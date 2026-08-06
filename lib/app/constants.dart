@@ -4,7 +4,8 @@
 library;
 
 /// 应用内部版本。全新版本代际，不沿用旧项目 0.14.x。
-const String appVersion = '0.1.0-dev.1+1';
+/// M2：本地 TXT 导入 + Drift 四层持久化。
+const String appVersion = '0.1.0-dev.2+2';
 
 /// 数据代际标识。新项目不兼容旧 XAOCEN 运行数据，也不提供迁移入口。
 const String dataEpoch = 'v4-local-1';

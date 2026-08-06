@@ -2,8 +2,8 @@ name: xaocen_reader
 description: "XAOCEN Reader v4 - unified content reading & subscription platform (local-first)."
 publish_to: 'none'
 
-# 0.1.0-dev.1+1 — 全新版本代际，不沿用旧项目 0.14.x
-version: 0.1.0-dev.1+1
+# 0.1.0-dev.2+2 — M2 本地 TXT 导入 + Drift 四层持久化
+version: 0.1.0-dev.2+2
 
 environment:
   sdk: ^3.12.2
@@ -21,6 +21,17 @@ dependencies:
   sqlite3_flutter_libs: ^0.5.36
   path: ^1.9.1
   crypto: ^3.0.6
+  file_picker: ^11.0.3
+  path_provider: ^2.1.6
+
+# sqlite3 native assets hook：默认从 github.com 下载预编译库；
+# 本环境 github.com 不可达（超时），改用 ghproxy.net 镜像。
+# 参考 package:sqlite3/doc/hook.md 的 url_pattern user-define。
+hooks:
+  user_defines:
+    sqlite3:
+      source: sqlite3
+      url_pattern: "https://ghproxy.net/https://github.com/simolus3/sqlite3.dart/releases/download/$RELEASE_TAG/$FILENAME"
 
 dev_dependencies:
   flutter_test:

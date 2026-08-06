@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 
-import 'placeholder_page.dart';
+import 'library_page.dart';
 
-/// 空路由入口 —— M0 仅注册根路由（占位页）。
+/// 路由入口 —— M2 根路由指向本地书库（M0 占位页保留供测试引用）。
 /// 后续功能页面通过 named routes 在此注册。
 abstract final class AppRouter {
   static const String root = '/';
 
   static Map<String, WidgetBuilder> get routes => {
-    root: (_) => const PlaceholderPage(),
+    root: (_) => const LibraryPage(),
   };
 }
