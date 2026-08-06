@@ -46,8 +46,8 @@ void main() {
   });
 
   group('版本与代际常量', () {
-    test('应用版本为 0.1.0-dev.2+2', () {
-      expect(appVersion, '0.1.0-dev.2+2');
+    test('应用版本为 0.1.0-dev.3+3', () {
+      expect(appVersion, '0.1.0-dev.3+3');
       expect(appVersion.startsWith('0.1.0'), isTrue);
     });
 

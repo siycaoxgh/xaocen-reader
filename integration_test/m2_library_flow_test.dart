@@ -10,6 +10,7 @@ import 'package:xaocen_reader/data/database/app_database.dart';
 import 'package:xaocen_reader/data/repositories/encoding_index_provider.dart';
 import 'package:xaocen_reader/data/repositories/library_file_manager.dart';
 import 'package:xaocen_reader/domain/library/library_import_models.dart';
+import 'package:xaocen_reader/reader/reader_page.dart';
 
 /// M2 集成测试：选择 fixture → 导入 → 书架出现 → 重启 → 仍存在 →
 /// 查看目录摘要 → 删除 → 书架消失 → 外部 fixture 仍存在。
@@ -154,10 +155,22 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
     expect(find.text('utf8_chapters'), findsOneWidget);
 
-    // 查看目录摘要（点开详情——本轮显示占位提示）
+    // 查看目录摘要（点开详情——M3 起打开真实 Reader）
     await tester.tap(find.text('utf8_chapters'));
+    await tester.pump();
+    for (var i = 0; i < 20; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    expect(
+      find.byType(ReaderPage),
+      findsOneWidget,
+      reason: 'M3 起点击书籍打开 Reader',
+    );
+    // 返回书架
+    await tester.tap(find.byIcon(Icons.arrow_back));
+    await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
-    expect(find.text('Reader 将在 M3 实现'), findsOneWidget);
+    expect(find.byType(ReaderPage), findsNothing);
 
     // ---- 删除 ----
     await repo2.removeCollection(r3.collection.id);

@@ -72,30 +72,6 @@ void main() {
       expect(find.textContaining('utf8'), findsOneWidget);
     });
 
-    testWidgets('点击书籍显示 Reader 占位提示', (tester) async {
-      final collection = LibraryCollection(
-        id: 'local-txt:abc',
-        sourceId: 'local-txt-source:abc',
-        title: '测试书籍',
-        subtitle: null,
-        itemCount: 1,
-        normalizedCharacterLength: 10,
-        detectedEncoding: TextEncoding.utf8,
-        sourceSize: 100,
-        importedAt: DateTime(2026, 8, 6),
-      );
-      container = ProviderContainer(
-        overrides: [
-          collectionsProvider.overrideWith((ref) async => [collection]),
-        ],
-      );
-      addTearDown(container.dispose);
-      await pump(tester);
-      await tester.tap(find.text('测试书籍'));
-      await tester.pump(const Duration(milliseconds: 100));
-      expect(find.text('Reader 将在 M3 实现'), findsOneWidget);
-    });
-
     testWidgets('超过 50MB 拒绝文案', (tester) async {
       await pump(tester);
       container
