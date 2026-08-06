@@ -115,7 +115,10 @@ void main() {
     // ---- 返回 ----
     await tester.tap(find.byIcon(Icons.arrow_back));
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 300));
+    // 等待 pop 动画完成（真机动画较慢）
+    for (var i = 0; i < 15; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
     expect(find.byType(ReaderPage), findsNothing);
 
     // ---- 重开：应从上次位置恢复 ----
