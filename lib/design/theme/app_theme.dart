@@ -1,0 +1,22 @@
+import 'package:flutter/material.dart';
+
+import '../tokens/app_tokens.dart';
+
+/// 应用主题入口 —— M0 建立基础主题，V3 统一 UI 原型后续单独落地。
+abstract final class AppTheme {
+  static ThemeData dark() {
+    final scheme = ColorScheme.dark(
+      primary: AppTokens.primary,
+      secondary: AppTokens.accent,
+      tertiary: AppTokens.secondary,
+      surface: AppTokens.surface,
+      onSurface: AppTokens.onSurface,
+      outline: AppTokens.outline,
+    );
+    return ThemeData(
+      useMaterial3: true,
+      colorScheme: scheme,
+      scaffoldBackgroundColor: AppTokens.background,
+    );
+  }
+}

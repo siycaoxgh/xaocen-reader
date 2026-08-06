@@ -1,0 +1,36 @@
+name: xaocen_reader
+description: "XAOCEN Reader v4 - unified content reading & subscription platform (local-first)."
+publish_to: 'none'
+
+# 0.1.0-dev.1+1 — 全新版本代际，不沿用旧项目 0.14.x
+version: 0.1.0-dev.1+1
+
+environment:
+  sdk: ^3.12.2
+
+# M0 依赖集合（锁定于 2026-08-06）：
+# - flutter_riverpod: 状态管理（第一版手写 Provider，不启用 codegen）
+# - drift / sqlite3_flutter_libs: 数据库（Drift + SQLite；build_runner 仅 Drift 确有需要时使用）
+# - path: 路径处理
+# 不引入：RSS / 网络书源 / TTS / 同步 / 插件 / EPUB
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_riverpod: ^2.6.1
+  drift: ^2.28.1
+  sqlite3_flutter_libs: ^0.5.36
+  path: ^1.9.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  integration_test:
+    sdk: flutter
+  drift_dev: ^2.28.1
+  build_runner: ^2.4.15
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/encoding/
