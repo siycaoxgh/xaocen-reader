@@ -8,6 +8,7 @@ import '../domain/library/library_entities.dart';
 import '../domain/library/library_import_models.dart';
 import '../domain/local_txt/large_file_policy.dart';
 import '../domain/local_txt/pipeline_progress.dart';
+import '../reader/reader_page.dart';
 import 'providers.dart';
 
 /// M2 最小书架 —— 本地书库（功能性界面，非 V3 统一 UI）。
@@ -211,12 +212,42 @@ class _CollectionTile extends ConsumerWidget {
         tooltip: '删除',
         onPressed: () => _confirmDelete(context, ref),
       ),
-      onTap: () {
+      onTap: () => _openReader(context, ref),
+    );
+  }
+
+  Future<void> _openReader(BuildContext context, WidgetRef ref) async {
+    try {
+      final repo = ref.read(libraryRepositoryProvider);
+      final loader = ref.read(documentLoaderProvider);
+      final progressRepo = ref.read(readingProgressRepositoryProvider);
+      final docs = await repo.getDocuments(collection.id);
+      final toc = await repo.getToc(collection.id);
+      if (docs.isEmpty) {
+        if (!context.mounted) return;
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('Reader 将在 M3 实现')));
-      },
-    );
+        ).showSnackBar(const SnackBar(content: Text('该书没有可用文档')));
+        return;
+      }
+      if (!context.mounted) return;
+      await openReader(
+        context,
+        ReaderLaunchContext(
+          collection: collection,
+          documents: docs,
+          toc: toc,
+          normalizedCharacterLength: collection.normalizedCharacterLength,
+          documentLoader: loader,
+          progressRepository: progressRepo,
+        ),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('打开失败: $e')));
+    }
   }
 
   Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {

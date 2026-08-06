@@ -6,9 +6,11 @@ import '../data/database/app_database.dart';
 import '../data/repositories/encoding_index_provider.dart';
 import '../data/repositories/library_file_manager.dart';
 import '../data/repositories/local_library_repository.dart';
+import '../data/repositories/reading_progress_repository.dart';
 import '../domain/library/library_entities.dart';
 import '../domain/library/library_import_models.dart';
 import '../domain/local_txt/pipeline_progress.dart';
+import '../reader/normalized_document_loader.dart';
 import '../sources/local_txt/txt_cancellation.dart';
 
 /// 数据库 Provider（懒加载）。
@@ -47,6 +49,20 @@ final collectionsProvider = FutureProvider<List<LibraryCollection>>((
 ) async {
   final repo = ref.watch(libraryRepositoryProvider);
   return repo.listCollections();
+});
+
+/// 文档加载器 Provider（Reader 使用）。
+final documentLoaderProvider = Provider<NormalizedDocumentLoader>((ref) {
+  final files = ref.watch(fileManagerProvider);
+  return NormalizedDocumentLoader(fileManager: files);
+});
+
+/// 阅读进度仓库 Provider。
+final readingProgressRepositoryProvider = Provider<ReadingProgressRepository>((
+  ref,
+) {
+  final db = ref.watch(databaseProvider);
+  return ReadingProgressRepository(db: db);
 });
 
 /// 导入进度状态。
