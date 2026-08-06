@@ -32,6 +32,26 @@ class LibraryFileManager {
   Directory contentDir(String contentHash) =>
       Directory('${localTxtDir.path}${Platform.pathSeparator}$contentHash');
 
+  /// 解析 DB 中存储的相对路径（如 `library/local_txt/<hash>/normalized.txt`）
+  /// 为绝对 File。
+  ///
+  /// storagePath 以 `library/` 开头（相对 applicationSupport），
+  /// 而本 manager 的 [libraryRoot] 即 `<support>/library`，
+  /// 因此要去掉 `library/` 前缀避免重复。
+  File resolveStoragePath(String storagePath) {
+    var rel = storagePath;
+    const libraryPrefix = 'library/';
+    if (rel.startsWith(libraryPrefix)) {
+      rel = rel.substring(libraryPrefix.length);
+    } else if (rel.startsWith('library\\')) {
+      rel = rel.substring('library\\'.length);
+    }
+    if (rel.contains('..')) {
+      throw LibraryFileException('unsafe storagePath: $storagePath');
+    }
+    return File('${libraryRoot.path}${Platform.pathSeparator}$rel');
+  }
+
   /// 创建临时导入目录。
   Future<Directory> createImportingJob(String jobId) async {
     await importingDir.create(recursive: true);
