@@ -37,6 +37,7 @@ class TxtImportService {
     this.parserVersion = '1.0.0',
     this.normalizationVersion = '1.0.0',
     this.indexFormatVersion = 1,
+    this.onNormalizedText,
   });
 
   /// GB18030 索引数据加载器（懒加载；首次需要时调用一次，进程内缓存由调用方保证）。
@@ -45,6 +46,9 @@ class TxtImportService {
   final String parserVersion;
   final String normalizationVersion;
   final int indexFormatVersion;
+
+  /// 规范化文本回调（isolate 内生成后回传；正文不入缓存，但可经此提供给调用方）。
+  final void Function(String normalizedText)? onNormalizedText;
 
   /// 导入入口。
   ///
@@ -201,6 +205,9 @@ class TxtImportService {
     scanSw.stop();
     _throwIfCancelled(token);
 
+    // 回传规范化文本（供 M2 写 normalized.txt）
+    onNormalizedText?.call(scanOutcome.normalizedText);
+
     stats['decodeMs'] = scanOutcome.decodeMs;
     stats['normalizeMs'] = scanOutcome.normalizeMs;
     stats['scanMs'] = scanOutcome.scanMs;
@@ -293,6 +300,7 @@ class TxtImportService {
       normalizeSw.stop();
       outcome.normalizeMs = normalizeSw.elapsedMilliseconds;
       outcome.normalizedLength = normalized.length;
+      outcome.normalizedText = normalized.text;
 
       final scanSw = Stopwatch()..start();
       const TxtTocScanner().scanRaw(normalized);
@@ -338,6 +346,7 @@ class _ScanOutcome {
   int volumeCount = 0;
   int chapterCount = 0;
   List<TocEntry> entries = const [];
+  String normalizedText = '';
 }
 
 /// 业务错误。
