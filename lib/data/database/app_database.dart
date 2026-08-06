@@ -21,6 +21,7 @@ part 'app_database.g.dart';
     ContentDocuments,
     TocEntries,
     ImportRecords,
+    ReadingProgress,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -30,7 +31,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting() : super(NativeDatabase.memory());
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   /// 打开应用数据库（support 目录下）。
   static Future<AppDatabase> open() async {
@@ -45,6 +46,13 @@ class AppDatabase extends _$AppDatabase {
     onCreate: (m) async {
       await m.createAll();
       await _createIndexes(customStatement);
+    },
+    onUpgrade: (m, from, to) async {
+      // schema 1 → 2：仅新增 reading_progress 表，不触碰 M2 既有数据。
+      if (from < 2) {
+        await m.createTable(readingProgress);
+        await _createIndexes(customStatement);
+      }
     },
     beforeOpen: (details) async {
       await customStatement('PRAGMA foreign_keys = ON');

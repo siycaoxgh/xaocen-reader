@@ -156,3 +156,30 @@ class ImportRecords extends Table {
   @override
   Set<Column> get primaryKey => {id};
 }
+
+/// reading_progress —— 每本书一条当前阅读进度（schema 2 新增）。
+///
+/// 唯一位置真源：absoluteCharacterOffset（normalized.txt 的 UTF-16 码元偏移）。
+/// 禁止保存页码 / scroll pixels / blockIndex / 章节百分比。
+class ReadingProgress extends Table {
+  /// collection ID（`local-txt:<hash>`，主键 + 外键（级联删除））。
+  TextColumn get collectionId =>
+      text().references(ContentCollections, #id, onDelete: KeyAction.cascade)();
+
+  /// 唯一位置真源：normalized.txt UTF-16 码元偏移。
+  IntColumn get absoluteCharacterOffset => integer()();
+
+  /// 快速识别章节的提示（非位置真源），可空。
+  TextColumn get itemIdHint => text().nullable()();
+
+  DateTimeColumn get updatedAt => dateTime()();
+
+  /// ReaderLocator 版本（区分未来 locator 语义）。
+  IntColumn get locatorVersion => integer()();
+
+  /// M1 normalization 版本（normalizationVersion）。
+  TextColumn get normalizationVersion => text()();
+
+  @override
+  Set<Column> get primaryKey => {collectionId};
+}

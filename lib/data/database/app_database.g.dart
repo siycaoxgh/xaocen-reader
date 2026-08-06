@@ -3332,6 +3332,480 @@ class ImportRecordsCompanion extends UpdateCompanion<ImportRecord> {
   }
 }
 
+class $ReadingProgressTable extends ReadingProgress
+    with TableInfo<$ReadingProgressTable, ReadingProgressData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ReadingProgressTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _collectionIdMeta = const VerificationMeta(
+    'collectionId',
+  );
+  @override
+  late final GeneratedColumn<String> collectionId = GeneratedColumn<String>(
+    'collection_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES content_collections (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _absoluteCharacterOffsetMeta =
+      const VerificationMeta('absoluteCharacterOffset');
+  @override
+  late final GeneratedColumn<int> absoluteCharacterOffset =
+      GeneratedColumn<int>(
+        'absolute_character_offset',
+        aliasedName,
+        false,
+        type: DriftSqlType.int,
+        requiredDuringInsert: true,
+      );
+  static const VerificationMeta _itemIdHintMeta = const VerificationMeta(
+    'itemIdHint',
+  );
+  @override
+  late final GeneratedColumn<String> itemIdHint = GeneratedColumn<String>(
+    'item_id_hint',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _locatorVersionMeta = const VerificationMeta(
+    'locatorVersion',
+  );
+  @override
+  late final GeneratedColumn<int> locatorVersion = GeneratedColumn<int>(
+    'locator_version',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _normalizationVersionMeta =
+      const VerificationMeta('normalizationVersion');
+  @override
+  late final GeneratedColumn<String> normalizationVersion =
+      GeneratedColumn<String>(
+        'normalization_version',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: true,
+      );
+  @override
+  List<GeneratedColumn> get $columns => [
+    collectionId,
+    absoluteCharacterOffset,
+    itemIdHint,
+    updatedAt,
+    locatorVersion,
+    normalizationVersion,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'reading_progress';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ReadingProgressData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('collection_id')) {
+      context.handle(
+        _collectionIdMeta,
+        collectionId.isAcceptableOrUnknown(
+          data['collection_id']!,
+          _collectionIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_collectionIdMeta);
+    }
+    if (data.containsKey('absolute_character_offset')) {
+      context.handle(
+        _absoluteCharacterOffsetMeta,
+        absoluteCharacterOffset.isAcceptableOrUnknown(
+          data['absolute_character_offset']!,
+          _absoluteCharacterOffsetMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_absoluteCharacterOffsetMeta);
+    }
+    if (data.containsKey('item_id_hint')) {
+      context.handle(
+        _itemIdHintMeta,
+        itemIdHint.isAcceptableOrUnknown(
+          data['item_id_hint']!,
+          _itemIdHintMeta,
+        ),
+      );
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    if (data.containsKey('locator_version')) {
+      context.handle(
+        _locatorVersionMeta,
+        locatorVersion.isAcceptableOrUnknown(
+          data['locator_version']!,
+          _locatorVersionMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_locatorVersionMeta);
+    }
+    if (data.containsKey('normalization_version')) {
+      context.handle(
+        _normalizationVersionMeta,
+        normalizationVersion.isAcceptableOrUnknown(
+          data['normalization_version']!,
+          _normalizationVersionMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_normalizationVersionMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {collectionId};
+  @override
+  ReadingProgressData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ReadingProgressData(
+      collectionId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}collection_id'],
+      )!,
+      absoluteCharacterOffset: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}absolute_character_offset'],
+      )!,
+      itemIdHint: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}item_id_hint'],
+      ),
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+      locatorVersion: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}locator_version'],
+      )!,
+      normalizationVersion: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}normalization_version'],
+      )!,
+    );
+  }
+
+  @override
+  $ReadingProgressTable createAlias(String alias) {
+    return $ReadingProgressTable(attachedDatabase, alias);
+  }
+}
+
+class ReadingProgressData extends DataClass
+    implements Insertable<ReadingProgressData> {
+  /// collection ID（local-txt:<hash>），主键 + 外键（级联删除）。
+  final String collectionId;
+
+  /// 唯一位置真源：normalized.txt UTF-16 码元偏移。
+  final int absoluteCharacterOffset;
+
+  /// 快速识别章节的提示（非位置真源），可空。
+  final String? itemIdHint;
+  final DateTime updatedAt;
+
+  /// ReaderLocator 版本（区分未来 locator 语义）。
+  final int locatorVersion;
+
+  /// M1 normalization 版本（normalizationVersion）。
+  final String normalizationVersion;
+  const ReadingProgressData({
+    required this.collectionId,
+    required this.absoluteCharacterOffset,
+    this.itemIdHint,
+    required this.updatedAt,
+    required this.locatorVersion,
+    required this.normalizationVersion,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['collection_id'] = Variable<String>(collectionId);
+    map['absolute_character_offset'] = Variable<int>(absoluteCharacterOffset);
+    if (!nullToAbsent || itemIdHint != null) {
+      map['item_id_hint'] = Variable<String>(itemIdHint);
+    }
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    map['locator_version'] = Variable<int>(locatorVersion);
+    map['normalization_version'] = Variable<String>(normalizationVersion);
+    return map;
+  }
+
+  ReadingProgressCompanion toCompanion(bool nullToAbsent) {
+    return ReadingProgressCompanion(
+      collectionId: Value(collectionId),
+      absoluteCharacterOffset: Value(absoluteCharacterOffset),
+      itemIdHint: itemIdHint == null && nullToAbsent
+          ? const Value.absent()
+          : Value(itemIdHint),
+      updatedAt: Value(updatedAt),
+      locatorVersion: Value(locatorVersion),
+      normalizationVersion: Value(normalizationVersion),
+    );
+  }
+
+  factory ReadingProgressData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ReadingProgressData(
+      collectionId: serializer.fromJson<String>(json['collectionId']),
+      absoluteCharacterOffset: serializer.fromJson<int>(
+        json['absoluteCharacterOffset'],
+      ),
+      itemIdHint: serializer.fromJson<String?>(json['itemIdHint']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      locatorVersion: serializer.fromJson<int>(json['locatorVersion']),
+      normalizationVersion: serializer.fromJson<String>(
+        json['normalizationVersion'],
+      ),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'collectionId': serializer.toJson<String>(collectionId),
+      'absoluteCharacterOffset': serializer.toJson<int>(
+        absoluteCharacterOffset,
+      ),
+      'itemIdHint': serializer.toJson<String?>(itemIdHint),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'locatorVersion': serializer.toJson<int>(locatorVersion),
+      'normalizationVersion': serializer.toJson<String>(normalizationVersion),
+    };
+  }
+
+  ReadingProgressData copyWith({
+    String? collectionId,
+    int? absoluteCharacterOffset,
+    Value<String?> itemIdHint = const Value.absent(),
+    DateTime? updatedAt,
+    int? locatorVersion,
+    String? normalizationVersion,
+  }) => ReadingProgressData(
+    collectionId: collectionId ?? this.collectionId,
+    absoluteCharacterOffset:
+        absoluteCharacterOffset ?? this.absoluteCharacterOffset,
+    itemIdHint: itemIdHint.present ? itemIdHint.value : this.itemIdHint,
+    updatedAt: updatedAt ?? this.updatedAt,
+    locatorVersion: locatorVersion ?? this.locatorVersion,
+    normalizationVersion: normalizationVersion ?? this.normalizationVersion,
+  );
+  ReadingProgressData copyWithCompanion(ReadingProgressCompanion data) {
+    return ReadingProgressData(
+      collectionId: data.collectionId.present
+          ? data.collectionId.value
+          : this.collectionId,
+      absoluteCharacterOffset: data.absoluteCharacterOffset.present
+          ? data.absoluteCharacterOffset.value
+          : this.absoluteCharacterOffset,
+      itemIdHint: data.itemIdHint.present
+          ? data.itemIdHint.value
+          : this.itemIdHint,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      locatorVersion: data.locatorVersion.present
+          ? data.locatorVersion.value
+          : this.locatorVersion,
+      normalizationVersion: data.normalizationVersion.present
+          ? data.normalizationVersion.value
+          : this.normalizationVersion,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ReadingProgressData(')
+          ..write('collectionId: $collectionId, ')
+          ..write('absoluteCharacterOffset: $absoluteCharacterOffset, ')
+          ..write('itemIdHint: $itemIdHint, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('locatorVersion: $locatorVersion, ')
+          ..write('normalizationVersion: $normalizationVersion')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    collectionId,
+    absoluteCharacterOffset,
+    itemIdHint,
+    updatedAt,
+    locatorVersion,
+    normalizationVersion,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ReadingProgressData &&
+          other.collectionId == this.collectionId &&
+          other.absoluteCharacterOffset == this.absoluteCharacterOffset &&
+          other.itemIdHint == this.itemIdHint &&
+          other.updatedAt == this.updatedAt &&
+          other.locatorVersion == this.locatorVersion &&
+          other.normalizationVersion == this.normalizationVersion);
+}
+
+class ReadingProgressCompanion extends UpdateCompanion<ReadingProgressData> {
+  final Value<String> collectionId;
+  final Value<int> absoluteCharacterOffset;
+  final Value<String?> itemIdHint;
+  final Value<DateTime> updatedAt;
+  final Value<int> locatorVersion;
+  final Value<String> normalizationVersion;
+  final Value<int> rowid;
+  const ReadingProgressCompanion({
+    this.collectionId = const Value.absent(),
+    this.absoluteCharacterOffset = const Value.absent(),
+    this.itemIdHint = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.locatorVersion = const Value.absent(),
+    this.normalizationVersion = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ReadingProgressCompanion.insert({
+    required String collectionId,
+    required int absoluteCharacterOffset,
+    this.itemIdHint = const Value.absent(),
+    required DateTime updatedAt,
+    required int locatorVersion,
+    required String normalizationVersion,
+    this.rowid = const Value.absent(),
+  }) : collectionId = Value(collectionId),
+       absoluteCharacterOffset = Value(absoluteCharacterOffset),
+       updatedAt = Value(updatedAt),
+       locatorVersion = Value(locatorVersion),
+       normalizationVersion = Value(normalizationVersion);
+  static Insertable<ReadingProgressData> custom({
+    Expression<String>? collectionId,
+    Expression<int>? absoluteCharacterOffset,
+    Expression<String>? itemIdHint,
+    Expression<DateTime>? updatedAt,
+    Expression<int>? locatorVersion,
+    Expression<String>? normalizationVersion,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (collectionId != null) 'collection_id': collectionId,
+      if (absoluteCharacterOffset != null)
+        'absolute_character_offset': absoluteCharacterOffset,
+      if (itemIdHint != null) 'item_id_hint': itemIdHint,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (locatorVersion != null) 'locator_version': locatorVersion,
+      if (normalizationVersion != null)
+        'normalization_version': normalizationVersion,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ReadingProgressCompanion copyWith({
+    Value<String>? collectionId,
+    Value<int>? absoluteCharacterOffset,
+    Value<String?>? itemIdHint,
+    Value<DateTime>? updatedAt,
+    Value<int>? locatorVersion,
+    Value<String>? normalizationVersion,
+    Value<int>? rowid,
+  }) {
+    return ReadingProgressCompanion(
+      collectionId: collectionId ?? this.collectionId,
+      absoluteCharacterOffset:
+          absoluteCharacterOffset ?? this.absoluteCharacterOffset,
+      itemIdHint: itemIdHint ?? this.itemIdHint,
+      updatedAt: updatedAt ?? this.updatedAt,
+      locatorVersion: locatorVersion ?? this.locatorVersion,
+      normalizationVersion: normalizationVersion ?? this.normalizationVersion,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (collectionId.present) {
+      map['collection_id'] = Variable<String>(collectionId.value);
+    }
+    if (absoluteCharacterOffset.present) {
+      map['absolute_character_offset'] = Variable<int>(
+        absoluteCharacterOffset.value,
+      );
+    }
+    if (itemIdHint.present) {
+      map['item_id_hint'] = Variable<String>(itemIdHint.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (locatorVersion.present) {
+      map['locator_version'] = Variable<int>(locatorVersion.value);
+    }
+    if (normalizationVersion.present) {
+      map['normalization_version'] = Variable<String>(
+        normalizationVersion.value,
+      );
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ReadingProgressCompanion(')
+          ..write('collectionId: $collectionId, ')
+          ..write('absoluteCharacterOffset: $absoluteCharacterOffset, ')
+          ..write('itemIdHint: $itemIdHint, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('locatorVersion: $locatorVersion, ')
+          ..write('normalizationVersion: $normalizationVersion, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -3344,6 +3818,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   );
   late final $TocEntriesTable tocEntries = $TocEntriesTable(this);
   late final $ImportRecordsTable importRecords = $ImportRecordsTable(this);
+  late final $ReadingProgressTable readingProgress = $ReadingProgressTable(
+    this,
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -3355,7 +3832,18 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     contentDocuments,
     tocEntries,
     importRecords,
+    readingProgress,
   ];
+  @override
+  StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'content_collections',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('reading_progress', kind: UpdateKind.delete)],
+    ),
+  ]);
 }
 
 typedef $$ContentSourcesTableCreateCompanionBuilder =
@@ -3848,6 +4336,26 @@ final class $$ContentCollectionsTableReferences
       manager.$state.copyWith(prefetchedData: cache),
     );
   }
+
+  static MultiTypedResultKey<$ReadingProgressTable, List<ReadingProgressData>>
+  _readingProgressRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.readingProgress,
+    aliasName: 'content_collections__id__reading_progress__collection_id',
+  );
+
+  $$ReadingProgressTableProcessedTableManager get readingProgressRefs {
+    final manager = $$ReadingProgressTableTableManager(
+      $_db,
+      $_db.readingProgress,
+    ).filter((f) => f.collectionId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _readingProgressRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 }
 
 class $$ContentCollectionsTableFilterComposer
@@ -3958,6 +4466,31 @@ class $$ContentCollectionsTableFilterComposer
           }) => $$TocEntriesTableFilterComposer(
             $db: $db,
             $table: $db.tocEntries,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> readingProgressRefs(
+    Expression<bool> Function($$ReadingProgressTableFilterComposer f) f,
+  ) {
+    final $$ReadingProgressTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.readingProgress,
+      getReferencedColumn: (t) => t.collectionId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ReadingProgressTableFilterComposer(
+            $db: $db,
+            $table: $db.readingProgress,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -4142,6 +4675,31 @@ class $$ContentCollectionsTableAnnotationComposer
     );
     return f(composer);
   }
+
+  Expression<T> readingProgressRefs<T extends Object>(
+    Expression<T> Function($$ReadingProgressTableAnnotationComposer a) f,
+  ) {
+    final $$ReadingProgressTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.readingProgress,
+      getReferencedColumn: (t) => t.collectionId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ReadingProgressTableAnnotationComposer(
+            $db: $db,
+            $table: $db.readingProgress,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$ContentCollectionsTableTableManager
@@ -4161,6 +4719,7 @@ class $$ContentCollectionsTableTableManager
             bool sourceId,
             bool contentItemsRefs,
             bool tocEntriesRefs,
+            bool readingProgressRefs,
           })
         > {
   $$ContentCollectionsTableTableManager(
@@ -4236,12 +4795,14 @@ class $$ContentCollectionsTableTableManager
                 sourceId = false,
                 contentItemsRefs = false,
                 tocEntriesRefs = false,
+                readingProgressRefs = false,
               }) {
                 return PrefetchHooks(
                   db: db,
                   explicitlyWatchedTables: [
                     if (contentItemsRefs) db.contentItems,
                     if (tocEntriesRefs) db.tocEntries,
+                    if (readingProgressRefs) db.readingProgress,
                   ],
                   addJoins:
                       <
@@ -4321,6 +4882,27 @@ class $$ContentCollectionsTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (readingProgressRefs)
+                        await $_getPrefetchedData<
+                          ContentCollection,
+                          $ContentCollectionsTable,
+                          ReadingProgressData
+                        >(
+                          currentTable: table,
+                          referencedTable: $$ContentCollectionsTableReferences
+                              ._readingProgressRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$ContentCollectionsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).readingProgressRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.collectionId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                     ];
                   },
                 );
@@ -4345,6 +4927,7 @@ typedef $$ContentCollectionsTableProcessedTableManager =
         bool sourceId,
         bool contentItemsRefs,
         bool tocEntriesRefs,
+        bool readingProgressRefs,
       })
     >;
 typedef $$ContentItemsTableCreateCompanionBuilder =
@@ -6071,6 +6654,365 @@ typedef $$ImportRecordsTableProcessedTableManager =
       ImportRecord,
       PrefetchHooks Function()
     >;
+typedef $$ReadingProgressTableCreateCompanionBuilder =
+    ReadingProgressCompanion Function({
+      required String collectionId,
+      required int absoluteCharacterOffset,
+      Value<String?> itemIdHint,
+      required DateTime updatedAt,
+      required int locatorVersion,
+      required String normalizationVersion,
+      Value<int> rowid,
+    });
+typedef $$ReadingProgressTableUpdateCompanionBuilder =
+    ReadingProgressCompanion Function({
+      Value<String> collectionId,
+      Value<int> absoluteCharacterOffset,
+      Value<String?> itemIdHint,
+      Value<DateTime> updatedAt,
+      Value<int> locatorVersion,
+      Value<String> normalizationVersion,
+      Value<int> rowid,
+    });
+
+final class $$ReadingProgressTableReferences
+    extends
+        BaseReferences<
+          _$AppDatabase,
+          $ReadingProgressTable,
+          ReadingProgressData
+        > {
+  $$ReadingProgressTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $ContentCollectionsTable _collectionIdTable(_$AppDatabase db) => db
+      .contentCollections
+      .createAlias('reading_progress__collection_id__content_collections__id');
+
+  $$ContentCollectionsTableProcessedTableManager get collectionId {
+    final $_column = $_itemColumn<String>('collection_id')!;
+
+    final manager = $$ContentCollectionsTableTableManager(
+      $_db,
+      $_db.contentCollections,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_collectionIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$ReadingProgressTableFilterComposer
+    extends Composer<_$AppDatabase, $ReadingProgressTable> {
+  $$ReadingProgressTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get absoluteCharacterOffset => $composableBuilder(
+    column: $table.absoluteCharacterOffset,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get itemIdHint => $composableBuilder(
+    column: $table.itemIdHint,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get locatorVersion => $composableBuilder(
+    column: $table.locatorVersion,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get normalizationVersion => $composableBuilder(
+    column: $table.normalizationVersion,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$ContentCollectionsTableFilterComposer get collectionId {
+    final $$ContentCollectionsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.collectionId,
+      referencedTable: $db.contentCollections,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ContentCollectionsTableFilterComposer(
+            $db: $db,
+            $table: $db.contentCollections,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ReadingProgressTableOrderingComposer
+    extends Composer<_$AppDatabase, $ReadingProgressTable> {
+  $$ReadingProgressTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get absoluteCharacterOffset => $composableBuilder(
+    column: $table.absoluteCharacterOffset,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get itemIdHint => $composableBuilder(
+    column: $table.itemIdHint,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get locatorVersion => $composableBuilder(
+    column: $table.locatorVersion,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get normalizationVersion => $composableBuilder(
+    column: $table.normalizationVersion,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$ContentCollectionsTableOrderingComposer get collectionId {
+    final $$ContentCollectionsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.collectionId,
+      referencedTable: $db.contentCollections,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ContentCollectionsTableOrderingComposer(
+            $db: $db,
+            $table: $db.contentCollections,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ReadingProgressTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ReadingProgressTable> {
+  $$ReadingProgressTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get absoluteCharacterOffset => $composableBuilder(
+    column: $table.absoluteCharacterOffset,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get itemIdHint => $composableBuilder(
+    column: $table.itemIdHint,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<int> get locatorVersion => $composableBuilder(
+    column: $table.locatorVersion,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get normalizationVersion => $composableBuilder(
+    column: $table.normalizationVersion,
+    builder: (column) => column,
+  );
+
+  $$ContentCollectionsTableAnnotationComposer get collectionId {
+    final $$ContentCollectionsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.collectionId,
+          referencedTable: $db.contentCollections,
+          getReferencedColumn: (t) => t.id,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$ContentCollectionsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.contentCollections,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return composer;
+  }
+}
+
+class $$ReadingProgressTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ReadingProgressTable,
+          ReadingProgressData,
+          $$ReadingProgressTableFilterComposer,
+          $$ReadingProgressTableOrderingComposer,
+          $$ReadingProgressTableAnnotationComposer,
+          $$ReadingProgressTableCreateCompanionBuilder,
+          $$ReadingProgressTableUpdateCompanionBuilder,
+          (ReadingProgressData, $$ReadingProgressTableReferences),
+          ReadingProgressData,
+          PrefetchHooks Function({bool collectionId})
+        > {
+  $$ReadingProgressTableTableManager(
+    _$AppDatabase db,
+    $ReadingProgressTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ReadingProgressTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ReadingProgressTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ReadingProgressTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> collectionId = const Value.absent(),
+                Value<int> absoluteCharacterOffset = const Value.absent(),
+                Value<String?> itemIdHint = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<int> locatorVersion = const Value.absent(),
+                Value<String> normalizationVersion = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ReadingProgressCompanion(
+                collectionId: collectionId,
+                absoluteCharacterOffset: absoluteCharacterOffset,
+                itemIdHint: itemIdHint,
+                updatedAt: updatedAt,
+                locatorVersion: locatorVersion,
+                normalizationVersion: normalizationVersion,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String collectionId,
+                required int absoluteCharacterOffset,
+                Value<String?> itemIdHint = const Value.absent(),
+                required DateTime updatedAt,
+                required int locatorVersion,
+                required String normalizationVersion,
+                Value<int> rowid = const Value.absent(),
+              }) => ReadingProgressCompanion.insert(
+                collectionId: collectionId,
+                absoluteCharacterOffset: absoluteCharacterOffset,
+                itemIdHint: itemIdHint,
+                updatedAt: updatedAt,
+                locatorVersion: locatorVersion,
+                normalizationVersion: normalizationVersion,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$ReadingProgressTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({collectionId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (collectionId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.collectionId,
+                                referencedTable:
+                                    $$ReadingProgressTableReferences
+                                        ._collectionIdTable(db),
+                                referencedColumn:
+                                    $$ReadingProgressTableReferences
+                                        ._collectionIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$ReadingProgressTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ReadingProgressTable,
+      ReadingProgressData,
+      $$ReadingProgressTableFilterComposer,
+      $$ReadingProgressTableOrderingComposer,
+      $$ReadingProgressTableAnnotationComposer,
+      $$ReadingProgressTableCreateCompanionBuilder,
+      $$ReadingProgressTableUpdateCompanionBuilder,
+      (ReadingProgressData, $$ReadingProgressTableReferences),
+      ReadingProgressData,
+      PrefetchHooks Function({bool collectionId})
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -6087,4 +7029,6 @@ class $AppDatabaseManager {
       $$TocEntriesTableTableManager(_db, _db.tocEntries);
   $$ImportRecordsTableTableManager get importRecords =>
       $$ImportRecordsTableTableManager(_db, _db.importRecords);
+  $$ReadingProgressTableTableManager get readingProgress =>
+      $$ReadingProgressTableTableManager(_db, _db.readingProgress);
 }
