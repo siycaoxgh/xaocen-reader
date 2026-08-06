@@ -1,38 +1,53 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:xaocen_reader/app/app.dart';
 import 'package:xaocen_reader/app/constants.dart';
-import 'package:xaocen_reader/app/placeholder_page.dart';
+import 'package:xaocen_reader/app/providers.dart';
 import 'package:xaocen_reader/app/router.dart';
+import 'package:xaocen_reader/data/database/app_database.dart';
+import 'package:xaocen_reader/data/repositories/library_file_manager.dart';
 
 void main() {
-  group('M0 骨架', () {
-    testWidgets('占位页渲染三段关键文案', (tester) async {
-      await tester.pumpWidget(const ProviderScope(child: XaocenApp()));
-
-      expect(find.text('XAOCEN Reader v4'), findsOneWidget);
-      expect(find.text('工程骨架已初始化'), findsOneWidget);
-      expect(find.text('当前阶段：M0'), findsOneWidget);
+  group('M0 骨架（M2 保留）', () {
+    testWidgets('根路由注册', (tester) async {
+      expect(AppRouter.root, '/');
+      expect(AppRouter.routes.containsKey('/'), isTrue);
     });
 
-    testWidgets('根路由指向占位页', (tester) async {
-      await tester.pumpWidget(const ProviderScope(child: XaocenApp()));
+    testWidgets('深色主题生效 + 根路由渲染书架', (tester) async {
+      final db = AppDatabase.forTesting();
+      addTearDown(db.close);
+      final container = ProviderContainer(
+        overrides: [
+          databaseProvider.overrideWithValue(db),
+          fileManagerProvider.overrideWithValue(
+            LibraryFileManager(
+              libraryRoot: Directory.systemTemp.createTempSync('xaocen_m0_lib'),
+            ),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const XaocenApp(),
+        ),
+      );
+      await tester.pumpAndSettle();
 
-      expect(find.byType(PlaceholderPage), findsOneWidget);
-    });
-
-    testWidgets('深色主题生效', (tester) async {
-      await tester.pumpWidget(const ProviderScope(child: XaocenApp()));
-
-      final context = tester.element(find.byType(PlaceholderPage));
+      final context = tester.element(find.byType(Scaffold).first);
       expect(Theme.of(context).brightness, Brightness.dark);
+      expect(find.text('本地书库'), findsOneWidget);
     });
   });
 
   group('版本与代际常量', () {
-    test('应用版本为全新代际 0.1.0-dev.1+1', () {
-      expect(appVersion, '0.1.0-dev.1+1');
+    test('应用版本为 0.1.0-dev.2+2', () {
+      expect(appVersion, '0.1.0-dev.2+2');
       expect(appVersion.startsWith('0.1.0'), isTrue);
     });
 
