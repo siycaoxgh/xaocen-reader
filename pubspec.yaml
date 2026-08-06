@@ -2,8 +2,8 @@ name: xaocen_reader
 description: "XAOCEN Reader v4 - unified content reading & subscription platform (local-first)."
 publish_to: 'none'
 
-# 0.1.0-dev.2+2 — M2 本地 TXT 导入 + Drift 四层持久化
-version: 0.1.0-dev.2+2
+# 0.1.0-dev.3+3 — M3 纵向滚动 Reader + 精确位置恢复
+version: 0.1.0-dev.3+3
 
 environment:
   sdk: ^3.12.2
@@ -23,6 +23,7 @@ dependencies:
   crypto: ^3.0.6
   file_picker: ^11.0.3
   path_provider: ^2.1.6
+  super_sliver_list: 0.4.1
 
 # sqlite3 native assets hook：默认从 github.com 下载预编译库；
 # 本环境 github.com 不可达（超时），改用 ghproxy.net 镜像。
