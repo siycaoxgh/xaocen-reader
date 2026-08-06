@@ -9,9 +9,7 @@ import 'package:xaocen_reader/app/router.dart';
 void main() {
   group('M0 骨架', () {
     testWidgets('占位页渲染三段关键文案', (tester) async {
-      await tester.pumpWidget(
-        const ProviderScope(child: XaocenApp()),
-      );
+      await tester.pumpWidget(const ProviderScope(child: XaocenApp()));
 
       expect(find.text('XAOCEN Reader v4'), findsOneWidget);
       expect(find.text('工程骨架已初始化'), findsOneWidget);
@@ -19,17 +17,13 @@ void main() {
     });
 
     testWidgets('根路由指向占位页', (tester) async {
-      await tester.pumpWidget(
-        const ProviderScope(child: XaocenApp()),
-      );
+      await tester.pumpWidget(const ProviderScope(child: XaocenApp()));
 
       expect(find.byType(PlaceholderPage), findsOneWidget);
     });
 
     testWidgets('深色主题生效', (tester) async {
-      await tester.pumpWidget(
-        const ProviderScope(child: XaocenApp()),
-      );
+      await tester.pumpWidget(const ProviderScope(child: XaocenApp()));
 
       final context = tester.element(find.byType(PlaceholderPage));
       expect(Theme.of(context).brightness, Brightness.dark);

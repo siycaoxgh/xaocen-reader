@@ -8,6 +8,6 @@ abstract final class AppRouter {
   static const String root = '/';
 
   static Map<String, WidgetBuilder> get routes => {
-        root: (_) => const PlaceholderPage(),
-      };
+    root: (_) => const PlaceholderPage(),
+  };
 }
