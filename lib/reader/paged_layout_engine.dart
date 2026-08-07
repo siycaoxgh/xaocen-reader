@@ -35,7 +35,9 @@ class PagedLayoutEngine {
     this.policyVersion = pagedPolicyVersion,
   }) : _tp = TextPainter(
          textDirection: textDirection,
-         textScaler: TextScaler.linear(textScale),
+         // 与渲染（RenderReaderTextBlock）完全一致：noScaling。
+         // textScale 本轮恒 1.0（未来阅读设置放开时经 signature 重分页）。
+         textScaler: TextScaler.noScaling,
        );
 
   /// 规范化正文（引用 NormalizedDocument.text，不复制全文）。
@@ -78,9 +80,6 @@ class PagedLayoutEngine {
   /// 且与全文页数无关（§九）。
   static const int candidateChars = 32768;
 
-  /// 高度比较容差。
-  static const double _epsilon = 0.5;
-
   void _layoutCandidate(String candidate) {
     _tp.text = TextSpan(text: candidate, style: style);
     _tp.layout(maxWidth: contentWidth);
@@ -114,7 +113,7 @@ class PagedLayoutEngine {
     _layoutCandidate(candidate);
 
     // 整块不足一屏（文档尾 / 候选上限内装完）：直接整块一页。
-    if (_tp.height <= contentHeight + _epsilon) {
+    if (_tp.height <= contentHeight) {
       return PagedTextRange(
         startCharacterOffset: startOffset,
         endCharacterOffset: startOffset + take,
@@ -128,11 +127,26 @@ class PagedLayoutEngine {
     var lineStart = 0;
     var found = false;
     for (final m in lines) {
-      if (acc + m.height > contentHeight + _epsilon) break;
+      // 严格 ≤ contentHeight（无 ε 容差）：保证页面渲染高度不超 viewport 约束。
+      if (acc + m.height > contentHeight) break;
       acc += m.height;
+      // lineStart 始终指向「内容行行首」（0 或 LF 后）；getLineBoundary 对
+      // 行首求 [行首, 行尾)，行尾在 LF 前（该行以 LF 结束时）。LF 字符本身
+      // 归入下一页（页面 end 无 trailing LF → 渲染无额外空行，行数与引擎
+      // 累计一致——'a\n' 渲染高 = 2 行，而引擎候选上累计不含 trailing 空行）。
       final b = _tp.getLineBoundary(TextPosition(offset: lineStart));
-      lineEnd = b.end;
-      lineStart = lineEnd;
+      var end = b.end;
+      // 零宽防御（正常不触发：lineStart 非 LF）：至少推进一个字符。
+      if (end <= lineStart) {
+        end = lineStart + 1;
+      }
+      lineEnd = end;
+      // 下一行行首：跳过 LF（lineEnd 是 LF 位置时 +1；wrap 行行尾即行首）。
+      if (lineEnd < candidate.length && candidate.codeUnitAt(lineEnd) == 0x0A) {
+        lineStart = lineEnd + 1;
+      } else {
+        lineStart = lineEnd;
+      }
       found = true;
     }
     if (!found) {
@@ -164,26 +178,39 @@ class PagedLayoutEngine {
     if (endOffset <= 0) return null;
 
     final take = math.min(endOffset, candidateChars);
-    final start = endOffset - take;
+    var start = endOffset - take;
+    // 候选起点回退到 LF 位置（上一行的换行符）：候选首字符 = LF（首行 =
+    // LF 空行）——与 forward 页首（LF 位置）同一行边界，getLineBoundary
+    // 往回数行精确对称（100 页往返）。无 LF（超长段/纯 wrap）：保持原
+    // 起点（wrap 行由宽度决定，行数不变）。
+    if (start > 0) {
+      final lf = text.lastIndexOf('\n', start - 1);
+      if (lf >= 0) {
+        start = lf;
+      }
+    }
     final candidate = text.substring(start, endOffset);
     _layoutCandidate(candidate);
 
     // 整块不足一屏：从候选起点到 endOffset 一页。
-    if (_tp.height <= contentHeight + _epsilon) {
+    if (_tp.height <= contentHeight) {
       return PagedTextRange(
         startCharacterOffset: start,
         endCharacterOffset: endOffset,
       );
     }
 
-    // 从末尾往回累计渲染行：取「放得下的最大完整行集合」。
+    // 从末尾往回累计渲染行（getLineBoundary，与 forward 的
+    // computeLineMetrics 行划分一致——同布局同文本）：
+    // 取「放得下的最大完整行集合」。
     final lines = _tp.computeLineMetrics();
     var acc = 0.0;
     var lineStartRel = candidate.length;
     var found = false;
     for (var i = lines.length - 1; i >= 0; i--) {
       final m = lines[i];
-      if (acc + m.height > contentHeight + _epsilon) break;
+      // 严格 ≤ contentHeight（无 ε 容差）。
+      if (acc + m.height > contentHeight) break;
       acc += m.height;
       final b = _tp.getLineBoundary(
         TextPosition(offset: math.max(0, lineStartRel - 1)),
@@ -198,16 +225,20 @@ class PagedLayoutEngine {
       );
       lineStartRel = b.start;
     }
-
-    var newStart = start + lineStartRel;
-    newStart = _fixSurrogateBoundary(newStart);
-    if (newStart >= endOffset) {
+    // 页首 = 候选内行首；行首前是 LF → 页首 = LF 位置（与 forward 页
+    // start = LF 一致）。行首为 0（文档首）时保持 0。
+    if (lineStartRel > 0 && candidate.codeUnitAt(lineStartRel - 1) == 0x0A) {
+      lineStartRel -= 1;
+    }
+    var pageStart = start + lineStartRel;
+    pageStart = _fixSurrogateBoundary(pageStart);
+    if (pageStart >= endOffset) {
       // 防御：至少回退一码元。
-      newStart = math.max(0, endOffset - 1);
-      newStart = _fixSurrogateBoundary(newStart);
+      pageStart = math.max(0, endOffset - 1);
+      pageStart = _fixSurrogateBoundary(pageStart);
     }
     return PagedTextRange(
-      startCharacterOffset: newStart,
+      startCharacterOffset: pageStart,
       endCharacterOffset: endOffset,
     );
   }
