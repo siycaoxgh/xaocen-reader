@@ -3,7 +3,7 @@ description: "XAOCEN Reader v4 - unified content reading & subscription platform
 publish_to: 'none'
 
 # 0.1.0-dev.3+3 — M3 纵向滚动 Reader + 精确位置恢复
-version: 0.1.0-dev.3+3
+version: 0.1.0-dev.4+4
 
 environment:
   sdk: ^3.12.2
