@@ -184,7 +184,7 @@ void main() {
     );
     expect(r.index.chapterCount, 2);
     final titles = r.index.tocEntries.map((e) => e.title).toList();
-    expect(titles, ['第1章', '第2章']);
+    expect(titles, ['第1章 正常', '第2章 继续']);
   });
 
   test('合同10b: 相邻重复去重 + 远距同名保留（fixture 级）', () async {

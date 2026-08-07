@@ -138,7 +138,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
     expect(find.text('目录 — utf8_chapters'), findsOneWidget);
-    await tester.tap(find.text('第3章'));
+    await tester.tap(find.text('第3章 章节3'));
     await tester.pump();
     for (var i = 0; i < 20; i++) {
       await tester.pump(const Duration(milliseconds: 100));
