@@ -82,11 +82,14 @@ class NormalizedDocumentLoader {
       throw NormalizedDocumentException('file_missing', '文件不存在: $storagePath');
     }
 
-    // 从 manifest.json 读取期望 hash / 长度（若调用方未提供）
+    // 从 manifest.json 读取期望 hash / 长度（唯一权威：manifest 与文件原子写入）。
+    // expectedHash / expectedLength 仅在 manifest 缺失时作为调用方回退。
     final manifest = await _readManifest(storagePath);
-    final wantHash = expectedHash ?? manifest?['normalizedHash'] as String?;
+    final wantHash = _str(manifest, 'normalizedHash').isNotEmpty
+        ? _str(manifest, 'normalizedHash')
+        : expectedHash;
     final wantLength =
-        expectedLength ?? manifest?['normalizedCharacterLength'] as int?;
+        _int(manifest, 'normalizedCharacterLength') ?? expectedLength;
 
     final bytes = await file.readAsBytes();
 
@@ -143,6 +146,14 @@ class NormalizedDocumentLoader {
     final v = m?[key];
     if (v == null) return '';
     return v.toString();
+  }
+
+  static int? _int(Map<String, dynamic>? m, String key) {
+    final v = m?[key];
+    if (v == null) return null;
+    if (v is int) return v;
+    if (v is num) return v.toInt();
+    return int.tryParse(v.toString());
   }
 
   /// 读取同目录 manifest.json（不存在返回 null）。

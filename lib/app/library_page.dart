@@ -8,6 +8,7 @@ import '../domain/library/library_entities.dart';
 import '../domain/library/library_import_models.dart';
 import '../domain/local_txt/large_file_policy.dart';
 import '../domain/local_txt/pipeline_progress.dart';
+import '../data/repositories/collection_repair_service.dart';
 import '../reader/reader_page.dart';
 import 'providers.dart';
 
@@ -240,6 +241,7 @@ class _CollectionTile extends ConsumerWidget {
           normalizedCharacterLength: collection.normalizedCharacterLength,
           documentLoader: loader,
           progressRepository: progressRepo,
+          repair: () => _repairCollection(ref, collection.id),
         ),
       );
     } catch (e) {
@@ -247,6 +249,22 @@ class _CollectionTile extends ConsumerWidget {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('打开失败: $e')));
+    }
+  }
+
+  /// 修复 managed collection（返回 null 成功，否则错误信息）。
+  Future<String?> _repairCollection(WidgetRef ref, String collectionId) async {
+    try {
+      final repo = ref.read(libraryRepositoryProvider);
+      final repair = await CollectionRepairService(
+        database: repo.database,
+        fileManager: repo.fileManager,
+        encodingIndexProvider: repo.encodingIndexProvider,
+      ).repair(collectionId);
+      ref.invalidate(collectionsProvider);
+      return repair.repaired ? null : repair.error;
+    } catch (e) {
+      return '$e';
     }
   }
 

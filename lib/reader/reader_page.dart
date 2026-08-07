@@ -32,6 +32,7 @@ class ReaderLaunchContext {
     required this.normalizedCharacterLength,
     required this.documentLoader,
     required this.progressRepository,
+    this.repair,
   });
 
   final LibraryCollection collection;
@@ -43,6 +44,9 @@ class ReaderLaunchContext {
   final int normalizedCharacterLength;
   final NormalizedDocumentLoader documentLoader;
   final ReadingProgressRepository progressRepository;
+
+  /// 修复回调（由书架页注入）：返回 null 表示成功，否则返回错误信息。
+  final Future<String?> Function()? repair;
 }
 
 /// 打开 Reader 的工厂（书架页调用）。
@@ -107,9 +111,12 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
         ? widget.launch.documents.first
         : null;
     if (doc != null) {
+      // 注意：不把 doc.contentHash 当作 expectedHash 传入。
+      // M2 早期版本 content_documents.content_hash 误存 sourceHash；
+      // normalizedHash 的唯一权威是 manifest（与文件原子写入）。
+      // Loader 内部优先读 manifest.normalizedHash 校验落盘字节。
       _controller.setDocumentSource(
         storagePath: doc.storagePath,
-        expectedHash: doc.contentHash.isEmpty ? null : doc.contentHash,
         expectedLength: widget.launch.normalizedCharacterLength,
       );
     }
@@ -138,6 +145,60 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
         state == AppLifecycleState.paused ||
         state == AppLifecycleState.detached) {
       _controller.flush(source: ReaderPositionEventSource.lifecycleFlush);
+    }
+  }
+
+  /// 修复并重试（§十：修复后重新打开 Reader）。
+  bool _repairing = false;
+
+  Future<void> _repairAndRetry() async {
+    final repair = widget.launch.repair;
+    if (repair == null || _repairing) return;
+    _repairing = true;
+    setState(() {});
+    try {
+      final err = await repair();
+      if (!mounted) return;
+      if (err == null) {
+        // 修复成功：重新初始化控制器并打开
+        _controller.removeListener(_onControllerChanged);
+        _controller.dispose();
+        _controller = ReaderController(
+          collectionId: widget.launch.collection.id,
+          documentLoader: widget.launch.documentLoader,
+          progressRepository: widget.launch.progressRepository,
+          progressOverride: widget.progressOverride,
+        );
+        final doc = widget.launch.documents.isNotEmpty
+            ? widget.launch.documents.first
+            : null;
+        if (doc != null) {
+          _controller.setDocumentSource(
+            storagePath: doc.storagePath,
+            expectedLength: widget.launch.normalizedCharacterLength,
+          );
+        }
+        _controller.visibleRangeProvider = _measureVisibleRange;
+        _controller.blockLayoutResolver = (index) => _layoutByIndex(index);
+        _controller.addListener(_onControllerChanged);
+        _restoreFinished = false;
+        _repairing = false;
+        _start();
+      } else {
+        _repairing = false;
+        setState(() {});
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('修复失败: $err')));
+      }
+    } catch (e) {
+      _repairing = false;
+      if (mounted) {
+        setState(() {});
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('修复失败: $e')));
+      }
     }
   }
 
@@ -263,6 +324,14 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     final state = _controller.state;
     if (state == ReaderState.failed) {
+      final err = _controller.error ?? '';
+      // §十：hash_mismatch 等派生数据损坏显示修复入口（不显示长内部路径）
+      final repairable =
+          err.contains('hash_mismatch') ||
+          err.contains('length_mismatch') ||
+          err.contains('bom_present') ||
+          err.contains('invalid_utf8') ||
+          err.contains('file_missing');
       return Scaffold(
         appBar: AppBar(title: Text(widget.launch.collection.title)),
         body: Center(
@@ -273,11 +342,36 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
               children: [
                 const Icon(Icons.error_outline, size: 48),
                 const SizedBox(height: 12),
-                Text('加载失败: ${_controller.error}', textAlign: TextAlign.center),
-                const SizedBox(height: 12),
-                FilledButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('返回书架'),
+                if (repairable && widget.launch.repair != null) ...[
+                  Text(
+                    '书籍文件需要修复',
+                    style: Theme.of(context).textTheme.titleMedium,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    '应用保存的正文缓存校验失败，可以从已托管的原始文件重新生成，'
+                    '不会修改您的外部 TXT。',
+                    textAlign: TextAlign.center,
+                  ),
+                ] else
+                  Text('加载失败: $err', textAlign: TextAlign.center),
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text('返回书架'),
+                    ),
+                    if (repairable && widget.launch.repair != null) ...[
+                      const SizedBox(width: 12),
+                      FilledButton(
+                        onPressed: _repairAndRetry,
+                        child: const Text('修复并重试'),
+                      ),
+                    ],
+                  ],
                 ),
               ],
             ),
