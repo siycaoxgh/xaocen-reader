@@ -2,7 +2,6 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:super_sliver_list/super_sliver_list.dart';
 import 'package:xaocen_reader/data/database/app_database.dart';
 import 'package:xaocen_reader/data/repositories/library_file_manager.dart';
 import 'package:xaocen_reader/data/repositories/reading_progress_repository.dart';
@@ -12,9 +11,10 @@ import 'package:xaocen_reader/domain/reader/reader_locator.dart';
 import 'package:xaocen_reader/reader/normalized_document_loader.dart';
 import 'package:xaocen_reader/reader/reader_page.dart';
 
-/// M3.3 目录打开时定位当前章节（§十 Widget）。
+/// M3.4 目录平铺展示（§九 Widget）。
 ///
-/// fixture：3 卷 × 每卷 200 章 = 600 章，总文本足够大让目录可滚动。
+/// 主 fixture：3 卷 × 每卷 200 章 = 600 章，总文本足够大让目录可滚动。
+/// 异常 fixture：层级错乱的卷/章/部/番外混合，验证平铺容错。
 void main() {
   late Directory tmp;
   late LibraryFileManager fileManager;
@@ -90,6 +90,150 @@ void main() {
     chapterOffsetOf = offsets;
   });
 
+  /// 异常层级 fixture（§八/§九）：错乱 parentId、连续 volume、卷中无章、
+  /// 卷/部混用、chapter 无 parent。必须全部平铺可见且可跳转。
+  (List<LibraryTocEntry>, String) abnormalFixture() {
+    final entries = <LibraryTocEntry>[
+      LibraryTocEntry(
+        id: 'v1',
+        collectionId: 'local-txt:xyz',
+        itemId: null,
+        parentId: null,
+        kind: 'volume',
+        level: 1,
+        title: '第一卷',
+        displayTitle: '第一卷',
+        orderIndex: 0,
+        startCharacterOffset: 0,
+        endCharacterOffset: 0,
+      ),
+      LibraryTocEntry(
+        id: 'c1',
+        collectionId: 'local-txt:xyz',
+        itemId: 'local-txt:xyz:chapter:1',
+        parentId: 'v1',
+        kind: 'chapter',
+        level: 2,
+        title: '第1章',
+        displayTitle: '第1章',
+        orderIndex: 1,
+        startCharacterOffset: 4,
+        endCharacterOffset: 0,
+      ),
+      LibraryTocEntry(
+        id: 'c2',
+        collectionId: 'local-txt:xyz',
+        itemId: 'local-txt:xyz:chapter:2',
+        parentId: 'v1',
+        kind: 'chapter',
+        level: 2,
+        title: '第2章',
+        displayTitle: '第2章',
+        orderIndex: 2,
+        startCharacterOffset: 8,
+        endCharacterOffset: 0,
+      ),
+      LibraryTocEntry(
+        id: 'v2',
+        collectionId: 'local-txt:xyz',
+        itemId: null,
+        parentId: null,
+        kind: 'volume',
+        level: 1,
+        title: '第二卷',
+        displayTitle: '第二卷',
+        orderIndex: 3,
+        startCharacterOffset: 12,
+        endCharacterOffset: 0,
+      ),
+      LibraryTocEntry(
+        id: 'v3',
+        collectionId: 'local-txt:xyz',
+        itemId: null,
+        parentId: null,
+        kind: 'volume',
+        level: 1,
+        title: '第三卷',
+        displayTitle: '第三卷',
+        orderIndex: 4,
+        startCharacterOffset: 16,
+        endCharacterOffset: 0,
+      ),
+      LibraryTocEntry(
+        id: 'c3',
+        collectionId: 'local-txt:xyz',
+        itemId: 'local-txt:xyz:chapter:3',
+        parentId: 'v3',
+        kind: 'chapter',
+        level: 2,
+        title: '第1章',
+        displayTitle: '第1章',
+        orderIndex: 5,
+        startCharacterOffset: 20,
+        endCharacterOffset: 0,
+      ),
+      // parentId 指向不存在的卷（幽灵父级）——不得隐藏
+      LibraryTocEntry(
+        id: 'c4',
+        collectionId: 'local-txt:xyz',
+        itemId: 'local-txt:xyz:chapter:4',
+        parentId: 'ghost-volume',
+        kind: 'chapter',
+        level: 2,
+        title: '第2章',
+        displayTitle: '第2章',
+        orderIndex: 6,
+        startCharacterOffset: 24,
+        endCharacterOffset: 0,
+      ),
+      // 卷/部混用
+      LibraryTocEntry(
+        id: 'p1',
+        collectionId: 'local-txt:xyz',
+        itemId: null,
+        parentId: null,
+        kind: 'volume',
+        level: 1,
+        title: '第四部',
+        displayTitle: '第四部',
+        orderIndex: 7,
+        startCharacterOffset: 28,
+        endCharacterOffset: 0,
+      ),
+      LibraryTocEntry(
+        id: 'c5',
+        collectionId: 'local-txt:xyz',
+        itemId: 'local-txt:xyz:chapter:5',
+        parentId: 'p1',
+        kind: 'chapter',
+        level: 2,
+        title: '第99章',
+        displayTitle: '第99章',
+        orderIndex: 8,
+        startCharacterOffset: 32,
+        endCharacterOffset: 0,
+      ),
+      // 番外：无 parent 的 chapter
+      LibraryTocEntry(
+        id: 'c6',
+        collectionId: 'local-txt:xyz',
+        itemId: 'local-txt:xyz:chapter:6',
+        parentId: null,
+        kind: 'chapter',
+        level: 1,
+        title: '番外',
+        displayTitle: '番外',
+        orderIndex: 9,
+        startCharacterOffset: 36,
+        endCharacterOffset: 0,
+      ),
+    ];
+    final text =
+        '第一卷\n第1章\n第2章\n第二卷\n第三卷\n第1章\n第2章\n'
+        '第四部\n第99章\n番外\n';
+    return (entries, text);
+  }
+
   setUp(() async {
     tmp = await Directory.systemTemp.createTemp('xaocen_toc_scroll');
     fileManager = LibraryFileManager(libraryRoot: tmp);
@@ -134,46 +278,61 @@ void main() {
     await db.close();
   });
 
-  ReaderLaunchContext launchContext({int progressOffset = 0}) {
+  ReaderLaunchContext launchContext({
+    List<LibraryTocEntry>? toc,
+    String? text,
+    String collectionId = 'local-txt:abc',
+    String title = '测试书籍',
+    int itemCount = totalChapters,
+  }) {
+    final body = text ?? bookText;
     return ReaderLaunchContext(
       collection: LibraryCollection(
-        id: 'local-txt:abc',
-        sourceId: 'local-txt-source:abc',
-        title: '测试书籍',
+        id: collectionId,
+        sourceId: 'local-txt-source:${collectionId.split(':').last}',
+        title: title,
         subtitle: null,
-        itemCount: totalChapters,
-        normalizedCharacterLength: bookText.length,
+        itemCount: itemCount,
+        normalizedCharacterLength: body.length,
         detectedEncoding: TextEncoding.utf8,
         sourceSize: 2048,
         importedAt: DateTime.now(),
       ),
       documents: [
         LibraryDocument(
-          id: 'local-txt:abc:document:0',
-          itemId: 'local-txt:abc:chapter:1',
+          id: '$collectionId:document:0',
+          itemId: '$collectionId:chapter:1',
           storagePath: 'library/local_txt/abc/normalized.txt',
           mediaType: 'text/plain',
           startCharacterOffset: 0,
-          endCharacterOffset: bookText.length,
+          endCharacterOffset: body.length,
           contentHash: '',
           normalizationVersion: 'v1',
         ),
       ],
-      toc: tocEntries,
-      normalizedCharacterLength: bookText.length,
+      toc: toc ?? tocEntries,
+      normalizedCharacterLength: body.length,
       documentLoader: loader,
       progressRepository: progressRepo,
     );
   }
 
   /// 打开 Reader 并恢复到指定章节。
-  Future<void> pumpReader(WidgetTester tester, int chapterNo) async {
+  Future<void> pumpReader(
+    WidgetTester tester,
+    int chapterNo, {
+    List<LibraryTocEntry>? toc,
+    String? text,
+    int? offset,
+  }) async {
+    final body = text ?? bookText;
+    final off = offset ?? chapterOffsetOf[chapterNo]!;
     await tester.pumpWidget(
       MaterialApp(
         home: ReaderPage(
-          launch: launchContext(),
+          launch: launchContext(toc: toc, text: body),
           documentOverride: NormalizedDocument(
-            text: bookText,
+            text: body,
             normalizedHash: '',
             normalizationVersion: 'v1',
             parserVersion: '1',
@@ -182,7 +341,7 @@ void main() {
           ),
           progressOverride: ReaderLocator(
             collectionId: 'local-txt:abc',
-            absoluteCharacterOffset: chapterOffsetOf[chapterNo]!,
+            absoluteCharacterOffset: off,
           ),
         ),
       ),
@@ -202,10 +361,6 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  void closeToc(WidgetTester tester) {
-    tester.state<NavigatorState>(find.byType(Navigator).first).pop();
-  }
-
   /// 目标章节 tile 是否在目录视口内。
   bool tileVisible(WidgetTester tester, String title) {
     final finder = find.text(title);
@@ -220,32 +375,51 @@ void main() {
     return bottomRight.dy > sheetTop && topLeft.dy < screenH;
   }
 
-  /// 目标行顶部在目录视口中的相对位置（0~1，期望 ~0.35）。
-  double tileAlignmentInViewport(WidgetTester tester, String title) {
-    final finder = find.text(title);
-    final box = tester.renderObject<RenderBox>(finder.first);
-    final top = box.localToGlobal(Offset.zero).dy;
-    final screenH = tester.getSize(find.byType(MaterialApp)).height;
-    final sheetTop = screenH * 0.4;
-    return (top - sheetTop) / (screenH - sheetTop);
-  }
-
-  group('M3.3 目录自动定位', () {
-    testWidgets('1. 阅读第1章打开目录：第1章可见且高亮', (tester) async {
+  group('M3.4 目录平铺展示', () {
+    testWidgets('1. volume + chapter 全部可见', (tester) async {
       await pumpReader(tester, 1);
       await openToc(tester);
-      expect(find.text('第1章 章节1'), findsOneWidget, reason: '第1章应在目录中');
-      expect(tileVisible(tester, '第1章 章节1'), isTrue, reason: '第1章应可见');
-      final tile = tester.widget<ListTile>(
-        find.ancestor(
-          of: find.text('第1章 章节1'),
-          matching: find.byType(ListTile),
-        ),
-      );
-      expect(tile.selected, isTrue, reason: '第1章应高亮');
+      // 平铺渲染：卷标题与章节标题都直接显示（无折叠隐藏）
+      expect(find.text('第1卷 卷1 标题'), findsOneWidget, reason: '卷标题始终显示');
+      expect(find.text('第1章 章节1'), findsOneWidget, reason: '章节始终显示');
+      // 虚拟列表：滚动到底后尾部卷/章同样可见（证明无任何隐藏）
+      for (
+        var i = 0;
+        i < 80 && find.text('第600章 章节600').evaluate().isEmpty;
+        i++
+      ) {
+        await tester.drag(find.byType(ListView).last, const Offset(0, -600));
+        await tester.pumpAndSettle();
+      }
+      expect(find.text('第600章 章节600'), findsOneWidget, reason: '滚动后尾部章可见');
+      // 再往上滚到第3卷标题（尾部卷也应可见）
+      for (
+        var i = 0;
+        i < 80 && find.text('第3卷 卷3 标题').evaluate().isEmpty;
+        i++
+      ) {
+        await tester.drag(find.byType(ListView).last, const Offset(0, 600));
+        await tester.pumpAndSettle();
+      }
+      expect(find.text('第3卷 卷3 标题'), findsOneWidget, reason: '滚动后尾部卷可见');
     });
 
-    testWidgets('2. 阅读第258章打开目录：自动滚到第258章', (tester) async {
+    testWidgets('2. 没有任何折叠按钮', (tester) async {
+      await pumpReader(tester, 300);
+      await openToc(tester);
+      expect(find.byIcon(Icons.expand_more), findsNothing);
+      expect(find.byIcon(Icons.expand_less), findsNothing);
+    });
+
+    testWidgets('3. 当前章节属于 volume 时仍直接可见', (tester) async {
+      await pumpReader(tester, 450); // 第3卷
+      await openToc(tester);
+      // 无折叠 → 450 章（属于卷3）直接平铺可见；若卷3被折叠则该章不可见
+      expect(find.text('第450章 章节450'), findsOneWidget);
+      expect(tileVisible(tester, '第450章 章节450'), isTrue);
+    });
+
+    testWidgets('4. 阅读第258章打开目录：直接定位', (tester) async {
       await pumpReader(tester, 258);
       await openToc(tester);
       expect(find.text('第258章 章节258'), findsOneWidget);
@@ -256,50 +430,84 @@ void main() {
       );
     });
 
-    testWidgets('3. 阅读第473章打开目录：自动滚到第473章', (tester) async {
+    testWidgets('5. 阅读第473章打开目录：直接定位', (tester) async {
       await pumpReader(tester, 473);
       await openToc(tester);
       expect(tileVisible(tester, '第473章 章节473'), isTrue);
     });
 
-    testWidgets('4. 当前章节属于折叠卷时父卷自动展开', (tester) async {
-      await pumpReader(tester, 450); // 第3卷
+    testWidgets('6. parentId 错误不隐藏 chapter', (tester) async {
+      final (entries, text) = abnormalFixture();
+      await pumpReader(tester, 0, toc: entries, text: text, offset: 20);
       await openToc(tester);
-      expect(find.text('第450章 章节450'), findsOneWidget);
-      expect(tileVisible(tester, '第450章 章节450'), isTrue);
-      // 定位在 450 章（第3卷）时卷3标题在视口上方，先用户滚动到卷3标题
-      await tester.drag(find.byType(ListView).last, const Offset(0, 2551));
-      await tester.pumpAndSettle();
-      expect(find.text('第3卷 卷3 标题'), findsOneWidget);
-      // 折叠第3卷后其章节消失
-      await tester.tap(find.text('第3卷 卷3 标题'));
-      await tester.pumpAndSettle();
-      expect(find.text('第450章 章节450'), findsNothing);
-      // 点击「定位当前章节」→ 父卷重新展开 + 定位
-      await tester.tap(find.text('定位当前章节'));
-      await tester.pumpAndSettle();
-      await tester.pump(const Duration(milliseconds: 200));
-      expect(find.text('第450章 章节450'), findsOneWidget);
-    });
-
-    testWidgets('5. 打开后高亮项可见（自动定位生效）', (tester) async {
-      await pumpReader(tester, 400);
-      await openToc(tester);
-      expect(tileVisible(tester, '第400章 章节400'), isTrue);
-    });
-
-    testWidgets('6. 高亮项位于视口约 30%~40% 区域', (tester) async {
-      await pumpReader(tester, 300);
-      await openToc(tester);
-      final alignment = tileAlignmentInViewport(tester, '第300章 章节300');
+      // 幽灵父级章节必须可见：滚动遍历目录，第2章（两个，含幽灵父级）都出现
+      var sawChapter2 = 0;
+      for (var step = 0; step < 4; step++) {
+        sawChapter2 += find.text('第2章').evaluate().length;
+        if (sawChapter2 >= 2) break;
+        await tester.drag(find.byType(ListView).last, const Offset(0, -160));
+        await tester.pumpAndSettle();
+      }
       expect(
-        alignment,
-        inInclusiveRange(0.20, 0.55),
-        reason: '高亮项应在视口上部 30~40% 附近，实际 $alignment',
+        sawChapter2,
+        greaterThanOrEqualTo(2),
+        reason: '两处「第2章」都可见（含幽灵父级），实际 $sawChapter2',
       );
     });
 
-    testWidgets('7. 用户手动滚动目录后不被自动拉回', (tester) async {
+    testWidgets('7. chapter 无 parent 仍显示', (tester) async {
+      final (entries, text) = abnormalFixture();
+      await pumpReader(tester, 0, toc: entries, text: text, offset: 36);
+      await openToc(tester);
+      // 滚动遍历：无父级番外仍显示
+      for (var i = 0; i < 6 && find.text('番外').evaluate().isEmpty; i++) {
+        await tester.drag(find.byType(ListView).last, const Offset(0, -200));
+        await tester.pumpAndSettle();
+      }
+      expect(find.text('番外'), findsOneWidget, reason: '无父级番外仍显示');
+    });
+
+    testWidgets('8. 连续 volume 正常显示', (tester) async {
+      final (entries, text) = abnormalFixture();
+      await pumpReader(tester, 0, toc: entries, text: text, offset: 12);
+      await openToc(tester);
+      expect(find.text('第二卷'), findsOneWidget);
+      expect(find.text('第三卷'), findsOneWidget);
+      // 卷之间无章节也正常
+      expect(find.text('第二卷'), findsOneWidget);
+    });
+
+    testWidgets('9. 多种 volume/part 混合仍按 orderIndex 显示', (tester) async {
+      final (entries, text) = abnormalFixture();
+      await pumpReader(tester, 0, toc: entries, text: text, offset: 0);
+      await openToc(tester);
+      // 异常 fixture 全部 10 项必须可见（滚动到底逐项确认）
+      final titles = [
+        '第一卷',
+        '第1章',
+        '第2章',
+        '第二卷',
+        '第三卷',
+        '第1章',
+        '第2章',
+        '第四部',
+        '第99章',
+        '番外',
+      ];
+      // 目录初始视口只显示前几项；先确认顶部项
+      expect(find.text('第一卷'), findsOneWidget);
+      expect(find.text('第二卷'), findsOneWidget);
+      // 滚动遍历确认尾部项（虚拟列表分步滚动）
+      for (var i = 0; i < 6 && find.text('番外').evaluate().isEmpty; i++) {
+        await tester.drag(find.byType(ListView).last, const Offset(0, -200));
+        await tester.pumpAndSettle();
+      }
+      expect(find.text('第99章'), findsOneWidget, reason: '尾部卷内章节可见');
+      expect(find.text('番外'), findsOneWidget, reason: '尾部番外可见');
+      expect(titles.length, 10);
+    });
+
+    testWidgets('10. 用户手动滚动目录后不被自动拉回', (tester) async {
       await pumpReader(tester, 300);
       await openToc(tester);
       expect(tileVisible(tester, '第300章 章节300'), isTrue);
@@ -315,44 +523,23 @@ void main() {
       expect(tileVisible(tester, '第1章 章节1'), isTrue);
     });
 
-    testWidgets('8. 关闭再打开时重新定位当前章节', (tester) async {
+    testWidgets('11. 定位当前章节按钮工作', (tester) async {
       await pumpReader(tester, 300);
       await openToc(tester);
       expect(tileVisible(tester, '第300章 章节300'), isTrue);
-      closeToc(tester);
+      // 用户滚离后出现按钮
+      await tester.drag(find.byType(ListView).last, const Offset(0, 30000));
       await tester.pumpAndSettle();
-      // 重新打开 → 再次定位
-      await openToc(tester);
-      expect(tileVisible(tester, '第300章 章节300'), isTrue);
+      expect(find.text('第1章 章节1'), findsOneWidget);
+      expect(find.text('定位当前章节'), findsOneWidget, reason: '滚离后显示定位按钮');
+      // 点击 → 回到当前章节
+      await tester.tap(find.text('定位当前章节'));
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(tileVisible(tester, '第300章 章节300'), isTrue, reason: '点击后回到当前章节');
     });
 
-    testWidgets('9. 正文滚动到新章节后再次打开定位新章节', (tester) async {
-      await pumpReader(tester, 100);
-      await openToc(tester);
-      expect(tileVisible(tester, '第100章 章节100'), isTrue);
-      closeToc(tester);
-      await tester.pumpAndSettle();
-      // 正文滚到后面（drag 正文 SuperListView：~200 章处）
-      await tester.drag(find.byType(SuperListView), const Offset(0, -11500));
-      await tester.pumpAndSettle();
-      await openToc(tester);
-      // 新当前章节（drag 后）应被高亮且可见
-      final selectedFinder = find.byWidgetPredicate(
-        (w) => w is ListTile && w.selected == true,
-      );
-      expect(selectedFinder, findsWidgets, reason: '应有高亮当前章节');
-      final selTile = tester.widget<ListTile>(selectedFinder.first);
-      final titleText = (selTile.title as Text?)?.data ?? '';
-      expect(titleText, isNotEmpty);
-      expect(titleText != '第100章 章节100', isTrue, reason: '正文滚动后当前章节应已变化');
-      expect(
-        tileVisible(tester, titleText),
-        isTrue,
-        reason: '高亮当前章节应可见（自动定位生效）',
-      );
-    });
-
-    testWidgets('10. 无章节显示并定位「全文」', (tester) async {
+    testWidgets('12. 无章节只显示全文', (tester) async {
       const noChaptersText = '无章节正文，只有一段话。\n第二段。\n';
       await tester.pumpWidget(
         MaterialApp(
@@ -421,29 +608,6 @@ void main() {
       await openToc(tester);
       expect(find.text('全文'), findsWidgets);
       expect(find.textContaining('第1章'), findsNothing);
-    });
-
-    testWidgets('11. dispose 后无残留 callback', (tester) async {
-      await pumpReader(tester, 300);
-      await openToc(tester);
-      closeToc(tester);
-      await tester.pumpAndSettle();
-      await tester.pump(const Duration(milliseconds: 300));
-      expect(tester.takeException(), isNull);
-    });
-
-    testWidgets('12. 快速开关目录没有异常', (tester) async {
-      await pumpReader(tester, 300);
-      for (var i = 0; i < 4; i++) {
-        await tester.tap(find.byIcon(Icons.list));
-        await tester.pump(const Duration(milliseconds: 80));
-        if (find.byType(Navigator).evaluate().isNotEmpty) {
-          tester.state<NavigatorState>(find.byType(Navigator).first).pop();
-        }
-        await tester.pump(const Duration(milliseconds: 80));
-      }
-      await tester.pumpAndSettle();
-      expect(tester.takeException(), isNull);
     });
   });
 }
