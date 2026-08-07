@@ -7,13 +7,16 @@ import 'package:path/path.dart' as p;
 
 import '../../domain/library/library_entities.dart';
 import '../../domain/library/library_import_models.dart';
+import '../../domain/library/normalized_artifact.dart';
 import '../../domain/local_txt/large_file_policy.dart';
 import '../../domain/local_txt/pipeline_progress.dart';
 import '../../domain/local_txt/text_encoding.dart';
 import '../../domain/local_txt/txt_index.dart';
 import '../database/app_database.dart';
+import 'collection_repair_service.dart';
 import 'encoding_index_provider.dart';
 import 'library_file_manager.dart';
+import 'managed_collection_health.dart';
 import '../../sources/local_txt/txt_import_request.dart';
 import '../../sources/local_txt/txt_import_service.dart';
 
@@ -32,6 +35,12 @@ class LocalLibraryRepository {
   final AppDatabase _db;
   final LibraryFileManager _files;
   final EncodingIndexProvider encodingIndexProvider;
+
+  /// 数据库访问（repair 等外部服务需要）。
+  AppDatabase get database => _db;
+
+  /// 文件管理（repair 等外部服务需要）。
+  LibraryFileManager get fileManager => _files;
   // ---- 稳定 ID 生成（确定性，非 UUID，不使用当前时间）----
 
   static String sourceIdFor(String hash) => 'local-txt-source:$hash';
@@ -105,10 +114,47 @@ class LocalLibraryRepository {
     final contentHash = sha256.convert(bytes).toString();
     _throwIfCancelled(token);
 
-    // 4. 重复导入检测
+    // 4. 重复导入检测（§九：不能只凭 sourceHash 直接返回 alreadyImported）
     final existing = await findByContentHash(contentHash);
     if (existing != null) {
-      return ImportTxtResult(collection: existing, alreadyImported: true);
+      // 执行 managed health check
+      final health = await ManagedCollectionHealthCheck(
+        database: _db,
+        fileManager: _files,
+      ).check(existing.id);
+      if (health.ok) {
+        // 健康：alreadyImported
+        return ImportTxtResult(
+          collection: existing,
+          alreadyImported: true,
+          outcome: ImportOutcome.alreadyImported,
+        );
+      }
+      if (health.sourceOk) {
+        // 不健康但 source.txt 有效：自动修复
+        final repair = await CollectionRepairService(
+          database: _db,
+          fileManager: _files,
+          encodingIndexProvider: encodingIndexProvider,
+        ).repair(existing.id);
+        if (repair.repaired) {
+          return ImportTxtResult(
+            collection: existing,
+            alreadyImported: true,
+            outcome: ImportOutcome.repairedExisting,
+          );
+        }
+        throw LibraryException(
+          'repair_failed',
+          '已有书库记录需要修复但修复失败: ${repair.error}',
+        );
+      }
+      // source.txt 也无效：corruptedManagedCopy，允许用户明确重新导入
+      return ImportTxtResult(
+        collection: existing,
+        alreadyImported: true,
+        outcome: ImportOutcome.corruptedManagedCopy,
+      );
     }
 
     // 5. 两阶段提交
@@ -148,7 +194,7 @@ class LocalLibraryRepository {
       // 阶段 C：文件提交（normalized.txt / index.json / manifest.json）
       phase = 'writingFiles';
       emit(PipelinePhase.writingCache, message: '写入派生文件');
-      await _writeDerivedFiles(
+      final artifact = await _writeDerivedFiles(
         jobDir: jobDir,
         index: importServiceResult.index,
         contentHash: contentHash,
@@ -165,6 +211,7 @@ class LocalLibraryRepository {
         index: importServiceResult.index,
         contentHash: contentHash,
         sourceHash: sourceHash,
+        normalizedHash: artifact.sha256,
         originalFileName: file.uri.pathSegments.last,
         size: size,
       );
@@ -173,6 +220,24 @@ class LocalLibraryRepository {
       // 阶段 E：原子移动（filesCommitted → completed）
       phase = 'filesCommitted';
       await _files.commitToContentDir(jobId, contentHash);
+      // 最终校验：移动后重新读取 normalized.txt 验证 hash 一致
+      final committed = _files.contentDir(contentHash);
+      final committedNorm = File(p.join(committed.path, 'normalized.txt'));
+      if (!await committedNorm.exists()) {
+        throw const LibraryException(
+          'normalized_missing_after_commit',
+          '提交后 normalized.txt 不存在',
+        );
+      }
+      final finalHash = sha256
+          .convert(await committedNorm.readAsBytes())
+          .toString();
+      if (finalHash != artifact.sha256) {
+        throw const LibraryException(
+          'normalized_verify_failed',
+          '提交后 normalized.txt hash 不一致',
+        );
+      }
       phase = 'completed';
       emit(PipelinePhase.completed, message: '导入完成');
       return ImportTxtResult(collection: collection, alreadyImported: false);
@@ -232,40 +297,74 @@ class LocalLibraryRepository {
     );
   }
 
-  Future<void> _writeDerivedFiles({
+  /// 写入派生文件（唯一 hash 合同：hash 来自落盘字节）。
+  ///
+  /// 正确顺序（任务书 §六）：
+  /// 1. 生成规范化文本（内存）；
+  /// 2. 写 normalized.tmp（flush）；
+  /// 3. 从落盘字节重新读取计算 SHA-256；
+  /// 4. 重新解码验证 UTF-16 字符长度；
+  /// 5. 原子 rename 为 normalized.txt；
+  /// 6. 同一 NormalizedArtifact 写入 manifest；
+  /// 7. 最终重读 normalized.txt 完整校验。
+  Future<NormalizedArtifact> _writeDerivedFiles({
     required Directory jobDir,
     required TxtIndex index,
     required String contentHash,
     required String sourceHash,
     required String normalizedText,
   }) async {
-    // normalized.txt（无 BOM UTF-8）
-    final normalizedFile = File(p.join(jobDir.path, 'normalized.txt'));
-    await normalizedFile.writeAsBytes(utf8.encode(normalizedText), flush: true);
-    final normalizedHash = sha256
-        .convert(utf8.encode(normalizedText))
-        .toString();
-    // 长度验证
+    // 长度预校验（内存文本 vs 索引）
     if (normalizedText.length != index.normalizedCharacterLength) {
       throw const LibraryException('normalized_length_mismatch', '规范化长度与索引不一致');
     }
+
+    // 1-2. 写 tmp（flush）
+    final tmpFile = File(p.join(jobDir.path, 'normalized.tmp'));
+    await tmpFile.writeAsBytes(utf8.encode(normalizedText), flush: true);
+
+    // 3. 从落盘字节计算 hash（不信任内存 encode 结果）
+    final bytes = await tmpFile.readAsBytes();
+    final normalizedHash = sha256.convert(bytes).toString();
+
+    // 4. 重新解码验证 UTF-16 长度
+    final decoded = utf8.decode(bytes);
+    if (decoded.length != index.normalizedCharacterLength) {
+      throw const LibraryException(
+        'normalized_length_mismatch',
+        '落盘规范化长度与索引不一致',
+      );
+    }
+
+    // 5. 原子 rename
+    final normalizedFile = File(p.join(jobDir.path, 'normalized.txt'));
+    await tmpFile.rename(normalizedFile.path);
+
+    final artifact = NormalizedArtifact(
+      filePath: normalizedFile.path,
+      utf8ByteLength: bytes.length,
+      utf16CharacterLength: decoded.length,
+      sha256: normalizedHash,
+      normalizationVersion: index.normalizationVersion,
+    );
 
     // index.json（M1 TxtIndex 格式）
     final indexFile = File(p.join(jobDir.path, 'index.json'));
     await indexFile.writeAsString(index.encode(), flush: true);
 
-    // manifest.json
+    // 6. manifest.json —— 使用同一 artifact
     final manifest = <String, dynamic>{
       'manifestVersion': 1,
       'contentHash': contentHash,
       'originalFileName': index.sourceFileName,
       'sourceSize': index.sourceSize,
       'sourceHash': sourceHash,
-      'normalizedHash': normalizedHash,
+      'normalizedHash': artifact.sha256,
+      'normalizedUtf8ByteLength': artifact.utf8ByteLength,
       'detectedEncoding': index.encoding.name,
-      'normalizedCharacterLength': index.normalizedCharacterLength,
+      'normalizedCharacterLength': artifact.utf16CharacterLength,
       'parserVersion': index.parserVersion,
-      'normalizationVersion': index.normalizationVersion,
+      'normalizationVersion': artifact.normalizationVersion,
       'indexFormatVersion': index.indexFormatVersion,
       'importedAt': DateTime.now().toUtc().toIso8601String(),
     };
@@ -274,6 +373,18 @@ class LocalLibraryRepository {
       const JsonEncoder.withIndent('  ').convert(manifest),
       flush: true,
     );
+
+    // 7. 最终完整校验（重读 normalized.txt）
+    final verifyBytes = await normalizedFile.readAsBytes();
+    final verifyHash = sha256.convert(verifyBytes).toString();
+    if (verifyHash != artifact.sha256) {
+      throw const LibraryException(
+        'normalized_verify_failed',
+        '落盘 normalized.txt 校验失败',
+      );
+    }
+
+    return artifact;
   }
 
   Future<LibraryCollection> _writeDatabase({
@@ -281,6 +392,7 @@ class LocalLibraryRepository {
     required TxtIndex index,
     required String contentHash,
     required String sourceHash,
+    required String normalizedHash,
     required String originalFileName,
     required int size,
   }) async {
@@ -377,7 +489,7 @@ class LocalLibraryRepository {
                 mediaType: 'text/plain; charset=utf-8',
                 startCharacterOffset: 0,
                 endCharacterOffset: index.normalizedCharacterLength,
-                contentHash: sourceHash,
+                contentHash: normalizedHash,
                 normalizationVersion: index.normalizationVersion,
               ),
             );
@@ -409,7 +521,7 @@ class LocalLibraryRepository {
                   mediaType: 'text/plain; charset=utf-8',
                   startCharacterOffset: c.startCharacterOffset,
                   endCharacterOffset: c.endCharacterOffset,
-                  contentHash: sourceHash,
+                  contentHash: normalizedHash,
                   normalizationVersion: index.normalizationVersion,
                 ),
               );
