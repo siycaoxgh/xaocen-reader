@@ -747,7 +747,7 @@ class _TocSheet extends StatefulWidget {
   final List<LibraryTocEntry> toc;
   final ReaderController controller;
 
-  /// 当前真实可见范围顶部字符偏移（来自用户滚动/跳转后的实测，§十一）。
+  /// 当前真实可见范围顶部字符偏移（用户滚动/跳转后的实测，§六）。
   final int currentTopOffset;
 
   final String collectionTitle;
@@ -757,14 +757,15 @@ class _TocSheet extends StatefulWidget {
   State<_TocSheet> createState() => _TocSheetState();
 }
 
+/// 平铺目录（M3.4）：所有 TocEntry 按正文顺序始终显示，无折叠。
+///
+/// TOC hierarchy is advisory; source order is authoritative.
+/// 层级仅影响视觉表现，不影响目录项是否可见。
 class _TocSheetState extends State<_TocSheet> {
-  /// 用户折叠的卷 id（默认全展开；当前章节父卷强制展开）。
-  final Set<String> _collapsed = {};
-
   /// 当前章节（目录打开时计算一次，§四：真实可见范围顶部）。
   String? _currentChapterId;
 
-  /// 本次打开是否已自动定位（§八：每次打开最多一次）。
+  /// 本次打开是否已自动定位（§六：每次打开最多一次）。
   bool _autoLocated = false;
 
   /// extent 未稳定时自动定位的 bounded 重试计数（§七：禁止无限重试）。
@@ -778,7 +779,7 @@ class _TocSheetState extends State<_TocSheet> {
 
   final Map<int, GlobalKey> _itemKeys = {};
 
-  /// dense ListTile 实际高度（阶段一索引级估算，阶段二 ensureVisible 修正）。
+  /// dense ListTile 估算行高（阶段一索引级估算，阶段二 ensureVisible 修正）。
   static const double _kItemExtent = 40.0;
 
   /// 目标行期望位于视口约 35% 处（§六：30%~40%）。
@@ -789,6 +790,10 @@ class _TocSheetState extends State<_TocSheet> {
 
   bool get _hasChapters => _chapters.isNotEmpty;
 
+  /// 平铺目录：collection 所有真实 TocEntry，保持原顺序（orderIndex，
+  /// 与正文 startCharacterOffset 顺序一致）。层级不隐藏任何条目。
+  List<LibraryTocEntry> get _flatEntries => widget.toc;
+
   @override
   void initState() {
     super.initState();
@@ -797,37 +802,27 @@ class _TocSheetState extends State<_TocSheet> {
       widget.currentTopOffset,
       widget.toc,
     )?.id;
-    // §五：当前章节父卷强制展开。
-    _autoExpandParents();
-    // 等列表首次构建后执行两阶段自动定位（一次）。
+    // 等列表首次构建后执行自动定位（一次）。
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       _autoLocate();
     });
   }
 
-  void _autoExpandParents() {
-    for (final pid in TocIndexLogic.parentVolumeIdsOf(
-      _currentChapterId,
-      widget.toc,
-    )) {
-      _collapsed.remove(pid);
-    }
-  }
-
-  List<LibraryTocEntry> get _visibleEntries =>
-      TocIndexLogic.visibleEntries(widget.toc, _collapsed);
-
   /// 阶段一：索引级跳转 + 阶段二：行级精确对齐。
   void _locateToCurrent() {
     final scroll = _sheetScroll;
     if (scroll == null || !scroll.hasClients) {
+      // 打开动画早期 scroll 尚未 attach：bounded 重试（§七：禁止无限重试）
+      if (_locateRetries < 10) {
+        _locateRetries++;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _locateToCurrent();
+        });
+      }
       return;
     }
-    final idx = TocIndexLogic.visibleIndexFor(
-      _currentChapterId,
-      _visibleEntries,
-    );
+    final idx = TocIndexLogic.displayIndexFor(_currentChapterId, _flatEntries);
     if (idx == null) {
       return;
     }
@@ -898,10 +893,9 @@ class _TocSheetState extends State<_TocSheet> {
     _locateToCurrent();
   }
 
-  /// 「定位当前章节」按钮（§九：仅用户滚离后提供）。
+  /// 「定位当前章节」按钮（§六：仅用户滚离后提供）。
   void _locatePressed() {
     setState(() {
-      _autoExpandParents();
       _userScrolled = false;
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -911,16 +905,19 @@ class _TocSheetState extends State<_TocSheet> {
   }
 
   void _onScrollNotification(ScrollNotification n) {
+    // 用户拖动（dragDetails 非空）才算用户滚动；程序 jumpTo 不算。
     if (n is ScrollStartNotification && n.dragDetails != null) {
-      _userScrolled = true;
+      _markUserScrolled();
+    }
+    if (n is ScrollUpdateNotification && n.dragDetails != null) {
+      _markUserScrolled();
     }
   }
 
-  void _toggleVolume(String id) {
+  void _markUserScrolled() {
+    if (_userScrolled) return;
     setState(() {
-      if (!_collapsed.remove(id)) {
-        _collapsed.add(id);
-      }
+      _userScrolled = true;
     });
   }
 
@@ -929,6 +926,7 @@ class _TocSheetState extends State<_TocSheet> {
     final currentChapter = _currentChapterId == null
         ? null
         : _chapters.where((e) => e.id == _currentChapterId).firstOrNull;
+    final theme = Theme.of(context);
 
     return DraggableScrollableSheet(
       expand: false,
@@ -945,11 +943,11 @@ class _TocSheetState extends State<_TocSheet> {
                   Expanded(
                     child: Text(
                       '目录 — ${widget.collectionTitle}',
-                      style: Theme.of(context).textTheme.titleMedium,
+                      style: theme.textTheme.titleMedium,
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  // §九：用户滚离当前章后提供「定位当前章节」入口。
+                  // §六：用户滚离当前章节后提供「定位当前章节」入口。
                   if (_userScrolled)
                     TextButton.icon(
                       onPressed: _locatePressed,
@@ -992,29 +990,49 @@ class _TocSheetState extends State<_TocSheet> {
                       },
                       child: ListView.builder(
                         controller: scrollController,
-                        itemCount: _visibleEntries.length,
+                        itemCount: _flatEntries.length,
                         itemBuilder: (context, i) {
-                          final e = _visibleEntries[i];
+                          final e = _flatEntries[i];
                           if (e.kind == 'volume') {
-                            final collapsed = _collapsed.contains(e.id);
-                            return ListTile(
+                            // §五：volume 平铺显示 — 稍高字重 + 轻量「卷」标识 +
+                            // 上方间距；不显示展开箭头；点击跳转卷首。
+                            return Padding(
                               key: _itemKeys[i] ??= GlobalKey(),
-                              dense: true,
-                              leading: Icon(
-                                collapsed
-                                    ? Icons.expand_more
-                                    : Icons.expand_less,
-                                size: 20,
-                              ),
-                              title: Text(
-                                e.displayTitle,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w600,
+                              padding: const EdgeInsets.only(top: 14),
+                              child: ListTile(
+                                dense: true,
+                                contentPadding: const EdgeInsets.only(
+                                  left: 16,
+                                  right: 16,
                                 ),
+                                leading: Container(
+                                  width: 22,
+                                  height: 22,
+                                  alignment: Alignment.center,
+                                  decoration: BoxDecoration(
+                                    color: theme.colorScheme.secondaryContainer,
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    '卷',
+                                    style: theme.textTheme.labelSmall?.copyWith(
+                                      color: theme
+                                          .colorScheme
+                                          .onSecondaryContainer,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                                title: Text(
+                                  e.displayTitle,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                onTap: () => widget.onJump(e),
                               ),
-                              onTap: () => _toggleVolume(e.id),
                             );
                           }
                           final selected =
@@ -1023,8 +1041,9 @@ class _TocSheetState extends State<_TocSheet> {
                           return ListTile(
                             key: _itemKeys[i] ??= GlobalKey(),
                             dense: true,
+                            // §五：chapter 轻微一级缩进，不按 parentId 多层加深。
                             contentPadding: const EdgeInsets.only(
-                              left: 32,
+                              left: 28,
                               right: 16,
                             ),
                             title: Text(
