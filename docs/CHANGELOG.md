@@ -15,9 +15,57 @@ Legend for validation columns:
 ## Unreleased
 
 ### Planned
-- M4 horizontal paged reader (not started; M3 is the current freeze point).
+- M4.2 paged reader UI integration (dual-mode switch, PageView, keyboard
+  paging) — core engine delivered in M4.1, UI staged as WIP stash.
 - Search, bookmarks, full reader settings, TTS, RSS, network sources,
   EPUB/PDF (all deferred, see KNOWN_ISSUES.md).
+
+---
+
+## 0.1.0-dev.4+4 — M4.1 (2026-08-07)
+
+**Data generation:** `v4-local-1` (unchanged).
+**Drift schema:** 2 (unchanged — no new persisted fields this round).
+**Breaking internal changes:** none (engine is a new derived layer).
+
+### M4.1 — Horizontal paging core (feat/m4-horizontal-reader)
+
+Scope: paging computation only (`document offset → PagedLayoutEngine →
+PageRange`). No UI integration in this round.
+
+#### Added
+- `PagedTextRange` (PageRange): start/end UTF-16 code-unit offsets,
+  [start, end) contract; derived structure — never written to Drift /
+  manifest, never changes normalized.txt, never enters ReaderLocator.
+- `PagedLayoutEngine`: lazy forward/backward pagination at rendering-line
+  granularity (`getLineBoundary` line-end alignment → visually continuous
+  pages, no half-line jumps); `pageContaining(offset)` anchored by
+  ReaderBlockIndex (bounded iterations, never full-book pre-pagination,
+  deterministic per (document, layout signature, target offset)).
+- Backward pagination contract: `previous.end == current.start`
+  (symmetry by construction; verified by a 100-page round-trip test).
+- `PageWindow`: finite window (prev 2 + current + next 3), eviction of
+  far pages; Page object count independent of total page count.
+- `PagedLayoutSignature` cache key: size / text metrics / textScale /
+  padding / policyVersion; color-only changes do NOT invalidate (no
+  repagination on theme color switch).
+- Surrogate-pair protection at every page boundary; empty / short / long
+  paragraph / CRLF-normalized text / chapter-less TXT all supported at
+  engine level.
+
+#### Changed
+- App version `0.1.0-dev.3+3` → `0.1.0-dev.4+4` (pubspec + constants).
+
+#### Fixed
+- (During M4.2 staging, engine-adjacent) PageView needs a pre-filled window
+  to swipe: window prefill of adjacent pages added in the staged controller
+  (kept in stash; reported for transparency).
+
+#### Validation
+- New unit tests: engine 20 + window 7 (all pass).
+- Full `flutter test` regression: 313 pass; `flutter analyze` clean.
+- NOT performed this round (scope): UI integration, real-file acceptance,
+  Windows manual, Android device, verify.ps1 — deferred to M4.2.
 
 ---
 

@@ -255,6 +255,50 @@ HEAD `f965448`（docs Android 结果），工作区 clean，M3 冻结点。
 
 ---
 
+## M4.1 — 横向分页核心（0.1.0-dev.4+4）
+
+### 目标（用户收窄指令）
+只实现分页计算能力：`document offset → PagedLayoutEngine → PageRange`。
+不接入完整 UI；不保存数据库；不修改 reading_progress；不影响 VerticalReader。
+
+### 实现
+- **PagedTextRange（PageRange）**：start/end UTF-16 码元偏移，[start,end) 合同；
+  纯派生结构，不进 Drift / manifest / ReaderLocator。
+- **PagedLayoutEngine**：
+  - 行粒度分页（getLineBoundary 行尾对齐）→ 页面视觉连续（无半行跳变）；
+  - layoutForwardPage：候选 ≤32768 码元一次布局，逐渲染行累计；
+  - layoutPreviousPage：从 end 往回累计行，保证 previous.end == current.start
+    （与正向同构 → 100 页往返对称测试通过）；
+  - pageContaining：ReaderBlockIndex 锚定 + 有限次 forward（绝不从 0 逐页）。
+- **PageWindow**：prev 2 + current + next 3 有限窗口 + 淘汰；Page 对象数
+  与全文页数无关（红线 §49-7）。
+- **PagedLayoutSignature**：尺寸/字体度量/textScale/padding/policyVersion
+  入 key；纯颜色变化不重分页（§32）。
+- 引擎层支持：UTF-16 offset、surrogate pair（𠀀）、CRLF 规范化文本、
+  长段落（5000 字符无换行）、空文本、无章节 TXT（0 章 → 全文一页链）。
+
+### 出现问题与修复
+- 无（引擎层单元测试首轮即过：Ahem 字体确定性分页 + 100 页往返对称）。
+- M4.2 阶段（staged 代码）暴露真实缺陷：**PageView 需要窗口预填相邻页
+  才能滑动**——初始窗口只有 current 1 页时 fling 无法翻页（PageView
+  itemCount=1 无第 2 页可 settle）。已在 staged 控制器加 `_prefillWindow`
+  （current 前后各预生成窗口页）。该修复保留在 stash 中，M4.2 接入时生效。
+
+### 验证
+- 新增单元测试 27 项（引擎 20 + 窗口 7）全过；
+- `flutter test` 全量 313 项通过（M3 基线无回归）；
+- `flutter analyze` 零问题；
+- M4.1 范围外（M4.2 执行）：真实文件验收、Windows 真人、Android 真机、
+  verify.ps1、长期文档全量更新。
+
+### 最终状态
+- 分支 `feat/m4-horizontal-reader`，起始 HEAD `539ed8d`；
+- M4.2 WIP（控制器/视图/双模式）`git stash` 保留；
+- 工作区 clean；按用户指令停止，未自动进入 M4.2。
+
+
+---
+
 ## 附：版本与 schema 历史（git 实测）
 
 | Project version | Milestone | Drift schema | parserVersion | normalizationVersion | indexFormatVersion | Data generation |
@@ -263,6 +307,7 @@ HEAD `f965448`（docs Android 结果），工作区 clean，M3 冻结点。
 | 0.1.0-dev.2+2 | M2 | **1**（6 表） | 1.0.0 | 1.0.0 | 1 | v4-local-1 |
 | 0.1.0-dev.3+3 | M3/M3.1 | **2**（+reading_progress） | 1.0.0 | 1.0.0 | 1 | v4-local-1 |
 | 0.1.0-dev.3+3 | M3.2/M3.3/M3.4 | 2 | **2.0.0** | 1.0.0 | 1 | v4-local-1 |
+| 0.1.0-dev.4+4 | M4.1 | 2 | 2.0.0 | 1.0.0 | 1 | v4-local-1 |
 
 - GB18030 index asset formatVersion = 1（meta.json 实测：source WHATWG 2024-09-18 snapshot，entryCount 23940，anchorCount 209，sha256 aebe263d…）。
 - 版本确认方式：`git show <milestone commit>:pubspec.yaml` + `lib/app/constants.dart` 与 `lib/data/database/app_database.dart`（schemaVersion=2）实测。
