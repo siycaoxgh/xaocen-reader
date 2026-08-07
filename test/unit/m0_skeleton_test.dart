@@ -40,7 +40,17 @@ void main() {
       await tester.pumpAndSettle();
 
       final context = tester.element(find.byType(Scaffold).first);
-      expect(Theme.of(context).brightness, Brightness.dark);
+      // P1：主题改为 light/dark 双主题 + 跟随系统（测试环境默认浅色）
+      expect(Theme.of(context).brightness, Brightness.light);
+      final materialApp = tester.widget<MaterialApp>(
+        find.descendant(
+          of: find.byType(XaocenApp),
+          matching: find.byType(MaterialApp),
+        ),
+      );
+      expect(materialApp.themeMode, ThemeMode.system);
+      expect(materialApp.theme!.brightness, Brightness.light);
+      expect(materialApp.darkTheme!.brightness, Brightness.dark);
       expect(find.text('本地书库'), findsOneWidget);
     });
   });
