@@ -119,6 +119,16 @@ class ManagedCollectionHealthCheck {
     final manifestSourceHash = manifest?['sourceHash'] as String?;
     final manifestNormLen = manifest?['normalizedCharacterLength'];
 
+    // index.json（parserVersion 权威判断，M3.2 §六）
+    Map<String, dynamic>? index;
+    final indexFile = File(p.join(sourceDir.path, 'index.json'));
+    if (await indexFile.exists()) {
+      try {
+        index =
+            jsonDecode(await indexFile.readAsString()) as Map<String, dynamic>;
+      } catch (_) {}
+    }
+
     // ---- normalized.txt ----
     final normFile = File(p.join(sourceDir.path, 'normalized.txt'));
     String? actualNormalizedHash;
@@ -179,9 +189,22 @@ class ManagedCollectionHealthCheck {
       problems.add('normalizationVersion 不兼容: $normVersion');
       versionCompatible = false;
     }
-    if (parserVersion != null && parserVersion != '1.0.0') {
+    // M3.2：parserVersion 2.0.0 = 完整标题合同。旧版本（1.0.0）
+    // 的标题是短标题（仅「第X章」），需要重新生成索引。
+    if (parserVersion != null &&
+        parserVersion != '1.0.0' &&
+        parserVersion != '2.0.0') {
       problems.add('parserVersion 不兼容: $parserVersion');
       versionCompatible = false;
+    }
+    // 标题完整性（§六 情况B/C）：旧 parserVersion（<2.0.0）的扫描器
+    // 只存「第X章」正则片段，没有完整标题 → 需要重新索引。
+    // 判断依据是 index.json/manifest 的 parserVersion（权威），
+    // 不能靠猜测单个标题是否"太短"——真实文件中「第五十一章」这类
+    // 纯编号标题是合法的完整标题。
+    final needReindex = _isOldParser(manifest, index);
+    if (needReindex) {
+      problems.add('toc 标题不完整（旧 parserVersion 数据），需要重新索引');
     }
     if (manifest?['manifestVersion'] is int &&
         (manifest!['manifestVersion'] as int) != 1) {
@@ -191,7 +214,12 @@ class ManagedCollectionHealthCheck {
 
     return ManagedCollectionHealth(
       collectionId: collectionId,
-      ok: sourceOk && normalizedOk && dbConsistent && versionCompatible,
+      ok:
+          sourceOk &&
+          normalizedOk &&
+          dbConsistent &&
+          versionCompatible &&
+          !needReindex,
       sourceOk: sourceOk,
       normalizedOk: normalizedOk,
       dbConsistent: dbConsistent,
@@ -202,5 +230,26 @@ class ManagedCollectionHealthCheck {
       sourceHash: manifestSourceHash,
       actualSourceHash: actualSourceHash,
     );
+  }
+
+  /// 判断索引是否为旧 parserVersion（<2.0.0，无完整标题）数据（M3.2 §六）。
+  ///
+  /// 旧扫描器（parser 1.0.0）产出的 toc 标题只有「第X章/卷」正则片段。
+  /// 判断依据：index.json 的 parserVersion（权威）；缺失时回退 manifest。
+  /// 注意：真实文件中「第五十一章」这类纯编号标题是合法的完整标题，
+  /// 不能靠猜测单个标题是否"太短"判断。
+  bool _isOldParser(
+    Map<String, dynamic>? manifest,
+    Map<String, dynamic>? index,
+  ) {
+    final idxParser = index?['parserVersion']?.toString();
+    if (idxParser != null && idxParser != '1.0.0' && idxParser != '2.0.0') {
+      return true; // 未来未知版本，保守要求重索引
+    }
+    if (idxParser != null) return idxParser == '1.0.0';
+    // index.json 缺失：回退 manifest
+    final maniParser = manifest?['parserVersion']?.toString();
+    if (maniParser != null) return maniParser == '1.0.0';
+    return false;
   }
 }

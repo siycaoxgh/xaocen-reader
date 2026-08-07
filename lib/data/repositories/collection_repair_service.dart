@@ -134,6 +134,10 @@ class CollectionRepairService {
       }
 
       // 4. 写入 repair 临时目录（正确写入顺序，hash 来自落盘字节）
+      // 4.0 写 index.json（含完整 displayTitle / parserVersion 2.0.0），
+      //     否则 _replaceDerivedFiles 无新 index 可复制，旧短标题残留。
+      final newIndexFile = File(p.join(repairDir.path, 'index.json'));
+      await newIndexFile.writeAsString(result.index.encode(), flush: true);
       final normText = normalizedText!;
       final tmpFile = File(p.join(repairDir.path, 'normalized.tmp'));
       await tmpFile.writeAsBytes(utf8.encode(normText), flush: true);
@@ -168,7 +172,8 @@ class CollectionRepairService {
       // 5. 原子替换旧派生文件（保留 source.txt 不动）
       await _replaceDerivedFiles(contentDir, repairDir, newNormFile);
 
-      // 6. Drift 事务更新（content_documents.content_hash → normalizedHash）
+      // 6. Drift 事务更新（content_documents.content_hash → normalizedHash；
+      //    toc_entries / content_items 标题 → 完整 displayTitle，M3.2 §七）
       await _db.transaction(() async {
         final docs = await (_db.select(
           _db.contentDocuments,
@@ -182,6 +187,46 @@ class CollectionRepairService {
               normalizationVersion: Value(result.index.normalizationVersion),
             ),
           );
+        }
+        // 同步完整标题到 toc_entries 与 content_items（保留 id/offset 不变）
+        final newEntries = result.index.tocEntries;
+        final newByOffset = {
+          for (final e in newEntries) e.startCharacterOffset: e,
+        };
+        // 校验 offset 未漂移：旧 toc 的 offset 集合 == 新 toc 的 offset 集合
+        final oldToc = await (_db.select(
+          _db.tocEntries,
+        )..where((t) => t.collectionId.equals(collectionId))).get();
+        final oldOffsets = oldToc.map((t) => t.startCharacterOffset).toSet();
+        final newOffsets = newByOffset.keys.toSet();
+        if (!oldOffsets.containsAll(newOffsets) ||
+            !newOffsets.containsAll(oldOffsets)) {
+          throw const FormatException(
+            'repair: toc offset 漂移（新旧 offset 不一致），禁止静默重建',
+          );
+        }
+        for (final r in oldToc) {
+          final e = newByOffset[r.startCharacterOffset];
+          if (e == null) continue;
+          await (_db.update(
+            _db.tocEntries,
+          )..where((t) => t.id.equals(r.id))).write(
+            TocEntriesCompanion(
+              title: Value(e.displayTitle),
+              level: Value(e.level),
+              orderIndex: Value(e.order),
+            ),
+          );
+        }
+        // content_items 标题同步（按 startCharacterOffset 匹配）
+        final items = await (_db.select(
+          _db.contentItems,
+        )..where((t) => t.collectionId.equals(collectionId))).get();
+        for (final it in items) {
+          final e = newByOffset[it.startCharacterOffset];
+          if (e == null) continue;
+          await (_db.update(_db.contentItems)..where((t) => t.id.equals(it.id)))
+              .write(ContentItemsCompanion(title: Value(e.displayTitle)));
         }
         await _markRepairState(collectionId, 'completed', repairError: null);
       });
