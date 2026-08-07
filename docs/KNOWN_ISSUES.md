@@ -1,6 +1,6 @@
 # KNOWN_ISSUES.md — XAOCEN Reader v4 已知问题清单
 
-> 状态截至 M3 冻结点（HEAD `f965448`）。
+> 状态截至 M4.2（HEAD `feat/m4-horizontal-reader`）。
 > 已解决的问题不在此列为 open；「Resolved but regression-sensitive」列出需要持续盯防的已修复项。
 
 ---
@@ -18,13 +18,14 @@
 | 仅支持 TXT | EPUB/PDF/Markdown/HTML 未实现（见 Deferred） |
 | >20MB 需确认 | 导入前提示，用户确认后后台扫描 |
 | >50MB 0.1.x 暂不支持 | 明确提示，不尝试打开（阈值集中定义于 large_file_policy.dart，可调） |
-| Reader 仅纵向滚动 | 横向分页是 M4，未开始 |
+| Reader 双模式 | 纵向滚动 + 横向分页（M4 已交付，v0.1.0-dev.4+4）；位置真源始终为 UTF-16 偏移，页码为派生 |
 | 文件选择依赖系统对话框 | file_picker 调起系统选择器（Android 上需手动配合） |
 | Android 调试依赖无线调试 | USB 直连被 Windows 驱动签名阻塞，需设备开启无线调试 |
 | 调试 APK 内存占用高 | Debug 构建 PSS ~281MB（JIT/引擎常驻）；Release 会显著下降 |
 | 12px 顶部安全区 | 恢复/跳转后顶部可能显示上一章尾部（合同行为：标题行对齐 topInset+8~24px；目录高亮允许 ±1 章） |
 | 目录 UI 长距离滚动受限 | DraggableScrollableSheet 手势会吞掉长距离 drag；远跳能力由 controller 层 + 集成测试保证，UI 层点到即达 |
 | normalized.txt 全文载入内存 | ≤50MB 文件全量加载为 Dart String（设计内）；>50MB 惰性读取未承诺 |
+| 分页 backward 页首漂移 | Flutter getLineBoundary 在 LF/wrap 边界行首定位偏差：≤2 屏/100 页（end 链严格连续，字符链不重不漏；confirmed locator 零误差，仅翻回时起始行略偏移） |
 
 ---
 
@@ -32,7 +33,6 @@
 
 | 项 | 说明 |
 |---|---|
-| 横向分页 M4 | 下一个里程碑；红线：不得破坏 M3 纵向 Reader |
 | 搜索 | FTS5 未建 |
 | 书签 | 未实现 |
 | 完整 Reader 设置 | 字体/行距/背景等设置 UI 未做（主题已有 light/dark/system） |

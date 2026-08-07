@@ -1,6 +1,6 @@
 # TEST_VALIDATION_MATRIX.md — XAOCEN Reader v4 验证矩阵
 
-> 状态：M3 冻结点（HEAD `f965448`，分支 `fix/m3-flat-toc`）。
+> 状态：M4.2 完成点（HEAD `feat/m4-horizontal-reader`）。
 > 自动测试与真人测试分开记录。**Android Debug 构建 PASS ≠ Android 真机 PASS**，两者分别列出。
 > 真人环境：Windows（本机，用户 + 自动化集成测试）；Android 真机 Redmi K60（23013RK75C / mondrian，Android 15 / API 35，无线 adb）。
 
@@ -10,16 +10,17 @@
 
 ## A. 自动测试（当前全绿）
 
-**单元 + Widget：259 项**（`flutter test`，Windows VM）：
+**单元 + Widget：313 项**（`flutter test`，Windows VM）：
 - M1 系：gb18030_decoder（含全表 23940/锚点 209/四字节/非法/跨块）、txt_encoding_detector、txt_normalizer、txt_toc_scanner（24）、txt_index_cache、large_file_policy
 - M2 系：local_library_test（20）、library_page_test（8）、m0_skeleton_test（6→更新）
 - M3 系：reader_block（9）、reader_locator（10）、reading_progress_repository（8）、reader_controller（12）、normalized_document_loader（9）、reader_page_test（6）、reader_jump（11）、toc_title_persistence（6）、toc_display（4）
 - M3.1 系：hash_contract（11）、repair_service（12）
 - M3.3 系：toc_index（10）、reader_appearance（7）、toc_scroll（12）、reader_dark_mode（8）
 - 合同：txt_pipeline_contract（10）、content_navigation_contract（8）
+- M4 系：paged_layout_engine（20）、page_window（7）、paged_reader_controller（18）、paged_reader_view（11）
 
 **集成测试：5 个文件**（`flutter test integration_test`，Windows 逐文件 + Android 真机）：
-`accept_real_files_test` · `hash_contract_flow_test` · `m2_android_verify_test` · `m2_library_flow_test` · `vertical_reader_flow_test`
+`accept_real_files_test` · `accept_real_paged_test` · `hash_contract_flow_test` · `m2_android_verify_test` · `m2_library_flow_test` · `paged_reader_flow_test` · `reader_mode_switch_test` · `vertical_reader_flow_test`
 
 **构建门禁**：`tool/verify.ps1` 全绿（pub get / format / analyze / test / integration / Windows Release / APK Debug / git diff --check）。
 
@@ -51,6 +52,12 @@
 | 深色/浅色可读（≥4.5:1） | ✅ | ✅ 8 | — | ✅ | ✅*（用户确认深色可读） |
 | 横竖屏旋转 | — | — | ✅ | — | ✅（渲染正常位置连续） |
 | 外部文件保留（删除/repair/导入均不改外部 TXT） | ✅ | ✅ | ✅ | ✅（hash 不变） | ✅ |
+| 分页引擎（行粒度/LF 边界/end 链连续/surrogate 不拆） | ✅ 20 | ✅ 11 | ✅ accept_real_paged | ✅ | ⏳ 待真机 |
+| 分页惰性窗口（prev2+next3，Page 数与总页数无关） | ✅ 7 | ✅ | ✅ paged_flow | ✅ | ⏳ 待真机 |
+| 双模式切换（v↔p 精确 anchor/零写入/generation） | ✅ 18 | ✅ 11 | ✅ mode_switch | ✅ | ⏳ 待真机 |
+| 分页目录跳转（精确 target/标题可见） | ✅ | ✅ | ✅ paged_flow | ✅ | ⏳ 待真机 |
+| 键盘翻页 / 滑动翻页（Win / Android） | — | ✅ | ✅ paged_flow | ✅ | ⏳ 待真机 |
+| 100 页往返（end 链严格连续，页首 ≤2 屏漂移） | ✅ 20 | — | ✅ accept_real_paged | ✅ | ⏳ 待真机 |
 
 ---
 

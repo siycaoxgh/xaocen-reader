@@ -308,6 +308,47 @@ HEAD `f965448`（docs Android 结果），工作区 clean，M3 冻结点。
 | 0.1.0-dev.3+3 | M3/M3.1 | **2**（+reading_progress） | 1.0.0 | 1.0.0 | 1 | v4-local-1 |
 | 0.1.0-dev.3+3 | M3.2/M3.3/M3.4 | 2 | **2.0.0** | 1.0.0 | 1 | v4-local-1 |
 | 0.1.0-dev.4+4 | M4.1 | 2 | 2.0.0 | 1.0.0 | 1 | v4-local-1 |
+| 0.1.0-dev.4+4 | M4.2 | 2 | 2.0.0 | 1.0.0 | 1 | v4-local-1 |
 
 - GB18030 index asset formatVersion = 1（meta.json 实测：source WHATWG 2024-09-18 snapshot，entryCount 23940，anchorCount 209，sha256 aebe263d…）。
 - 版本确认方式：`git show <milestone commit>:pubspec.yaml` + `lib/app/constants.dart` 与 `lib/data/database/app_database.dart`（schemaVersion=2）实测。
+
+
+---
+
+## M4.2 — 横向分页 Reader UI 与双模式精确切换（0.1.0-dev.4+4，2026-08-08）
+
+### 目标（用户任务书 M4 §五 / M4.2 指令）
+在 M3 纵向 Reader 基线之上增加横向分页模式，不破坏任何 M3 行为；
+唯一位置真源始终是 UTF-16 码元偏移；Page/pageIndex 全部只是派生状态。
+
+### 交付
+- `PagedReaderView`（PageView 内置容器，单一 PageController + _followWindow）；
+- `PagedReaderController`（open/nextPage/previousPage/jumpToOffset/relayoutSilently/
+  onPageSettled/防抖保存/generation/flush）；
+- 双模式切换（reader_page.dart）：v→p（switchAnchor 精确）、p→v（confirmed locator
+  走 M3 恢复链）、freeze/unfreeze 写冻结、无固定延迟；
+- 分页模式目录跳转（精确 target）、resize/横竖屏重分页（offset 不变）、
+  Theme 颜色-only 不重分页；
+- Windows 键盘翻页 + Android 滑动翻页。
+
+### 关键工程决策与踩坑（详见 ENGINEERING_LESSONS.md）
+- 引擎页面边界：getLineBoundary 在 LF 位置返回零宽 → 前进时跳过 LF、
+  页尾停在 LF 前（避免 trailing LF 空行超约束）、backward 候选起点回退行首；
+  textScaler 统一 noScaling。
+- PageView 窗口竞态：itemCount = 窗口页数时 fling 到缺失页会回弹 →
+  `_prefillWindow` 预填 prev2/next3；窗口 trim 收缩后显示页索引越界 →
+  单一 controller + select 后 _followWindow。
+- relayout 竞态：LayoutBuilder 内同步 relayoutSilently（不 notifyListeners），
+  首帧即用新尺寸，无闪跳。
+- 切换零写入：删除 p→v 时无条件 paged.flush()（未翻页不得写库）。
+
+### 验证
+- 313 项单元+widget 全过；8 个集成测试全过（含 4 个真实 TXT 验收：
+  473 章 9 锚点、无章节 7.68MB 中段、100 页往返 end 链严格连续）；
+- verify.ps1 全绿（含 Windows Release、APK Debug、git diff --check）；
+- 已知边界：backward 页首漂移 ≤ 2 屏/100 页（end 链连续，confirmed 零误差）。
+
+### 状态
+- 分支 feat/m4-horizontal-reader；M4.2 提交后工作区 clean；
+- Android 真机验证待设备上线补做（无线 adb）。

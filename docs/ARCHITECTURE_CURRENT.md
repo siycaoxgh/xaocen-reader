@@ -1,7 +1,7 @@
 # ARCHITECTURE_CURRENT.md — XAOCEN Reader v4 当前架构与合同
 
-> 只描述当前代码与合同（HEAD `f965448`，分支 `fix/m3-flat-toc`，M3 冻结点）。
-> 不记录历史故事（见 PROJECT_HISTORY.md）；不包含尚未实现的 M4 内容。
+> 只描述当前代码与合同（HEAD `feat/m4-horizontal-reader`，M4.2 完成点）。
+> 不记录历史故事（见 PROJECT_HISTORY.md）。
 > 代码位置均以本仓库实际文件为准。
 
 ---
@@ -294,3 +294,47 @@ Two distinct hashes, distinct duties:
     (binbyu/Reader custom license; legado GPL-3.0); behavior-only reuse.
 13. The archived old XAOCEN Reader is never reintroduced.
 14. M4 must not break the M3 vertical Reader (M3 is the freeze baseline).
+
+
+---
+
+## 分页 Reader 架构（M4，0.1.0-dev.4+4）
+
+### 分层（lib/reader/ + lib/domain/reader/）
+
+```
+ReaderPage（双模式容器）
+ ├─ 纵向：ReaderController + SuperListView + RenderReaderTextBlock（M3 不变）
+ └─ 分页：PagedReaderController + PagedReaderView(PageView)
+           ├─ PagedLayoutEngine（PagedTextRange 行粒度排版，惰性/确定性）
+           └─ PageWindow（prev2+current+next3 有限窗口，淘汰远离页）
+模式切换：ReaderModeTransitionState（idle/v2p/p2v）+ freezeWrites + generation
+```
+
+### 位置真源合同（M4 §六，与 M3 一致）
+
+- `ReaderLocator.absoluteCharacterOffset` = normalized.txt → Dart String 的 UTF-16 码元偏移；
+- Page/pageIndex/PageView index/scroll pixels/chapterPage/blockIndex/百分比 **全部禁止**作为持久位置；
+- reading_progress 结构不变（collectionId + offset + itemIdHint + locatorVersion + normalizationVersion）。
+
+### 分页引擎合同
+
+- 显示与分页测量共用同一 TextPainter 参数集（fontSize/height/letterSpacing/textDirection/
+  width/height/padding/`TextScaler.noScaling`），页面绘制不得用第二套参数；
+- `layoutForwardPage(start)` / `layoutPreviousPage(end)`：`prev.end == current.start` 构造对称，
+  end 链严格连续（字符链不重不漏）；LF 归下一页（页尾无 trailing LF → 渲染不超约束）；
+- `pageContaining(target)`：ReaderBlockIndex 锚定 + 有限 forward（禁止 0 逐页/比例估算）；
+- 惰性：打开时只生成当前页 + 前后有限页（prefill prev2/next3），Page 数与全文总页数无关；
+- 进程内缓存 key = document identity + normalizedHash + viewport w/h + metrics signature +
+  textScale + padding + paginationPolicyVersion；尺寸/横竖屏/metrics 变化 invalidate；
+  仅颜色变化不重分页（只 repaint）；
+- 已知边界：backward 页首 ≤2 屏/100 页漂移（end 链连续；confirmed 零误差）→ KNOWN_ISSUES.md。
+
+### 双模式切换合同
+
+- v→p：switchAnchor = 纵向真实可见范围顶部 offset → pageContaining → 显示；
+  **anchor 不得被 page.start 静默覆盖**（未翻页立即切回仍恢复 X）；
+- p→v：confirmed locator → M3 精确恢复链 → 验证 locator ∈ 真实 ReaderVisibleRange；
+- 切换期间 freezeWrites（旧组件零写入）；generation 拒绝过期异步结果；无固定延迟；
+- 目录跳转：chapter/volume.startCharacterOffset → pageContaining → 标题可见 →
+  confirmed = 精确 target（立即防抖保存）；用户主动翻页后才用 page.start 覆盖。

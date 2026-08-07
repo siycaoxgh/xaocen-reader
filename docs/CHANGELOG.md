@@ -15,10 +15,54 @@ Legend for validation columns:
 ## Unreleased
 
 ### Planned
-- M4.2 paged reader UI integration (dual-mode switch, PageView, keyboard
-  paging) — core engine delivered in M4.1, UI staged as WIP stash.
 - Search, bookmarks, full reader settings, TTS, RSS, network sources,
   EPUB/PDF (all deferred, see KNOWN_ISSUES.md).
+
+---
+
+## 0.1.0-dev.4+4 — M4.2 (2026-08-08)
+
+**Data generation:** `v4-local-1` (unchanged).
+**Drift schema:** 2 (unchanged — no new persisted fields).
+**Breaking internal changes:** none.
+
+### Added
+- Horizontal paged reader UI (`PagedReaderView` + built-in `PageView`/`PageController`):
+  lazy PageWindow (prev2 + current + next3), no full-document pre-pagination,
+  no fake total page count.
+- Dual-mode switch: vertical ↔ paged, with transition state machine
+  (`ReaderModeTransitionState`), freeze/unfreeze progress writes, operation
+  generation to reject stale async results; switchAnchor is the real visible
+  top offset, never silently replaced by page.start; switching back without
+  turning a page restores the exact anchor (0 UTF-16 error).
+- Paged TOC jump: chapter.startCharacterOffset → pageContaining → title
+  visible → confirmed = exact target; user page turns update confirmed to
+  new page.start with 400ms debounce; resize/orientation re-pagination keeps
+  ReaderLocator unchanged; theme color-only changes repaint without re-pagination.
+- Windows keyboard paging (Left/Right/PageUp/PageDown); Android swipe paging.
+
+### Fixed
+- `PagedLayoutEngine` page boundary iteration: `getLineBoundary` zero-width at LF
+  (skip LF when advancing), page end stays before LF (no trailing-LF extra empty
+  row → render height never exceeds viewport constraints), backward candidate
+  start rewinds to line start (lastIndexOf LF) for symmetry; `TextScaler.noScaling`
+  on both measure and render paths.
+- PagedReaderView window-trim race: single persistent PageController +
+  `_followWindow` (jumpToPage when shown page != currentIndex); relayout happens
+  silently inside LayoutBuilder (no setState-in-build); `_prefillWindow` fills
+  prev2/next3 after open/jump/relayout so fling never hits a missing page.
+- v→p→v zero-write contract: removed unconditional `paged.flush()` on
+  switch-to-vertical (un-turned pages must not write progress).
+
+### Known boundary (see KNOWN_ISSUES.md)
+- backward page-start drift ≤ 2 screens / 100 pages (end chain strictly
+  continuous; confirmed locator zero-error).
+
+### Validation
+- 313 unit+widget tests PASS; 8 integration tests PASS (incl. real-file
+  acceptance for 4 real TXT, paged flow, mode-switch); Windows Release build,
+  APK debug build, git diff --check — VERIFY PASSED.
+- Details: `M4_RESULT.md` (two-tier report: synthetic / real corpus).
 
 ---
 
