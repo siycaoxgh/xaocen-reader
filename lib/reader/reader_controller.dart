@@ -102,6 +102,24 @@ class ReaderController extends ChangeNotifier {
   /// 恢复完成后解冻用户位置写入。
   bool get restoreWriteUnlocked => _restoreWriteUnlocked;
 
+  /// 模式切换期间的写入冻结深度（M4 §二十一）。
+  /// 默认 0：M3 行为完全不变；切换期间 > 0 时跳过数据库写入
+  /// （内存 confirmed 仍更新，只是不落库）。
+  int _writeFreezeDepth = 0;
+
+  /// 是否处于写入冻结（模式切换中）。
+  bool get writesFrozen => _writeFreezeDepth > 0;
+
+  /// 冻结写入（切换开始）。可嵌套。
+  void freezeWrites() {
+    _writeFreezeDepth++;
+  }
+
+  /// 解冻写入（切换完成）。
+  void unfreezeWrites() {
+    if (_writeFreezeDepth > 0) _writeFreezeDepth--;
+  }
+
   /// 供测试注入的文档（跳过 loader）。
   void injectDocument(NormalizedDocument doc) {
     _document = doc;
@@ -340,6 +358,7 @@ class ReaderController extends ChangeNotifier {
     _confirmedLocator = locator;
     _debounce?.cancel();
     _debounce = Timer(_debounceDuration, () async {
+      if (writesFrozen) return; // 切换中不落库（§二十一）
       await _progressRepository.saveProgress(locator);
     });
   }
@@ -349,6 +368,7 @@ class ReaderController extends ChangeNotifier {
     ReaderPositionEventSource source = ReaderPositionEventSource.lifecycleFlush,
   }) async {
     if (!_restoreWriteUnlocked) return;
+    if (writesFrozen) return; // 模式切换中：不落库（§二十一）
     _debounce?.cancel();
     _debounce = null;
     final locator = _confirmedLocator;

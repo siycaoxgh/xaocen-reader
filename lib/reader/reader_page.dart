@@ -21,8 +21,11 @@ import '../domain/library/toc_index.dart';
 import '../domain/reader/reader_locator.dart';
 import '../domain/reader/reader_visible_range.dart';
 import 'normalized_document_loader.dart';
+import 'paged_reader_controller.dart';
+import 'paged_reader_view.dart';
 import 'reader_appearance.dart';
 import 'reader_controller.dart';
+import 'reader_mode.dart';
 import 'reader_text_block.dart';
 
 /// 打开 Reader 所需上下文（由书架页组装）。
@@ -95,6 +98,20 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
   /// 当前可见范围缓存（供测试与诊断）。
   ReaderVisibleRange? lastVisibleRange;
 
+  // ---- M4：双模式 ----
+
+  /// 当前阅读模式（纵向 M3 / 横向分页 M4）。
+  ReaderMode _mode = ReaderMode.vertical;
+
+  /// 模式切换状态机（§二十一）。
+  ReaderModeTransitionState _transition = ReaderModeTransitionState.idle;
+
+  /// 分页模式控制器（首次切换到分页时创建）。
+  PagedReaderController? _pagedController;
+
+  /// 模式切换代数：切换时递增，过期异步结果被拒绝（§二十一）。
+  int _modeGeneration = 0;
+
   @override
   void initState() {
     super.initState();
@@ -148,6 +165,14 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _controller.removeListener(_onControllerChanged);
+    // M4：分页模式退出时 flush 最新已确认位置
+    final paged = _pagedController;
+    if (paged != null) {
+      paged.removeListener(_onPagedControllerChanged);
+      paged.flush();
+      paged.dispose();
+      _pagedController = null;
+    }
     // 生命周期 flush：写最新已确认用户位置
     _controller.flush();
     _controller.dispose();
@@ -164,7 +189,116 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
     }
   }
 
-  /// 修复并重试（§十：修复后重新打开 Reader）。
+  /// 分页控制器变化（窗口重建/翻页后）→ setState。
+  void _onPagedControllerChanged() {
+    if (mounted) setState(() {});
+  }
+
+  // ---- M4：模式切换（§十七~§二十一）----
+
+  /// 当前分页模式正文样式（与纵向同一外观）。
+  TextStyle get _pagedBodyStyle => _appearance.baseTextStyle;
+
+  /// 分页模式内容区尺寸（由 body 布局提供；切换前用屏幕估算）。
+  Size _pagedViewportSize = const Size(0, 0);
+
+  /// 纵向 → 分页（§十七）：
+  /// freeze → 取真实可见范围顶部 anchor → pageContaining(anchor) →
+  /// 验证 anchor 在页内 → 显示 → unfreeze。
+  /// 页面开头可以早于 anchor；anchor 不被改成 page.start。
+  void _switchToPaged() {
+    if (_transition != ReaderModeTransitionState.idle) return;
+    if (_controller.document == null || _controller.blockIndex == null) {
+      return;
+    }
+    final gen = ++_modeGeneration;
+    _transition = ReaderModeTransitionState.verticalToPaged;
+    _controller.freezeWrites();
+    setState(() {});
+
+    // 取真实可见范围顶部作为切换锚点（§十七 switchAnchor）。
+    final anchorOffset = _controller.lastTopVisibleOffset;
+    final anchor = ReaderLocator(
+      collectionId: _controller.collectionId,
+      absoluteCharacterOffset: anchorOffset,
+    );
+
+    final size = _pagedViewportSize;
+    final width = size.width > 0
+        ? size.width
+        : MediaQuery.of(context).size.width;
+    final height = size.height > 0
+        ? size.height
+        : MediaQuery.of(context).size.height - kToolbarHeight;
+
+    final paged = PagedReaderController(
+      collectionId: _controller.collectionId,
+      document: _controller.document!,
+      progressRepository: widget.launch.progressRepository,
+      blockIndex: _controller.blockIndex!,
+      style: _pagedBodyStyle,
+      width: width,
+      height: height,
+    );
+    paged.addListener(_onPagedControllerChanged);
+    final page = paged.open(anchor);
+    // 验证 anchor 在页内（§十七：switchAnchor inside page）。
+    assert(page.contains(anchorOffset), '切换锚点必须在页面范围内');
+    _pagedController = paged;
+    _mode = ReaderMode.paged;
+    _transition = ReaderModeTransitionState.idle;
+    _controller.unfreezeWrites();
+    if (gen != _modeGeneration) return; // 切换期间又切换：丢弃旧代
+    setState(() {});
+  }
+
+  /// 分页 → 纵向（§二十）：
+  /// freeze → 取最新 confirmed locator → 精确 M3 restore →
+  /// 验证 locator 在真实可见范围内 → 完成 → unfreeze。
+  /// 未翻页时 confirmed 仍是原精确 anchor（§十八：切模式不丢位置）。
+  void _switchToVertical() {
+    if (_transition != ReaderModeTransitionState.idle) return;
+    final paged = _pagedController;
+    if (paged == null) return;
+    final locator = paged.confirmedLocator;
+    if (locator == null) return;
+
+    final gen = ++_modeGeneration;
+    _transition = ReaderModeTransitionState.pagedToVertical;
+    _controller.freezeWrites();
+    // §二十一：切换本身零写入。翻页进度由防抖 Timer（400ms）自然落盘；
+    // 退出 Reader 时由 dispose flush 落盘。
+    setState(() {});
+
+    // 精确 M3 restore：jumpToOffset 走既有两阶段对齐链。
+    _tocJumpPending = false;
+    _controller
+        .jumpToOffset(
+          locator.absoluteCharacterOffset,
+          itemIdHint: locator.itemIdHint,
+        )
+        .then((_) {
+          if (!mounted || gen != _modeGeneration) return;
+          setState(() {});
+          _scheduleJumpToPendingTarget();
+          // 恢复完成由 _finishRestore 确认可见范围后解冻
+          _transition = ReaderModeTransitionState.idle;
+          _mode = ReaderMode.vertical;
+          _controller.unfreezeWrites();
+          setState(() {});
+        });
+  }
+
+  /// 模式切换入口（AppBar 菜单）。
+  void _selectMode(ReaderMode mode) {
+    if (mode == _mode) return;
+    if (mode == ReaderMode.paged) {
+      _switchToPaged();
+    } else {
+      _switchToVertical();
+    }
+  }
+
   bool _repairing = false;
 
   Future<void> _repairAndRetry() async {
@@ -626,53 +760,90 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
             tooltip: '目录',
             onPressed: _openToc,
           ),
-        ],
-      ),
-      body: Column(
-        children: [
-          if (const bool.fromEnvironment('XAOCEN_READER_DEBUG'))
-            _DebugBar(controller: _controller, page: this),
-          Expanded(
-            child: Scrollbar(
-              controller: _scroll,
-              child: NotificationListener<ScrollNotification>(
-                onNotification: (n) {
-                  _onUserScroll(n);
-                  return false;
-                },
-                child: SuperListView.builder(
-                  controller: _scroll,
-                  listController: _listController,
-                  itemCount: index.blockCount,
-                  itemBuilder: (context, i) {
-                    final block = index.blocks[i];
-                    final text = doc.text.substring(
-                      block.startCharacterOffset,
-                      block.endCharacterOffset,
-                    );
-                    final key = _blockKeys[i] ??= GlobalKey();
-                    return ReaderTextBlock(
-                      key: key,
-                      text: text,
-                      style: _bodyStyle,
-                      // 主题变化时递增：保证已构建 block 走 updateRenderObject 更新颜色
-                      styleVersion: _appearance.textColor.toARGB32(),
-                      textDirection: TextDirection.ltr,
-                      maxWidth: MediaQuery.of(context).size.width - 32,
-                      onLayout: (layout) {
-                        final ro = key.currentContext?.findRenderObject();
-                        if (ro is RenderReaderTextBlock) {
-                          _renderObjects[i] = ro;
-                        }
-                      },
-                    );
-                  },
-                ),
-              ),
+          // M4：阅读模式切换（滚动 / 分页），当前模式可识别（§三十九）。
+          PopupMenuButton<ReaderMode>(
+            tooltip: '阅读模式',
+            icon: Icon(
+              _mode == ReaderMode.paged ? Icons.auto_stories : Icons.swap_vert,
             ),
+            onSelected: _selectMode,
+            itemBuilder: (context) => [
+              CheckedPopupMenuItem(
+                value: ReaderMode.vertical,
+                checked: _mode == ReaderMode.vertical,
+                child: const Text('滚动'),
+              ),
+              CheckedPopupMenuItem(
+                value: ReaderMode.paged,
+                checked: _mode == ReaderMode.paged,
+                child: const Text('分页'),
+              ),
+            ],
           ),
         ],
       ),
+      body: _mode == ReaderMode.paged && _pagedController != null
+          ? _buildPagedBody(context)
+          : Column(
+              children: [
+                if (const bool.fromEnvironment('XAOCEN_READER_DEBUG'))
+                  _DebugBar(controller: _controller, page: this),
+                Expanded(
+                  child: Scrollbar(
+                    controller: _scroll,
+                    child: NotificationListener<ScrollNotification>(
+                      onNotification: (n) {
+                        _onUserScroll(n);
+                        return false;
+                      },
+                      child: SuperListView.builder(
+                        controller: _scroll,
+                        listController: _listController,
+                        itemCount: index.blockCount,
+                        itemBuilder: (context, i) {
+                          final block = index.blocks[i];
+                          final text = doc.text.substring(
+                            block.startCharacterOffset,
+                            block.endCharacterOffset,
+                          );
+                          final key = _blockKeys[i] ??= GlobalKey();
+                          return ReaderTextBlock(
+                            key: key,
+                            text: text,
+                            style: _bodyStyle,
+                            // 主题变化时递增：保证已构建 block 走 updateRenderObject 更新颜色
+                            styleVersion: _appearance.textColor.toARGB32(),
+                            textDirection: TextDirection.ltr,
+                            maxWidth: MediaQuery.of(context).size.width - 32,
+                            onLayout: (layout) {
+                              final ro = key.currentContext?.findRenderObject();
+                              if (ro is RenderReaderTextBlock) {
+                                _renderObjects[i] = ro;
+                              }
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+    );
+  }
+
+  /// M4：分页模式 body。
+  ///
+  /// 记录视口尺寸（供切换锚点用）；引擎尺寸与渲染约束的同步由
+  /// PagedReaderView 内部的 LayoutBuilder 静默处理（§三十一 resize/
+  /// orientation：capture locator → 重建窗口 → confirmed 保持）。
+  Widget _buildPagedBody(BuildContext context) {
+    final paged = _pagedController!;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        _pagedViewportSize = Size(constraints.maxWidth, constraints.maxHeight);
+        return PagedReaderView(controller: paged, appearance: _appearance);
+      },
     );
   }
 
@@ -706,8 +877,11 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
   }
 
   void _openToc() {
-    // 当前章节高亮基于真实可见范围顶部（§十一），非上次点击/恢复位置
-    final currentTop = _topVisibleCharacterOffset();
+    // 当前章节高亮基于真实可见范围顶部（§十一），非上次点击/恢复位置。
+    // M4：分页模式基于 confirmed locator（精确 anchor / 翻页后 page.start）。
+    final currentTop = _mode == ReaderMode.paged
+        ? (_pagedController?.confirmedLocator?.absoluteCharacterOffset ?? 0)
+        : _topVisibleCharacterOffset();
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -723,6 +897,14 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
 
   Future<void> _jumpToChapter(LibraryTocEntry entry) async {
     Navigator.of(context).pop(); // close sheet
+    // M4：分页模式目录跳转（§二十四：confirmed = 精确 target offset）。
+    if (_mode == ReaderMode.paged) {
+      final paged = _pagedController;
+      if (paged == null) return;
+      paged.jumpToOffset(entry.startCharacterOffset, itemIdHint: entry.itemId);
+      if (mounted) setState(() {});
+      return;
+    }
     _tocJumpPending = true;
     _alignRetries = 0;
     await _controller.jumpToOffset(

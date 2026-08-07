@@ -37,7 +37,7 @@ class ReaderTextBlock extends LeafRenderObjectWidget {
     required this.styleVersion,
     required this.textDirection,
     required this.maxWidth,
-    required this.onLayout,
+    this.onLayout,
   });
 
   final String text;
