@@ -34,7 +34,7 @@ import 'txt_toc_scanner.dart';
 class TxtImportService {
   TxtImportService({
     required this.encodingTableLoader,
-    this.parserVersion = '1.0.0',
+    this.parserVersion = '2.0.0',
     this.normalizationVersion = '1.0.0',
     this.indexFormatVersion = 1,
     this.onNormalizedText,

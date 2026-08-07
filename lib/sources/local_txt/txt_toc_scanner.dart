@@ -22,13 +22,28 @@ class TocHit {
     required this.lineIndex,
     required this.charOffset,
     required this.title,
+    required this.displayTitle,
+    required this.dedupeKey,
+    this.chapterNumber,
     required this.isLineStart,
     required this.indentCount,
   });
 
   final int lineIndex;
   final int charOffset;
+
+  /// 正则匹配片段（如「第31章」）——仅供内部过渡，不用于展示。
   final String title;
+
+  /// 完整标题行（trim 首尾空白），用于目录/书架展示。
+  final String displayTitle;
+
+  /// 去重比较键（trim + 全/半角空格归一化 + 连续空白折叠）。
+  final String dedupeKey;
+
+  /// 章节/卷编号（如 "31" / "一" / "卷一"）。
+  final String? chapterNumber;
+
   final bool isLineStart;
   final int indentCount;
 }
@@ -100,11 +115,18 @@ class TxtTocScanner {
 
       final m = tocTitlePattern.matchAsPrefix(trimmed);
       if (m == null) continue;
+      final matched = m.group(0)!;
+      // M3.2 合同：displayTitle 取完整标题行（trim 首尾空白），
+      // 保留「第X章/卷」与后面的具体标题；不得只存正则匹配片段。
+      final displayTitle = trimmed.trim();
       hits.add(
         TocHit(
           lineIndex: line,
           charOffset: start,
-          title: m.group(0)!,
+          title: matched,
+          displayTitle: displayTitle,
+          dedupeKey: dedupeKeyFor(displayTitle),
+          chapterNumber: chapterNumberFor(displayTitle),
           isLineStart: isLineStart,
           indentCount: trimmedStart,
         ),
@@ -126,7 +148,39 @@ class TxtTocScanner {
     return i;
   }
 
+  /// 去重比较键：trim + 全/半角空格归一化 + 连续空白折叠。
+  static String dedupeKeyFor(String title) {
+    final s = title.trim().replaceAll('\u3000', ' ');
+    final sb = StringBuffer();
+    var prevSpace = false;
+    for (var i = 0; i < s.length; i++) {
+      final ch = s[i];
+      if (ch == ' ' || ch == '\t') {
+        if (!prevSpace) sb.write(' ');
+        prevSpace = true;
+      } else {
+        sb.write(ch);
+        prevSpace = false;
+      }
+    }
+    return sb.toString().trim();
+  }
+
+  /// 从标题解析编号（如「第31章」→ "31"；「卷一」→ "一"；「楔子」→ null）。
+  static String? chapterNumberFor(String displayTitle) {
+    final m = RegExp(
+      r'^(?:第\s*([0-9〇零一二两三四五六七八九十百千万亿壹贰叁肆伍陆柒捌玖拾佰仟萬億]{1,12})\s*(?:章|卷|部|节)|卷\s*([0-9〇零一二两三四五六七八九十百千万亿壹贰叁肆伍陆柒捌玖拾佰仟萬億]{1,6}))',
+    ).firstMatch(displayTitle);
+    if (m == null) return null;
+    return m.group(1) ?? m.group(2);
+  }
+
   /// 相邻结构重复去重（保留行首版本）。
+  ///
+  /// 判据：行距 ≤3 + 一个真行首一个缩进 + （dedupeKey 相同 或 章节编号相同）。
+  /// 章节编号相同即视为重复：真实小说中缩进重复行常是正文对标题的引用
+  /// （可能带错别字，如「第468章 这特么」vs「　第468章 这特码」），
+  /// 此时应保留行首版并剔除正文引用行（M3.2 真实文件回归：473 章不得变 486）。
   List<TocHit> _dedupe(List<TocHit> hits) {
     final result = <TocHit>[];
     var i = 0;
@@ -134,9 +188,12 @@ class TxtTocScanner {
       final cur = hits[i];
       if (i + 1 < hits.length) {
         final next = hits[i + 1];
+        final sameNumber =
+            cur.chapterNumber != null &&
+            cur.chapterNumber == next.chapterNumber;
         final isAdjacentDup =
             (next.lineIndex - cur.lineIndex) <= 3 &&
-            cur.title == next.title &&
+            (cur.dedupeKey == next.dedupeKey || sameNumber) &&
             cur.isLineStart &&
             !next.isLineStart;
         if (isAdjacentDup) {
@@ -179,7 +236,10 @@ class TxtTocScanner {
             parentId: null,
             kind: TocEntryKind.volume,
             level: 1,
-            title: hit.title,
+            title: hit.displayTitle,
+            displayTitle: hit.displayTitle,
+            dedupeKey: hit.dedupeKey,
+            chapterNumber: hit.chapterNumber,
             order: volumeOrder,
             startCharacterOffset: hit.charOffset,
             endCharacterOffset: endOffset,
@@ -195,7 +255,10 @@ class TxtTocScanner {
             parentId: parentId,
             kind: TocEntryKind.chapter,
             level: 2,
-            title: hit.title,
+            title: hit.displayTitle,
+            displayTitle: hit.displayTitle,
+            dedupeKey: hit.dedupeKey,
+            chapterNumber: hit.chapterNumber,
             order: chapterOrderInVolume,
             startCharacterOffset: hit.charOffset,
             endCharacterOffset: endOffset,
