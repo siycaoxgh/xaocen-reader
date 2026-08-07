@@ -17,9 +17,11 @@ import 'package:super_sliver_list/super_sliver_list.dart';
 
 import '../data/repositories/reading_progress_repository.dart';
 import '../domain/library/library_entities.dart';
+import '../domain/library/toc_index.dart';
 import '../domain/reader/reader_locator.dart';
 import '../domain/reader/reader_visible_range.dart';
 import 'normalized_document_loader.dart';
+import 'reader_appearance.dart';
 import 'reader_controller.dart';
 import 'reader_text_block.dart';
 
@@ -80,7 +82,13 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
   late final ReaderController _controller;
   final ScrollController _scroll = ScrollController();
   final ListController _listController = ListController();
-  late final TextStyle _bodyStyle;
+  late TextStyle _bodyStyle;
+
+  /// Reader 视觉合同（P1：从 Theme 解析，禁止正文硬编码颜色）。
+  late ReaderResolvedAppearance _appearance;
+
+  /// 上次应用的主题（didChangeDependencies 检测切换）。
+  ThemeData? _lastTheme;
 
   bool _restoreFinished = false;
 
@@ -91,11 +99,6 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _bodyStyle = const TextStyle(
-      fontSize: 17,
-      height: 1.7,
-      color: Color(0xFF222222),
-    );
     _controller = ReaderController(
       collectionId: widget.launch.collection.id,
       documentLoader: widget.launch.documentLoader,
@@ -124,6 +127,21 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
     _controller.addListener(_onControllerChanged);
 
     _start();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final theme = Theme.of(context);
+    if (theme != _lastTheme) {
+      _lastTheme = theme;
+      // P1：主题切换 → 解析新外观。颜色变化只触发重绘
+      // （RenderReaderTextBlock.style setter 区分度量/颜色），
+      // 不重建 block 索引、不写进度、阅读 offset 保持不变。
+      _appearance = resolveReaderAppearance(context);
+      _bodyStyle = _appearance.baseTextStyle;
+      if (mounted) setState(() {});
+    }
   }
 
   @override
@@ -430,8 +448,6 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
     }
 
     // 当前树中已布局的块（虚拟列表只构建可见区附近的块）。
-    // 以「已布局块」的最小/最大 index 与 offset 作为可见范围。
-    // 只统计 key 仍在树中的块（回收的块 currentContext 为 null）。
     final active = <int>[];
     _blockKeys.forEach((i, key) {
       if (key.currentContext != null) {
@@ -440,7 +456,6 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
     });
     active.sort();
     if (active.isEmpty) {
-      // 尚未布局：退回首块
       final b0 = index.blocks.first;
       return ReaderVisibleRange(
         startCharacterOffset: b0.startCharacterOffset,
@@ -452,9 +467,53 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
     }
     final firstBlock = active.first;
     final lastBlock = active.last;
+
+    // 布局进行中（例如 SuperListView 布局帧内派发滚动通知）：
+    // 禁止访问 RenderBox.size（box.dart 断言），回退 block 级近似。
+    if (RenderObject.debugActiveLayout != null) {
+      return ReaderVisibleRange(
+        startCharacterOffset: index.blocks[firstBlock].startCharacterOffset,
+        endCharacterOffset: index.blocks[lastBlock].endCharacterOffset,
+        firstVisibleBlock: firstBlock,
+        lastVisibleBlock: lastBlock,
+        measuredAt: DateTime.now(),
+      );
+    }
+
+    // M3.3：块内真实顶部/底部字符（不再用 block 起始近似）。
+    // 视口顶/底与块全局坐标比对 → RenderReaderTextBlock.characterOffsetAtLocalY。
+    final viewportGlobalTop = _viewportGlobalTop();
+    final viewportDim = _scroll.position.viewportDimension;
+    final viewportGlobalBottom = viewportGlobalTop + viewportDim;
+    int? preciseTop;
+    int? preciseBottom;
+    for (final i in active) {
+      final ro = _renderObjects[i];
+      if (ro == null || !ro.layoutCompleted || !ro.attached) continue;
+      final gTop = ro.localToGlobal(Offset.zero).dy;
+      final gBottom = gTop + ro.size.height;
+      final blockStart = index.blocks[i].startCharacterOffset;
+      if (preciseTop == null &&
+          gTop <= viewportGlobalTop &&
+          gBottom > viewportGlobalTop) {
+        final rel = (viewportGlobalTop - gTop).clamp(0.0, ro.size.height);
+        final localChar = ro.characterOffsetAtLocalY(rel);
+        preciseTop = blockStart + localChar;
+      }
+      if (preciseBottom == null &&
+          gTop <= viewportGlobalBottom &&
+          gBottom > viewportGlobalBottom) {
+        final rel = (viewportGlobalBottom - gTop).clamp(0.0, ro.size.height);
+        preciseBottom = blockStart + ro.characterOffsetAtLocalY(rel);
+      }
+      if (preciseTop != null && preciseBottom != null) break;
+    }
+
     return ReaderVisibleRange(
-      startCharacterOffset: index.blocks[firstBlock].startCharacterOffset,
-      endCharacterOffset: index.blocks[lastBlock].endCharacterOffset,
+      startCharacterOffset:
+          preciseTop ?? index.blocks[firstBlock].startCharacterOffset,
+      endCharacterOffset:
+          preciseBottom ?? index.blocks[lastBlock].endCharacterOffset,
       firstVisibleBlock: firstBlock,
       lastVisibleBlock: lastBlock,
       measuredAt: DateTime.now(),
@@ -489,6 +548,7 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
           err.contains('invalid_utf8') ||
           err.contains('file_missing');
       return Scaffold(
+        backgroundColor: _appearance.backgroundColor,
         appBar: AppBar(title: Text(widget.launch.collection.title)),
         body: Center(
           child: Padding(
@@ -540,6 +600,7 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
         _controller.document == null ||
         _controller.blockIndex == null) {
       return Scaffold(
+        backgroundColor: _appearance.backgroundColor,
         appBar: AppBar(title: Text(widget.launch.collection.title)),
         body: const Center(child: CircularProgressIndicator()),
       );
@@ -549,6 +610,7 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
     final doc = _controller.document!;
 
     return Scaffold(
+      backgroundColor: _appearance.backgroundColor,
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
@@ -593,7 +655,8 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
                       key: key,
                       text: text,
                       style: _bodyStyle,
-                      styleVersion: 1,
+                      // 主题变化时递增：保证已构建 block 走 updateRenderObject 更新颜色
+                      styleVersion: _appearance.textColor.toARGB32(),
                       textDirection: TextDirection.ltr,
                       maxWidth: MediaQuery.of(context).size.width - 32,
                       onLayout: (layout) {
@@ -672,7 +735,7 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
   }
 }
 
-class _TocSheet extends StatelessWidget {
+class _TocSheet extends StatefulWidget {
   const _TocSheet({
     required this.toc,
     required this.controller,
@@ -691,49 +754,224 @@ class _TocSheet extends StatelessWidget {
   final ValueChanged<LibraryTocEntry> onJump;
 
   @override
-  Widget build(BuildContext context) {
-    final chapters = toc.where((e) => e.kind == 'chapter').toList();
-    final hasChapters = chapters.isNotEmpty;
+  State<_TocSheet> createState() => _TocSheetState();
+}
 
-    // 当前章节：最后一个 startCharacterOffset <= topVisible 的 chapter（§十一）
-    LibraryTocEntry? currentChapter;
-    if (hasChapters) {
-      for (final e in chapters) {
-        if (e.startCharacterOffset <= currentTopOffset) {
-          currentChapter = e;
-        } else {
-          break;
+class _TocSheetState extends State<_TocSheet> {
+  /// 用户折叠的卷 id（默认全展开；当前章节父卷强制展开）。
+  final Set<String> _collapsed = {};
+
+  /// 当前章节（目录打开时计算一次，§四：真实可见范围顶部）。
+  String? _currentChapterId;
+
+  /// 本次打开是否已自动定位（§八：每次打开最多一次）。
+  bool _autoLocated = false;
+
+  /// extent 未稳定时自动定位的 bounded 重试计数（§七：禁止无限重试）。
+  int _locateRetries = 0;
+
+  /// 用户是否已手动滚动目录（显示「定位当前章节」按钮）。
+  bool _userScrolled = false;
+
+  /// DraggableScrollableSheet 提供的滚动控制器（builder 首次构建后可用）。
+  ScrollController? _sheetScroll;
+
+  final Map<int, GlobalKey> _itemKeys = {};
+
+  /// dense ListTile 实际高度（阶段一索引级估算，阶段二 ensureVisible 修正）。
+  static const double _kItemExtent = 40.0;
+
+  /// 目标行期望位于视口约 35% 处（§六：30%~40%）。
+  static const double _kTargetAlignment = 0.35;
+
+  List<LibraryTocEntry> get _chapters =>
+      widget.toc.where((e) => e.kind == 'chapter').toList();
+
+  bool get _hasChapters => _chapters.isNotEmpty;
+
+  @override
+  void initState() {
+    super.initState();
+    // §四：当前章节 = 最后一个 startCharacterOffset <= 顶部可见 的 chapter。
+    _currentChapterId = TocIndexLogic.currentChapterFor(
+      widget.currentTopOffset,
+      widget.toc,
+    )?.id;
+    // §五：当前章节父卷强制展开。
+    _autoExpandParents();
+    // 等列表首次构建后执行两阶段自动定位（一次）。
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _autoLocate();
+    });
+  }
+
+  void _autoExpandParents() {
+    for (final pid in TocIndexLogic.parentVolumeIdsOf(
+      _currentChapterId,
+      widget.toc,
+    )) {
+      _collapsed.remove(pid);
+    }
+  }
+
+  List<LibraryTocEntry> get _visibleEntries =>
+      TocIndexLogic.visibleEntries(widget.toc, _collapsed);
+
+  /// 阶段一：索引级跳转 + 阶段二：行级精确对齐。
+  void _locateToCurrent() {
+    final scroll = _sheetScroll;
+    if (scroll == null || !scroll.hasClients) {
+      return;
+    }
+    final idx = TocIndexLogic.visibleIndexFor(
+      _currentChapterId,
+      _visibleEntries,
+    );
+    if (idx == null) {
+      return;
+    }
+    final viewport = scroll.position.viewportDimension;
+    final max = scroll.position.maxScrollExtent;
+    // extent 未稳定时（打开动画早期 max=0）bounded 重试
+    if (max <= 0 && _locateRetries < 10) {
+      _locateRetries++;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _locateToCurrent();
+      });
+      return;
+    }
+    final targetPixels = idx * _kItemExtent - viewport * _kTargetAlignment;
+    scroll.jumpTo(targetPixels.clamp(0.0, max).toDouble());
+    // 阶段二：目标行布局完成后 ensureVisible 对齐到 35%。
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _alignItem(idx, retries: 0);
+    });
+  }
+
+  /// 从当前已构建的目录项实测单行高度（dense ListTile 在不同主题/字体
+  /// 下高度不同，估算不可靠；实测后一次到位）。
+  double? _measuredItemExtent() {
+    for (final key in _itemKeys.values) {
+      final ctx = key.currentContext;
+      if (ctx != null) {
+        final ro = ctx.findRenderObject();
+        if (ro is RenderBox && ro.size.height > 0) {
+          return ro.size.height;
         }
       }
     }
+    return null;
+  }
+
+  void _alignItem(int idx, {required int retries}) {
+    final ctx = _itemKeys[idx]?.currentContext;
+    if (ctx == null) {
+      // bounded frame retry（§七：不允许无限重试）。
+      if (retries < 8) {
+        final sp = _sheetScroll?.position;
+        if (sp != null && sp.hasContentDimensions) {
+          // 用实测行高重算目标位置（估算值可能偏差导致目标不在构建区）
+          final extent = _measuredItemExtent() ?? _kItemExtent;
+          final targetPixels =
+              idx * extent - sp.viewportDimension * _kTargetAlignment;
+          sp.jumpTo(targetPixels.clamp(0.0, sp.maxScrollExtent).toDouble());
+        }
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          _alignItem(idx, retries: retries + 1);
+        });
+      }
+      return;
+    }
+    Scrollable.ensureVisible(
+      ctx,
+      alignment: _kTargetAlignment,
+      duration: Duration.zero,
+    );
+  }
+
+  void _autoLocate() {
+    if (_autoLocated) return;
+    _autoLocated = true;
+    _locateToCurrent();
+  }
+
+  /// 「定位当前章节」按钮（§九：仅用户滚离后提供）。
+  void _locatePressed() {
+    setState(() {
+      _autoExpandParents();
+      _userScrolled = false;
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _locateToCurrent();
+    });
+  }
+
+  void _onScrollNotification(ScrollNotification n) {
+    if (n is ScrollStartNotification && n.dragDetails != null) {
+      _userScrolled = true;
+    }
+  }
+
+  void _toggleVolume(String id) {
+    setState(() {
+      if (!_collapsed.remove(id)) {
+        _collapsed.add(id);
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final currentChapter = _currentChapterId == null
+        ? null
+        : _chapters.where((e) => e.id == _currentChapterId).firstOrNull;
 
     return DraggableScrollableSheet(
       expand: false,
       initialChildSize: 0.6,
       maxChildSize: 0.9,
       builder: (context, scrollController) {
+        _sheetScroll = scrollController;
         return Column(
           children: [
             Padding(
-              padding: const EdgeInsets.all(16),
-              child: Text(
-                '目录 — $collectionTitle',
-                style: Theme.of(context).textTheme.titleMedium,
+              padding: const EdgeInsets.fromLTRB(16, 12, 8, 4),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      '目录 — ${widget.collectionTitle}',
+                      style: Theme.of(context).textTheme.titleMedium,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  // §九：用户滚离当前章后提供「定位当前章节」入口。
+                  if (_userScrolled)
+                    TextButton.icon(
+                      onPressed: _locatePressed,
+                      icon: const Icon(Icons.my_location, size: 16),
+                      label: const Text('定位当前章节'),
+                    ),
+                ],
               ),
             ),
             Expanded(
-              child: !hasChapters
+              child: !_hasChapters
                   ? ListTile(
                       leading: const Icon(Icons.menu_book),
                       title: const Text('全文'),
                       subtitle: Text(
-                        '无章节文件 · ${controller.document?.text.length ?? 0} 字符',
+                        '无章节文件 · ${widget.controller.document?.text.length ?? 0} 字符',
                       ),
                       selected: true,
-                      onTap: () => onJump(
+                      onTap: () => widget.onJump(
                         LibraryTocEntry(
                           id: 'whole',
-                          collectionId: controller.collectionId,
+                          collectionId: widget.controller.collectionId,
                           itemId: null,
                           parentId: null,
                           kind: 'chapter',
@@ -743,52 +981,62 @@ class _TocSheet extends StatelessWidget {
                           orderIndex: 0,
                           startCharacterOffset: 0,
                           endCharacterOffset:
-                              controller.document?.text.length ?? 0,
+                              widget.controller.document?.text.length ?? 0,
                         ),
                       ),
                     )
-                  : ListView.builder(
-                      controller: scrollController,
-                      itemCount: toc.length,
-                      itemBuilder: (context, i) {
-                        final e = toc[i];
-                        if (e.kind == 'volume') {
-                          // 卷：完整卷标题（§五），可点击跳卷首
+                  : NotificationListener<ScrollNotification>(
+                      onNotification: (n) {
+                        _onScrollNotification(n);
+                        return false;
+                      },
+                      child: ListView.builder(
+                        controller: scrollController,
+                        itemCount: _visibleEntries.length,
+                        itemBuilder: (context, i) {
+                          final e = _visibleEntries[i];
+                          if (e.kind == 'volume') {
+                            final collapsed = _collapsed.contains(e.id);
+                            return ListTile(
+                              key: _itemKeys[i] ??= GlobalKey(),
+                              dense: true,
+                              leading: Icon(
+                                collapsed
+                                    ? Icons.expand_more
+                                    : Icons.expand_less,
+                                size: 20,
+                              ),
+                              title: Text(
+                                e.displayTitle,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              onTap: () => _toggleVolume(e.id),
+                            );
+                          }
+                          final selected =
+                              currentChapter?.id == e.id ||
+                              (currentChapter == null && e.orderIndex == 1);
                           return ListTile(
+                            key: _itemKeys[i] ??= GlobalKey(),
                             dense: true,
-                            leading: const Icon(
-                              Icons.collections_bookmark_outlined,
-                              size: 20,
+                            contentPadding: const EdgeInsets.only(
+                              left: 32,
+                              right: 16,
                             ),
                             title: Text(
                               e.displayTitle,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w600,
-                              ),
                             ),
-                            onTap: () => onJump(e),
+                            selected: selected,
+                            onTap: () => widget.onJump(e),
                           );
-                        }
-                        final selected =
-                            currentChapter?.id == e.id ||
-                            (currentChapter == null && e.orderIndex == 1);
-                        return ListTile(
-                          dense: true,
-                          contentPadding: const EdgeInsets.only(
-                            left: 32,
-                            right: 16,
-                          ),
-                          title: Text(
-                            e.displayTitle,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          selected: selected,
-                          onTap: () => onJump(e),
-                        );
-                      },
+                        },
+                      ),
                     ),
             ),
           ],
