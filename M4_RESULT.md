@@ -134,6 +134,16 @@
 - Release 构建成功（`build\windows\x64\runner\Release\xaocen_reader.exe`，36.5s）；
 - 冒烟启动 6s 无崩溃（此前 M4.2 阶段验证）。
 
+### E. Android 真机（Redmi K60 / Android 15 / 无线 adb，2026-08-08）
+
+- `flutter test integration_test/reader_mode_switch_test.dart -d <device>`：**2/2 通过**
+  （v→p→v 未翻页保精确 anchor + 零写入；翻页后 confirmed 更新 + 目录远跳保存精确 target）；
+- `flutter test integration_test/paged_reader_flow_test.dart -d <device>`：**1/1 通过**
+  （导入→纵向→切分页→翻页→切回→重开→目录远跳→重启恢复全链路）；
+- 用户手动导入 4 本真实 TXT（因果快递/无章节/青山/苟在初圣魔门）正常，分页阅读可用；
+- 数据持久性说明：`flutter test` 集成测试结束后会卸载测试 APK 导致 app 数据被清
+  （外部 TXT 不受影响），属测试框架副作用，非应用缺陷；重新导入即可恢复。
+
 ---
 
 ## 4. 真实文件验收矩阵（对照任务书 §三十三/§三十四）
@@ -148,7 +158,7 @@
 | 远距离章节跳转（1/19/42/112/195/258/300/400/473） | ✅（pageContaining + 标题可见 + confirmed 精确 target） |
 | 无章节大文件中段定位 | ✅（25%/50%/75% 仅测试用，生产无百分比定位） |
 | Windows 实际运行 | ✅（Release 构建 + 冒烟 + 全部集成测试） |
-| Android 真机实际运行 | ⏳（设备离线，待用户开启无线调试后补做） |
+| Android 真机实际运行 | ✅（Redmi K60 / Android 15，无线 adb：reader_mode_switch 2/2 + paged_reader_flow 1/1 真机通过；用户手动导入 4 本真实 TXT 正常使用） |
 
 ---
 
@@ -179,4 +189,13 @@
 
 ---
 
-*M4 停止条件：工作区 clean、verify.ps1 全绿、真机验证补做后本阶段收尾。*
+## 9. 真机验证补充说明
+
+- 核心真机验证通过集成测试完成（上述 E 段）；手动滑动翻页手感、横竖屏旋转等
+  交互体验由用户手动确认（app 已保留在真机，正常入口版）。
+- 集成测试会清空 app 数据（测试框架卸载副作用）：如需保留书架数据，
+  请勿在验证后依赖集成测试产生的数据，重新导入外部 TXT 即可。
+
+---
+
+*M4 停止条件达成：工作区 clean、verify.ps1 全绿、Android 真机验证完成。*

@@ -60,8 +60,9 @@ Legend for validation columns:
 
 ### Validation
 - 313 unit+widget tests PASS; 8 integration tests PASS (incl. real-file
-  acceptance for 4 real TXT, paged flow, mode-switch); Windows Release build,
-  APK debug build, git diff --check — VERIFY PASSED.
+  acceptance for 4 real TXT, paged flow, mode-switch); Android real-device
+  (Redmi K60) reader_mode_switch 2/2 + paged_reader_flow 1/1 PASS; Windows
+  Release build, APK debug build, git diff --check — VERIFY PASSED.
 - Details: `M4_RESULT.md` (two-tier report: synthetic / real corpus).
 
 ---
