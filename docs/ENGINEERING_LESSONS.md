@@ -1,0 +1,535 @@
+# ENGINEERING_LESSONS.md — XAOCEN Reader v4 永久踩坑簿
+
+> 每条记录真实发生的问题、根因、错误做法、正确做法、回归保护与以后禁止事项。
+> 所有条目来自本项目实际开发过程（M0–M3.4），无虚构。
+
+---
+
+## 1. sourceHash / normalizedHash 混用（P1，M3.1）
+
+### 现象
+真实大 TXT 打开 Reader 报 `hash_mismatch`（expected `2528925c…` vs actual `d37db97a…`）；Windows 与 Android 均失败；自动测试全绿。
+
+### 根因
+M2 `_writeDatabase` 把 `content_documents.content_hash` 写成 sourceHash（源文件 hash），M3 ReaderPage 却把它当 expectedHash 传给 Loader 去校验 normalized.txt 落盘字节。两个不同对象的 hash 被当作同一个值。
+
+### 错误做法
+- 一个字段同时承载「内容身份」（source）与「派生文件校验」（normalized）两种语义；
+- Reader 侧不核对字段来源直接消费。
+
+### 正确做法
+- 明确两个 hash：sourceHash（外部 TXT 字节 = 内容身份）与 normalizedHash（落盘 normalized.txt UTF-8 字节 SHA-256）；
+- 所有消费点用同一值：manifest / Drift / Loader / 导入完成 / repair 完成；
+- 共享强类型 `NormalizedArtifact`；Loader 以 manifest.normalizedHash 为权威，expectedHash 仅回退；
+- 写入顺序：tmp → flush → close → **从落盘字节算 hash** → 重解码验证 UTF-16 长度 → 原子 rename → manifest → Drift 事务 → 最终重读校验。
+
+### 回归保护
+hash_contract_test（8MB 闭环、各损坏场景、跨会话重开）+ repair_service_test + 集成 hash_contract_flow_test；`tool/inspect_managed_txt.dart` 只读诊断。
+
+### 以后禁止事项
+禁止把 sourceHash 当 normalizedHash 使用；禁止在 flush/close 前保存预期 hash；禁止捕获 hash_mismatch 后继续加载或直接覆盖 expected。
+
+---
+
+## 2. CRLF 规范化导致 hash 变化
+
+### 现象
+小 TXT 全过、真实大 TXT 必失败。
+
+### 根因
+规范化把 CRLF→LF 改变字节 → normalized 字节 ≠ source 字节；小 ASCII 文件无 CRLF → 字节不变 → hash 碰巧相等。
+
+### 错误做法
+用「小文件通过」推断「大文件也通过」；没有覆盖「规范化改变字节」的测试向量。
+
+### 正确做法
+意识到「与文件大小无关，与规范化是否改变字节有关」；测试必须包含 CRLF/BOM 源文件，且断言 hash 反映**落盘**字节。
+
+### 回归保护
+hash_contract 测试含 CRLF 跨 buffer 边界、8MB 运行时生成文件（含 CRLF/UTF-8 四字节/GB18030 四字节跨块）。
+
+### 以后禁止事项
+禁止假设 source==normalized 字节；禁止用内存字符串算 hash 代替落盘字节。
+
+---
+
+## 3. 章节正则 group(0) 丢完整标题（M3.2）
+
+### 现象
+目录只显示「第X章」无具体名称；卷标题同理。
+
+### 根因
+M1 扫描器 `title: m.group(0)!` 只存正则匹配片段，完整标题从未进入数据链（index.json → Drift → UI）。
+
+### 错误做法
+把「匹配片段」当「标题」持久化；displayTitle 与匹配判定混为一个字段。
+
+### 正确做法
+- 判定用正则（行首 + 章后须空白/标点/行尾）；
+- 标题另取：完整行 trim 首尾空白 → displayTitle；
+- dedupeKey（空白归一化，不进 UI）与 chapterNumber（单独解析）独立字段；
+- parserVersion 升级（1.0.0→2.0.0）驱动存量数据 repair。
+
+### 回归保护
+scanner 8 项完整标题合同测试；toc_title_persistence 6 项；真实库 4 本 repair 后验证完整标题。
+
+### 以后禁止事项
+禁止用正则匹配片段直接作为展示标题；禁止 UI 用 orderIndex/「第${i+1}章」合成标题。
+
+---
+
+## 4. 相邻重复标题去重 vs 全局同名
+
+### 现象
+真实文件扫描出 486 章（多 13 章），预期 473。
+
+### 根因
+正文引用章节标题的缩进行与行首标题存在错别字差异（「第468章 这特么是元婴」vs「第468章 这特码是元婴」），完整标题 dedupeKey 不同 → 不去重。
+
+### 错误做法
+只按完整标题文本去重；把正文引用行当独立章节。
+
+### 正确做法
+相邻去重（行距 ≤3）附加判据：**章节编号相同即视为重复**（真实小说缩进重复行常是正文对标题的引用，可能带错别字）；楔子/序章等无编号的仍按 dedupeKey。同时保持「远距同名保留、两个行首不去重、公告行排除」。
+
+### 回归保护
+真实文件验收断言恰为 473 章（accept_real_files_test）；扫描器相邻重复/远距同名/公告测试。
+
+### 以后禁止事项
+禁止全书同名全局去重；禁止因去重规则删除正文重复标题行。
+
+---
+
+## 5. 公告「第五十二章被审核了」误识别
+
+### 现象
+作者公告行被当成章节标题。
+
+### 根因
+正则只检查「第X章」前缀，未检查「章」后的字符。
+
+### 错误做法
+`^第.{1,12}章` 之类宽松匹配。
+
+### 正确做法
+「章/卷/部/节」后必须跟空白/标点/行尾（`(?=[ \u3000\t：:，,。.!！?？、]|$)`）；公告行「第五十二章被审核了，稍等～」被排除。
+
+### 回归保护
+notice_false_positive fixture + 扫描器公告排除测试；真实文件 473 章断言。
+
+### 以后禁止事项
+禁止放宽「章」后字符约束。
+
+---
+
+## 6. O(n²) 章节扫描约 7s
+
+### 现象
+Spike 2 全量扫描 ~7s（1,300,867 字符）。
+
+### 根因
+逐行计算 offset 时用累计/切片 O(n²) 算法。
+
+### 错误做法
+每命中一次就重新累计前面所有行；用固定延迟/加载动画掩盖。
+
+### 正确做法
+单次 O(n) 顺序扫描，预计算 _lineOffsets 一次遍历累计 UTF-16 offset；后台 Isolate 执行；正式版首次 251ms（28× 提速），缓存命中 63–127ms。
+
+### 回归保护
+真实文件耗时验收（M1）；缓存命中不重扫断言。
+
+### 以后禁止事项
+禁止 O(n²) offset 计算；禁止先扫前 N 章再补扫。
+
+---
+
+## 7. jumpToItem(block) 不是字符精确跳转（M3.2）
+
+### 现象
+目录点击后正文停在块顶，标题行不在期望位置。
+
+### 根因
+`jumpToItem(block.index, alignment: 0)` 只对齐块顶；标题常在块中间。
+
+### 错误做法
+把「块定位」当「字符定位」；固定 100ms Timer 假装完成。
+
+### 正确做法
+两阶段：块级 jumpToItem（第一阶段）→ post-frame 等目标块 layout → `rectForCharacterOffset(localOffset)` 求标题行 Rect → 二次 jumpToItem(rect, alignment 0) + 12px 微调 → `localToGlobal` 验证与视口相交；bounded retries ≤5，超限明确失败；无固定延迟。
+
+### 回归保护
+reader_jump_test 11 项（多章同块/块末/越界/不切 surrogate）；集成 multi-block fixture；真实文件 9 章 offset 验证。
+
+### 以后禁止事项
+禁止以 blockIndex/scroll extent 比例为跳转依据；禁止 Future.delayed 固定延迟。
+
+---
+
+## 8. 真实 visible range 不能用 block 级近似（M3.3）
+
+### 现象
+正文恢复/目录高亮差约 34 章（顶部报 224 章实际 258 章）。
+
+### 根因
+`_visibleRangeForScroll` 用块起始 offset 当可见范围顶。
+
+### 错误做法
+用块边界近似用户实际看到的字符。
+
+### 正确做法
+块内真实字符级：视口顶/底全局坐标 vs 块坐标 → `characterOffsetAtLocalY` → 精确 UTF-16 偏移；layout 进行中/未 attach 时安全回退 block 级。
+
+### 回归保护
+toc_scroll_test 12 项（含真实可见范围定位）；真实文件 6 章 ±1 验证。
+
+### 以后禁止事项
+禁止任何比例估算/块级近似作为可见范围真值。
+
+---
+
+## 9. 程序化 restore 期间不能写 progress（M3）
+
+### 现象
+恢复过程可能把位置写回旧值/中间值。
+
+### 根因
+恢复完成（confirmingVisibleRange）前 _restoreWriteUnlocked=false 的 gate 缺失或时序错误。
+
+### 错误做法
+恢复过程中 flush/防抖写进度。
+
+### 正确做法
+`_restoreWriteUnlocked` gate：programmatic restore 零写入；仅确认可见范围后解冻；用户滚动才触发防抖保存。
+
+### 回归保护
+reader_controller_test 恢复冻结/防抖/flush 用例。
+
+### 以后禁止事项
+禁止恢复未确认前任何位置写入。
+
+---
+
+## 10. 目录打开不能只从列表顶部显示（M3.3）
+
+### 现象
+长目录打开后看不到当前章节，需手动滚半天。
+
+### 根因
+目录打开默认显示列表顶部。
+
+### 错误做法
+不做任何定位；或依赖上次点击位置。
+
+### 正确做法
+打开时用真实可见范围顶部反查当前 chapter → flat 索引 → 两阶段定位（估算 jumpTo 带入构建区 → ensureVisible 35%）→ 高亮；每次打开最多一次；用户滚动不拉回；提供「定位当前章节」按钮；bounded retry（extent 不稳 ≤10 / 实测行高 ≤8）。
+
+### 回归保护
+toc_scroll_test 12 项（定位/不拉回/重开重定位/无章节全文）。
+
+### 以后禁止事项
+禁止打开目录不定位；禁止每次打开多次定位。
+
+---
+
+## 11. TOC 折叠不适合内容导航（M3.4）
+
+### 现象
+用户手工测试发现卷折叠导致查找/跳转繁琐，且 TXT 层级数据本身不可靠。
+
+### 根因
+把层级当交互结构；异常层级（幽灵 parentId/连续卷）会造成内容被折叠隐藏。
+
+### 错误做法
+用 collapse/expand 解决长列表；把层级当可见性开关。
+
+### 正确做法
+全局合同：**Content hierarchy is semantic, not interactive. Source order is authoritative; navigable entries remain visible.** 层级只做语义/分组/搜索/导出；卷作 Section Header；所有可导航项始终可见；长列表用自动定位/高亮/搜索/索引。
+
+### 回归保护
+content_navigation_contract_test 8 项（异常 fixture 全部平铺可见）；toc_scroll_test 平铺语义。
+
+### 以后禁止事项
+禁止内容导航中引入折叠；禁止保存 collapsed 状态；禁止无功能箭头。
+
+---
+
+## 12. 深色背景 + TextPainter 默认深字（M3.3 P1）
+
+### 现象
+深色主题下正文不可读（黑底深字或白底黑字不匹配）。
+
+### 根因
+正文 TextPainter 硬编码 `Color(0xFF222222)`，与 theme 背景无关。
+
+### 错误做法
+正文颜色硬编码；显示与测量用两套样式。
+
+### 正确做法
+`ReaderResolvedAppearance` 从 Theme colorScheme 解析（surface/onSurface/onSurfaceVariant/primaryContainer）；TextSpan 显式携带解析色；同一 TextPainter 显示与测量；对比度 ≥4.5:1。
+
+### 回归保护
+reader_dark_mode_test 8 项（浅/深可读、无深底深字组合、主题切换不写进度不改 Locator）。
+
+### 以后禁止事项
+禁止 Reader 正文硬编码颜色；禁止依赖 DefaultTextStyle。
+
+---
+
+## 13. Theme 颜色变化与 TextPainter layout/paint 分离（M3.3）
+
+### 现象
+主题切换触发整页重排/闪烁。
+
+### 根因
+style setter 一律 markNeedsLayout。
+
+### 错误做法
+颜色变化也走重排路径。
+
+### 正确做法
+度量变化 → markNeedsLayout；仅颜色变化 → 同步 span + markNeedsPaint；主题切换只重绘不重建 block 索引、不写进度、不改 Locator。
+
+### 回归保护
+reader_dark_mode_test（切换后 block 颜色更新、度量不变）。
+
+### 以后禁止事项
+禁止颜色变化触发 layout；禁止主题切换重建索引/写进度。
+
+---
+
+## 14. flutter test 可能产生 test-runner APK（真机白屏）
+
+### 现象
+真机安装后白屏，进程存活、logcat 无错误。
+
+### 根因
+`flutter test integration_test` 会把 `build/app/outputs/flutter-apk/app-debug.apk` 覆盖为 test-runner 入口版（main 是测试驱动），手动 `adb install -r` 装的是测试版 APK。
+
+### 错误做法
+测试后直接安装 build 目录 APK 当正常版。
+
+### 正确做法
+测试/集成测试后必须重新 `flutter build apk --debug` 再安装。
+
+### 回归保护
+操作规范（M3 真机记录）；verify.ps1 末尾步骤顺序注意。
+
+### 以后禁止事项
+禁止把测试后的 APK 直接交付/安装；禁止把「APK 构建成功」当「功能通过」。
+
+---
+
+## 15. Windows sqlite3_flutter_libs / CMAKE_INSTALL_PREFIX（M0）
+
+### 现象
+Windows Release 构建失败（需管理员权限写 C:/Program Files/xaocen_reader）。
+
+### 根因
+sqlite3_flutter_libs 0.5.42 的 FetchContent 在 configure 期重新初始化 `project()`，把 CMAKE_INSTALL_PREFIX 重置为默认值；Flutter 模板的 `if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)` 保护失效。
+
+### 错误做法
+重复尝试普通构建；试图给 Program Files 权限。
+
+### 正确做法
+`windows/CMakeLists.txt` Installation 段无条件把 install prefix 指向构建目录（保留注释解释原因）。
+
+### 回归保护
+Windows Release 构建步骤（verify.ps1）。
+
+### 以后禁止事项
+禁止删除该 CMake 修复；禁止依赖默认 install prefix。
+
+---
+
+## 16. PowerShell 5.1 中文注释解析问题
+
+### 现象
+verify.ps1/脚本报行号偏移、`$itDir` 为空、语法错误；行为诡异。
+
+### 根因
+PowerShell 5.1 按 ANSI 解析 UTF-8 无 BOM 文件，中文多字节吞掉换行 → 行号错位。
+
+### 错误做法
+在 .ps1 里写中文注释；内联命令用中文字符串。
+
+### 正确做法
+脚本文件全英文注释/纯 ASCII；内联复杂命令写成 .py/.ps1 脚本文件；中文内容用 write 工具写 Dart/测试文件（UTF-8 可靠）。
+
+### 回归保护
+verify.ps1 英文注释；find_cjk.py 检查无残留中文。
+
+### 以后禁止事项
+禁止在 PowerShell 脚本内联中文；禁止依赖 PS 5.1 的 UTF-8 中文解析。
+
+---
+
+## 17. Windows USB ADB 驱动冲突
+
+### 现象
+USB 直连设备不识别。
+
+### 根因
+手机 ADB 接口被 Windows 微软通用 WinUSB 驱动抢占（GUID 不匹配 adb 认的 Google 驱动）；修改官方 INF 被签名校验拒绝（Windows 11 驱动签名强制）。
+
+### 错误做法
+反复重装驱动/尝试绕过签名。
+
+### 正确做法
+**无线调试定案**：开发者选项 → 无线调试 → 配对码（`adb pair`）→ TLS 连接；后续开发调试一直沿用。
+
+### 回归保护
+操作规范（记录于 SPIKE_RESULT.md §6 连接备注）。
+
+### 以后禁止事项
+禁止为 USB 驱动绕过 Windows 签名强制。
+
+---
+
+## 18. 无线 ADB / mDNS 端口变化
+
+### 现象
+设备离线；`adb devices` 为空；连接端口每次变化；出现双 mDNS 通道（`(2)` 变体）导致 "more than one device"。
+
+### 根因
+无线调试端口动态分配；mDNS 服务名不可直接 connect（cannot resolve host）；重启 adb server 后设备延迟自动出现。
+
+### 错误做法
+硬编码旧端口；connect 不可解析的服务名。
+
+### 正确做法
+`adb kill-server/start-server` 后等 mDNS 自动发现；多设备时 `adb disconnect` 清空后手动连接实际端口；serial 解析注意空格截断。
+
+### 回归保护
+操作规范；真机流程脚本按 serial 全量解析。
+
+### 以后禁止事项
+禁止硬编码无线端口；禁止假设单通道。
+
+---
+
+## 19. adb keyevent 4 行为
+
+### 现象
+点击「无效」的假象：书架按返回键其实是退出 app（回到设置页）；app 不在前台时 tap 全部无效。
+
+### 根因
+书架是首页，keyevent 4 直接 finish app；误以为 tap 失效。
+
+### 错误做法
+用 keyevent 4 当「返回书架」；不确认 app 前台状态就点。
+
+### 正确做法
+阅读页返回用 AppBar 返回箭头（或测试里 Navigator.pop）；退出验证用 am start 重启；每次 tap 前先截图确认页面状态。
+
+### 回归保护
+真机操作规范（记录于 memory）。
+
+### 以后禁止事项
+禁止不确认前台页面就批量点击；禁止把 keyevent 4 当通用返回。
+
+---
+
+## 20. GUI 自动点击坐标估算误差
+
+### 现象
+「点第45章没跳转」结论错误——实际跳转正常（548→530 差分验证）。
+
+### 根因
+image 工具坐标估算有 ±200–300px 噪声；单次点击命中相邻行/当前章节造成假象。
+
+### 错误做法
+用一次点击现象直接判定功能失败；依赖单次截图坐标。
+
+### 正确做法
+**差分验证**：点远距离目标，观察正文是否变化；用已验证锚点 + 相对行距推算；必要时多次尝试 + 截图确认；结论前先排除坐标误差。
+
+### 回归保护
+真机验证流程（M3.4 13/13 用差分法确认）。
+
+### 以后禁止事项
+禁止单次点击失败即判定功能缺陷；禁止信任单张截图的绝对坐标。
+
+---
+
+## 21. Android 字体 metrics 与 Windows 不同（坐标真源意义）
+
+### 现象
+同一文件 Android 分页 3,993 页 vs Windows 1,651 页（同配置）；页边界完全不同。
+
+### 根因
+平台字体度量差异（Spike 4 A8 实测确认）。
+
+### 错误做法
+依赖页边界/页号跨平台定位。
+
+### 正确做法
+字符偏移坐标（UTF-16 码元）为唯一真源——页/块是派生结构；跨字体、横竖屏、重排、平台变化下偏移稳定。
+
+### 回归保护
+Spike 3/4 偏移稳定性测试（字号/宽度/横竖屏）；Reader 恢复状态机。
+
+### 以后禁止事项
+禁止 ReaderLocator 依赖页边界/blockIndex/像素。
+
+---
+
+## 22. 大文件不能因无章节而成为单一巨大 Widget
+
+### 现象
+无章节 7.68MB 文件（2,739,888 字符）若整体渲染必卡死。
+
+### 根因
+无章节 = 1 个 whole item ≠ 1 个 Widget；正文必须分块虚拟化。
+
+### 错误做法
+按 item 粒度渲染；预排全文。
+
+### 正确做法
+whole item 覆盖 0..normalizedCharacterLength；ReaderBlock 派生分块（6144 码元/块）+ super_sliver_list 按需构建；只预排首屏/恢复页/邻近页。
+
+### 回归保护
+无章节大文件滚动集成/真机验证（25%/50%/75% 定位不跳末尾）。
+
+### 以后禁止事项
+禁止全文单 Widget/SelectableText；禁止预排全书。
+
+---
+
+## 23. source order 高于不可靠 hierarchy（M3.4 合同）
+
+### 现象
+真实 TXT 层级数据不可靠（错误 parentId/连续卷/卷部混用）。
+
+### 根因
+第三方 TXT 的层级结构天然不可信。
+
+### 错误做法
+把层级当导航依据；异常时隐藏内容或崩溃。
+
+### 正确做法
+source order 权威；异常层级只影响视觉分组；所有可导航项始终可见。
+
+### 回归保护
+content_navigation_contract_test 异常 fixture；toc_scroll_test 平铺。
+
+### 以后禁止事项
+禁止因层级异常隐藏内容；禁止依赖 parentId 正确性。
+
+---
+
+## 附：其他小型教训（简记）
+
+- **锚点数据源**：`gb18030_ranges_official.json` 是空数组不可用；209 锚点来自 spike1（Python gb18030 codec 生成）。
+- **PowerShell 插值**：`${pair[0]}` 生成损坏 Dart 数组（`[, ]`）→ 用 Python 生成。
+- **解码器跨块**：`_state==2` 分支第四字节跨块未置 `_state=3` → 逐字节分段输入失败。
+- **编码检测截断**：严格 UTF-8 采样在 65534 截断多字节序列误判 → 采样末尾容忍 ≤3 字节截断。
+- **Drift 主键**：`text()` 默认非主键 → 6 表显式 primaryKey；toc id 冲突 → collectionId 前缀。
+- **路径段尾随空**：Windows `Directory.uri.pathSegments` 末尾空段 → 过滤非空。
+- **SQLite 999 变量**：8MB fixture 33 万章 × 3 表 insert 超限 → 100 章×80KB 生成。
+- **测试 FakeAsync**：widget 测试不推真实 IO → Provider override + integration_test 真实链路。
+- **AGP 9 + file_picker**：Kotlin 冲突 → AGP 8.7.3 + 传统 KGP。
+- **sqlite3 hook 被墙**：github.com 不可达 → ghproxy 镜像 url_pattern。
+- **androidx.test 动态版本**：flutter.io metadata 404 → dependencyResolutionManagement。
+- **GlobalKey**：必须作为 Widget 的 key 才能关联 context（存 map 单独管理无效）。
+- **fixture 中文编码**：Python patch 会破坏 UTF-8 → 用 write 工具写测试文件。

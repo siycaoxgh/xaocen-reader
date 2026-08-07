@@ -1,0 +1,268 @@
+# PROJECT_HISTORY.md — XAOCEN Reader v4 完整工程时间线
+
+> 记录 2026-08-06 至 2026-08-07 从 Pre-M0 到 M3.4 的真实过程，含失败尝试与修复。
+> 只记录当前仓库（v4）历史；已归档的旧 XAOCEN Reader 项目不属于本历史，不引用。
+> 原始证据：各阶段 `M*_RESULT.md`、`SPIKE_RESULT.md`、`README_ENGINE_DECISION.md`（均为仓库/父目录实际文件）。
+
+---
+
+## 阶段总览
+
+| 阶段 | 目标 | 分支 | Start → End commit | Commits | 版本 | 验证 |
+|---|---|---|---|---|---|---|
+| Pre-M0 | 调研/审计/Spike/真机 | （临时目录 research/spike/） | — | — | — | Spike 3+1 全过；真机 8/8 |
+| M0 | 工程骨架 | main | `7ce51fe` → `847641b` | 5 | 0.1.0-dev.1+1 | verify 全绿；双平台构建 |
+| M1 | TXT 标准化与索引 | feat/m1-local-txt-pipeline | `4b6108c` → `89fe10d` | 6 | 0.1.0-dev.1+1 | 82 测试；真实文件 473/0 章 |
+| M2 | 本地书库（Drift 四层） | feat/m2-local-library | `cab2a71` → `e61c8b6` | 6 | 0.1.0-dev.2+2 | 109 测试；真机 9/9 |
+| M3 | 纵向 Reader + 精确恢复 | feat/m3-vertical-reader | `45ae988` → `ab866d7` | 8 | 0.1.0-dev.3+3 | 160 测试；真机 9/9（用户+自动化） |
+| M3.1 | normalizedHash P1 修复 | fix/m3-normalized-hash-contract | `26d74e5` → `aa73c95` | 6 | 0.1.0-dev.3+3 | 185 测试；真实库修复 |
+| M3.2 | 目录完整标题 + 精确跳转 | fix/m3-toc-title-exact-jump | `9bccab6` → `da1a13d` | 6 | 0.1.0-dev.3+3 | 214 测试；真实库 4 本 |
+| M3.3 | 目录自动定位 + 深色可读 | fix/m3-toc-current-item-scroll | `68f4be7` → `ce2ff98` | 5 | 0.1.0-dev.3+3 | 250 测试 |
+| M3.4 | 平铺目录 + 导航合同 | fix/m3-flat-toc | `38575df` → `f965448` | 6 | 0.1.0-dev.3+3 | 259 测试；真机 13/13 |
+
+合计：48 commits（M0 以来，HEAD 链）；当前分支 `fix/m3-flat-toc`，HEAD `f965448`。
+
+---
+
+## Pre-M0 — 竞品调研、引擎审计、三个 Spike、Android 真机 Spike
+
+### 目标
+在写任何代码前回答：技术栈选什么、Reader 核心能否复用现成项目、位置坐标用什么、分页用什么。
+
+### 实现
+- **竞品调研**（8 轮检索）：Legado、Readest、ReadYou、Follow/Folo+RSSHub、Miniflux、FreshRSS、Koodo、Thorium、Tachiyomi、Flutter 生态。结论：无项目同时覆盖「本地 + 网络源 + RSS + 统一收件箱」；四层内容模型无直接对标。
+- **引擎可行性审计**（binbyu/Reader + legado-with-MD3，仅本地 TXT 链路）：
+  - binbyu/Reader：C++/Win32/GDI，全文解码 + **UTF-16 字符偏移**坐标 + 实时位置保存；**无 LICENSE、自定义条款严禁商用** → 不可复制，仅行为参考。
+  - legado-with-MD3：Android/Kotlin，**字节偏移**章节边界 + 章节索引+章内字符偏移位置模型；**GPL-3.0** → 不可复制/移植，仅行为参考。
+  - 结论：两者主程序代码均不可复制；Fork/FFI/Kotlin 移植全部否决；**行为参考 + Dart 自研**是唯一采用路线；**继续 Flutter**（不切 Tauri）。
+- **三个 Spike**（临时目录，未建正式工程）：
+  1. GBK/GB18030 解码：pub.dev 无 Dart 3 纯 Dart GBK 包（全部停更在 Dart 2；charset_converter 平台插件行为不可控；charset_codec 需 Rust 工具链）→ **自研纯 Dart 解码器**（WHATWG 23940 双字节表 + 209 锚点四字节表；64MB/s；0x80→U+FFFD 跨端一致；7457→U+E7C7 差异保留 Python 行为）。
+  2. 章节扫描：正则 + 相邻去重（行首+缩进、行距≤3、保留行首）；公告「第五十二章被审核了」必须排除（章后须空白/标点/行尾）；**473 章**命中；发现 O(n²) offset 累计 → 正式版必须 O(n)。
+  3. TextPainter 分页：首屏 22–29ms；**字符偏移在字体/宽度/滚动/分页变化下稳定**（4/4）；内存 ~7MB 估算 → **锁定 TextPainter**。
+- **Android 真机 Spike**（Redmi K60 / Android 15，无线 adb）：8/8 通过——GB18030 表 23940/209、有章节首屏、无章节 7.68MB 首屏、真实内存（PSS 281MB/RSS 431MB，Debug JIT 开销）、字号/横竖屏/重排后偏移稳定、A8 确认 **Android 与 Windows 页边界不同（字体度量差异）但字符偏移语义一致** → 字符偏移坐标系成立。
+
+### 出现问题与修复
+- USB ADB 直连失败：Windows 设备被微软通用 WinUSB 驱动抢占（GUID 不匹配），修改官方 INF 被签名校验拒绝 → **无线调试定案**（后续一直沿用）。
+- PowerShell 内联命令与中文编码反复踩坑（见 ENGINEERING_LESSONS.md）。
+
+### 最终状态
+`README_ENGINE_DECISION.md`（12 项决策确认）+ `SPIKE_RESULT.md` 落盘；未创建任何应用源码。
+
+---
+
+## M0 — 工程骨架（0.1.0-dev.1+1）
+
+### 目标
+只做单 Flutter 工程初始化 + git + 最小目录 + 依赖 + 主题/路由入口 + 验证门禁；不实现任何 TXT/Reader/UI 功能。
+
+### 实现
+- `flutter create xaocen_reader`；重写 pubspec（版本 0.1.0-dev.1+1；riverpod/drift/sqlite3_flutter_libs/path）。
+- lib 骨架：app/（constants/bootstrap/app/router/placeholder）、design/（tokens/theme）。
+- `tool/verify.ps1`（7 步门禁）；`test/unit/m0_skeleton_test.dart` 6 项。
+- GB18030 asset 位置与格式说明（不放假数据）；版本常量 + dataEpoch `v4-local-1`。
+
+### 出现问题与修复
+- Windows Release 构建两次失败：sqlite3_flutter_libs 0.5.42 的 FetchContent 在 configure 期重新 `project()`，把 `CMAKE_INSTALL_PREFIX` 重置为 `C:/Program Files/xaocen_reader`（需管理员）→ 在 `windows/CMakeLists.txt` 的 Installation 段无条件把 install prefix 指向构建目录。
+- verify.ps1 初版中文注释被 PowerShell 5.1 按 ANSI 解析出错 → 全英文注释；flutter 不在 PATH → 用 flutter.bat 完整路径。
+- git 提交时 PowerShell 把 `chore(project):` 当命令 → 改用 .ps1 脚本提交。
+
+### 验证
+6/6 测试；Windows Release（65.8s，exe 91648B）+ APK Debug（179s）；exe 冒烟 6s 无崩溃；verify 全绿；HEAD `847641b`（M0_RESULT.md 记录时 `7532f2f`，`847641b` 为随后补的 docs 提交）。
+
+### 最终状态
+clean；M0_RESULT.md 12 项报告；按任务书停止，未进 M1。
+
+---
+
+## M1 — TXT 标准化与索引管线（0.1.0-dev.1+1）
+
+### 目标
+正式 TXT 管线：文件校验 → 内容身份 → 编码检测 → GB18030 解码 → 规范化 → 后台 Isolate 卷章扫描 → 目录树 → 原子索引缓存 → 缓存读取与失效判断。
+
+### 实现
+- 领域模型：TextEncoding（6 值）、TocEntry、TxtIndex（含 displayTitle 前的旧字段）、PipelineProgress（12 阶段）、LargeFilePolicy（20/50MB 阈值集中）。
+- 服务：纯 Dart GB18030 解码器（双/四字节 + replace/strict + 分段输入跨块）、编码检测（BOM→严格 UTF-8→GB18030 候选→unknown，无扩展名判断）、规范化（仅去 BOM + CRLF/CR→LF，O(n)，lineStarts）、O(n) 扫描器（正则 + 相邻去重 + 卷—章）、原子缓存（tmp→序列化→flush→校验→原子替换；校验 size/hash/encoding/parser/normalization/indexFormat，不依赖 mtime）、内容身份（SHA-256，crypto 包）、取消令牌。
+- GB18030 Asset 生成器：`tool/generate_gb18030_index.dart` + 内嵌 209 锚点；产出 bin 97,446B，SHA-256 `aebe263d…`（与 Spike 4 真机验证一致）。
+- `tool/inspect_txt.dart` 只读诊断。
+
+### 出现问题与修复
+- 锚点数据源：`gb18030_ranges_official.json` 是空数组 → 用 spike1 的 209 锚点（Python gb18030 codec 生成）内嵌为 Dart 常量。
+- PowerShell 插值 `${pair[0]}` 生成损坏 Dart 数组（`[, ]`）→ 改用 Python 脚本生成。
+- 解码器真 bug：`_state==2` 分支第四字节跨块时未置 `_state=3` → 逐字节分段输入四字节序列失败（补状态迁移后 82/82）。
+- 编码检测误判：严格 UTF-8 采样 64KB 恰在 65534 处截断多字节序列 → 采样末尾容忍截断（忽略最后 ≤3 字节）。
+- O(n²) offset 累计（Spike 遗留）→ 单次 O(n) 顺序扫描（预计算 _lineOffsets）。
+
+### 验证
+- 真实文件：有章节 3.7MB → UTF-8 / **473 章** / 9 个指定 offset 全命中 / **首次 251ms**（旧 ~7s，28×）/ 缓存命中 63–127ms；无章节 7.7MB → 0 章 / 368ms / 127ms；外部文件 hash 不变。
+- 82 测试全过；verify 全绿；HEAD `89fe10d`。
+
+---
+
+## M2 — 本地书库（0.1.0-dev.2+2）
+
+### 目标
+TXT 选择→预检→复制原文件→M1 索引→规范化正文→Drift 四层模型→最小书架→重启持久→删除；不做 Reader。
+
+### 实现
+- managed 布局 `<support>/library/local_txt/<hash>/{source.txt, normalized.txt, index.json, manifest.json}`；原子导入 13 步两阶段提交；重复导入 alreadyImported（同名不同内容可分别导入）。
+- Drift schema 1（6 表 + FK + 唯一约束 + 6 索引）；正文不落库；确定性 ID（5 种格式）。
+- LocalLibraryRepository（6 方法）+ LibraryFileManager（安全删除校验）+ EncodingIndexProvider（FlutterAsset/File/Memory）。
+- UI：导入按钮 + 书架 + 进度 10 阶段 + 取消 + 大文件确认。
+- M1 管线增加 `onNormalizedText` 回调回传正文（供写 normalized.txt；正文只经内存不入缓存）。
+
+### 出现问题与修复
+- Drift 表 id 未标主键导致 FK mismatch（6 表显式 primaryKey）。
+- toc_entries.id UNIQUE 冲突（不同书相同章节结构）→ collectionId 前缀。
+- Windows `Directory.uri.pathSegments` 尾随空段 → 删除安全校验误拒/漏检 → 过滤非空段。
+- AGP 9 + file_picker Kotlin 冲突 → AGP 8.7.3 + 传统 KGP。
+- sqlite3 hook 从 github.com 下载被墙 → ghproxy 镜像（pubspec hooks url_pattern）。
+- 集成测试 fixture 在 Android 沙箱不可读 → 内嵌字节常量；GB18030 fixture 手写字节序错误（a3ba 写成 ba3a）→ 修正。
+- Widget 测试 FakeAsync 不推真实 IO → Provider override + integration_test 承担真实链路。
+
+### 验证
+109 测试；Windows 集成 2 文件；**Android 真机 9/9**（含 AssetBundle 23940/209、GB18030 𠀀、alreadyImported、取消不留半成品）；真实文件 473/0 章 + 外部 hash 不变；HEAD `e61c8b6`（ff 合并 main）。
+
+---
+
+## M3 — 纵向 Reader + 精确位置恢复（0.1.0-dev.3+3，schema 2）
+
+### 目标
+ReaderLocator（UTF-16 码元偏移唯一真源）、ReaderBlock 派生分块、super_sliver_list 虚拟滚动、真实可见范围、恢复状态机（确认前零写入）、保存分类、目录抽屉。
+
+### 实现
+- schema 1→2：新增 reading_progress（collectionId 主键+外键级联、absoluteCharacterOffset、itemIdHint、updatedAt、locatorVersion、normalizationVersion）；onUpgrade 只增不删。
+- NormalizedDocumentLoader（manifest 校验：存在/无 BOM/严格 UTF-8/hash/UTF-16 长度；≤50MB 全载内存）。
+- ReaderBlock/ReaderBlockIndex（4096–8192 码元，LF 优先，不切 surrogate，确定性重建）。
+- RenderReaderTextBlock（同一 TextPainter 显示与测量；local offset↔glyph Rect、characterOffsetAtLocalY、layout 完成回调）。
+- 恢复状态机 + 400ms 防抖 + lifecycle flush；目录两阶段跳转（先 jumpToItem 块级）。
+- 保存分类：restore 零写入 / tocJump 确认后保存 / 用户滚动防抖 / scroll-end + lifecycle flush。
+
+### 出现问题与修复
+- `TransferableTypedData` 位置排查（flutter/services、dart:ui 均错，最终 dart:isolate）。
+- 集成测试「进度为 null / 为 0」：恢复状态机 finishRestore 依赖列表 attach → 双 post-frame 重试；GlobalKey 必须作为 Widget key 才能关联 context；fixture 太小只有 1 块 → 生成 27594 字符大 fixture。
+- `_visibleRangeForScroll` 早期块级近似 → 后升级（M3.3）。
+- Android 构建：androidx.test 动态版本 metadata 404 → dependencyResolutionManagement（google() 优先 + flutter.io 排除 androidx.test）。
+- super_sliver_list 准入 Spike 5 通过（双端构建/jumpToItem/不预构建/dispose）。
+
+### 验证
+160 测试；4 集成测试；真实文件 9 offset + 无章节比例定位；Windows 全绿；**Android 真机 9/9**（用户开启无线调试后执行；返回动画慢 → 测试加 pop 等待 ab866d7）。**真机白屏教训**：flutter test 会把 app-debug.apk 覆盖为 test-runner 入口版 → 手动安装必须重新 `flutter build apk --debug`。
+
+---
+
+## M3.1 — normalizedHash 合同修复（P1，0.1.0-dev.3+3）
+
+### 目标
+修复真实大 TXT 在 Windows 与 Android 打开报 hash_mismatch 的 P1 数据一致性问题。
+
+### 用户发现与错误表现
+- 用户电脑 `C:\Users\TOM\Desktop\测试` 与手机 `Documents/测试` 的 4 个大 TXT 打开 Reader 均失败；
+- expected `2528925c0ee3946ccedd5911b10d6acaba6e4c592c53feb230d317a5a4aa79db` ≠ actual `d37db97a98372402b0379db75d0624bac4f65d42b7762c28bc94851b59102770`。
+
+### 为什么自动测试没覆盖
+- 小 TXT fixture 无 CRLF/BOM，规范化后字节不变 → sourceHash == normalizedHash，拿 sourceHash 校验碰巧通过；自动测试从未用含 CRLF 的大文件走「Drift→Reader」全链（集成测试 fixture 都是小 UTF-8）。
+
+### 诊断如何证明 expected 是 sourceHash
+- 新增 `tool/inspect_managed_txt.dart` 只读诊断：collection `local-txt:2528925c…` 的 source.txt 实际 SHA = `2528925c…`（=目录名=Drift 记录值）；normalized.txt 实际 SHA = `d37db97a…`（=manifest.normalizedHash）；文件层与管线完全健康；**唯一损坏点是 Drift content_documents.content_hash 存了 sourceHash**；821 条记录全部如此（m31_dbhash 确认）。
+
+### 最终修复
+- 合同：`normalizedHash = 最终落盘 normalized.txt（无 BOM UTF-8 文件字节）的 SHA-256`；
+- 共享 `NormalizedArtifact`；12 步写入顺序（tmp→flush→close→落盘算 hash→重解码验证长度→原子 rename→manifest→Drift 事务→最终重读校验）；
+- Loader 以 manifest.normalizedHash 为权威，expectedHash 仅回退；ReaderPage 不再把 doc.contentHash 当 expectedHash；
+- `ManagedCollectionHealthCheck` + `CollectionRepairService`（保留 source/normalized/collectionId/offset/progress；repair 不改外部 TXT；失败不覆盖旧文件）；
+- alreadyImported 三态（健康/repairExisting/corruptedManagedCopy）；Reader 错误页「书籍文件需要修复」+ 修复并重试。
+
+### 回归保护
+- hash_contract_test 11 项（8MB 闭环、跨块边界、各损坏场景、repair 全场景、三态）+ repair_service_test 12 项；集成 hash_contract_flow_test（导入→关闭→重开→Loader→Reader 首屏）；大 fixture 用「100 章×80KB」规避 SQLite 999 变量上限。
+
+### 验证
+185 测试；真实库 3 大文件 repair 成功 + 821 行更新；外部 TXT hash 不变；Reader 打开青山第 31 章 @192296 成功；Android 用户手动确认（大 TXT 打开/滑动正常/错误消失）；HEAD `aa73c95`。
+
+---
+
+## M3.2 — 目录完整标题 + 精确章节跳转（0.1.0-dev.3+3，parserVersion 2.0.0）
+
+### 目标
+目录显示完整标题（非「第X章」片段）；点击目录精确跳到标题行（非块顶）。
+
+### 用户发现
+- 目录只有章节序号无完整标题；点目录不能准确定位到标题行。
+
+### 根因
+- 标题丢失（情况 B）：M1 扫描器 `title: m.group(0)!` 只取正则匹配片段「第X章/卷」，完整标题从未进入数据链（index.json → Drift → UI 全是短标题）。
+- 跳转不准：`jumpToItem(block.index, alignment: 0)` 只对齐块顶，无块内字符二次对齐；且原实现有固定 100ms Timer（违反无固定延迟红线）。
+
+### 实现
+- 标题合同：displayTitle（完整行 trim）/ dedupeKey（归一化，不进 UI）/ chapterNumber（单独解析）；parserVersion 1.0.0→2.0.0。
+- 两阶段精确跳转：jumpToItem(块) → post-frame rectForCharacterOffset 求标题行 Rect → 二次 jumpToItem(rect, alignment 0) + 12px 微调 → localToGlobal 验证视口相交；bounded retries ≤5；移除固定 Timer。
+- 高亮 = 真实可见范围顶部反查（最后一个 start≤topVisible 的 chapter）。
+- repair 扩展：按 index.json parserVersion 判定旧数据；repair 显式写 repairDir/index.json（原缺陷：repair 从不写 index.json，旧短标题残留）；Drift 事务同步标题（offset 不漂移才更新）。
+
+### 出现问题与修复
+- 真实文件 473→486 回归：正文引用标题的缩进行与行首标题有错别字差异（第468章 这特么 vs 这特码），dedupeKey 比较失败 → 相邻去重附加判据「章节编号相同即视为重复」→ 恢复 473。
+- 健康检查曾用「标题太短」猜测（误判「第五十一章」这类合法纯编号标题）→ 改以 parserVersion 为权威。
+- 测试断言多次按旧合同写错（楔子 8→7、前言偏移、多字节偏移、第二卷内 order）→ 逐个核对实际 fixture 修正。
+
+### 验证
+214 测试；真实库 4 本 repair 后 parserVersion 2.0.0 + 完整标题 + health ok；第 1/19/42/112/195/258/300/400/473 章 offset 全命中；目录点击跳转 + 高亮验证；HEAD `da1a13d`。
+
+---
+
+## M3.3 — 目录打开自动定位当前章节 + 深色可读性（0.1.0-dev.3+3）
+
+### 目标
+打开目录即定位到当前章节（视口 35% 处高亮）；修复深色主题下正文不可读（P1）。
+
+### 实现
+- `TocIndexLogic` 纯逻辑（currentChapterFor / parentVolumeIdsOf / visibleIndexFor）+ `_TocSheet` StatefulWidget：卷折叠（当前章父卷强制展开）、每次打开最多定位一次、两阶段定位（估算行高 jumpTo → ensureVisible 0.35）、bounded retry（extent 不稳 ≤10 / 实测行高 ≤8）、用户滚动后不拉回 +「定位当前章节」按钮、无固定延迟。
+- `_visibleRangeForScroll` 从 block 级近似升级为**块内真实字符级**（视口顶/底坐标 → characterOffsetAtLocalY → 精确 UTF-16 偏移；layout 中/未 attach 安全回退）。
+- `ReaderResolvedAppearance`（bg=surface/text=onSurface/secondary=onSurfaceVariant/heading/selection/baseTextStyle）+ WCAG ≥4.5:1；AppTheme.light() + system mode。
+- RenderReaderTextBlock style setter：度量变化 markNeedsLayout、仅颜色变化 markNeedsPaint；主题切换不重建 block 索引、不写进度、不改 Locator。
+
+### 出现问题与修复
+- Widget 测试 12 项首跑 1 过 11 败：Python patch 破坏中文编码（乱码）→ write 工具整体重写测试文件；测试 4 卷标题在视口外（先 drag 到可见再 tap）；「定位当前章节」按钮不显示（_userScrolled 无 setState）→ 修。
+- 正文恢复与目录定位章节偏差：`_visibleRangeForScroll` 用 block 起始近似 → 顶部报 224 章实际 258 章 → preciseTop 字符级计算修复。
+- box.dart:2268 断言：layout 期间访问 RenderBox.size → 未 attach 跳过 + layout 期间回退 block 级。
+- 真实大 TXT 验证：第 112 章等 autoLocate 早期 maxScrollExtent=0 被 clamp 到 0 → bounded retry；估算行高 48 vs 实际 dense ListTile 不符 → 实测行高重算。
+
+### 验证
+250 测试；真实文件 6 章（±1 章，12px 安全区合同行为）；深色 8 项 widget 全过；HEAD `ce2ff98`。
+
+---
+
+## M3.4 — 平铺目录 + 全局内容导航合同（0.1.0-dev.3+3）
+
+### 目标
+用户手工测试 M3.3 后产品决定：TXT 层级结构不可靠 → 删除卷折叠，目录始终平铺；并把该原则固化为全局产品合同。
+
+### 实现
+- 删除折叠：_collapsed/_toggleVolume/_autoExpandParents/parentVolumeIdsOf/visibleEntries/折叠图标全移除（无死代码）。
+- 平铺：volume = Section Header（字重 + 「卷」badge + 间距 + 无箭头，点击跳卷首）；chapter = 完整 displayTitle + 高亮 + 轻缩进；flat = 原始 toc 顺序零过滤。
+- 自动定位简化：currentChapterFor → displayIndexFor → jumpTo + ensureVisible 0.35；保留「每次最多一次 / 滚动不拉回 / 定位按钮 / 关闭重开重定位」。
+- **全局合同**：`Content hierarchy is semantic, not interactive. Source order is authoritative; navigable entries remain visible.`（层级负责表达关系，顺序负责导航，折叠不参与内容可见性）——覆盖 TXT/EPUB/RSS/Feed/网页；落盘 `docs/CONTENT_NAVIGATION_CONTRACT.md` + 合同测试 8 项。
+
+### 出现问题与修复
+- `_locateToCurrent` 在 scroll 未 attach 时直接 return 无重试 → 补 bounded retry。
+- 测试适配虚拟列表（混合高度 volume 54px + chapter 40px）；scrollUntilVisible 不稳定 → ScrollUpdate 触发。
+
+### 验证
+- 259 测试（251 + 8 合同）；5 集成测试；verify 全绿。
+- Windows 真实库 4 collection（473/294 3卷/53 1卷/无章节全文）。
+- **Android 真机 13/13**（Redmi K60 / Android 15 / 无线 adb）：覆盖安装数据存留、恢复位置（43/548 章）、平铺无箭头、自动定位高亮（42 章 @39%）、点章节跳转（548→530）、点卷跳转、滚动不拉回、正文滚动保存恢复（八月初七中段）、force-stop、进程退出重进、横竖屏、0 crash（pid 23606 全程不变）。
+- 期间教训：image 工具坐标估算 ±200-300px 噪声 → 单次点击现象不能直接判定功能失败（「点 45 章没跳」实为坐标偏差点到当前章节的假象）；keyevent 4 在书架会退出 app。
+
+### 最终状态
+HEAD `f965448`（docs Android 结果），工作区 clean，M3 冻结点。
+
+---
+
+## 附：版本与 schema 历史（git 实测）
+
+| Project version | Milestone | Drift schema | parserVersion | normalizationVersion | indexFormatVersion | Data generation |
+|---|---|---|---|---|---|---|
+| 0.1.0-dev.1+1 | M0（无库）/ M1 | —（M2 建库）/ 1 隐含 | 1.0.0 | 1.0.0 | 1 | v4-local-1 |
+| 0.1.0-dev.2+2 | M2 | **1**（6 表） | 1.0.0 | 1.0.0 | 1 | v4-local-1 |
+| 0.1.0-dev.3+3 | M3/M3.1 | **2**（+reading_progress） | 1.0.0 | 1.0.0 | 1 | v4-local-1 |
+| 0.1.0-dev.3+3 | M3.2/M3.3/M3.4 | 2 | **2.0.0** | 1.0.0 | 1 | v4-local-1 |
+
+- GB18030 index asset formatVersion = 1（meta.json 实测：source WHATWG 2024-09-18 snapshot，entryCount 23940，anchorCount 209，sha256 aebe263d…）。
+- 版本确认方式：`git show <milestone commit>:pubspec.yaml` + `lib/app/constants.dart` 与 `lib/data/database/app_database.dart`（schemaVersion=2）实测。
