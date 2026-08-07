@@ -106,6 +106,9 @@ class RenderReaderTextBlock extends RenderBox {
   late TextPainter _layoutPainter;
   bool _layoutDone = false;
 
+  /// 最近一次布局宽度（仅颜色变化时内部同步重排用）。
+  double _lastLayoutWidth = 0;
+
   String get text => _text;
   set text(String v) {
     if (v == _text) return;
@@ -117,9 +120,31 @@ class RenderReaderTextBlock extends RenderBox {
   TextStyle get style => _style;
   set style(TextStyle v) {
     if (v == _style) return;
+    final metricsChanged = !_sameMetrics(_style, v);
     _style = v;
     _layoutPainter.text = TextSpan(text: _text, style: v);
-    markNeedsLayout();
+    if (metricsChanged) {
+      // 字体/字号/行高等度量变化：触发完整重排
+      markNeedsLayout();
+    } else if (_layoutDone) {
+      // 仅颜色变化（P1）：内部同步重排（相同度量），只重绘不重排树。
+      _layoutPainter.layout(maxWidth: _lastLayoutWidth);
+      markNeedsPaint();
+    }
+  }
+
+  /// 两个 TextStyle 是否仅绘制属性（颜色类）不同、度量相同。
+  static bool _sameMetrics(TextStyle a, TextStyle b) {
+    return a.fontSize == b.fontSize &&
+        a.height == b.height &&
+        a.fontFamily == b.fontFamily &&
+        a.fontFamilyFallback == b.fontFamilyFallback &&
+        a.fontWeight == b.fontWeight &&
+        a.fontStyle == b.fontStyle &&
+        a.letterSpacing == b.letterSpacing &&
+        a.wordSpacing == b.wordSpacing &&
+        a.textBaseline == b.textBaseline &&
+        a.inherit == b.inherit;
   }
 
   int get styleVersion => _styleVersion;
@@ -183,6 +208,7 @@ class RenderReaderTextBlock extends RenderBox {
     final width = constraints.maxWidth.isFinite
         ? constraints.maxWidth
         : _maxWidth;
+    _lastLayoutWidth = width;
     _layoutPainter.layout(maxWidth: width);
     size = Size(width, _layoutPainter.height);
     _layoutDone = true;
