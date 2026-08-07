@@ -63,7 +63,8 @@ class LibraryTocEntry {
     required this.orderIndex,
     required this.startCharacterOffset,
     required this.endCharacterOffset,
-  });
+    String? displayTitle,
+  }) : displayTitle = displayTitle ?? title;
 
   final String id;
   final String collectionId;
@@ -73,7 +74,13 @@ class LibraryTocEntry {
   /// volume / chapter。
   final String kind;
   final int level;
+
+  /// Drift 标题（完整标题）。
   final String title;
+
+  /// 完整展示标题（与 [title] 相同，供 UI 直接使用）。
+  final String displayTitle;
+
   final int orderIndex;
   final int startCharacterOffset;
   final int endCharacterOffset;
