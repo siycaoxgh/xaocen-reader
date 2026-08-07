@@ -16,4 +16,11 @@ abstract final class AppTokens {
   static const Color onBackground = Color(0xFFE6F0F3);
   static const Color onSurface = Color(0xFFC9DDE3);
   static const Color outline = Color(0xFF2E434A);
+
+  // 浅色中性色（P1：Reader 浅色 Theme 可读性验收）
+  static const Color lightBackground = Color(0xFFF4F7F8);
+  static const Color lightSurface = Color(0xFFFFFFFF);
+  static const Color lightOnBackground = Color(0xFF16262B);
+  static const Color lightOnSurface = Color(0xFF1C2B30);
+  static const Color lightOutline = Color(0xFFB8C9CE);
 }

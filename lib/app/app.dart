@@ -12,7 +12,9 @@ class XaocenApp extends StatelessWidget {
     return MaterialApp(
       title: 'XAOCEN Reader',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.dark(),
+      theme: AppTheme.light(),
+      darkTheme: AppTheme.dark(),
+      themeMode: ThemeMode.system,
       initialRoute: AppRouter.root,
       routes: AppRouter.routes,
     );
