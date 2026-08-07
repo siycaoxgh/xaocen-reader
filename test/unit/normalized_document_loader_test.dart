@@ -59,9 +59,45 @@ void main() {
       expect(doc.text, text);
     });
 
-    test('hash 不匹配抛异常', () async {
-      expect(
-        () => loader.load(
+    test('manifest hash 错误时抛异常（manifest 为权威）', () async {
+      // 篡改 manifest.normalizedHash 为错误值
+      final mf = File('${tmp.path}/local_txt/abc/manifest.json');
+      await mf.writeAsString(
+        '{"manifestVersion":1,"normalizedHash":"wrong-hash",'
+        '"normalizedCharacterLength":17,'
+        '"normalizationVersion":"v1","parserVersion":"1",'
+        '"indexFormatVersion":"1","originalFileName":"test.txt"}',
+      );
+      await expectLater(
+        loader.load(storagePath: 'library/local_txt/abc/normalized.txt'),
+        throwsA(
+          isA<NormalizedDocumentException>().having(
+            (e) => e.code,
+            'code',
+            'hash_mismatch',
+          ),
+        ),
+      );
+    });
+
+    test('manifest 缺失时 expectedHash 作为回退', () async {
+      final f = File('${tmp.path}/local_txt/abc/manifest.json');
+      await f.delete();
+      final text = '第一章 开端\n正文内容\n第二章 发展\n';
+      final hash = sha256.convert(utf8.encode(text)).toString();
+      final doc = await loader.load(
+        storagePath: 'library/local_txt/abc/normalized.txt',
+        expectedHash: hash,
+        expectedLength: text.length,
+      );
+      expect(doc.text, text);
+    });
+
+    test('manifest 缺失且 expectedHash 错误时抛异常', () async {
+      final f = File('${tmp.path}/local_txt/abc/manifest.json');
+      await f.delete();
+      await expectLater(
+        loader.load(
           storagePath: 'library/local_txt/abc/normalized.txt',
           expectedHash: 'wrong-hash',
         ),
@@ -75,9 +111,11 @@ void main() {
       );
     });
 
-    test('长度不匹配抛异常', () async {
-      expect(
-        () => loader.load(
+    test('manifest 缺失且 expectedLength 错误时抛异常', () async {
+      final f = File('${tmp.path}/local_txt/abc/manifest.json');
+      await f.delete();
+      await expectLater(
+        loader.load(
           storagePath: 'library/local_txt/abc/normalized.txt',
           expectedLength: 999,
         ),
