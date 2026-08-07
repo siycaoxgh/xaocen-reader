@@ -23,12 +23,31 @@ class ImportTxtResult {
   const ImportTxtResult({
     required this.collection,
     required this.alreadyImported,
+    this.outcome = ImportOutcome.imported,
   });
 
   final LibraryCollection collection;
 
   /// 同 hash 重复导入时为 true（不复制第二份、不产生第二本）。
   final bool alreadyImported;
+
+  /// 导入/重复导入最终结果分类。
+  final ImportOutcome outcome;
+}
+
+/// 导入结果分类。
+enum ImportOutcome {
+  /// 新导入成功。
+  imported,
+
+  /// 重复导入且 managed 数据健康（直接复用）。
+  alreadyImported,
+
+  /// 重复导入但 managed 派生数据不健康，已自动修复。
+  repairedExisting,
+
+  /// 重复导入但 managed source.txt 也损坏，需要用户明确重新导入。
+  corruptedManagedCopy,
 }
 
 /// 取消令牌（复用 M1 语义，直接使用 M1 类型）。
