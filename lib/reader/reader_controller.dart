@@ -169,6 +169,7 @@ class ReaderController extends ChangeNotifier {
       // 通知 UI 跳到目标块（返回目标块信息，由 UI 执行跳转）
       _restorePhase = ReaderRestorePhase.jumpingToBlock;
       _pendingTargetBlock = targetBlock;
+      _lastTopVisibleOffset = _requestedLocator!.absoluteCharacterOffset;
       // 文档已就绪：正文可渲染（finishRestore 负责确认可见范围 + 解冻写入）
       _state = ReaderState.ready;
       notifyListeners();
@@ -280,6 +281,7 @@ class ReaderController extends ChangeNotifier {
       itemIdHint: itemIdHint,
     );
     _requestedLocator = target;
+    _lastTopVisibleOffset = target.absoluteCharacterOffset;
     final block = _blockIndex!.blockForOffset(target.absoluteCharacterOffset);
     if (block == null) return;
     _pendingTargetBlock = block;
@@ -306,10 +308,24 @@ class ReaderController extends ChangeNotifier {
   }
 
   /// 用户滚动上报（userDrag / userWheel / userScrollbar）。
+  /// 跳转失败标记（§十：bounded 重试后明确失败，不宣称成功）。
+  Future<void> markRestoreFailed(String reason) async {
+    if (_restoreWriteUnlocked) return; // 已解冻写入的不再回退
+    _restorePhase = ReaderRestorePhase.failed;
+    _error = reason;
+    _state = ReaderState.failed;
+    notifyListeners();
+  }
+
+  /// 最近一次真实可见范围顶部偏移（目录当前章节高亮用，§十一）。
+  int _lastTopVisibleOffset = 0;
+  int get lastTopVisibleOffset => _lastTopVisibleOffset;
+
   void reportUserScroll({
     required int topVisibleCharacterOffset,
     ReaderPositionEventSource source = ReaderPositionEventSource.userDrag,
   }) {
+    _lastTopVisibleOffset = topVisibleCharacterOffset;
     if (!_restoreWriteUnlocked) return; // 恢复完成前零写入
     if (_document == null) return;
     final clamped = clampLocatorOffset(

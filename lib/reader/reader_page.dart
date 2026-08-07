@@ -82,7 +82,6 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
   final ListController _listController = ListController();
   late final TextStyle _bodyStyle;
 
-  Timer? _postJumpTimer;
   bool _restoreFinished = false;
 
   /// 当前可见范围缓存（供测试与诊断）。
@@ -130,7 +129,6 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _postJumpTimer?.cancel();
     _controller.removeListener(_onControllerChanged);
     // 生命周期 flush：写最新已确认用户位置
     _controller.flush();
@@ -222,24 +220,182 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
     if (mounted) setState(() {});
   }
 
-  /// 跳转到待处理目标块。
+  /// 目标标题行置于 viewport 顶部安全区下方的期望间距（§九：8~24px）。
+  static const double _kTitleInset = 12.0;
+
+  /// 二次对齐/验证重试计数（bounded frame state machine，§十）。
+  int _alignRetries = 0;
+
+  /// 本次跳转是否来自目录点击（决定完成后 finishTocJump 还是 finishRestore）。
+  bool _tocJumpPending = false;
+
+  // ---- 跳转诊断（供测试与 _DebugBar）----
+  Rect? lastTitleLineRect; // 目标标题行 Rect（块局部坐标）
+  double? lastTitleLineGlobalTop;
+  double? lastViewportTop;
+  double? lastViewportBottom;
+  double? lastAlignError; // 标题行顶部 - viewport 顶部 - inset
+  String? lastJumpError;
+
+  /// 跳转目标块（阶段1）→ 块内字符二次对齐（阶段2）→ 真实可见验证（阶段3）。
+  ///
+  /// 阶段1：jumpToItem(block.index) 只把目标块带进视口；
+  /// 阶段2：用 RenderReaderTextBlock 实际 TextPainter 求目标字符所在行 Rect，
+  ///        再次 jumpToItem(rect) 把标题行对齐 viewport 顶部 + inset；
+  /// 阶段3：测量真实可见范围，确认标题行与 viewport 相交，才完成恢复/保存。
   void _scheduleJumpToPendingTarget() {
     final block = _controller.pendingTargetBlock;
     if (block == null || !_listController.isAttached) {
       return;
     }
+    _alignRetries = 0;
+    lastJumpError = null;
     _listController.jumpToItem(
       index: block.index,
       scrollController: _scroll,
       alignment: 0.0,
     );
-    // post-frame 确认
+    // post-frame：等目标块布局完成后做块内字符对齐
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      if (!_restoreFinished) {
-        _finishRestore();
-      }
+      _scheduleSecondStageAlign();
     });
+  }
+
+  void _scheduleSecondStageAlign() {
+    final block = _controller.pendingTargetBlock;
+    final target = _controller.requestedLocator?.absoluteCharacterOffset;
+    if (block == null || target == null || !_listController.isAttached) {
+      _alignFailed('目标块或目标偏移不可用');
+      return;
+    }
+    final render = _renderObjects[block.index];
+    if (render == null || !render.layoutCompleted) {
+      _alignRetries++;
+      if (_alignRetries > 5) {
+        _alignFailed('目标块布局未完成（bounded retries 超限）');
+        return;
+      }
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _scheduleSecondStageAlign();
+      });
+      return;
+    }
+    final localOffset = target - block.startCharacterOffset;
+    if (localOffset < 0 ||
+        localOffset > block.endCharacterOffset - block.startCharacterOffset) {
+      _alignFailed('目标偏移超出目标块范围');
+      return;
+    }
+    final rect = render.rectForCharacterOffset(localOffset);
+    if (rect == null) {
+      _alignFailed('无法解析目标字符行 Rect');
+      return;
+    }
+    lastTitleLineRect = rect;
+    // 阶段2：目标行顶部对齐 viewport 顶部（rect 为块局部坐标）
+    _listController.jumpToItem(
+      index: block.index,
+      scrollController: _scroll,
+      alignment: 0.0,
+      rect: Rect.fromLTWH(0, rect.top, 1, rect.height),
+    );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      // 微调：标题行置于 viewport 顶部安全区下方（8~24px）
+      final pos = _scroll.position;
+      if (pos.pixels > _kTitleInset) {
+        pos.jumpTo(pos.pixels - _kTitleInset);
+      }
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _verifyTargetVisible();
+      });
+    });
+  }
+
+  void _verifyTargetVisible() {
+    final block = _controller.pendingTargetBlock;
+    final target = _controller.requestedLocator?.absoluteCharacterOffset;
+    if (block == null || target == null) {
+      _alignFailed('目标块或目标偏移不可用');
+      return;
+    }
+    final render = _renderObjects[block.index];
+    final viewportTop = _viewportGlobalTop();
+    final viewportBottom = viewportTop + _scroll.position.viewportDimension;
+    lastViewportTop = viewportTop;
+    lastViewportBottom = viewportBottom;
+    if (render == null || !render.layoutCompleted) {
+      _alignRetries++;
+      if (_alignRetries > 5) {
+        _alignFailed('目标标题行不可见（布局未完成）');
+        return;
+      }
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _verifyTargetVisible();
+      });
+      return;
+    }
+    final localOffset = target - block.startCharacterOffset;
+    final rect = render.rectForCharacterOffset(localOffset);
+    if (rect == null) {
+      _alignFailed('标题行 Rect 不可用');
+      return;
+    }
+    final titleTop = render.localToGlobal(Offset(0, rect.top)).dy;
+    final titleBottom = titleTop + rect.height;
+    lastTitleLineGlobalTop = titleTop;
+    lastAlignError = titleTop - viewportTop - _kTitleInset;
+    final intersects = titleBottom > viewportTop && titleTop < viewportBottom;
+    if (!intersects) {
+      _alignRetries++;
+      if (_alignRetries > 5) {
+        _alignFailed('目标标题行未进入 viewport（对齐失败）');
+        return;
+      }
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _verifyTargetVisible();
+      });
+      return;
+    }
+    // 对齐成功：重新测量真实可见范围并完成恢复/保存
+    final visible = _measureVisibleRange();
+    _controller.visibleRangeProvider = () => visible;
+    if (_tocJumpPending) {
+      _tocJumpPending = false;
+      _controller.finishTocJump().then((_) {
+        if (!mounted) return;
+        setState(() {});
+      });
+    } else {
+      _finishRestore();
+    }
+  }
+
+  double _viewportGlobalTop() {
+    final pos = _scroll.position;
+    // ScrollPosition.context 是与之关联的 ScrollableState（非空时可用）
+    final ctx = pos.context as dynamic;
+    final state = ctx?.notificationContext ?? ctx?.context;
+    final ro = state?.findRenderObject();
+    if (ro is RenderBox) return ro.localToGlobal(Offset.zero).dy;
+    return 0;
+  }
+
+  void _alignFailed(String reason) {
+    lastJumpError = reason;
+    if (_tocJumpPending) {
+      // 目录跳转失败：不保存，保持原状态，给出明确失败
+      _tocJumpPending = false;
+    }
+    if (!_restoreFinished) {
+      _controller.markRestoreFailed('跳转失败: $reason');
+    }
+    if (mounted) setState(() {});
   }
 
   void _finishRestore() {
@@ -487,12 +643,15 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
   }
 
   void _openToc() {
+    // 当前章节高亮基于真实可见范围顶部（§十一），非上次点击/恢复位置
+    final currentTop = _topVisibleCharacterOffset();
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       builder: (ctx) => _TocSheet(
         toc: widget.launch.toc,
         controller: _controller,
+        currentTopOffset: currentTop,
         collectionTitle: widget.launch.collection.title,
         onJump: _jumpToChapter,
       ),
@@ -501,6 +660,8 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
 
   Future<void> _jumpToChapter(LibraryTocEntry entry) async {
     Navigator.of(context).pop(); // close sheet
+    _tocJumpPending = true;
+    _alignRetries = 0;
     await _controller.jumpToOffset(
       entry.startCharacterOffset,
       itemIdHint: entry.itemId,
@@ -508,11 +669,6 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
     if (!mounted) return;
     setState(() {});
     _scheduleJumpToPendingTarget();
-    // 目录跳转完成确认后立即保存
-    _postJumpTimer?.cancel();
-    _postJumpTimer = Timer(const Duration(milliseconds: 100), () {
-      _controller.finishTocJump();
-    });
   }
 }
 
@@ -520,21 +676,36 @@ class _TocSheet extends StatelessWidget {
   const _TocSheet({
     required this.toc,
     required this.controller,
+    required this.currentTopOffset,
     required this.collectionTitle,
     required this.onJump,
   });
 
   final List<LibraryTocEntry> toc;
   final ReaderController controller;
+
+  /// 当前真实可见范围顶部字符偏移（来自用户滚动/跳转后的实测，§十一）。
+  final int currentTopOffset;
+
   final String collectionTitle;
   final ValueChanged<LibraryTocEntry> onJump;
 
   @override
   Widget build(BuildContext context) {
     final chapters = toc.where((e) => e.kind == 'chapter').toList();
-    final volumes = toc.where((e) => e.kind == 'volume').toList();
-    final currentOffset =
-        controller.confirmedLocator?.absoluteCharacterOffset ?? 0;
+    final hasChapters = chapters.isNotEmpty;
+
+    // 当前章节：最后一个 startCharacterOffset <= topVisible 的 chapter（§十一）
+    LibraryTocEntry? currentChapter;
+    if (hasChapters) {
+      for (final e in chapters) {
+        if (e.startCharacterOffset <= currentTopOffset) {
+          currentChapter = e;
+        } else {
+          break;
+        }
+      }
+    }
 
     return DraggableScrollableSheet(
       expand: false,
@@ -551,7 +722,7 @@ class _TocSheet extends StatelessWidget {
               ),
             ),
             Expanded(
-              child: chapters.isEmpty
+              child: !hasChapters
                   ? ListTile(
                       leading: const Icon(Icons.menu_book),
                       title: const Text('全文'),
@@ -568,6 +739,7 @@ class _TocSheet extends StatelessWidget {
                           kind: 'chapter',
                           level: 1,
                           title: '全文',
+                          displayTitle: '全文',
                           orderIndex: 0,
                           startCharacterOffset: 0,
                           endCharacterOffset:
@@ -577,26 +749,43 @@ class _TocSheet extends StatelessWidget {
                     )
                   : ListView.builder(
                       controller: scrollController,
-                      itemCount: chapters.length,
+                      itemCount: toc.length,
                       itemBuilder: (context, i) {
-                        final e = chapters[i];
+                        final e = toc[i];
+                        if (e.kind == 'volume') {
+                          // 卷：完整卷标题（§五），可点击跳卷首
+                          return ListTile(
+                            dense: true,
+                            leading: const Icon(
+                              Icons.collections_bookmark_outlined,
+                              size: 20,
+                            ),
+                            title: Text(
+                              e.displayTitle,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            onTap: () => onJump(e),
+                          );
+                        }
                         final selected =
-                            currentOffset >= e.startCharacterOffset &&
-                            currentOffset < e.endCharacterOffset;
+                            currentChapter?.id == e.id ||
+                            (currentChapter == null && e.orderIndex == 1);
                         return ListTile(
                           dense: true,
+                          contentPadding: const EdgeInsets.only(
+                            left: 32,
+                            right: 16,
+                          ),
                           title: Text(
-                            e.title,
+                            e.displayTitle,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
                           selected: selected,
-                          trailing: volumes.isEmpty
-                              ? null
-                              : Text(
-                                  '${e.orderIndex + 1}',
-                                  style: const TextStyle(fontSize: 12),
-                                ),
                           onTap: () => onJump(e),
                         );
                       },
