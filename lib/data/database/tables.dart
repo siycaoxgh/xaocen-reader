@@ -157,17 +157,23 @@ class ImportRecords extends Table {
   Set<Column> get primaryKey => {id};
 }
 
-/// reading_progress —— 每本书一条当前阅读进度（schema 2 新增）。
+/// reading_progress —— 每本书一条当前阅读进度（schema 2 新增；schema 3 加 readingMode）。
 ///
 /// 唯一位置真源：absoluteCharacterOffset（normalized.txt 的 UTF-16 码元偏移）。
+/// readingMode 是阅读表现状态（vertical/paged），绝不是位置真源。
 /// 禁止保存页码 / scroll pixels / blockIndex / 章节百分比。
 class ReadingProgress extends Table {
   /// collection ID（`local-txt:<hash>`，主键 + 外键（级联删除））。
-  TextColumn get collectionId =>
-      text().references(ContentCollections, #id, onDelete: KeyAction.cascade)();
+  TextColumn get collectionId => text().customConstraint(
+    'REFERENCES content_collections (id) ON DELETE CASCADE',
+  )();
 
   /// 唯一位置真源：normalized.txt UTF-16 码元偏移。
   IntColumn get absoluteCharacterOffset => integer()();
+
+  /// 阅读表现状态：'vertical' / 'paged'（schema 3 新增，旧数据默认 vertical）。
+  TextColumn get readingMode =>
+      text().withDefault(const Constant('vertical'))();
 
   /// 快速识别章节的提示（非位置真源），可空。
   TextColumn get itemIdHint => text().nullable()();

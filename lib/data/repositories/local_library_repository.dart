@@ -726,6 +726,10 @@ class LocalLibraryRepository {
 
     await _db.transaction(() async {
       // 级联删除（外键依赖顺序：documents → toc → items → collection → source）
+      // 显式删除 reading_progress（DB FK 已加 CASCADE，双保险；修复删书残留进度）。
+      await (_db.delete(
+        _db.readingProgress,
+      )..where((t) => t.collectionId.equals(collectionId))).go();
       final itemIds = await (_db.select(
         _db.contentItems,
       )..where((t) => t.collectionId.equals(collectionId))).get();

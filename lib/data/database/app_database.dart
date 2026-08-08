@@ -31,7 +31,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting() : super(NativeDatabase.memory());
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   /// 打开应用数据库（support 目录下）。
   static Future<AppDatabase> open() async {
@@ -52,6 +52,11 @@ class AppDatabase extends _$AppDatabase {
       if (from < 2) {
         await m.createTable(readingProgress);
         await _createIndexes(customStatement);
+      }
+      // schema 2 → 3：reading_progress 新增 readingMode 列
+      // （阅读表现状态，旧数据默认 'vertical'）。
+      if (from < 3) {
+        await m.addColumn(readingProgress, readingProgress.readingMode);
       }
     },
     beforeOpen: (details) async {

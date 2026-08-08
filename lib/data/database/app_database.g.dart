@@ -623,9 +623,6 @@ class $ContentCollectionsTable extends ContentCollections
     false,
     type: DriftSqlType.string,
     requiredDuringInsert: true,
-    defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'REFERENCES content_sources (id)',
-    ),
   );
   static const VerificationMeta _titleMeta = const VerificationMeta('title');
   @override
@@ -1159,9 +1156,6 @@ class $ContentItemsTable extends ContentItems
     false,
     type: DriftSqlType.string,
     requiredDuringInsert: true,
-    defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'REFERENCES content_collections (id)',
-    ),
   );
   static const VerificationMeta _kindMeta = const VerificationMeta('kind');
   @override
@@ -1692,9 +1686,6 @@ class $ContentDocumentsTable extends ContentDocuments
     false,
     type: DriftSqlType.string,
     requiredDuringInsert: true,
-    defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'REFERENCES content_items (id)',
-    ),
   );
   static const VerificationMeta _storagePathMeta = const VerificationMeta(
     'storagePath',
@@ -2244,9 +2235,6 @@ class $TocEntriesTable extends TocEntries
     false,
     type: DriftSqlType.string,
     requiredDuringInsert: true,
-    defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'REFERENCES content_collections (id)',
-    ),
   );
   static const VerificationMeta _itemIdMeta = const VerificationMeta('itemId');
   @override
@@ -2256,9 +2244,6 @@ class $TocEntriesTable extends TocEntries
     true,
     type: DriftSqlType.string,
     requiredDuringInsert: false,
-    defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'REFERENCES content_items (id)',
-    ),
   );
   static const VerificationMeta _parentIdMeta = const VerificationMeta(
     'parentId',
@@ -3348,9 +3333,7 @@ class $ReadingProgressTable extends ReadingProgress
     false,
     type: DriftSqlType.string,
     requiredDuringInsert: true,
-    defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'REFERENCES content_collections (id) ON DELETE CASCADE',
-    ),
+    $customConstraints: 'REFERENCES content_collections (id) ON DELETE CASCADE',
   );
   static const VerificationMeta _absoluteCharacterOffsetMeta =
       const VerificationMeta('absoluteCharacterOffset');
@@ -3363,6 +3346,18 @@ class $ReadingProgressTable extends ReadingProgress
         type: DriftSqlType.int,
         requiredDuringInsert: true,
       );
+  static const VerificationMeta _readingModeMeta = const VerificationMeta(
+    'readingMode',
+  );
+  @override
+  late final GeneratedColumn<String> readingMode = GeneratedColumn<String>(
+    'reading_mode',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('vertical'),
+  );
   static const VerificationMeta _itemIdHintMeta = const VerificationMeta(
     'itemIdHint',
   );
@@ -3411,6 +3406,7 @@ class $ReadingProgressTable extends ReadingProgress
   List<GeneratedColumn> get $columns => [
     collectionId,
     absoluteCharacterOffset,
+    readingMode,
     itemIdHint,
     updatedAt,
     locatorVersion,
@@ -3449,6 +3445,15 @@ class $ReadingProgressTable extends ReadingProgress
       );
     } else if (isInserting) {
       context.missing(_absoluteCharacterOffsetMeta);
+    }
+    if (data.containsKey('reading_mode')) {
+      context.handle(
+        _readingModeMeta,
+        readingMode.isAcceptableOrUnknown(
+          data['reading_mode']!,
+          _readingModeMeta,
+        ),
+      );
     }
     if (data.containsKey('item_id_hint')) {
       context.handle(
@@ -3506,6 +3511,10 @@ class $ReadingProgressTable extends ReadingProgress
         DriftSqlType.int,
         data['${effectivePrefix}absolute_character_offset'],
       )!,
+      readingMode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}reading_mode'],
+      )!,
       itemIdHint: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}item_id_hint'],
@@ -3533,11 +3542,14 @@ class $ReadingProgressTable extends ReadingProgress
 
 class ReadingProgressData extends DataClass
     implements Insertable<ReadingProgressData> {
-  /// collection ID（local-txt:<hash>），主键 + 外键（级联删除）。
+  /// collection ID（`local-txt:<hash>`，主键 + 外键（级联删除））。
   final String collectionId;
 
   /// 唯一位置真源：normalized.txt UTF-16 码元偏移。
   final int absoluteCharacterOffset;
+
+  /// 阅读表现状态：'vertical' / 'paged'（schema 3 新增，旧数据默认 vertical）。
+  final String readingMode;
 
   /// 快速识别章节的提示（非位置真源），可空。
   final String? itemIdHint;
@@ -3551,6 +3563,7 @@ class ReadingProgressData extends DataClass
   const ReadingProgressData({
     required this.collectionId,
     required this.absoluteCharacterOffset,
+    required this.readingMode,
     this.itemIdHint,
     required this.updatedAt,
     required this.locatorVersion,
@@ -3561,6 +3574,7 @@ class ReadingProgressData extends DataClass
     final map = <String, Expression>{};
     map['collection_id'] = Variable<String>(collectionId);
     map['absolute_character_offset'] = Variable<int>(absoluteCharacterOffset);
+    map['reading_mode'] = Variable<String>(readingMode);
     if (!nullToAbsent || itemIdHint != null) {
       map['item_id_hint'] = Variable<String>(itemIdHint);
     }
@@ -3574,6 +3588,7 @@ class ReadingProgressData extends DataClass
     return ReadingProgressCompanion(
       collectionId: Value(collectionId),
       absoluteCharacterOffset: Value(absoluteCharacterOffset),
+      readingMode: Value(readingMode),
       itemIdHint: itemIdHint == null && nullToAbsent
           ? const Value.absent()
           : Value(itemIdHint),
@@ -3593,6 +3608,7 @@ class ReadingProgressData extends DataClass
       absoluteCharacterOffset: serializer.fromJson<int>(
         json['absoluteCharacterOffset'],
       ),
+      readingMode: serializer.fromJson<String>(json['readingMode']),
       itemIdHint: serializer.fromJson<String?>(json['itemIdHint']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
       locatorVersion: serializer.fromJson<int>(json['locatorVersion']),
@@ -3609,6 +3625,7 @@ class ReadingProgressData extends DataClass
       'absoluteCharacterOffset': serializer.toJson<int>(
         absoluteCharacterOffset,
       ),
+      'readingMode': serializer.toJson<String>(readingMode),
       'itemIdHint': serializer.toJson<String?>(itemIdHint),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
       'locatorVersion': serializer.toJson<int>(locatorVersion),
@@ -3619,6 +3636,7 @@ class ReadingProgressData extends DataClass
   ReadingProgressData copyWith({
     String? collectionId,
     int? absoluteCharacterOffset,
+    String? readingMode,
     Value<String?> itemIdHint = const Value.absent(),
     DateTime? updatedAt,
     int? locatorVersion,
@@ -3627,6 +3645,7 @@ class ReadingProgressData extends DataClass
     collectionId: collectionId ?? this.collectionId,
     absoluteCharacterOffset:
         absoluteCharacterOffset ?? this.absoluteCharacterOffset,
+    readingMode: readingMode ?? this.readingMode,
     itemIdHint: itemIdHint.present ? itemIdHint.value : this.itemIdHint,
     updatedAt: updatedAt ?? this.updatedAt,
     locatorVersion: locatorVersion ?? this.locatorVersion,
@@ -3640,6 +3659,9 @@ class ReadingProgressData extends DataClass
       absoluteCharacterOffset: data.absoluteCharacterOffset.present
           ? data.absoluteCharacterOffset.value
           : this.absoluteCharacterOffset,
+      readingMode: data.readingMode.present
+          ? data.readingMode.value
+          : this.readingMode,
       itemIdHint: data.itemIdHint.present
           ? data.itemIdHint.value
           : this.itemIdHint,
@@ -3658,6 +3680,7 @@ class ReadingProgressData extends DataClass
     return (StringBuffer('ReadingProgressData(')
           ..write('collectionId: $collectionId, ')
           ..write('absoluteCharacterOffset: $absoluteCharacterOffset, ')
+          ..write('readingMode: $readingMode, ')
           ..write('itemIdHint: $itemIdHint, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('locatorVersion: $locatorVersion, ')
@@ -3670,6 +3693,7 @@ class ReadingProgressData extends DataClass
   int get hashCode => Object.hash(
     collectionId,
     absoluteCharacterOffset,
+    readingMode,
     itemIdHint,
     updatedAt,
     locatorVersion,
@@ -3681,6 +3705,7 @@ class ReadingProgressData extends DataClass
       (other is ReadingProgressData &&
           other.collectionId == this.collectionId &&
           other.absoluteCharacterOffset == this.absoluteCharacterOffset &&
+          other.readingMode == this.readingMode &&
           other.itemIdHint == this.itemIdHint &&
           other.updatedAt == this.updatedAt &&
           other.locatorVersion == this.locatorVersion &&
@@ -3690,6 +3715,7 @@ class ReadingProgressData extends DataClass
 class ReadingProgressCompanion extends UpdateCompanion<ReadingProgressData> {
   final Value<String> collectionId;
   final Value<int> absoluteCharacterOffset;
+  final Value<String> readingMode;
   final Value<String?> itemIdHint;
   final Value<DateTime> updatedAt;
   final Value<int> locatorVersion;
@@ -3698,6 +3724,7 @@ class ReadingProgressCompanion extends UpdateCompanion<ReadingProgressData> {
   const ReadingProgressCompanion({
     this.collectionId = const Value.absent(),
     this.absoluteCharacterOffset = const Value.absent(),
+    this.readingMode = const Value.absent(),
     this.itemIdHint = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.locatorVersion = const Value.absent(),
@@ -3707,6 +3734,7 @@ class ReadingProgressCompanion extends UpdateCompanion<ReadingProgressData> {
   ReadingProgressCompanion.insert({
     required String collectionId,
     required int absoluteCharacterOffset,
+    this.readingMode = const Value.absent(),
     this.itemIdHint = const Value.absent(),
     required DateTime updatedAt,
     required int locatorVersion,
@@ -3720,6 +3748,7 @@ class ReadingProgressCompanion extends UpdateCompanion<ReadingProgressData> {
   static Insertable<ReadingProgressData> custom({
     Expression<String>? collectionId,
     Expression<int>? absoluteCharacterOffset,
+    Expression<String>? readingMode,
     Expression<String>? itemIdHint,
     Expression<DateTime>? updatedAt,
     Expression<int>? locatorVersion,
@@ -3730,6 +3759,7 @@ class ReadingProgressCompanion extends UpdateCompanion<ReadingProgressData> {
       if (collectionId != null) 'collection_id': collectionId,
       if (absoluteCharacterOffset != null)
         'absolute_character_offset': absoluteCharacterOffset,
+      if (readingMode != null) 'reading_mode': readingMode,
       if (itemIdHint != null) 'item_id_hint': itemIdHint,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (locatorVersion != null) 'locator_version': locatorVersion,
@@ -3742,6 +3772,7 @@ class ReadingProgressCompanion extends UpdateCompanion<ReadingProgressData> {
   ReadingProgressCompanion copyWith({
     Value<String>? collectionId,
     Value<int>? absoluteCharacterOffset,
+    Value<String>? readingMode,
     Value<String?>? itemIdHint,
     Value<DateTime>? updatedAt,
     Value<int>? locatorVersion,
@@ -3752,6 +3783,7 @@ class ReadingProgressCompanion extends UpdateCompanion<ReadingProgressData> {
       collectionId: collectionId ?? this.collectionId,
       absoluteCharacterOffset:
           absoluteCharacterOffset ?? this.absoluteCharacterOffset,
+      readingMode: readingMode ?? this.readingMode,
       itemIdHint: itemIdHint ?? this.itemIdHint,
       updatedAt: updatedAt ?? this.updatedAt,
       locatorVersion: locatorVersion ?? this.locatorVersion,
@@ -3770,6 +3802,9 @@ class ReadingProgressCompanion extends UpdateCompanion<ReadingProgressData> {
       map['absolute_character_offset'] = Variable<int>(
         absoluteCharacterOffset.value,
       );
+    }
+    if (readingMode.present) {
+      map['reading_mode'] = Variable<String>(readingMode.value);
     }
     if (itemIdHint.present) {
       map['item_id_hint'] = Variable<String>(itemIdHint.value);
@@ -3796,6 +3831,7 @@ class ReadingProgressCompanion extends UpdateCompanion<ReadingProgressData> {
     return (StringBuffer('ReadingProgressCompanion(')
           ..write('collectionId: $collectionId, ')
           ..write('absoluteCharacterOffset: $absoluteCharacterOffset, ')
+          ..write('readingMode: $readingMode, ')
           ..write('itemIdHint: $itemIdHint, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('locatorVersion: $locatorVersion, ')
@@ -3873,36 +3909,6 @@ typedef $$ContentSourcesTableUpdateCompanionBuilder =
       Value<int> rowid,
     });
 
-final class $$ContentSourcesTableReferences
-    extends BaseReferences<_$AppDatabase, $ContentSourcesTable, ContentSource> {
-  $$ContentSourcesTableReferences(
-    super.$_db,
-    super.$_table,
-    super.$_typedResult,
-  );
-
-  static MultiTypedResultKey<$ContentCollectionsTable, List<ContentCollection>>
-  _contentCollectionsRefsTable(_$AppDatabase db) =>
-      MultiTypedResultKey.fromTable(
-        db.contentCollections,
-        aliasName: 'content_sources__id__content_collections__source_id',
-      );
-
-  $$ContentCollectionsTableProcessedTableManager get contentCollectionsRefs {
-    final manager = $$ContentCollectionsTableTableManager(
-      $_db,
-      $_db.contentCollections,
-    ).filter((f) => f.sourceId.id.sqlEquals($_itemColumn<String>('id')!));
-
-    final cache = $_typedResult.readTableOrNull(
-      _contentCollectionsRefsTable($_db),
-    );
-    return ProcessedTableManager(
-      manager.$state.copyWith(prefetchedData: cache),
-    );
-  }
-}
-
 class $$ContentSourcesTableFilterComposer
     extends Composer<_$AppDatabase, $ContentSourcesTable> {
   $$ContentSourcesTableFilterComposer({
@@ -3956,31 +3962,6 @@ class $$ContentSourcesTableFilterComposer
     column: $table.updatedAt,
     builder: (column) => ColumnFilters(column),
   );
-
-  Expression<bool> contentCollectionsRefs(
-    Expression<bool> Function($$ContentCollectionsTableFilterComposer f) f,
-  ) {
-    final $$ContentCollectionsTableFilterComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.id,
-      referencedTable: $db.contentCollections,
-      getReferencedColumn: (t) => t.sourceId,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$ContentCollectionsTableFilterComposer(
-            $db: $db,
-            $table: $db.contentCollections,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return f(composer);
-  }
 }
 
 class $$ContentSourcesTableOrderingComposer
@@ -4083,32 +4064,6 @@ class $$ContentSourcesTableAnnotationComposer
 
   GeneratedColumn<DateTime> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
-
-  Expression<T> contentCollectionsRefs<T extends Object>(
-    Expression<T> Function($$ContentCollectionsTableAnnotationComposer a) f,
-  ) {
-    final $$ContentCollectionsTableAnnotationComposer composer =
-        $composerBuilder(
-          composer: this,
-          getCurrentColumn: (t) => t.id,
-          referencedTable: $db.contentCollections,
-          getReferencedColumn: (t) => t.sourceId,
-          builder:
-              (
-                joinBuilder, {
-                $addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer,
-              }) => $$ContentCollectionsTableAnnotationComposer(
-                $db: $db,
-                $table: $db.contentCollections,
-                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-                joinBuilder: joinBuilder,
-                $removeJoinBuilderFromRootComposer:
-                    $removeJoinBuilderFromRootComposer,
-              ),
-        );
-    return f(composer);
-  }
 }
 
 class $$ContentSourcesTableTableManager
@@ -4122,9 +4077,12 @@ class $$ContentSourcesTableTableManager
           $$ContentSourcesTableAnnotationComposer,
           $$ContentSourcesTableCreateCompanionBuilder,
           $$ContentSourcesTableUpdateCompanionBuilder,
-          (ContentSource, $$ContentSourcesTableReferences),
+          (
+            ContentSource,
+            BaseReferences<_$AppDatabase, $ContentSourcesTable, ContentSource>,
+          ),
           ContentSource,
-          PrefetchHooks Function({bool contentCollectionsRefs})
+          PrefetchHooks Function()
         > {
   $$ContentSourcesTableTableManager(
     _$AppDatabase db,
@@ -4188,45 +4146,9 @@ class $$ContentSourcesTableTableManager
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
-              .map(
-                (e) => (
-                  e.readTable(table),
-                  $$ContentSourcesTableReferences(db, table, e),
-                ),
-              )
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
               .toList(),
-          prefetchHooksCallback: ({contentCollectionsRefs = false}) {
-            return PrefetchHooks(
-              db: db,
-              explicitlyWatchedTables: [
-                if (contentCollectionsRefs) db.contentCollections,
-              ],
-              addJoins: null,
-              getPrefetchedDataCallback: (items) async {
-                return [
-                  if (contentCollectionsRefs)
-                    await $_getPrefetchedData<
-                      ContentSource,
-                      $ContentSourcesTable,
-                      ContentCollection
-                    >(
-                      currentTable: table,
-                      referencedTable: $$ContentSourcesTableReferences
-                          ._contentCollectionsRefsTable(db),
-                      managerFromTypedResult: (p0) =>
-                          $$ContentSourcesTableReferences(
-                            db,
-                            table,
-                            p0,
-                          ).contentCollectionsRefs,
-                      referencedItemsForCurrentItem: (item, referencedItems) =>
-                          referencedItems.where((e) => e.sourceId == item.id),
-                      typedResults: items,
-                    ),
-                ];
-              },
-            );
-          },
+          prefetchHooksCallback: null,
         ),
       );
 }
@@ -4241,9 +4163,12 @@ typedef $$ContentSourcesTableProcessedTableManager =
       $$ContentSourcesTableAnnotationComposer,
       $$ContentSourcesTableCreateCompanionBuilder,
       $$ContentSourcesTableUpdateCompanionBuilder,
-      (ContentSource, $$ContentSourcesTableReferences),
+      (
+        ContentSource,
+        BaseReferences<_$AppDatabase, $ContentSourcesTable, ContentSource>,
+      ),
       ContentSource,
-      PrefetchHooks Function({bool contentCollectionsRefs})
+      PrefetchHooks Function()
     >;
 typedef $$ContentCollectionsTableCreateCompanionBuilder =
     ContentCollectionsCompanion Function({
@@ -4283,64 +4208,13 @@ final class $$ContentCollectionsTableReferences
     super.$_typedResult,
   );
 
-  static $ContentSourcesTable _sourceIdTable(_$AppDatabase db) => db
-      .contentSources
-      .createAlias('content_collections__source_id__content_sources__id');
-
-  $$ContentSourcesTableProcessedTableManager get sourceId {
-    final $_column = $_itemColumn<String>('source_id')!;
-
-    final manager = $$ContentSourcesTableTableManager(
-      $_db,
-      $_db.contentSources,
-    ).filter((f) => f.id.sqlEquals($_column));
-    final item = $_typedResult.readTableOrNull(_sourceIdTable($_db));
-    if (item == null) return manager;
-    return ProcessedTableManager(
-      manager.$state.copyWith(prefetchedData: [item]),
-    );
-  }
-
-  static MultiTypedResultKey<$ContentItemsTable, List<ContentItem>>
-  _contentItemsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
-    db.contentItems,
-    aliasName: 'content_collections__id__content_items__collection_id',
-  );
-
-  $$ContentItemsTableProcessedTableManager get contentItemsRefs {
-    final manager = $$ContentItemsTableTableManager(
-      $_db,
-      $_db.contentItems,
-    ).filter((f) => f.collectionId.id.sqlEquals($_itemColumn<String>('id')!));
-
-    final cache = $_typedResult.readTableOrNull(_contentItemsRefsTable($_db));
-    return ProcessedTableManager(
-      manager.$state.copyWith(prefetchedData: cache),
-    );
-  }
-
-  static MultiTypedResultKey<$TocEntriesTable, List<TocEntry>>
-  _tocEntriesRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
-    db.tocEntries,
-    aliasName: 'content_collections__id__toc_entries__collection_id',
-  );
-
-  $$TocEntriesTableProcessedTableManager get tocEntriesRefs {
-    final manager = $$TocEntriesTableTableManager(
-      $_db,
-      $_db.tocEntries,
-    ).filter((f) => f.collectionId.id.sqlEquals($_itemColumn<String>('id')!));
-
-    final cache = $_typedResult.readTableOrNull(_tocEntriesRefsTable($_db));
-    return ProcessedTableManager(
-      manager.$state.copyWith(prefetchedData: cache),
-    );
-  }
-
   static MultiTypedResultKey<$ReadingProgressTable, List<ReadingProgressData>>
   _readingProgressRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
     db.readingProgress,
-    aliasName: 'content_collections__id__reading_progress__collection_id',
+    aliasName: $_aliasNameGenerator(
+      db.contentCollections.id,
+      db.readingProgress.collectionId,
+    ),
   );
 
   $$ReadingProgressTableProcessedTableManager get readingProgressRefs {
@@ -4369,6 +4243,11 @@ class $$ContentCollectionsTableFilterComposer
   });
   ColumnFilters<String> get id => $composableBuilder(
     column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get sourceId => $composableBuilder(
+    column: $table.sourceId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -4401,79 +4280,6 @@ class $$ContentCollectionsTableFilterComposer
     column: $table.updatedAt,
     builder: (column) => ColumnFilters(column),
   );
-
-  $$ContentSourcesTableFilterComposer get sourceId {
-    final $$ContentSourcesTableFilterComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.sourceId,
-      referencedTable: $db.contentSources,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$ContentSourcesTableFilterComposer(
-            $db: $db,
-            $table: $db.contentSources,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
-
-  Expression<bool> contentItemsRefs(
-    Expression<bool> Function($$ContentItemsTableFilterComposer f) f,
-  ) {
-    final $$ContentItemsTableFilterComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.id,
-      referencedTable: $db.contentItems,
-      getReferencedColumn: (t) => t.collectionId,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$ContentItemsTableFilterComposer(
-            $db: $db,
-            $table: $db.contentItems,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return f(composer);
-  }
-
-  Expression<bool> tocEntriesRefs(
-    Expression<bool> Function($$TocEntriesTableFilterComposer f) f,
-  ) {
-    final $$TocEntriesTableFilterComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.id,
-      referencedTable: $db.tocEntries,
-      getReferencedColumn: (t) => t.collectionId,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$TocEntriesTableFilterComposer(
-            $db: $db,
-            $table: $db.tocEntries,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return f(composer);
-  }
 
   Expression<bool> readingProgressRefs(
     Expression<bool> Function($$ReadingProgressTableFilterComposer f) f,
@@ -4515,6 +4321,11 @@ class $$ContentCollectionsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get sourceId => $composableBuilder(
+    column: $table.sourceId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get title => $composableBuilder(
     column: $table.title,
     builder: (column) => ColumnOrderings(column),
@@ -4544,29 +4355,6 @@ class $$ContentCollectionsTableOrderingComposer
     column: $table.updatedAt,
     builder: (column) => ColumnOrderings(column),
   );
-
-  $$ContentSourcesTableOrderingComposer get sourceId {
-    final $$ContentSourcesTableOrderingComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.sourceId,
-      referencedTable: $db.contentSources,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$ContentSourcesTableOrderingComposer(
-            $db: $db,
-            $table: $db.contentSources,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
 }
 
 class $$ContentCollectionsTableAnnotationComposer
@@ -4580,6 +4368,9 @@ class $$ContentCollectionsTableAnnotationComposer
   });
   GeneratedColumn<String> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get sourceId =>
+      $composableBuilder(column: $table.sourceId, builder: (column) => column);
 
   GeneratedColumn<String> get title =>
       $composableBuilder(column: $table.title, builder: (column) => column);
@@ -4602,79 +4393,6 @@ class $$ContentCollectionsTableAnnotationComposer
 
   GeneratedColumn<DateTime> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
-
-  $$ContentSourcesTableAnnotationComposer get sourceId {
-    final $$ContentSourcesTableAnnotationComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.sourceId,
-      referencedTable: $db.contentSources,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$ContentSourcesTableAnnotationComposer(
-            $db: $db,
-            $table: $db.contentSources,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
-
-  Expression<T> contentItemsRefs<T extends Object>(
-    Expression<T> Function($$ContentItemsTableAnnotationComposer a) f,
-  ) {
-    final $$ContentItemsTableAnnotationComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.id,
-      referencedTable: $db.contentItems,
-      getReferencedColumn: (t) => t.collectionId,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$ContentItemsTableAnnotationComposer(
-            $db: $db,
-            $table: $db.contentItems,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return f(composer);
-  }
-
-  Expression<T> tocEntriesRefs<T extends Object>(
-    Expression<T> Function($$TocEntriesTableAnnotationComposer a) f,
-  ) {
-    final $$TocEntriesTableAnnotationComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.id,
-      referencedTable: $db.tocEntries,
-      getReferencedColumn: (t) => t.collectionId,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$TocEntriesTableAnnotationComposer(
-            $db: $db,
-            $table: $db.tocEntries,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return f(composer);
-  }
 
   Expression<T> readingProgressRefs<T extends Object>(
     Expression<T> Function($$ReadingProgressTableAnnotationComposer a) f,
@@ -4715,12 +4433,7 @@ class $$ContentCollectionsTableTableManager
           $$ContentCollectionsTableUpdateCompanionBuilder,
           (ContentCollection, $$ContentCollectionsTableReferences),
           ContentCollection,
-          PrefetchHooks Function({
-            bool sourceId,
-            bool contentItemsRefs,
-            bool tocEntriesRefs,
-            bool readingProgressRefs,
-          })
+          PrefetchHooks Function({bool readingProgressRefs})
         > {
   $$ContentCollectionsTableTableManager(
     _$AppDatabase db,
@@ -4790,123 +4503,40 @@ class $$ContentCollectionsTableTableManager
                 ),
               )
               .toList(),
-          prefetchHooksCallback:
-              ({
-                sourceId = false,
-                contentItemsRefs = false,
-                tocEntriesRefs = false,
-                readingProgressRefs = false,
-              }) {
-                return PrefetchHooks(
-                  db: db,
-                  explicitlyWatchedTables: [
-                    if (contentItemsRefs) db.contentItems,
-                    if (tocEntriesRefs) db.tocEntries,
-                    if (readingProgressRefs) db.readingProgress,
-                  ],
-                  addJoins:
-                      <
-                        T extends TableManagerState<
-                          dynamic,
-                          dynamic,
-                          dynamic,
-                          dynamic,
-                          dynamic,
-                          dynamic,
-                          dynamic,
-                          dynamic,
-                          dynamic,
-                          dynamic,
-                          dynamic
-                        >
-                      >(state) {
-                        if (sourceId) {
-                          state =
-                              state.withJoin(
-                                    currentTable: table,
-                                    currentColumn: table.sourceId,
-                                    referencedTable:
-                                        $$ContentCollectionsTableReferences
-                                            ._sourceIdTable(db),
-                                    referencedColumn:
-                                        $$ContentCollectionsTableReferences
-                                            ._sourceIdTable(db)
-                                            .id,
-                                  )
-                                  as T;
-                        }
-
-                        return state;
-                      },
-                  getPrefetchedDataCallback: (items) async {
-                    return [
-                      if (contentItemsRefs)
-                        await $_getPrefetchedData<
-                          ContentCollection,
-                          $ContentCollectionsTable,
-                          ContentItem
-                        >(
-                          currentTable: table,
-                          referencedTable: $$ContentCollectionsTableReferences
-                              ._contentItemsRefsTable(db),
-                          managerFromTypedResult: (p0) =>
-                              $$ContentCollectionsTableReferences(
-                                db,
-                                table,
-                                p0,
-                              ).contentItemsRefs,
-                          referencedItemsForCurrentItem:
-                              (item, referencedItems) => referencedItems.where(
-                                (e) => e.collectionId == item.id,
-                              ),
-                          typedResults: items,
-                        ),
-                      if (tocEntriesRefs)
-                        await $_getPrefetchedData<
-                          ContentCollection,
-                          $ContentCollectionsTable,
-                          TocEntry
-                        >(
-                          currentTable: table,
-                          referencedTable: $$ContentCollectionsTableReferences
-                              ._tocEntriesRefsTable(db),
-                          managerFromTypedResult: (p0) =>
-                              $$ContentCollectionsTableReferences(
-                                db,
-                                table,
-                                p0,
-                              ).tocEntriesRefs,
-                          referencedItemsForCurrentItem:
-                              (item, referencedItems) => referencedItems.where(
-                                (e) => e.collectionId == item.id,
-                              ),
-                          typedResults: items,
-                        ),
-                      if (readingProgressRefs)
-                        await $_getPrefetchedData<
-                          ContentCollection,
-                          $ContentCollectionsTable,
-                          ReadingProgressData
-                        >(
-                          currentTable: table,
-                          referencedTable: $$ContentCollectionsTableReferences
-                              ._readingProgressRefsTable(db),
-                          managerFromTypedResult: (p0) =>
-                              $$ContentCollectionsTableReferences(
-                                db,
-                                table,
-                                p0,
-                              ).readingProgressRefs,
-                          referencedItemsForCurrentItem:
-                              (item, referencedItems) => referencedItems.where(
-                                (e) => e.collectionId == item.id,
-                              ),
-                          typedResults: items,
-                        ),
-                    ];
-                  },
-                );
+          prefetchHooksCallback: ({readingProgressRefs = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [
+                if (readingProgressRefs) db.readingProgress,
+              ],
+              addJoins: null,
+              getPrefetchedDataCallback: (items) async {
+                return [
+                  if (readingProgressRefs)
+                    await $_getPrefetchedData<
+                      ContentCollection,
+                      $ContentCollectionsTable,
+                      ReadingProgressData
+                    >(
+                      currentTable: table,
+                      referencedTable: $$ContentCollectionsTableReferences
+                          ._readingProgressRefsTable(db),
+                      managerFromTypedResult: (p0) =>
+                          $$ContentCollectionsTableReferences(
+                            db,
+                            table,
+                            p0,
+                          ).readingProgressRefs,
+                      referencedItemsForCurrentItem: (item, referencedItems) =>
+                          referencedItems.where(
+                            (e) => e.collectionId == item.id,
+                          ),
+                      typedResults: items,
+                    ),
+                ];
               },
+            );
+          },
         ),
       );
 }
@@ -4923,12 +4553,7 @@ typedef $$ContentCollectionsTableProcessedTableManager =
       $$ContentCollectionsTableUpdateCompanionBuilder,
       (ContentCollection, $$ContentCollectionsTableReferences),
       ContentCollection,
-      PrefetchHooks Function({
-        bool sourceId,
-        bool contentItemsRefs,
-        bool tocEntriesRefs,
-        bool readingProgressRefs,
-      })
+      PrefetchHooks Function({bool readingProgressRefs})
     >;
 typedef $$ContentItemsTableCreateCompanionBuilder =
     ContentItemsCompanion Function({
@@ -4955,67 +4580,6 @@ typedef $$ContentItemsTableUpdateCompanionBuilder =
       Value<int> rowid,
     });
 
-final class $$ContentItemsTableReferences
-    extends BaseReferences<_$AppDatabase, $ContentItemsTable, ContentItem> {
-  $$ContentItemsTableReferences(super.$_db, super.$_table, super.$_typedResult);
-
-  static $ContentCollectionsTable _collectionIdTable(_$AppDatabase db) => db
-      .contentCollections
-      .createAlias('content_items__collection_id__content_collections__id');
-
-  $$ContentCollectionsTableProcessedTableManager get collectionId {
-    final $_column = $_itemColumn<String>('collection_id')!;
-
-    final manager = $$ContentCollectionsTableTableManager(
-      $_db,
-      $_db.contentCollections,
-    ).filter((f) => f.id.sqlEquals($_column));
-    final item = $_typedResult.readTableOrNull(_collectionIdTable($_db));
-    if (item == null) return manager;
-    return ProcessedTableManager(
-      manager.$state.copyWith(prefetchedData: [item]),
-    );
-  }
-
-  static MultiTypedResultKey<$ContentDocumentsTable, List<ContentDocument>>
-  _contentDocumentsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
-    db.contentDocuments,
-    aliasName: 'content_items__id__content_documents__item_id',
-  );
-
-  $$ContentDocumentsTableProcessedTableManager get contentDocumentsRefs {
-    final manager = $$ContentDocumentsTableTableManager(
-      $_db,
-      $_db.contentDocuments,
-    ).filter((f) => f.itemId.id.sqlEquals($_itemColumn<String>('id')!));
-
-    final cache = $_typedResult.readTableOrNull(
-      _contentDocumentsRefsTable($_db),
-    );
-    return ProcessedTableManager(
-      manager.$state.copyWith(prefetchedData: cache),
-    );
-  }
-
-  static MultiTypedResultKey<$TocEntriesTable, List<TocEntry>>
-  _tocEntriesRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
-    db.tocEntries,
-    aliasName: 'content_items__id__toc_entries__item_id',
-  );
-
-  $$TocEntriesTableProcessedTableManager get tocEntriesRefs {
-    final manager = $$TocEntriesTableTableManager(
-      $_db,
-      $_db.tocEntries,
-    ).filter((f) => f.itemId.id.sqlEquals($_itemColumn<String>('id')!));
-
-    final cache = $_typedResult.readTableOrNull(_tocEntriesRefsTable($_db));
-    return ProcessedTableManager(
-      manager.$state.copyWith(prefetchedData: cache),
-    );
-  }
-}
-
 class $$ContentItemsTableFilterComposer
     extends Composer<_$AppDatabase, $ContentItemsTable> {
   $$ContentItemsTableFilterComposer({
@@ -5027,6 +4591,11 @@ class $$ContentItemsTableFilterComposer
   });
   ColumnFilters<String> get id => $composableBuilder(
     column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get collectionId => $composableBuilder(
+    column: $table.collectionId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -5059,79 +4628,6 @@ class $$ContentItemsTableFilterComposer
     column: $table.createdAt,
     builder: (column) => ColumnFilters(column),
   );
-
-  $$ContentCollectionsTableFilterComposer get collectionId {
-    final $$ContentCollectionsTableFilterComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.collectionId,
-      referencedTable: $db.contentCollections,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$ContentCollectionsTableFilterComposer(
-            $db: $db,
-            $table: $db.contentCollections,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
-
-  Expression<bool> contentDocumentsRefs(
-    Expression<bool> Function($$ContentDocumentsTableFilterComposer f) f,
-  ) {
-    final $$ContentDocumentsTableFilterComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.id,
-      referencedTable: $db.contentDocuments,
-      getReferencedColumn: (t) => t.itemId,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$ContentDocumentsTableFilterComposer(
-            $db: $db,
-            $table: $db.contentDocuments,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return f(composer);
-  }
-
-  Expression<bool> tocEntriesRefs(
-    Expression<bool> Function($$TocEntriesTableFilterComposer f) f,
-  ) {
-    final $$TocEntriesTableFilterComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.id,
-      referencedTable: $db.tocEntries,
-      getReferencedColumn: (t) => t.itemId,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$TocEntriesTableFilterComposer(
-            $db: $db,
-            $table: $db.tocEntries,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return f(composer);
-  }
 }
 
 class $$ContentItemsTableOrderingComposer
@@ -5145,6 +4641,11 @@ class $$ContentItemsTableOrderingComposer
   });
   ColumnOrderings<String> get id => $composableBuilder(
     column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get collectionId => $composableBuilder(
+    column: $table.collectionId,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -5177,29 +4678,6 @@ class $$ContentItemsTableOrderingComposer
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
   );
-
-  $$ContentCollectionsTableOrderingComposer get collectionId {
-    final $$ContentCollectionsTableOrderingComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.collectionId,
-      referencedTable: $db.contentCollections,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$ContentCollectionsTableOrderingComposer(
-            $db: $db,
-            $table: $db.contentCollections,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
 }
 
 class $$ContentItemsTableAnnotationComposer
@@ -5213,6 +4691,11 @@ class $$ContentItemsTableAnnotationComposer
   });
   GeneratedColumn<String> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get collectionId => $composableBuilder(
+    column: $table.collectionId,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<String> get kind =>
       $composableBuilder(column: $table.kind, builder: (column) => column);
@@ -5237,80 +4720,6 @@ class $$ContentItemsTableAnnotationComposer
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
-
-  $$ContentCollectionsTableAnnotationComposer get collectionId {
-    final $$ContentCollectionsTableAnnotationComposer composer =
-        $composerBuilder(
-          composer: this,
-          getCurrentColumn: (t) => t.collectionId,
-          referencedTable: $db.contentCollections,
-          getReferencedColumn: (t) => t.id,
-          builder:
-              (
-                joinBuilder, {
-                $addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer,
-              }) => $$ContentCollectionsTableAnnotationComposer(
-                $db: $db,
-                $table: $db.contentCollections,
-                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-                joinBuilder: joinBuilder,
-                $removeJoinBuilderFromRootComposer:
-                    $removeJoinBuilderFromRootComposer,
-              ),
-        );
-    return composer;
-  }
-
-  Expression<T> contentDocumentsRefs<T extends Object>(
-    Expression<T> Function($$ContentDocumentsTableAnnotationComposer a) f,
-  ) {
-    final $$ContentDocumentsTableAnnotationComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.id,
-      referencedTable: $db.contentDocuments,
-      getReferencedColumn: (t) => t.itemId,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$ContentDocumentsTableAnnotationComposer(
-            $db: $db,
-            $table: $db.contentDocuments,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return f(composer);
-  }
-
-  Expression<T> tocEntriesRefs<T extends Object>(
-    Expression<T> Function($$TocEntriesTableAnnotationComposer a) f,
-  ) {
-    final $$TocEntriesTableAnnotationComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.id,
-      referencedTable: $db.tocEntries,
-      getReferencedColumn: (t) => t.itemId,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$TocEntriesTableAnnotationComposer(
-            $db: $db,
-            $table: $db.tocEntries,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return f(composer);
-  }
 }
 
 class $$ContentItemsTableTableManager
@@ -5324,13 +4733,12 @@ class $$ContentItemsTableTableManager
           $$ContentItemsTableAnnotationComposer,
           $$ContentItemsTableCreateCompanionBuilder,
           $$ContentItemsTableUpdateCompanionBuilder,
-          (ContentItem, $$ContentItemsTableReferences),
+          (
+            ContentItem,
+            BaseReferences<_$AppDatabase, $ContentItemsTable, ContentItem>,
+          ),
           ContentItem,
-          PrefetchHooks Function({
-            bool collectionId,
-            bool contentDocumentsRefs,
-            bool tocEntriesRefs,
-          })
+          PrefetchHooks Function()
         > {
   $$ContentItemsTableTableManager(_$AppDatabase db, $ContentItemsTable table)
     : super(
@@ -5388,107 +4796,9 @@ class $$ContentItemsTableTableManager
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
-              .map(
-                (e) => (
-                  e.readTable(table),
-                  $$ContentItemsTableReferences(db, table, e),
-                ),
-              )
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
               .toList(),
-          prefetchHooksCallback:
-              ({
-                collectionId = false,
-                contentDocumentsRefs = false,
-                tocEntriesRefs = false,
-              }) {
-                return PrefetchHooks(
-                  db: db,
-                  explicitlyWatchedTables: [
-                    if (contentDocumentsRefs) db.contentDocuments,
-                    if (tocEntriesRefs) db.tocEntries,
-                  ],
-                  addJoins:
-                      <
-                        T extends TableManagerState<
-                          dynamic,
-                          dynamic,
-                          dynamic,
-                          dynamic,
-                          dynamic,
-                          dynamic,
-                          dynamic,
-                          dynamic,
-                          dynamic,
-                          dynamic,
-                          dynamic
-                        >
-                      >(state) {
-                        if (collectionId) {
-                          state =
-                              state.withJoin(
-                                    currentTable: table,
-                                    currentColumn: table.collectionId,
-                                    referencedTable:
-                                        $$ContentItemsTableReferences
-                                            ._collectionIdTable(db),
-                                    referencedColumn:
-                                        $$ContentItemsTableReferences
-                                            ._collectionIdTable(db)
-                                            .id,
-                                  )
-                                  as T;
-                        }
-
-                        return state;
-                      },
-                  getPrefetchedDataCallback: (items) async {
-                    return [
-                      if (contentDocumentsRefs)
-                        await $_getPrefetchedData<
-                          ContentItem,
-                          $ContentItemsTable,
-                          ContentDocument
-                        >(
-                          currentTable: table,
-                          referencedTable: $$ContentItemsTableReferences
-                              ._contentDocumentsRefsTable(db),
-                          managerFromTypedResult: (p0) =>
-                              $$ContentItemsTableReferences(
-                                db,
-                                table,
-                                p0,
-                              ).contentDocumentsRefs,
-                          referencedItemsForCurrentItem:
-                              (item, referencedItems) => referencedItems.where(
-                                (e) => e.itemId == item.id,
-                              ),
-                          typedResults: items,
-                        ),
-                      if (tocEntriesRefs)
-                        await $_getPrefetchedData<
-                          ContentItem,
-                          $ContentItemsTable,
-                          TocEntry
-                        >(
-                          currentTable: table,
-                          referencedTable: $$ContentItemsTableReferences
-                              ._tocEntriesRefsTable(db),
-                          managerFromTypedResult: (p0) =>
-                              $$ContentItemsTableReferences(
-                                db,
-                                table,
-                                p0,
-                              ).tocEntriesRefs,
-                          referencedItemsForCurrentItem:
-                              (item, referencedItems) => referencedItems.where(
-                                (e) => e.itemId == item.id,
-                              ),
-                          typedResults: items,
-                        ),
-                    ];
-                  },
-                );
-              },
+          prefetchHooksCallback: null,
         ),
       );
 }
@@ -5503,13 +4813,12 @@ typedef $$ContentItemsTableProcessedTableManager =
       $$ContentItemsTableAnnotationComposer,
       $$ContentItemsTableCreateCompanionBuilder,
       $$ContentItemsTableUpdateCompanionBuilder,
-      (ContentItem, $$ContentItemsTableReferences),
+      (
+        ContentItem,
+        BaseReferences<_$AppDatabase, $ContentItemsTable, ContentItem>,
+      ),
       ContentItem,
-      PrefetchHooks Function({
-        bool collectionId,
-        bool contentDocumentsRefs,
-        bool tocEntriesRefs,
-      })
+      PrefetchHooks Function()
     >;
 typedef $$ContentDocumentsTableCreateCompanionBuilder =
     ContentDocumentsCompanion Function({
@@ -5536,33 +4845,6 @@ typedef $$ContentDocumentsTableUpdateCompanionBuilder =
       Value<int> rowid,
     });
 
-final class $$ContentDocumentsTableReferences
-    extends
-        BaseReferences<_$AppDatabase, $ContentDocumentsTable, ContentDocument> {
-  $$ContentDocumentsTableReferences(
-    super.$_db,
-    super.$_table,
-    super.$_typedResult,
-  );
-
-  static $ContentItemsTable _itemIdTable(_$AppDatabase db) => db.contentItems
-      .createAlias('content_documents__item_id__content_items__id');
-
-  $$ContentItemsTableProcessedTableManager get itemId {
-    final $_column = $_itemColumn<String>('item_id')!;
-
-    final manager = $$ContentItemsTableTableManager(
-      $_db,
-      $_db.contentItems,
-    ).filter((f) => f.id.sqlEquals($_column));
-    final item = $_typedResult.readTableOrNull(_itemIdTable($_db));
-    if (item == null) return manager;
-    return ProcessedTableManager(
-      manager.$state.copyWith(prefetchedData: [item]),
-    );
-  }
-}
-
 class $$ContentDocumentsTableFilterComposer
     extends Composer<_$AppDatabase, $ContentDocumentsTable> {
   $$ContentDocumentsTableFilterComposer({
@@ -5574,6 +4856,11 @@ class $$ContentDocumentsTableFilterComposer
   });
   ColumnFilters<String> get id => $composableBuilder(
     column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get itemId => $composableBuilder(
+    column: $table.itemId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -5606,29 +4893,6 @@ class $$ContentDocumentsTableFilterComposer
     column: $table.normalizationVersion,
     builder: (column) => ColumnFilters(column),
   );
-
-  $$ContentItemsTableFilterComposer get itemId {
-    final $$ContentItemsTableFilterComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.itemId,
-      referencedTable: $db.contentItems,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$ContentItemsTableFilterComposer(
-            $db: $db,
-            $table: $db.contentItems,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
 }
 
 class $$ContentDocumentsTableOrderingComposer
@@ -5642,6 +4906,11 @@ class $$ContentDocumentsTableOrderingComposer
   });
   ColumnOrderings<String> get id => $composableBuilder(
     column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get itemId => $composableBuilder(
+    column: $table.itemId,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -5674,29 +4943,6 @@ class $$ContentDocumentsTableOrderingComposer
     column: $table.normalizationVersion,
     builder: (column) => ColumnOrderings(column),
   );
-
-  $$ContentItemsTableOrderingComposer get itemId {
-    final $$ContentItemsTableOrderingComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.itemId,
-      referencedTable: $db.contentItems,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$ContentItemsTableOrderingComposer(
-            $db: $db,
-            $table: $db.contentItems,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
 }
 
 class $$ContentDocumentsTableAnnotationComposer
@@ -5710,6 +4956,9 @@ class $$ContentDocumentsTableAnnotationComposer
   });
   GeneratedColumn<String> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get itemId =>
+      $composableBuilder(column: $table.itemId, builder: (column) => column);
 
   GeneratedColumn<String> get storagePath => $composableBuilder(
     column: $table.storagePath,
@@ -5738,29 +4987,6 @@ class $$ContentDocumentsTableAnnotationComposer
     column: $table.normalizationVersion,
     builder: (column) => column,
   );
-
-  $$ContentItemsTableAnnotationComposer get itemId {
-    final $$ContentItemsTableAnnotationComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.itemId,
-      referencedTable: $db.contentItems,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$ContentItemsTableAnnotationComposer(
-            $db: $db,
-            $table: $db.contentItems,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
 }
 
 class $$ContentDocumentsTableTableManager
@@ -5774,9 +5000,16 @@ class $$ContentDocumentsTableTableManager
           $$ContentDocumentsTableAnnotationComposer,
           $$ContentDocumentsTableCreateCompanionBuilder,
           $$ContentDocumentsTableUpdateCompanionBuilder,
-          (ContentDocument, $$ContentDocumentsTableReferences),
+          (
+            ContentDocument,
+            BaseReferences<
+              _$AppDatabase,
+              $ContentDocumentsTable,
+              ContentDocument
+            >,
+          ),
           ContentDocument,
-          PrefetchHooks Function({bool itemId})
+          PrefetchHooks Function()
         > {
   $$ContentDocumentsTableTableManager(
     _$AppDatabase db,
@@ -5836,56 +5069,9 @@ class $$ContentDocumentsTableTableManager
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
-              .map(
-                (e) => (
-                  e.readTable(table),
-                  $$ContentDocumentsTableReferences(db, table, e),
-                ),
-              )
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
               .toList(),
-          prefetchHooksCallback: ({itemId = false}) {
-            return PrefetchHooks(
-              db: db,
-              explicitlyWatchedTables: [],
-              addJoins:
-                  <
-                    T extends TableManagerState<
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic
-                    >
-                  >(state) {
-                    if (itemId) {
-                      state =
-                          state.withJoin(
-                                currentTable: table,
-                                currentColumn: table.itemId,
-                                referencedTable:
-                                    $$ContentDocumentsTableReferences
-                                        ._itemIdTable(db),
-                                referencedColumn:
-                                    $$ContentDocumentsTableReferences
-                                        ._itemIdTable(db)
-                                        .id,
-                              )
-                              as T;
-                    }
-
-                    return state;
-                  },
-              getPrefetchedDataCallback: (items) async {
-                return [];
-              },
-            );
-          },
+          prefetchHooksCallback: null,
         ),
       );
 }
@@ -5900,9 +5086,12 @@ typedef $$ContentDocumentsTableProcessedTableManager =
       $$ContentDocumentsTableAnnotationComposer,
       $$ContentDocumentsTableCreateCompanionBuilder,
       $$ContentDocumentsTableUpdateCompanionBuilder,
-      (ContentDocument, $$ContentDocumentsTableReferences),
+      (
+        ContentDocument,
+        BaseReferences<_$AppDatabase, $ContentDocumentsTable, ContentDocument>,
+      ),
       ContentDocument,
-      PrefetchHooks Function({bool itemId})
+      PrefetchHooks Function()
     >;
 typedef $$TocEntriesTableCreateCompanionBuilder =
     TocEntriesCompanion Function({
@@ -5933,46 +5122,6 @@ typedef $$TocEntriesTableUpdateCompanionBuilder =
       Value<int> rowid,
     });
 
-final class $$TocEntriesTableReferences
-    extends BaseReferences<_$AppDatabase, $TocEntriesTable, TocEntry> {
-  $$TocEntriesTableReferences(super.$_db, super.$_table, super.$_typedResult);
-
-  static $ContentCollectionsTable _collectionIdTable(_$AppDatabase db) => db
-      .contentCollections
-      .createAlias('toc_entries__collection_id__content_collections__id');
-
-  $$ContentCollectionsTableProcessedTableManager get collectionId {
-    final $_column = $_itemColumn<String>('collection_id')!;
-
-    final manager = $$ContentCollectionsTableTableManager(
-      $_db,
-      $_db.contentCollections,
-    ).filter((f) => f.id.sqlEquals($_column));
-    final item = $_typedResult.readTableOrNull(_collectionIdTable($_db));
-    if (item == null) return manager;
-    return ProcessedTableManager(
-      manager.$state.copyWith(prefetchedData: [item]),
-    );
-  }
-
-  static $ContentItemsTable _itemIdTable(_$AppDatabase db) =>
-      db.contentItems.createAlias('toc_entries__item_id__content_items__id');
-
-  $$ContentItemsTableProcessedTableManager? get itemId {
-    final $_column = $_itemColumn<String>('item_id');
-    if ($_column == null) return null;
-    final manager = $$ContentItemsTableTableManager(
-      $_db,
-      $_db.contentItems,
-    ).filter((f) => f.id.sqlEquals($_column));
-    final item = $_typedResult.readTableOrNull(_itemIdTable($_db));
-    if (item == null) return manager;
-    return ProcessedTableManager(
-      manager.$state.copyWith(prefetchedData: [item]),
-    );
-  }
-}
-
 class $$TocEntriesTableFilterComposer
     extends Composer<_$AppDatabase, $TocEntriesTable> {
   $$TocEntriesTableFilterComposer({
@@ -5984,6 +5133,16 @@ class $$TocEntriesTableFilterComposer
   });
   ColumnFilters<String> get id => $composableBuilder(
     column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get collectionId => $composableBuilder(
+    column: $table.collectionId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get itemId => $composableBuilder(
+    column: $table.itemId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -6021,52 +5180,6 @@ class $$TocEntriesTableFilterComposer
     column: $table.endCharacterOffset,
     builder: (column) => ColumnFilters(column),
   );
-
-  $$ContentCollectionsTableFilterComposer get collectionId {
-    final $$ContentCollectionsTableFilterComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.collectionId,
-      referencedTable: $db.contentCollections,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$ContentCollectionsTableFilterComposer(
-            $db: $db,
-            $table: $db.contentCollections,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
-
-  $$ContentItemsTableFilterComposer get itemId {
-    final $$ContentItemsTableFilterComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.itemId,
-      referencedTable: $db.contentItems,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$ContentItemsTableFilterComposer(
-            $db: $db,
-            $table: $db.contentItems,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
 }
 
 class $$TocEntriesTableOrderingComposer
@@ -6080,6 +5193,16 @@ class $$TocEntriesTableOrderingComposer
   });
   ColumnOrderings<String> get id => $composableBuilder(
     column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get collectionId => $composableBuilder(
+    column: $table.collectionId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get itemId => $composableBuilder(
+    column: $table.itemId,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -6117,52 +5240,6 @@ class $$TocEntriesTableOrderingComposer
     column: $table.endCharacterOffset,
     builder: (column) => ColumnOrderings(column),
   );
-
-  $$ContentCollectionsTableOrderingComposer get collectionId {
-    final $$ContentCollectionsTableOrderingComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.collectionId,
-      referencedTable: $db.contentCollections,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$ContentCollectionsTableOrderingComposer(
-            $db: $db,
-            $table: $db.contentCollections,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
-
-  $$ContentItemsTableOrderingComposer get itemId {
-    final $$ContentItemsTableOrderingComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.itemId,
-      referencedTable: $db.contentItems,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$ContentItemsTableOrderingComposer(
-            $db: $db,
-            $table: $db.contentItems,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
 }
 
 class $$TocEntriesTableAnnotationComposer
@@ -6176,6 +5253,14 @@ class $$TocEntriesTableAnnotationComposer
   });
   GeneratedColumn<String> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get collectionId => $composableBuilder(
+    column: $table.collectionId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get itemId =>
+      $composableBuilder(column: $table.itemId, builder: (column) => column);
 
   GeneratedColumn<String> get parentId =>
       $composableBuilder(column: $table.parentId, builder: (column) => column);
@@ -6203,53 +5288,6 @@ class $$TocEntriesTableAnnotationComposer
     column: $table.endCharacterOffset,
     builder: (column) => column,
   );
-
-  $$ContentCollectionsTableAnnotationComposer get collectionId {
-    final $$ContentCollectionsTableAnnotationComposer composer =
-        $composerBuilder(
-          composer: this,
-          getCurrentColumn: (t) => t.collectionId,
-          referencedTable: $db.contentCollections,
-          getReferencedColumn: (t) => t.id,
-          builder:
-              (
-                joinBuilder, {
-                $addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer,
-              }) => $$ContentCollectionsTableAnnotationComposer(
-                $db: $db,
-                $table: $db.contentCollections,
-                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-                joinBuilder: joinBuilder,
-                $removeJoinBuilderFromRootComposer:
-                    $removeJoinBuilderFromRootComposer,
-              ),
-        );
-    return composer;
-  }
-
-  $$ContentItemsTableAnnotationComposer get itemId {
-    final $$ContentItemsTableAnnotationComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.itemId,
-      referencedTable: $db.contentItems,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$ContentItemsTableAnnotationComposer(
-            $db: $db,
-            $table: $db.contentItems,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
 }
 
 class $$TocEntriesTableTableManager
@@ -6263,9 +5301,9 @@ class $$TocEntriesTableTableManager
           $$TocEntriesTableAnnotationComposer,
           $$TocEntriesTableCreateCompanionBuilder,
           $$TocEntriesTableUpdateCompanionBuilder,
-          (TocEntry, $$TocEntriesTableReferences),
+          (TocEntry, BaseReferences<_$AppDatabase, $TocEntriesTable, TocEntry>),
           TocEntry,
-          PrefetchHooks Function({bool collectionId, bool itemId})
+          PrefetchHooks Function()
         > {
   $$TocEntriesTableTableManager(_$AppDatabase db, $TocEntriesTable table)
     : super(
@@ -6331,67 +5369,9 @@ class $$TocEntriesTableTableManager
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
-              .map(
-                (e) => (
-                  e.readTable(table),
-                  $$TocEntriesTableReferences(db, table, e),
-                ),
-              )
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
               .toList(),
-          prefetchHooksCallback: ({collectionId = false, itemId = false}) {
-            return PrefetchHooks(
-              db: db,
-              explicitlyWatchedTables: [],
-              addJoins:
-                  <
-                    T extends TableManagerState<
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic
-                    >
-                  >(state) {
-                    if (collectionId) {
-                      state =
-                          state.withJoin(
-                                currentTable: table,
-                                currentColumn: table.collectionId,
-                                referencedTable: $$TocEntriesTableReferences
-                                    ._collectionIdTable(db),
-                                referencedColumn: $$TocEntriesTableReferences
-                                    ._collectionIdTable(db)
-                                    .id,
-                              )
-                              as T;
-                    }
-                    if (itemId) {
-                      state =
-                          state.withJoin(
-                                currentTable: table,
-                                currentColumn: table.itemId,
-                                referencedTable: $$TocEntriesTableReferences
-                                    ._itemIdTable(db),
-                                referencedColumn: $$TocEntriesTableReferences
-                                    ._itemIdTable(db)
-                                    .id,
-                              )
-                              as T;
-                    }
-
-                    return state;
-                  },
-              getPrefetchedDataCallback: (items) async {
-                return [];
-              },
-            );
-          },
+          prefetchHooksCallback: null,
         ),
       );
 }
@@ -6406,9 +5386,9 @@ typedef $$TocEntriesTableProcessedTableManager =
       $$TocEntriesTableAnnotationComposer,
       $$TocEntriesTableCreateCompanionBuilder,
       $$TocEntriesTableUpdateCompanionBuilder,
-      (TocEntry, $$TocEntriesTableReferences),
+      (TocEntry, BaseReferences<_$AppDatabase, $TocEntriesTable, TocEntry>),
       TocEntry,
-      PrefetchHooks Function({bool collectionId, bool itemId})
+      PrefetchHooks Function()
     >;
 typedef $$ImportRecordsTableCreateCompanionBuilder =
     ImportRecordsCompanion Function({
@@ -6658,6 +5638,7 @@ typedef $$ReadingProgressTableCreateCompanionBuilder =
     ReadingProgressCompanion Function({
       required String collectionId,
       required int absoluteCharacterOffset,
+      Value<String> readingMode,
       Value<String?> itemIdHint,
       required DateTime updatedAt,
       required int locatorVersion,
@@ -6668,6 +5649,7 @@ typedef $$ReadingProgressTableUpdateCompanionBuilder =
     ReadingProgressCompanion Function({
       Value<String> collectionId,
       Value<int> absoluteCharacterOffset,
+      Value<String> readingMode,
       Value<String?> itemIdHint,
       Value<DateTime> updatedAt,
       Value<int> locatorVersion,
@@ -6688,9 +5670,13 @@ final class $$ReadingProgressTableReferences
     super.$_typedResult,
   );
 
-  static $ContentCollectionsTable _collectionIdTable(_$AppDatabase db) => db
-      .contentCollections
-      .createAlias('reading_progress__collection_id__content_collections__id');
+  static $ContentCollectionsTable _collectionIdTable(_$AppDatabase db) =>
+      db.contentCollections.createAlias(
+        $_aliasNameGenerator(
+          db.readingProgress.collectionId,
+          db.contentCollections.id,
+        ),
+      );
 
   $$ContentCollectionsTableProcessedTableManager get collectionId {
     final $_column = $_itemColumn<String>('collection_id')!;
@@ -6718,6 +5704,11 @@ class $$ReadingProgressTableFilterComposer
   });
   ColumnFilters<int> get absoluteCharacterOffset => $composableBuilder(
     column: $table.absoluteCharacterOffset,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get readingMode => $composableBuilder(
+    column: $table.readingMode,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -6779,6 +5770,11 @@ class $$ReadingProgressTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get readingMode => $composableBuilder(
+    column: $table.readingMode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get itemIdHint => $composableBuilder(
     column: $table.itemIdHint,
     builder: (column) => ColumnOrderings(column),
@@ -6834,6 +5830,11 @@ class $$ReadingProgressTableAnnotationComposer
   });
   GeneratedColumn<int> get absoluteCharacterOffset => $composableBuilder(
     column: $table.absoluteCharacterOffset,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get readingMode => $composableBuilder(
+    column: $table.readingMode,
     builder: (column) => column,
   );
 
@@ -6912,6 +5913,7 @@ class $$ReadingProgressTableTableManager
               ({
                 Value<String> collectionId = const Value.absent(),
                 Value<int> absoluteCharacterOffset = const Value.absent(),
+                Value<String> readingMode = const Value.absent(),
                 Value<String?> itemIdHint = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<int> locatorVersion = const Value.absent(),
@@ -6920,6 +5922,7 @@ class $$ReadingProgressTableTableManager
               }) => ReadingProgressCompanion(
                 collectionId: collectionId,
                 absoluteCharacterOffset: absoluteCharacterOffset,
+                readingMode: readingMode,
                 itemIdHint: itemIdHint,
                 updatedAt: updatedAt,
                 locatorVersion: locatorVersion,
@@ -6930,6 +5933,7 @@ class $$ReadingProgressTableTableManager
               ({
                 required String collectionId,
                 required int absoluteCharacterOffset,
+                Value<String> readingMode = const Value.absent(),
                 Value<String?> itemIdHint = const Value.absent(),
                 required DateTime updatedAt,
                 required int locatorVersion,
@@ -6938,6 +5942,7 @@ class $$ReadingProgressTableTableManager
               }) => ReadingProgressCompanion.insert(
                 collectionId: collectionId,
                 absoluteCharacterOffset: absoluteCharacterOffset,
+                readingMode: readingMode,
                 itemIdHint: itemIdHint,
                 updatedAt: updatedAt,
                 locatorVersion: locatorVersion,

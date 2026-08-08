@@ -1,18 +1,19 @@
-/// 阅读模式 —— 纵向滚动（M3）与横向分页（M4）。
+/// 阅读模式（UI/Reader 层）。
 ///
 /// 两种模式共享同一位置真源：ReaderLocator.absoluteCharacterOffset
 /// （normalized.txt UTF-16 码元偏移）。
 /// Page / pageIndex / PageView index / scroll pixels 全部只是派生状态。
+///
+/// 持久化用 domain 层 `ReadingMode`（见 reader_progress_state.dart）：
+/// [ReaderMode] 在此仅是别名，保证 UI 层既有用法不变。
 library;
 
-/// 阅读模式。
-enum ReaderMode {
-  /// 纵向虚拟滚动（M3 基线，默认）。
-  vertical,
+import '../../domain/reader/reading_mode.dart';
 
-  /// 横向分页（M4 新增）。
-  paged,
-}
+export '../../domain/reader/reading_mode.dart' show ReadingMode;
+
+/// 阅读模式（= domain ReadingMode 别名）。
+typedef ReaderMode = ReadingMode;
 
 /// 模式切换状态机（§二十一）。
 ///
