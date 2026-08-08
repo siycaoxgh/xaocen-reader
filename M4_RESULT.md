@@ -138,6 +138,9 @@
 
 ### E. Android 真机（Redmi K60 / Android 15 / 无线 adb，2026-08-08）
 
+> ⚠️ 以下为 **M4 P1 修复前** 的真机结果。P1（模式+Locator 持久化）修复后
+> **尚未做真机复验**——退出重开保持「模式 + 最后位置」需真人验证（见 §11）。
+
 - `flutter test integration_test/reader_mode_switch_test.dart -d <device>`：**2/2 通过**
   （v→p→v 未翻页保精确 anchor + 零写入；翻页后 confirmed 更新 + 目录远跳保存精确 target）；
 - `flutter test integration_test/paged_reader_flow_test.dart -d <device>`：**1/1 通过**
@@ -160,7 +163,7 @@
 | 远距离章节跳转（1/19/42/112/195/258/300/400/473） | ✅（pageContaining + 标题可见 + confirmed 精确 target） |
 | 无章节大文件中段定位 | ✅（25%/50%/75% 仅测试用，生产无百分比定位） |
 | Windows 实际运行 | ✅（Release 构建 + 冒烟 + 全部集成测试） |
-| Android 真机实际运行 | ✅（Redmi K60 / Android 15，无线 adb：reader_mode_switch 2/2 + paged_reader_flow 1/1 真机通过；用户手动导入 4 本真实 TXT 正常使用） |
+| Android 真机实际运行 | ✅（P1 修复前：reader_mode_switch 2/2 + paged_reader_flow 1/1 真机通过；用户手动导入 4 本真实 TXT 正常使用）<br>⏳ **P1 修复后待重新真机验证** （退出重开保持模式+位置，见 §11 Handoff） |
 
 ---
 
@@ -252,3 +255,18 @@
   4. route pop / App 后台 / force-stop（lifecycle flush active）/ dispose 均只写激活模式；
   5. page swipe 未 settle 时退出只保存最后 confirmed 位置；
   6. inactive Reader 不覆盖 active Reader 状态（最后一次提交为准）。
+
+---
+
+## 11. Handoff / Next Action（2026-08-08 模型切换交接）
+
+详见根目录 `HANDOFF.md`。要点：
+
+- **M4 P1（模式 + Locator 持久化）已修复并提交**（b389a6a~3d0fba5），
+  自动化验证全绿（327 单元+widget + 8 集成 + verify.ps1）；
+- **剩余唯一事项**：P1 修复后的 **Windows + Android 真人验证**
+  （退出重开保持「最后阅读模式 + 最后 confirmed Locator」；
+  force-stop 重启保持；覆盖安装数据保留 + schema 2→3 迁移正常）；
+- 构建产物：Windows `build\windows\x64\runner\Release\xaocen_reader.exe`；
+  Android `build\app\outputs\flutter-apk\app-debug.apk`；
+- 真人验证通过后，M4 才可标记 COMPLETE；之后可 ff 合并回 main。
