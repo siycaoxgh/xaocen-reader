@@ -1,6 +1,6 @@
 # KNOWN_ISSUES.md — XAOCEN Reader v4 已知问题清单
 
-> 状态截至 M5.1b 实现完成（`feat/m4-horizontal-reader`）。Android metrics 真机验证待设备。
+> 状态截至 M5.1c COMPLETE（`feat/m4-horizontal-reader`）。Android 真机统一延后到 M5.1 收尾。
 > 已解决的问题不在此列为 open；「Resolved but regression-sensitive」列出需要持续盯防的已修复项。
 
 ---
@@ -35,8 +35,8 @@
 |---|---|
 | 搜索 | FTS5 未建 |
 | 书签 | 未实现 |
-| Reader 设置 UI/Theme paint | Metrics 保位重排已完成；V3 设置面板与 themeMode paint 留待后续 |
-| M5.1b Android 真机语料验证 | Debug APK 已构建；本轮无 Android 设备连接，4 TXT metrics 验证待补 |
+| Reader V3 壳层/设置 UI | Metrics 与 theme paint 已完成；完整 V3 Reader UI 尚未做 |
+| M5.1 Android 最终真机验证 | M5.1c/d/e 开发阶段仅要求 Debug build；真人/真实语料统一在 M5.1 收尾执行 |
 | TTS | 未引入 flutter_tts |
 | RSS / 网络书源 | webfeed/JSON Feed 调研过但未引入；RSS 属 v2.0 范围 |
 | EPUB / PDF | 未实现 |

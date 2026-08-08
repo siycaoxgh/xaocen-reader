@@ -1,6 +1,6 @@
 # ARCHITECTURE_CURRENT.md — XAOCEN Reader v4 当前架构与合同
 
-> 只描述当前代码与合同（`feat/m4-horizontal-reader`，M5.1b 实现完成点）。
+> 只描述当前代码与合同（`feat/m4-horizontal-reader`，M5.1c 完成点）。
 > 不记录历史故事（见 PROJECT_HISTORY.md）。
 > 代码位置均以本仓库实际文件为准。
 
@@ -386,7 +386,7 @@ reading_progress 新增 readingMode TEXT DEFAULT 'vertical'；旧数据默认 ve
 - `readingMode` 不属于 ReaderPreferences，仍按书保存在 ReaderProgressState。
 - ReaderLocator 不变，absoluteCharacterOffset 仍是 normalized.txt UTF-16 唯一位置真源。
 - 本阶段只定义 Metrics/Paint 分类，尚未把设置接入 Reader 或实现 relayout。
-- M5.1b 已把 Metrics 接入 Reader；Paint/themeMode 仍未接入，留待 M5.1c。
+- M5.1b 已把 Metrics 接入 Reader；M5.1c 已把 themeMode 作为 paint-only 接入 App/Reader。
 
 ### Metrics 保位重排合同（M5.1b）
 
@@ -395,6 +395,13 @@ freeze → capture active confirmed locator → apply → invalidate → restore
 校验 → confirm → unfreeze 执行。纵向复用 M3 字符级恢复；分页只重建 locator 附近的
 有限 PageWindow。generation 拒绝旧代结果；模式切换、生命周期、route pop、resize 与
 dispose 不得允许旧 Reader 写 progress。
+
+### Theme paint-only 合同（M5.1c）
+
+`readerPreferencesProvider` 监听 Repository 强类型流，App 根节点把 system/light/dark 映射
+为 Material ThemeMode。Reader 仅从当前 ColorScheme 重新解析 ReaderResolvedAppearance。
+theme-only 变化不得改变 ReaderMetricsSignature、ReaderBlockIndex、PageWindow、分页结果、
+ReaderLocator 或 reading_progress；vertical/paged 只更新颜色绘制。
 
 ### 持久化边界
 

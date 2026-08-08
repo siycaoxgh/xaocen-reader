@@ -22,6 +22,7 @@
 | M4 | 横向分页 + 双模式持久化 | feat/m4-horizontal-reader | M3 ff → `2dae263` | — | 0.1.0-dev.4+4 | 327 测试；8 集成；双平台真人验证 |
 | M5.1a | ReaderPreferences + Drift | feat/m4-horizontal-reader | `2dae263` → 本阶段提交 | 1 | 0.1.0-dev.4+4 | 338 测试；schema 3→4 |
 | M5.1b | Metrics 保位重排 | feat/m4-horizontal-reader | `6c85a49` → 本阶段提交 | 1 | 0.1.0-dev.4+4 | 342 测试；Windows 4 TXT logical error 0 |
+| M5.1c | 三态主题 + paint-only | feat/m4-horizontal-reader | `e37e593` → 本阶段提交 | 1 | 0.1.0-dev.4+4 | 346 测试；9 integration；双端构建 |
 
 本阶段提交后合计：67 commits（M0 以来，HEAD 链）；当前分支
 `feat/m4-horizontal-reader`。最终 HEAD 以本阶段提交结果为准。
@@ -420,3 +421,13 @@ M5.1a COMPLETE；按用户要求停止，不自动进入 M5.1b。
 使用 generation 拒绝旧代。342 unit/widget、Windows 全部 4 个真实 TXT 共 12 锚点通过，
 logical error 全为 0；Android Debug build 通过。因本轮没有 Android 设备连接，Android
 真机语料验证待补，不进入 M5.1c。
+
+---
+
+## M5.1c — 主题控制与 paint-only 更新（2026-08-09）
+
+ReaderPreferences 的 system/light/dark 已实时接入 MaterialApp；Reader 继续通过
+ReaderResolvedAppearance/ColorScheme 更新 vertical/paged 颜色。纯主题变化不触发 metrics、
+重分页、Locator restore 或 progress 写入。346 unit/widget 与 9/9 Windows integration 通过；
+Windows Release、最终正常入口 Android Debug 构建通过。Android 真机按新策略统一延后到
+M5.1 最终收尾验证。M5.1c COMPLETE，不进入 M5.1d。

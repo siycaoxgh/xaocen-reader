@@ -246,9 +246,21 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
 
   void _onPreferencesChanged(ReaderPreferences next) {
     if (!mounted) return;
+    final previous = _preferences;
     final nextSignature = ReaderMetricsSignature.fromPreferences(next);
     _preferences = next;
-    if (nextSignature == _metricsSignature) return;
+    if (nextSignature == _metricsSignature) {
+      if (next.themeMode != previous.themeMode) {
+        _appearance = resolveReaderAppearance(
+          context,
+          fontSize: next.fontSize,
+          lineHeight: next.lineHeight,
+        );
+        _bodyStyle = _appearance.baseTextStyle;
+        setState(() {});
+      }
+      return;
+    }
     _metricsSignature = nextSignature;
     _beginMetricsRelayout(next);
   }

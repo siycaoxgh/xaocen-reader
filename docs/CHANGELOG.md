@@ -14,6 +14,15 @@ Legend for validation columns:
 
 ## Unreleased
 
+### M5.1c — three-state theme + paint-only Reader updates (2026-08-09)
+- Connected persisted ReaderThemeMode system/light/dark to MaterialApp in real time.
+- Reader vertical/paged colors continue through ReaderResolvedAppearance/ColorScheme.
+- Theme-only changes preserve ReaderLocator, ReaderBlockIndex, metrics signature,
+  PageWindow and pagination, with zero reading_progress writes.
+- Validation: analyze clean; 346 unit/widget PASS; 9/9 Windows integration PASS;
+  Windows Release and final normal-entry Android Debug builds PASS.
+- Android device validation: NOT-RUN / deferred to M5.1 final validation.
+
 ### M5.1b — metrics-preserving Reader relayout (2026-08-08)
 - Connected persisted ReaderPreferences metrics to vertical and paged Reader layout.
 - Added metrics signatures, operation generations, symmetric write freeze, exact

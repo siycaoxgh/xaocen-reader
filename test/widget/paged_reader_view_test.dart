@@ -244,6 +244,47 @@ void main() {
     c.dispose();
   });
 
+  testWidgets('paint-only theme update keeps PageWindow and Locator', (
+    tester,
+  ) async {
+    final c = makeController();
+    c.open(
+      const ReaderLocator(collectionId: 'c1', absoluteCharacterOffset: 5000),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SizedBox(
+          width: 400,
+          height: 600,
+          child: PagedReaderView(controller: c, appearance: appearance()),
+        ),
+      ),
+    );
+    await tester.pump();
+    final locator = c.confirmedLocator;
+    final windowGeneration = c.window.windowGeneration;
+    final controllerGeneration = c.generation;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SizedBox(
+          width: 400,
+          height: 600,
+          child: PagedReaderView(
+            controller: c,
+            appearance: appearance(dark: true),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(c.confirmedLocator, locator);
+    expect(c.window.windowGeneration, windowGeneration);
+    expect(c.generation, controllerGeneration);
+    expect(await progressRepo.getProgress('c1'), isNull);
+    c.dispose();
+  });
+
   testWidgets('18. rapid flip：快速连续翻页 0 crash 0 assertion', (tester) async {
     final c = makeController();
     c.open(const ReaderLocator(collectionId: 'c1', absoluteCharacterOffset: 0));

@@ -166,6 +166,38 @@ void main() {
   }
 
   group('ReaderPage Widget', () {
+    testWidgets(
+      'theme-only preferences do not restore locator or write progress',
+      (tester) async {
+        final changes = StreamController<ReaderPreferences>(sync: true);
+        final metricsReports = <ReaderMetricsRelayoutReport>[];
+        await pumpReader(
+          tester,
+          preferencesOverride: changes.stream,
+          onMetricsRelayout: metricsReports.add,
+        );
+        changes.add(
+          ReaderPreferences.defaults.copyWith(themeMode: ReaderThemeMode.light),
+        );
+        await tester.pump();
+        changes.add(
+          ReaderPreferences.defaults.copyWith(themeMode: ReaderThemeMode.dark),
+        );
+        await tester.pump();
+        changes.add(ReaderPreferences.defaults);
+        await tester.pump();
+
+        expect(
+          metricsReports,
+          isEmpty,
+          reason: 'paint-only 不进入 locator restore',
+        );
+        expect(await progressRepo.getProgress('local-txt:abc'), isNull);
+        await tester.pumpWidget(const SizedBox.shrink());
+        unawaited(changes.close());
+      },
+    );
+
     testWidgets('metrics 快速变化只应用最后一代，纵向 confirmed locator 不漂移', (tester) async {
       final changes = StreamController<ReaderPreferences>(sync: true);
       final reports = <ReaderMetricsRelayoutReport>[];
