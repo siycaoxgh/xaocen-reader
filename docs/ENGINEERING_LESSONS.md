@@ -696,3 +696,12 @@ TextPainter 不会释放，连续快速改设置会积累渲染资源。
 
 **正确做法**：generation 先使旧结果失效，显式 dispose 旧 engine，再按新 signature 构建
 engine 和有限 PageWindow；controller 最终 dispose 仍释放当前 engine。
+
+---
+
+## M5.1c 后 P1 教训（模式恢复状态机，2026-08-09）
+
+模式目标必须先成为 active subtree，再调度只对该模式有效的布局恢复；否则保护分支会把合法
+恢复当成旧模式工作直接跳过。解冻边界也不能以 Future 完成为准，只能以真实 visible range
+包含目标 Locator 且 confirmed 相等为准。核心切换测试必须使用非零 X，并直接调用强类型菜单
+回调；offset 0 与不可靠 popup 坐标 tap 都会制造假阳性。

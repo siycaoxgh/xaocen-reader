@@ -68,6 +68,21 @@ Future<void> openReader(BuildContext context, ReaderLaunchContext launch) {
   ).push(MaterialPageRoute<void>(builder: (_) => ReaderPage(launch: launch)));
 }
 
+@immutable
+class ReaderModeRestoreReport {
+  const ReaderModeRestoreReport({
+    required this.generation,
+    required this.target,
+    required this.confirmed,
+    required this.visibleRange,
+  });
+
+  final int generation;
+  final ReaderLocator target;
+  final ReaderLocator confirmed;
+  final ReaderVisibleRange visibleRange;
+}
+
 class ReaderPage extends StatefulWidget {
   const ReaderPage({
     super.key,
@@ -77,6 +92,7 @@ class ReaderPage extends StatefulWidget {
     this.initialStateOverride,
     this.preferencesOverride,
     this.onMetricsRelayout,
+    this.onModeRestore,
   });
 
   final ReaderLaunchContext launch;
@@ -94,6 +110,7 @@ class ReaderPage extends StatefulWidget {
   /// 测试注入：绕过 storage，直接驱动强类型设置流。
   final Stream<ReaderPreferences>? preferencesOverride;
   final ValueChanged<ReaderMetricsRelayoutReport>? onMetricsRelayout;
+  final ValueChanged<ReaderModeRestoreReport>? onModeRestore;
 
   @override
   State<ReaderPage> createState() => _ReaderPageState();
@@ -141,6 +158,29 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
 
   /// 模式切换代数：切换时递增，过期异步结果被拒绝（§二十一）。
   int _modeGeneration = 0;
+  ReaderLocator? _modeRestoreAnchor;
+  int? _modeRestoreGeneration;
+  bool _suppressProgrammaticScrollNotifications = false;
+
+  void _traceModeTransition(
+    String event, {
+    ReaderLocator? confirmed,
+    ReaderLocator? target,
+    int? generation,
+  }) {
+    assert(() {
+      debugPrint(
+        'reader-mode collection=${widget.launch.collection.id} '
+        'event=$event activeMode=${_mode.name} '
+        'confirmedLocator=${confirmed?.absoluteCharacterOffset ?? '-'} '
+        'persistedLocator=${_initialState?.absoluteCharacterOffset ?? '-'} '
+        'targetLocator=${target?.absoluteCharacterOffset ?? '-'} '
+        'generation=${generation ?? _modeGeneration} '
+        'timestamp=${DateTime.now().toIso8601String()}',
+      );
+      return true;
+    }());
+  }
 
   @override
   void initState() {
@@ -206,6 +246,9 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    _modeGeneration++;
+    _modeRestoreAnchor = null;
+    _modeRestoreGeneration = null;
     _metricsGeneration++;
     _preferencesSubscription?.cancel();
     WidgetsBinding.instance.removeObserver(this);
@@ -234,6 +277,10 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
     if (state == AppLifecycleState.inactive ||
         state == AppLifecycleState.paused ||
         state == AppLifecycleState.detached) {
+      if (_modeRestoreAnchor != null) {
+        _cancelModeRestore(revertToPaged: true);
+        return;
+      }
       // M4 P1：只 flush 当前激活模式，
       // 避免 inactive 纵向覆盖分页新位置。
       if (_mode == ReaderMode.paged) {
@@ -291,6 +338,7 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
   }
 
   void _beginMetricsRelayout(ReaderPreferences next) {
+    _cancelModeRestore();
     final activeLocator = _mode == ReaderMode.paged
         ? _pagedController?.confirmedLocator
         : _controller.confirmedLocator;
@@ -401,11 +449,13 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
     setState(() {});
 
     // 取真实可见范围顶部作为切换锚点（§十七 switchAnchor）。
-    final anchorOffset = _controller.lastTopVisibleOffset;
-    final anchor = ReaderLocator(
-      collectionId: _controller.collectionId,
-      absoluteCharacterOffset: anchorOffset,
-    );
+    final anchor =
+        _controller.confirmedLocator ??
+        ReaderLocator(
+          collectionId: _controller.collectionId,
+          absoluteCharacterOffset: _controller.lastTopVisibleOffset,
+        );
+    final anchorOffset = anchor.absoluteCharacterOffset;
 
     final size = _pagedViewportSize;
     final width = size.width > 0
@@ -455,6 +505,18 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
     final gen = ++_modeGeneration;
     _transition = ReaderModeTransitionState.pagedToVertical;
     _controller.freezeWrites();
+    // Activate the target subtree before scheduling its two-stage restore.
+    _mode = ReaderMode.vertical;
+    _modeRestoreAnchor = locator;
+    _modeRestoreGeneration = gen;
+    _suppressProgrammaticScrollNotifications = true;
+    _restoreFinished = false;
+    _traceModeTransition(
+      'modeSwitchStart',
+      confirmed: locator,
+      target: locator,
+      generation: gen,
+    );
     // §二十一：切换本身零写入。翻页进度由防抖 Timer（400ms）自然落盘；
     // 退出 Reader 时由 dispose flush 落盘。
     setState(() {});
@@ -469,17 +531,34 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
         .then((_) {
           if (!mounted || gen != _modeGeneration) return;
           setState(() {});
-          _scheduleJumpToPendingTarget();
-          // 恢复完成由 _finishRestore 确认可见范围后解冻
-          _transition = ReaderModeTransitionState.idle;
-          _mode = ReaderMode.vertical;
-          _controller.unfreezeWrites();
-          setState(() {});
+          _traceModeTransition(
+            'verticalRestore',
+            target: locator,
+            generation: gen,
+          );
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted || gen != _modeGeneration) return;
+            _scheduleJumpToPendingTarget();
+          });
         });
+  }
+
+  void _cancelModeRestore({bool revertToPaged = false}) {
+    if (_modeRestoreAnchor == null) return;
+    _modeGeneration++;
+    _modeRestoreAnchor = null;
+    _modeRestoreGeneration = null;
+    _transition = ReaderModeTransitionState.idle;
+    if (revertToPaged) _mode = ReaderMode.paged;
+    _suppressProgrammaticScrollNotifications = false;
+    _controller.unfreezeWrites();
+    _traceModeTransition('modeRestoreCancelled');
   }
 
   /// 模式切换入口（AppBar 菜单）。
   void _selectMode(ReaderMode mode) {
+    if (mode == _mode && _transition == ReaderModeTransitionState.idle) return;
+    _cancelModeRestore();
     if (mode == _mode) return;
     _cancelMetricsRelayout();
     if (mode == ReaderMode.paged) {
@@ -782,8 +861,54 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
     }
     final metricsGeneration = _metricsGeneration;
     final metricsAnchor = _metricsAnchor;
+    final modeGeneration = _modeRestoreGeneration;
+    final modeAnchor = _modeRestoreAnchor;
     _controller.finishRestore().then((result) {
       if (!mounted) return;
+      if (modeAnchor != null) {
+        if (modeGeneration != _modeGeneration ||
+            modeGeneration != _modeRestoreGeneration) {
+          return;
+        }
+        final range = result?.visibleRange;
+        final confirmed = result?.confirmed;
+        final containsTarget =
+            range != null && range.contains(modeAnchor.absoluteCharacterOffset);
+        if (confirmed != modeAnchor || !containsTarget) {
+          _traceModeTransition(
+            'modeRestoreRejected',
+            confirmed: confirmed,
+            target: modeAnchor,
+            generation: modeGeneration,
+          );
+          return;
+        }
+        _modeRestoreAnchor = null;
+        _modeRestoreGeneration = null;
+        _transition = ReaderModeTransitionState.idle;
+        _restoreFinished = true;
+        _traceModeTransition(
+          'modeSwitchComplete',
+          confirmed: confirmed,
+          target: modeAnchor,
+          generation: modeGeneration,
+        );
+        widget.onModeRestore?.call(
+          ReaderModeRestoreReport(
+            generation: modeGeneration!,
+            target: modeAnchor,
+            confirmed: confirmed!,
+            visibleRange: range,
+          ),
+        );
+        setState(() {});
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted || modeGeneration != _modeGeneration) return;
+          _suppressProgrammaticScrollNotifications = false;
+          _controller.unfreezeWrites();
+        });
+        return;
+      }
       if (metricsAnchor != null) {
         if (metricsGeneration != _metricsGeneration) return;
         final range = result?.visibleRange;
@@ -1112,6 +1237,7 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
   final Map<int, GlobalKey> _blockKeys = {};
 
   void _onUserScroll(ScrollNotification notification) {
+    if (_suppressProgrammaticScrollNotifications) return;
     if (notification is ScrollUpdateNotification ||
         notification is ScrollEndNotification ||
         notification is OverscrollNotification) {

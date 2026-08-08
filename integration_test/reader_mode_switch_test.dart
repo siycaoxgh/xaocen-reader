@@ -21,8 +21,10 @@ import 'package:xaocen_reader/data/database/app_database.dart';
 import 'package:xaocen_reader/data/repositories/encoding_index_provider.dart';
 import 'package:xaocen_reader/data/repositories/library_file_manager.dart';
 import 'package:xaocen_reader/domain/library/library_import_models.dart';
+import 'package:xaocen_reader/domain/reader/reader_progress_state.dart';
 import 'package:xaocen_reader/reader/paged_reader_view.dart';
 import 'package:xaocen_reader/reader/reader_page.dart';
+import 'package:xaocen_reader/reader/reader_mode.dart';
 
 /// 生成多章 fixture（约 30 章 × 800 字符 ≈ 24KB）。
 String _buildFixture() {
@@ -76,6 +78,13 @@ void main() {
     );
   }
 
+  void selectMode(WidgetTester tester, ReaderMode mode) {
+    final menu = tester.widget<PopupMenuButton<ReaderMode>>(
+      find.byType(PopupMenuButton<ReaderMode>),
+    );
+    menu.onSelected!(mode);
+  }
+
   testWidgets('切换不丢位置：v→p→v 保精确 anchor + 零写入', (tester) async {
     await buildScope();
     await tester.pumpWidget(
@@ -100,6 +109,16 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
+    const requestedX = 1200;
+    final progressRepo = container.read(readingProgressRepositoryProvider);
+    await progressRepo.saveProgress(
+      ReaderProgressState(
+        collectionId: r.collection.id,
+        absoluteCharacterOffset: requestedX,
+        readingMode: ReadingMode.vertical,
+      ),
+    );
+
     // 打开 Reader
     await tester.tap(find.text('switch_book'));
     await tester.pump();
@@ -108,32 +127,29 @@ void main() {
     }
     expect(find.byType(ReaderPage), findsOneWidget);
 
-    // 记录切换前 DB 无进度（程序化恢复零写入）
-    final progressRepo = container.read(readingProgressRepositoryProvider);
-    expect(
-      await progressRepo.getProgress(r.collection.id),
-      isNull,
-      reason: '恢复完成前零写入',
-    );
+    final x = (await progressRepo.getProgress(
+      r.collection.id,
+    ))!.absoluteCharacterOffset;
+    expect(x, greaterThan(0), reason: '核心模式切换验收必须使用非零 Locator X');
 
     // v → p
-    await tester.tap(find.byIcon(Icons.swap_vert));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('分页'));
+    selectMode(tester, ReaderMode.paged);
     await tester.pumpAndSettle();
     expect(find.byType(PagedReaderView), findsOneWidget);
 
     // 切换后 DB 仍无进度（模式切换本身不写，§十八）
     expect(
       await progressRepo.getProgress(r.collection.id),
-      isNull,
+      isA<ReaderProgressState>().having(
+        (state) => state.absoluteCharacterOffset,
+        'absoluteCharacterOffset',
+        x,
+      ),
       reason: '切换本身不写进度',
     );
 
     // p → v（未翻页）
-    await tester.tap(find.byIcon(Icons.auto_stories));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('滚动'));
+    selectMode(tester, ReaderMode.vertical);
     for (var i = 0; i < 20; i++) {
       await tester.pump(const Duration(milliseconds: 100));
     }
@@ -141,11 +157,15 @@ void main() {
     // 未翻页切回：DB 仍无进度（位置未变，无用户操作）
     expect(
       await progressRepo.getProgress(r.collection.id),
-      isNull,
+      isA<ReaderProgressState>().having(
+        (state) => state.absoluteCharacterOffset,
+        'absoluteCharacterOffset',
+        x,
+      ),
       reason: '未翻页切换不产生进度写入',
     );
 
-    // 返回书架、重开：应从 0 恢复（无保存进度）
+    // 返回书架、重开：仍从非零 X 恢复。
     await tester.tap(find.byIcon(Icons.arrow_back));
     await tester.pumpAndSettle();
     await tester.tap(find.text('switch_book'));
@@ -186,9 +206,7 @@ void main() {
     }
 
     // v → p
-    await tester.tap(find.byIcon(Icons.swap_vert));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('分页'));
+    selectMode(tester, ReaderMode.paged);
     await tester.pumpAndSettle();
 
     // 翻两页

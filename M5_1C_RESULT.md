@@ -41,3 +41,18 @@
 
 Android APK 在全部 flutter test / integration test 完成后，最后通过
 `flutter build apk --debug` 重新生成，不是 test runner APK。
+
+## P1 addendum — paged → vertical 非零 Locator 恢复
+
+- 根因来自 M4 双模式首版：纵向恢复调度时 `_mode` 仍为 paged，保护分支直接跳过恢复，
+  随后过早 idle/unfreeze；非零 X 因此显示为纵向顶部。
+- 修复顺序固定为 capture X → freeze → generation → 激活 vertical → 两阶段精确恢复 →
+  `ReaderVisibleRange.contains(X)` → confirm X → idle → 下一帧解除程序化滚动抑制并最后 unfreeze。
+- 旧 generation 在再次切换、metrics、lifecycle、route pop/dispose 时失效；不保存 pixels、
+  pageIndex、百分比或 page.start，也没有 offset 0 fallback / 固定 delay。
+- ReaderPreferences 仍是全局外观；ReaderProgressState 仍按 collectionId 独立保存 mode + Locator。
+- 新增非零 v→p→v、p→v→p、快速切换与多书反向重复读取回归；integration 菜单改为
+  强类型 `PopupMenuButton<ReaderMode>.onSelected`，不再依赖不稳定的浮层坐标 tap。
+- P1 最终自动验证：`flutter analyze` 0 issues；349/349 unit/widget PASS；9/9 Windows
+  integration 文件 PASS；真实目录全部 4 个 TXT、12 个 metrics anchor logical error=0，
+  并对全部 4 本执行独立 mode+Locator 多轮交叉读取。

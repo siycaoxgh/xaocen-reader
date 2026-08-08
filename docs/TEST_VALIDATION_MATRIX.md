@@ -10,7 +10,7 @@
 
 ## A. 自动测试（当前全绿）
 
-**单元 + Widget：346 项**（`flutter test`，Windows VM）：
+**单元 + Widget：349 项**（`flutter test`，Windows VM）：
 - M1 系：gb18030_decoder（含全表 23940/锚点 209/四字节/非法/跨块）、txt_encoding_detector、txt_normalizer、txt_toc_scanner（24）、txt_index_cache、large_file_policy
 - M2 系：local_library_test（20）、library_page_test（8）、m0_skeleton_test（6→更新）
 - M3 系：reader_block（9）、reader_locator（10）、reading_progress_repository（8）、reader_controller（12）、normalized_document_loader（9）、reader_page_test（6）、reader_jump（11）、toc_title_persistence（6）、toc_display（4）
@@ -18,7 +18,7 @@
 - M3.3 系：toc_index（10）、reader_appearance（7）、toc_scroll（12）、reader_dark_mode（8）
 - 合同：txt_pipeline_contract（10）、content_navigation_contract（8）
 - M4 系：paged_layout_engine（20）、page_window（7）、paged_reader_controller（18）、paged_reader_view（11）
-- M4 P1 系：reader_progress_state（3+1 迁移）、mode_persistence_contract（4）、mode_persistence_widget（3）
+- M4 P1 系：reader_progress_state（3+1 迁移）、mode_persistence_contract（4）、mode_persistence_widget（6，含非零双向与快速 generation）
 - M5.1a 系：reader_preferences（11：强类型合同/分类/持久化/watch/reset/fallback/迁移/隔离）
 - M5.1b 系：metrics signature、分页 window invalidation、快速 generation、纵向 widget 保位
 - M5.1c 系：App 三态主题、重建持久化、vertical/paged paint-only、零 progress 写入
@@ -60,6 +60,8 @@
 | 分页引擎（行粒度/LF 边界/end 链连续/surrogate 不拆） | ✅ 20 | ✅ 11 | ✅ accept_real_paged | ✅* | ✅* |
 | 分页惰性窗口（prev2+next3，Page 数与总页数无关） | ✅ 7 | ✅ | ✅ paged_flow | ✅* | ✅* |
 | 双模式切换（v↔p 精确 anchor/零写入/generation） | ✅ 18 | ✅ 11 | ✅ mode_switch | ✅* | ✅* |
+| paged→vertical 非零 X：visible confirm 后才解冻 | ✅ | ✅ | ✅ mode_switch（X=1200） | ✅ 自动 | NOT-RUN（M5.1 收尾） |
+| A/B 每书独立 mode+Locator，多轮交叉读取不串书 | ✅ | ✅ | ✅ real corpus（全部 4 TXT） | ✅ 自动 | NOT-RUN（M5.1 收尾） |
 | 分页目录跳转（精确 target/标题可见） | ✅ | ✅ | ✅ paged_flow | ✅* | ✅* |
 | 键盘翻页 / 滑动翻页（Win / Android） | — | ✅ | ✅ paged_flow | ✅* | ✅* |
 | 100 页往返（end 链严格连续，页首 ≤2 屏漂移） | ✅ 20 | — | ✅ accept_real_paged | ✅ | ✅*（实际翻页无明显问题） |

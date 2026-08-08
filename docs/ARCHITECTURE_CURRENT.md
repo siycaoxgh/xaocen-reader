@@ -340,6 +340,11 @@ ReaderPage（双模式容器）
 - 切换期间 freezeWrites（旧组件零写入）；generation 拒绝过期异步结果；无固定延迟；
 - 目录跳转：chapter/volume.startCharacterOffset → pageContaining → 标题可见 →
   confirmed = 精确 target（立即防抖保存）；用户主动翻页后才用 page.start 覆盖。
+- p→v 状态顺序不可交换：capture paged confirmed X → freeze → generation → target active=vertical
+  → 两阶段 restore X → real visible range contains X → finishRestore confirms X → idle → unfreeze last。
+  程序化滚动通知在完成边界前被抑制，不得伪装成用户滚动写入 progress。
+- ReaderPreferences 是全局外观；ReaderProgressState 以 collectionId 为主键按书保存
+  absoluteCharacterOffset + readingMode。两套状态不得互相读取、覆盖或合并。
 
 
 ---

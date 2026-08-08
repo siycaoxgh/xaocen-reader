@@ -150,7 +150,7 @@ void main() {
         ReaderProgressState(
           collectionId: 'local-txt:abc',
           absoluteCharacterOffset: 1,
-          readingMode: ReadingMode.vertical,
+          readingMode: ReadingMode.paged,
         ),
       );
       await repo.saveProgress(
@@ -160,14 +160,14 @@ void main() {
           readingMode: ReadingMode.vertical,
         ),
       );
-      expect(
-        (await repo.getProgress('local-txt:abc'))!.absoluteCharacterOffset,
-        1,
-      );
-      expect(
-        (await repo.getProgress('local-txt:def'))!.absoluteCharacterOffset,
-        2,
-      );
+      for (var round = 0; round < 5; round++) {
+        final a = await repo.getProgress('local-txt:abc');
+        final b = await repo.getProgress('local-txt:def');
+        expect(a!.absoluteCharacterOffset, 1);
+        expect(a.readingMode, ReadingMode.paged);
+        expect(b!.absoluteCharacterOffset, 2);
+        expect(b.readingMode, ReadingMode.vertical);
+      }
     });
   });
 

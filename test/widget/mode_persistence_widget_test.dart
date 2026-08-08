@@ -10,10 +10,10 @@ import 'package:xaocen_reader/domain/local_txt/text_encoding.dart';
 import 'package:xaocen_reader/domain/library/library_entities.dart';
 import 'package:xaocen_reader/domain/reader/reader_locator.dart';
 import 'package:xaocen_reader/domain/reader/reader_progress_state.dart';
-import 'package:xaocen_reader/domain/reader/reading_mode.dart';
 import 'package:xaocen_reader/reader/normalized_document_loader.dart';
 import 'package:xaocen_reader/reader/paged_reader_view.dart';
 import 'package:xaocen_reader/reader/reader_page.dart';
+import 'package:xaocen_reader/reader/reader_mode.dart';
 
 // 多页 fixture：够大以支持翻页（分页模式）。
 final String _bookText = _buildBookText();
@@ -100,6 +100,7 @@ void main() {
     WidgetTester tester, {
     ReaderProgressState? initialState,
     ReaderLocator? progress,
+    ValueChanged<ReaderModeRestoreReport>? onModeRestore,
   }) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -115,6 +116,7 @@ void main() {
           ),
           initialStateOverride: initialState,
           progressOverride: progress,
+          onModeRestore: onModeRestore,
         ),
       ),
     );
@@ -122,6 +124,102 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
     }
   }
+
+  void selectMode(WidgetTester tester, ReaderMode mode) {
+    final menu = tester.widget<PopupMenuButton<ReaderMode>>(
+      find.byType(PopupMenuButton<ReaderMode>),
+    );
+    menu.onSelected!(mode);
+  }
+
+  testWidgets('P1 regression: non-zero v -> p -> v confirms exact locator', (
+    tester,
+  ) async {
+    const x = 1000;
+    ReaderModeRestoreReport? report;
+    await pumpReader(
+      tester,
+      initialState: const ReaderProgressState(
+        collectionId: 'local-txt:abc',
+        absoluteCharacterOffset: x,
+        readingMode: ReadingMode.vertical,
+      ),
+      onModeRestore: (value) => report = value,
+    );
+
+    selectMode(tester, ReaderMode.paged);
+    await tester.pump();
+    selectMode(tester, ReaderMode.vertical);
+    for (var i = 0; i < 20 && report == null; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+
+    expect(report, isNotNull);
+    expect(report!.target.absoluteCharacterOffset, x);
+    expect(report!.confirmed.absoluteCharacterOffset, x);
+    expect(report!.visibleRange.contains(x), isTrue);
+  });
+
+  testWidgets('P1 regression: rapid v -> p -> v keeps latest generation', (
+    tester,
+  ) async {
+    const x = 1200;
+    final reports = <ReaderModeRestoreReport>[];
+    await pumpReader(
+      tester,
+      initialState: const ReaderProgressState(
+        collectionId: 'local-txt:abc',
+        absoluteCharacterOffset: x,
+        readingMode: ReadingMode.vertical,
+      ),
+      onModeRestore: reports.add,
+    );
+
+    selectMode(tester, ReaderMode.paged);
+    selectMode(tester, ReaderMode.vertical);
+    selectMode(tester, ReaderMode.paged);
+    selectMode(tester, ReaderMode.vertical);
+    for (var i = 0; i < 30 && reports.isEmpty; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+
+    expect(reports, hasLength(1));
+    expect(reports.single.confirmed.absoluteCharacterOffset, x);
+  });
+
+  testWidgets('P1 regression: non-zero p -> v -> p keeps exact locator', (
+    tester,
+  ) async {
+    const x = 1400;
+    final reports = <ReaderModeRestoreReport>[];
+    await pumpReader(
+      tester,
+      initialState: const ReaderProgressState(
+        collectionId: 'local-txt:abc',
+        absoluteCharacterOffset: x,
+        readingMode: ReadingMode.paged,
+      ),
+      onModeRestore: reports.add,
+    );
+    await tester.pumpAndSettle();
+
+    selectMode(tester, ReaderMode.vertical);
+    for (var i = 0; i < 20 && reports.isEmpty; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    selectMode(tester, ReaderMode.paged);
+    selectMode(tester, ReaderMode.vertical);
+    for (var i = 0; i < 20 && reports.length < 2; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+
+    expect(reports, hasLength(2));
+    expect(
+      reports.every((r) => r.confirmed.absoluteCharacterOffset == x),
+      isTrue,
+    );
+    expect(reports.every((r) => r.visibleRange.contains(x)), isTrue);
+  });
 
   testWidgets('P1-1: 分页模式 dispose 只 flush active（不被纵向覆盖）', (tester) async {
     // 纵向初始位置 A=0，注入
@@ -135,9 +233,7 @@ void main() {
     );
 
     // 切分页（菜单 → 分页）
-    await tester.tap(find.byIcon(Icons.swap_vert));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('分页'));
+    selectMode(tester, ReaderMode.paged);
     await tester.pumpAndSettle();
     expect(find.byType(PagedReaderView), findsOneWidget, reason: '已切分页');
 

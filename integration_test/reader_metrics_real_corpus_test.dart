@@ -11,6 +11,8 @@ import 'package:xaocen_reader/data/repositories/reading_progress_repository.dart
 import 'package:xaocen_reader/domain/library/library_import_models.dart';
 import 'package:xaocen_reader/domain/reader/reader_block.dart';
 import 'package:xaocen_reader/domain/reader/reader_locator.dart';
+import 'package:xaocen_reader/domain/reader/reader_progress_state.dart';
+import 'package:xaocen_reader/domain/reader/reading_mode.dart';
 import 'package:xaocen_reader/reader/normalized_document_loader.dart';
 import 'package:xaocen_reader/reader/paged_reader_controller.dart';
 
@@ -47,6 +49,7 @@ void main() {
         );
         final progress = ReadingProgressRepository(db: db);
         final loader = NormalizedDocumentLoader(fileManager: manager);
+        final corpusStates = <ReaderProgressState>[];
 
         for (final file in files) {
           final imported = await repository.importTxt(
@@ -121,6 +124,23 @@ void main() {
           }
           if (file.lengthSync() > 7 * 1024 * 1024) {
             expect(imported.collection.itemCount, 1);
+          }
+          final state = ReaderProgressState(
+            collectionId: imported.collection.id,
+            absoluteCharacterOffset: document.text.length ~/ 2,
+            readingMode: corpusStates.length.isEven
+                ? ReadingMode.paged
+                : ReadingMode.vertical,
+          );
+          await progress.saveProgress(state);
+          corpusStates.add(state);
+        }
+
+        expect(corpusStates, hasLength(files.length));
+        expect(corpusStates.length, greaterThanOrEqualTo(2));
+        for (var round = 0; round < 4; round++) {
+          for (final expected in corpusStates.reversed) {
+            expect(await progress.getProgress(expected.collectionId), expected);
           }
         }
       } finally {

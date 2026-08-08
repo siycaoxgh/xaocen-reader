@@ -431,3 +431,11 @@ ReaderResolvedAppearance/ColorScheme 更新 vertical/paged 颜色。纯主题变
 重分页、Locator restore 或 progress 写入。346 unit/widget 与 9/9 Windows integration 通过；
 Windows Release、最终正常入口 Android Debug 构建通过。Android 真机按新策略统一延后到
 M5.1 最终收尾验证。M5.1c COMPLETE，不进入 M5.1d。
+
+### M5.1c 后 P1 回归修复（2026-08-09）
+
+真人验收发现 paged→vertical 会回到顶部。定位确认：M4 首版在 `_mode` 仍为 paged 时调度
+纵向恢复，被 paged 防护分支跳过，且 visible-range confirm 前已经解冻。现按非零 Locator X
+完成严格状态机：激活 vertical 后恢复，真实可见范围包含 X 且 confirmed=X 才 idle/unfreeze。
+补齐双向、快速 generation、继续阅读重开及 A/B 多书隔离测试；schema 4、Preferences、TXT、
+TOC、Theme、UI 均未改变。

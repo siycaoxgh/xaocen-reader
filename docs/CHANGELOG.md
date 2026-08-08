@@ -14,6 +14,14 @@ Legend for validation columns:
 
 ## Unreleased
 
+### P1 — paged → vertical exact Locator restore (2026-08-09)
+- Fixed the latent M4 mode-state ordering bug that skipped vertical restore while paged was still active.
+- Writes remain frozen until the real visible range contains the captured non-zero Locator and confirmation succeeds.
+- Added non-zero bidirectional/rapid-generation regressions and repeated per-collection isolation checks.
+- Replaced unreliable integration popup coordinate taps with the typed mode-selection callback.
+- Validation: analyze clean; 349/349 unit/widget; 9/9 Windows integration files; all 4 real TXT;
+  Windows Release and final normal-entry Android Debug builds PASS (device deferred).
+
 ### M5.1c — three-state theme + paint-only Reader updates (2026-08-09)
 - Connected persisted ReaderThemeMode system/light/dark to MaterialApp in real time.
 - Reader vertical/paged colors continue through ReaderResolvedAppearance/ColorScheme.

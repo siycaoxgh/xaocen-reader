@@ -25,6 +25,7 @@ import 'package:xaocen_reader/data/repositories/reading_progress_repository.dart
 import 'package:xaocen_reader/domain/library/library_import_models.dart';
 import 'package:xaocen_reader/reader/paged_reader_view.dart';
 import 'package:xaocen_reader/reader/reader_page.dart';
+import 'package:xaocen_reader/reader/reader_mode.dart';
 
 /// 生成多章 fixture（UTF-8，章节标题满足扫描器合同「第X章 + 空白」）。
 /// 约 40 章 × 1200 字符 ≈ 48KB，多页可翻。
@@ -47,6 +48,13 @@ String _buildFixture() {
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+
+  void selectMode(WidgetTester tester, ReaderMode mode) {
+    final menu = tester.widget<PopupMenuButton<ReaderMode>>(
+      find.byType(PopupMenuButton<ReaderMode>),
+    );
+    menu.onSelected!(mode);
+  }
 
   late AppDatabase db;
   late Directory libRoot;
@@ -122,9 +130,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // ---- 切分页（菜单：滚动 → 分页）----
-    await tester.tap(find.byIcon(Icons.swap_vert));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('分页'));
+    selectMode(tester, ReaderMode.paged);
     await tester.pumpAndSettle();
     expect(
       find.byType(PagedReaderView),
@@ -141,9 +147,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // ---- 切回纵向 ----
-    await tester.tap(find.byIcon(Icons.auto_stories));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('滚动'));
+    selectMode(tester, ReaderMode.vertical);
     for (var i = 0; i < 20; i++) {
       await tester.pump(const Duration(milliseconds: 100));
     }
@@ -166,9 +170,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // ---- 切分页 + TOC 远跳 ----
-    await tester.tap(find.byIcon(Icons.swap_vert));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('分页'));
+    selectMode(tester, ReaderMode.paged);
     await tester.pumpAndSettle();
     expect(find.byType(PagedReaderView), findsOneWidget);
 
