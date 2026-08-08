@@ -18,6 +18,9 @@ library;
 
 import 'dart:async';
 
+import '../domain/reader/reader_progress_state.dart';
+import '../domain/reader/reading_mode.dart';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
 
@@ -337,7 +340,14 @@ class PagedReaderController extends ChangeNotifier {
       // 过期异步结果拒绝（§二十一）：代数变化后不再写旧代位置。
       if (gen != _generation) return;
       if (_disposed) return;
-      await _progressRepository.saveProgress(locator);
+      await _progressRepository.saveProgress(
+        ReaderProgressState(
+          collectionId: collectionId,
+          absoluteCharacterOffset: locator.absoluteCharacterOffset,
+          readingMode: ReadingMode.paged,
+          itemIdHint: locator.itemIdHint,
+        ),
+      );
     });
   }
 
@@ -347,7 +357,14 @@ class PagedReaderController extends ChangeNotifier {
     _debounce = null;
     final locator = _confirmedLocator;
     if (locator == null || _disposed) return;
-    await _progressRepository.saveProgress(locator);
+    await _progressRepository.saveProgress(
+      ReaderProgressState(
+        collectionId: collectionId,
+        absoluteCharacterOffset: locator.absoluteCharacterOffset,
+        readingMode: ReadingMode.paged,
+        itemIdHint: locator.itemIdHint,
+      ),
+    );
   }
 
   /// 测试注入：跳过防抖立即返回当前 confirmed。

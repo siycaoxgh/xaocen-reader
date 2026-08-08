@@ -20,6 +20,8 @@ import 'package:flutter/widgets.dart';
 import '../data/repositories/reading_progress_repository.dart';
 import '../domain/reader/reader_block.dart';
 import '../domain/reader/reader_locator.dart';
+import '../domain/reader/reader_progress_state.dart';
+import '../domain/reader/reading_mode.dart';
 import '../domain/reader/reader_visible_range.dart';
 import 'normalized_document_loader.dart';
 import 'reader_text_block.dart';
@@ -151,10 +153,11 @@ class ReaderController extends ChangeNotifier {
       notifyListeners();
 
       // 读取进度（progressOverride 供测试跳过 DB）
+      // getProgress 返回 ReaderProgressState（含 mode），取位置真源部分。
       final saved =
           initialLocator ??
           progressOverride ??
-          await _progressRepository.getProgress(collectionId);
+          (await _progressRepository.getProgress(collectionId))?.toLocator();
 
       final requested =
           saved ??
@@ -322,7 +325,14 @@ class ReaderController extends ChangeNotifier {
     );
     _restorePhase = ReaderRestorePhase.completed;
     notifyListeners();
-    await _progressRepository.saveProgress(_confirmedLocator!);
+    await _progressRepository.saveProgress(
+      ReaderProgressState(
+        collectionId: collectionId,
+        absoluteCharacterOffset: _confirmedLocator!.absoluteCharacterOffset,
+        readingMode: ReadingMode.vertical,
+        itemIdHint: _confirmedLocator!.itemIdHint,
+      ),
+    );
   }
 
   /// 用户滚动上报（userDrag / userWheel / userScrollbar）。
@@ -359,7 +369,14 @@ class ReaderController extends ChangeNotifier {
     _debounce?.cancel();
     _debounce = Timer(_debounceDuration, () async {
       if (writesFrozen) return; // 切换中不落库（§二十一）
-      await _progressRepository.saveProgress(locator);
+      await _progressRepository.saveProgress(
+        ReaderProgressState(
+          collectionId: collectionId,
+          absoluteCharacterOffset: locator.absoluteCharacterOffset,
+          readingMode: ReadingMode.vertical,
+          itemIdHint: locator.itemIdHint,
+        ),
+      );
     });
   }
 
@@ -373,7 +390,14 @@ class ReaderController extends ChangeNotifier {
     _debounce = null;
     final locator = _confirmedLocator;
     if (locator == null) return;
-    await _progressRepository.saveProgress(locator);
+    await _progressRepository.saveProgress(
+      ReaderProgressState(
+        collectionId: collectionId,
+        absoluteCharacterOffset: locator.absoluteCharacterOffset,
+        readingMode: ReadingMode.vertical,
+        itemIdHint: locator.itemIdHint,
+      ),
+    );
   }
 
   @override

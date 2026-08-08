@@ -26,6 +26,7 @@ import 'paged_reader_view.dart';
 import 'reader_appearance.dart';
 import 'reader_controller.dart';
 import 'reader_mode.dart';
+import '../domain/reader/reader_progress_state.dart';
 import 'reader_text_block.dart';
 
 /// 打开 Reader 所需上下文（由书架页组装）。
@@ -67,6 +68,7 @@ class ReaderPage extends StatefulWidget {
     required this.launch,
     this.documentOverride,
     this.progressOverride,
+    this.initialStateOverride,
   });
 
   final ReaderLaunchContext launch;
@@ -76,6 +78,10 @@ class ReaderPage extends StatefulWidget {
 
   /// 测试注入：跳过 DB 查询直接使用该进度。
   final ReaderLocator? progressOverride;
+
+  /// 测试注入：含 readingMode 的初始状态（跳过 DB 查询）。
+  /// 用于 widget 测试验证“重开恢复模式 + 位置”。
+  final ReaderProgressState? initialStateOverride;
 
   @override
   State<ReaderPage> createState() => _ReaderPageState();
@@ -99,6 +105,9 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
   ReaderVisibleRange? lastVisibleRange;
 
   // ---- M4：双模式 ----
+
+  /// 初始状态（重开时从库读取，含 readingMode）。
+  ReaderProgressState? _initialState;
 
   /// 当前阅读模式（纵向 M3 / 横向分页 M4）。
   ReaderMode _mode = ReaderMode.vertical;
@@ -165,16 +174,20 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _controller.removeListener(_onControllerChanged);
-    // M4：分页模式退出时 flush 最新已确认位置
     final paged = _pagedController;
     if (paged != null) {
       paged.removeListener(_onPagedControllerChanged);
-      paged.flush();
-      paged.dispose();
-      _pagedController = null;
     }
-    // 生命周期 flush：写最新已确认用户位置
-    _controller.flush();
+    // M4 P1：只有“当前激活的 Reader 模式”允许提交位置。
+    // inactive/disposed 的 VerticalReader 或 PagedReader 不得
+    // 在 route pop / lifecycle / dispose 时覆盖当前模式的新进度。
+    if (_mode == ReaderMode.paged) {
+      paged?.flush(); // active = 分页：保存 paged confirmed
+    } else {
+      _controller.flush(); // active = 纵向：保存纵向 confirmed
+    }
+    paged?.dispose();
+    _pagedController = null;
     _controller.dispose();
     _scroll.dispose();
     super.dispose();
@@ -185,7 +198,13 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
     if (state == AppLifecycleState.inactive ||
         state == AppLifecycleState.paused ||
         state == AppLifecycleState.detached) {
-      _controller.flush(source: ReaderPositionEventSource.lifecycleFlush);
+      // M4 P1：只 flush 当前激活模式，
+      // 避免 inactive 纵向覆盖分页新位置。
+      if (_mode == ReaderMode.paged) {
+        _pagedController?.flush();
+      } else {
+        _controller.flush(source: ReaderPositionEventSource.lifecycleFlush);
+      }
     }
   }
 
@@ -249,6 +268,9 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
     _transition = ReaderModeTransitionState.idle;
     _controller.unfreezeWrites();
     if (gen != _modeGeneration) return; // 切换期间又切换：丢弃旧代
+    // M4 P1：切换本身零写入（§二十一）。
+    // mode=paged 的持久化由退出时的 paged.flush()
+    // （dispose/lifecycle 只 flush active 模式）自然落盘。
     setState(() {});
   }
 
@@ -353,12 +375,33 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
   }
 
   Future<void> _start() async {
-    await _controller.open();
+    // 读初始状态（含 readingMode）：重开时恢复
+    // “上次的阅读模式 + 最后 confirmed Locator”。
+    // 测试注入 progressOverride 时跳过 DB 查询
+    // （widget 测试 FakeAsync 不推真实 IO）。
+    if (widget.initialStateOverride != null) {
+      _initialState = widget.initialStateOverride;
+    } else if (widget.progressOverride == null) {
+      _initialState = await widget.launch.progressRepository.getProgress(
+        widget.launch.collection.id,
+      );
+    }
+    await _controller.open(initialLocator: _initialState?.toLocator());
     if (!mounted) return;
     setState(() {});
     // 列表可能尚未 attach：post-frame 再尝试跳转
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      // M4 P1：重开时若上次是分页模式，自动切回分页
+      // （anchor = 恢复的位置，切换不改变 offset）。
+      // 先于纵向跳转执行，避免跳转异常中断切换。
+      if (_initialState?.readingMode == ReadingMode.paged) {
+        try {
+          _switchToPaged();
+        } catch (e) {
+          // 自动切分页失败不应阻断后续流程：保持纵向，由用户手动切换。
+        }
+      }
       _scheduleJumpToPendingTarget();
       // 列表 attach 后需要再等一帧确保布局完成
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -396,6 +439,11 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
   ///        再次 jumpToItem(rect) 把标题行对齐 viewport 顶部 + inset；
   /// 阶段3：测量真实可见范围，确认标题行与 viewport 相交，才完成恢复/保存。
   void _scheduleJumpToPendingTarget() {
+    // M4 P1：分页模式下纵向跳转/对齐跳过（纵向已让位给 paged）。
+    if (_mode == ReaderMode.paged) {
+      _restoreFinished = true;
+      return;
+    }
     final block = _controller.pendingTargetBlock;
     if (block == null || !_listController.isAttached) {
       return;
@@ -539,6 +587,12 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
   }
 
   void _alignFailed(String reason) {
+    // M4 P1：分页模式下纵向对齐失败不标记恢复失败（纵向已让位给 paged）。
+    if (_mode == ReaderMode.paged) {
+      _restoreFinished = true;
+      if (mounted) setState(() {});
+      return;
+    }
     lastJumpError = reason;
     if (_tocJumpPending) {
       // 目录跳转失败：不保存，保持原状态，给出明确失败
@@ -551,6 +605,13 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
   }
 
   void _finishRestore() {
+    // M4 P1：分页模式下不执行纵向恢复确认
+    // （纵向已让位给 paged，可见范围测量无法在 paged 下返回，
+    // 避免误设 state=failed）。
+    if (_mode == ReaderMode.paged) {
+      _restoreFinished = true;
+      return;
+    }
     _controller.finishRestore().then((_) {
       if (!mounted) return;
       _restoreFinished = true;
