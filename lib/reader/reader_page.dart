@@ -16,9 +16,12 @@ import 'package:flutter/material.dart';
 import 'package:super_sliver_list/super_sliver_list.dart';
 
 import '../data/repositories/reading_progress_repository.dart';
+import '../data/repositories/reader_preferences_repository.dart';
 import '../domain/library/library_entities.dart';
 import '../domain/library/toc_index.dart';
 import '../domain/reader/reader_locator.dart';
+import '../domain/reader/paged_text_range.dart';
+import '../domain/reader/reader_preferences.dart';
 import '../domain/reader/reader_visible_range.dart';
 import 'normalized_document_loader.dart';
 import 'paged_reader_controller.dart';
@@ -26,6 +29,7 @@ import 'paged_reader_view.dart';
 import 'reader_appearance.dart';
 import 'reader_controller.dart';
 import 'reader_mode.dart';
+import 'reader_metrics_signature.dart';
 import '../domain/reader/reader_progress_state.dart';
 import 'reader_text_block.dart';
 
@@ -38,6 +42,7 @@ class ReaderLaunchContext {
     required this.normalizedCharacterLength,
     required this.documentLoader,
     required this.progressRepository,
+    this.preferencesRepository,
     this.repair,
   });
 
@@ -50,6 +55,7 @@ class ReaderLaunchContext {
   final int normalizedCharacterLength;
   final NormalizedDocumentLoader documentLoader;
   final ReadingProgressRepository progressRepository;
+  final ReaderPreferencesRepository? preferencesRepository;
 
   /// 修复回调（由书架页注入）：返回 null 表示成功，否则返回错误信息。
   final Future<String?> Function()? repair;
@@ -69,6 +75,8 @@ class ReaderPage extends StatefulWidget {
     this.documentOverride,
     this.progressOverride,
     this.initialStateOverride,
+    this.preferencesOverride,
+    this.onMetricsRelayout,
   });
 
   final ReaderLaunchContext launch;
@@ -83,6 +91,10 @@ class ReaderPage extends StatefulWidget {
   /// 用于 widget 测试验证“重开恢复模式 + 位置”。
   final ReaderProgressState? initialStateOverride;
 
+  /// 测试注入：绕过 storage，直接驱动强类型设置流。
+  final Stream<ReaderPreferences>? preferencesOverride;
+  final ValueChanged<ReaderMetricsRelayoutReport>? onMetricsRelayout;
+
   @override
   State<ReaderPage> createState() => _ReaderPageState();
 }
@@ -92,6 +104,15 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
   final ScrollController _scroll = ScrollController();
   final ListController _listController = ListController();
   late TextStyle _bodyStyle;
+  ReaderPreferences _preferences = ReaderPreferences.defaults;
+  late ReaderMetricsSignature _metricsSignature =
+      ReaderMetricsSignature.fromPreferences(_preferences);
+  StreamSubscription<ReaderPreferences>? _preferencesSubscription;
+  int _metricsGeneration = 0;
+  ReaderLocator? _metricsAnchor;
+  bool _metricsWritesFrozen = false;
+  ReaderVisibleRange? _metricsVisibleBefore;
+  PagedTextRange? _metricsPageBefore;
 
   /// Reader 视觉合同（P1：从 Theme 解析，禁止正文硬编码颜色）。
   late ReaderResolvedAppearance _appearance;
@@ -152,6 +173,15 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
     _controller.blockLayoutResolver = (index) => _layoutByIndex(index);
     _controller.addListener(_onControllerChanged);
 
+    final preferencesStream =
+        widget.preferencesOverride ??
+        widget.launch.preferencesRepository?.watch();
+    if (preferencesStream != null) {
+      _preferencesSubscription = preferencesStream.listen(
+        _onPreferencesChanged,
+      );
+    }
+
     _start();
   }
 
@@ -164,7 +194,11 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
       // P1：主题切换 → 解析新外观。颜色变化只触发重绘
       // （RenderReaderTextBlock.style setter 区分度量/颜色），
       // 不重建 block 索引、不写进度、阅读 offset 保持不变。
-      _appearance = resolveReaderAppearance(context);
+      _appearance = resolveReaderAppearance(
+        context,
+        fontSize: _preferences.fontSize,
+        lineHeight: _preferences.lineHeight,
+      );
       _bodyStyle = _appearance.baseTextStyle;
       if (mounted) setState(() {});
     }
@@ -172,6 +206,8 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    _metricsGeneration++;
+    _preferencesSubscription?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     _controller.removeListener(_onControllerChanged);
     final paged = _pagedController;
@@ -206,6 +242,123 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
         _controller.flush(source: ReaderPositionEventSource.lifecycleFlush);
       }
     }
+  }
+
+  void _onPreferencesChanged(ReaderPreferences next) {
+    if (!mounted) return;
+    final nextSignature = ReaderMetricsSignature.fromPreferences(next);
+    _preferences = next;
+    if (nextSignature == _metricsSignature) return;
+    _metricsSignature = nextSignature;
+    _beginMetricsRelayout(next);
+  }
+
+  void _freezeMetricsWrites() {
+    if (_metricsWritesFrozen) {
+      _controller.unfreezeWrites();
+      _pagedController?.unfreezeWrites();
+    }
+    _controller.freezeWrites();
+    _pagedController?.freezeWrites();
+    _metricsWritesFrozen = true;
+  }
+
+  void _unfreezeMetricsWrites() {
+    if (!_metricsWritesFrozen) return;
+    _controller.unfreezeWrites();
+    _pagedController?.unfreezeWrites();
+    _metricsWritesFrozen = false;
+  }
+
+  void _cancelMetricsRelayout() {
+    _metricsGeneration++;
+    _metricsAnchor = null;
+    _metricsVisibleBefore = null;
+    _metricsPageBefore = null;
+    _unfreezeMetricsWrites();
+  }
+
+  void _beginMetricsRelayout(ReaderPreferences next) {
+    final activeLocator = _mode == ReaderMode.paged
+        ? _pagedController?.confirmedLocator
+        : _controller.confirmedLocator;
+    if (activeLocator == null) {
+      _appearance = resolveReaderAppearance(
+        context,
+        fontSize: next.fontSize,
+        lineHeight: next.lineHeight,
+      );
+      _bodyStyle = _appearance.baseTextStyle;
+      setState(() {});
+      return;
+    }
+
+    final generation = ++_metricsGeneration;
+    _metricsAnchor = activeLocator;
+    _metricsVisibleBefore = _mode == ReaderMode.vertical
+        ? lastVisibleRange
+        : null;
+    _metricsPageBefore = _mode == ReaderMode.paged
+        ? _pagedController?.currentPage
+        : null;
+    _freezeMetricsWrites();
+    _appearance = resolveReaderAppearance(
+      context,
+      fontSize: next.fontSize,
+      lineHeight: next.lineHeight,
+    );
+    _bodyStyle = _appearance.baseTextStyle;
+
+    if (_mode == ReaderMode.paged) {
+      final paged = _pagedController;
+      if (paged == null) {
+        _cancelMetricsRelayout();
+        return;
+      }
+      final size = _pagedViewportSize;
+      paged.relayout(
+        width: size.width > 0 ? size.width : paged.engine.width,
+        height: size.height > 0 ? size.height : paged.engine.height,
+        style: _bodyStyle,
+        horizontalPadding: next.horizontalPadding,
+        verticalPadding: next.verticalPadding,
+      );
+      if (generation != _metricsGeneration || !mounted) return;
+      final page = paged.currentPage;
+      assert(
+        page != null && page.contains(activeLocator.absoluteCharacterOffset),
+      );
+      assert(paged.confirmedLocator == activeLocator);
+      widget.onMetricsRelayout?.call(
+        ReaderMetricsRelayoutReport(
+          generation: generation,
+          locatorBefore: activeLocator,
+          locatorAfter: paged.confirmedLocator!,
+          signature: _metricsSignature,
+          pageBefore: _metricsPageBefore,
+          pageAfter: page,
+        ),
+      );
+      _metricsAnchor = null;
+      _metricsPageBefore = null;
+      _unfreezeMetricsWrites();
+      setState(() {});
+      return;
+    }
+
+    _renderObjects.clear();
+    _restoreFinished = false;
+    _controller
+        .jumpToOffset(
+          activeLocator.absoluteCharacterOffset,
+          itemIdHint: activeLocator.itemIdHint,
+        )
+        .then((_) {
+          if (!mounted || generation != _metricsGeneration) return;
+          setState(() {});
+          _scheduleJumpToPendingTarget();
+        });
+    setState(() {});
   }
 
   /// 分页控制器变化（窗口重建/翻页后）→ setState。
@@ -258,6 +411,8 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
       style: _pagedBodyStyle,
       width: width,
       height: height,
+      horizontalPadding: _preferences.horizontalPadding,
+      verticalPadding: _preferences.verticalPadding,
     );
     paged.addListener(_onPagedControllerChanged);
     final page = paged.open(anchor);
@@ -314,6 +469,7 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
   /// 模式切换入口（AppBar 菜单）。
   void _selectMode(ReaderMode mode) {
     if (mode == _mode) return;
+    _cancelMetricsRelayout();
     if (mode == ReaderMode.paged) {
       _switchToPaged();
     } else {
@@ -612,8 +768,32 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
       _restoreFinished = true;
       return;
     }
-    _controller.finishRestore().then((_) {
+    final metricsGeneration = _metricsGeneration;
+    final metricsAnchor = _metricsAnchor;
+    _controller.finishRestore().then((result) {
       if (!mounted) return;
+      if (metricsAnchor != null) {
+        if (metricsGeneration != _metricsGeneration) return;
+        final range = result?.visibleRange;
+        assert(result?.confirmed == metricsAnchor);
+        assert(
+          range != null &&
+              range.contains(metricsAnchor.absoluteCharacterOffset),
+        );
+        widget.onMetricsRelayout?.call(
+          ReaderMetricsRelayoutReport(
+            generation: metricsGeneration,
+            locatorBefore: metricsAnchor,
+            locatorAfter: result!.confirmed,
+            signature: _metricsSignature,
+            visibleBefore: _metricsVisibleBefore,
+            visibleAfter: range,
+          ),
+        );
+        _metricsAnchor = null;
+        _metricsVisibleBefore = null;
+        _unfreezeMetricsWrites();
+      }
       _restoreFinished = true;
       setState(() {});
     });
@@ -850,40 +1030,49 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
                 if (const bool.fromEnvironment('XAOCEN_READER_DEBUG'))
                   _DebugBar(controller: _controller, page: this),
                 Expanded(
-                  child: Scrollbar(
-                    controller: _scroll,
-                    child: NotificationListener<ScrollNotification>(
-                      onNotification: (n) {
-                        _onUserScroll(n);
-                        return false;
-                      },
-                      child: SuperListView.builder(
-                        controller: _scroll,
-                        listController: _listController,
-                        itemCount: index.blockCount,
-                        itemBuilder: (context, i) {
-                          final block = index.blocks[i];
-                          final text = doc.text.substring(
-                            block.startCharacterOffset,
-                            block.endCharacterOffset,
-                          );
-                          final key = _blockKeys[i] ??= GlobalKey();
-                          return ReaderTextBlock(
-                            key: key,
-                            text: text,
-                            style: _bodyStyle,
-                            // 主题变化时递增：保证已构建 block 走 updateRenderObject 更新颜色
-                            styleVersion: _appearance.textColor.toARGB32(),
-                            textDirection: TextDirection.ltr,
-                            maxWidth: MediaQuery.of(context).size.width - 32,
-                            onLayout: (layout) {
-                              final ro = key.currentContext?.findRenderObject();
-                              if (ro is RenderReaderTextBlock) {
-                                _renderObjects[i] = ro;
-                              }
-                            },
-                          );
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: _preferences.horizontalPadding,
+                      vertical: _preferences.verticalPadding,
+                    ),
+                    child: Scrollbar(
+                      controller: _scroll,
+                      child: NotificationListener<ScrollNotification>(
+                        onNotification: (n) {
+                          _onUserScroll(n);
+                          return false;
                         },
+                        child: SuperListView.builder(
+                          controller: _scroll,
+                          listController: _listController,
+                          itemCount: index.blockCount,
+                          itemBuilder: (context, i) {
+                            final block = index.blocks[i];
+                            final text = doc.text.substring(
+                              block.startCharacterOffset,
+                              block.endCharacterOffset,
+                            );
+                            final key = _blockKeys[i] ??= GlobalKey();
+                            return ReaderTextBlock(
+                              key: key,
+                              text: text,
+                              style: _bodyStyle,
+                              // 主题变化时递增：保证已构建 block 走 updateRenderObject 更新颜色
+                              styleVersion: _appearance.textColor.toARGB32(),
+                              textDirection: TextDirection.ltr,
+                              maxWidth:
+                                  MediaQuery.of(context).size.width -
+                                  (_preferences.horizontalPadding * 2),
+                              onLayout: (layout) {
+                                final ro = key.currentContext
+                                    ?.findRenderObject();
+                                if (ro is RenderReaderTextBlock) {
+                                  _renderObjects[i] = ro;
+                                }
+                              },
+                            );
+                          },
+                        ),
                       ),
                     ),
                   ),

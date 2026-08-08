@@ -1,6 +1,6 @@
 # ARCHITECTURE_CURRENT.md — XAOCEN Reader v4 当前架构与合同
 
-> 只描述当前代码与合同（`feat/m4-horizontal-reader`，M5.1a 完成点）。
+> 只描述当前代码与合同（`feat/m4-horizontal-reader`，M5.1b 实现完成点）。
 > 不记录历史故事（见 PROJECT_HISTORY.md）。
 > 代码位置均以本仓库实际文件为准。
 
@@ -386,6 +386,15 @@ reading_progress 新增 readingMode TEXT DEFAULT 'vertical'；旧数据默认 ve
 - `readingMode` 不属于 ReaderPreferences，仍按书保存在 ReaderProgressState。
 - ReaderLocator 不变，absoluteCharacterOffset 仍是 normalized.txt UTF-16 唯一位置真源。
 - 本阶段只定义 Metrics/Paint 分类，尚未把设置接入 Reader 或实现 relayout。
+- M5.1b 已把 Metrics 接入 Reader；Paint/themeMode 仍未接入，留待 M5.1c。
+
+### Metrics 保位重排合同（M5.1b）
+
+`ReaderMetricsSignature` 仅由字号、行高、水平/垂直边距组成。签名变化时必须按
+freeze → capture active confirmed locator → apply → invalidate → restore → contains
+校验 → confirm → unfreeze 执行。纵向复用 M3 字符级恢复；分页只重建 locator 附近的
+有限 PageWindow。generation 拒绝旧代结果；模式切换、生命周期、route pop、resize 与
+dispose 不得允许旧 Reader 写 progress。
 
 ### 持久化边界
 

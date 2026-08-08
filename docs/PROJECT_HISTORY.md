@@ -21,6 +21,7 @@
 | M3.4 | 平铺目录 + 导航合同 | fix/m3-flat-toc | `38575df` → `f965448` | 6 | 0.1.0-dev.3+3 | 259 测试；真机 13/13 |
 | M4 | 横向分页 + 双模式持久化 | feat/m4-horizontal-reader | M3 ff → `2dae263` | — | 0.1.0-dev.4+4 | 327 测试；8 集成；双平台真人验证 |
 | M5.1a | ReaderPreferences + Drift | feat/m4-horizontal-reader | `2dae263` → 本阶段提交 | 1 | 0.1.0-dev.4+4 | 338 测试；schema 3→4 |
+| M5.1b | Metrics 保位重排 | feat/m4-horizontal-reader | `6c85a49` → 本阶段提交 | 1 | 0.1.0-dev.4+4 | 342 测试；Windows 4 TXT logical error 0 |
 
 本阶段提交后合计：67 commits（M0 以来，HEAD 链）；当前分支
 `feat/m4-horizontal-reader`。最终 HEAD 以本阶段提交结果为准。
@@ -409,3 +410,13 @@ storage key 不泄漏。全量 338 unit/widget PASS，8/8 integration PASS，ana
 
 ### 状态
 M5.1a COMPLETE；按用户要求停止，不自动进入 M5.1b。
+
+---
+
+## M5.1b — Reader metrics 保位重新布局（2026-08-08）
+
+接入 fontSize、lineHeight、horizontalPadding、verticalPadding；纵向复用 M3 精确字符
+恢复，分页 invalidate 有限 PageWindow 后重新求包含原 locator 的页面。全流程冻结写入并
+使用 generation 拒绝旧代。342 unit/widget、Windows 全部 4 个真实 TXT 共 12 锚点通过，
+logical error 全为 0；Android Debug build 通过。因本轮没有 Android 设备连接，Android
+真机语料验证待补，不进入 M5.1c。

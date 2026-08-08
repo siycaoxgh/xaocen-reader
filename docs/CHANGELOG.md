@@ -14,6 +14,16 @@ Legend for validation columns:
 
 ## Unreleased
 
+### M5.1b — metrics-preserving Reader relayout (2026-08-08)
+- Connected persisted ReaderPreferences metrics to vertical and paged Reader layout.
+- Added metrics signatures, operation generations, symmetric write freeze, exact
+  ReaderLocator restore/containment confirmation, and finite PageWindow invalidation.
+- Added 18→20→24→22 stale-generation coverage; no page index, pixels, percentage,
+  or chapter-relative position is persisted.
+- Validation: analyze clean; 342 unit/widget PASS; Windows real corpus PASS for all
+  4 TXT / 12 anchors with logical error 0; Android debug APK build PASS.
+- Android device corpus validation remains pending because no Android device was connected.
+
 ### M5.1a — ReaderPreferences contract + Drift persistence (2026-08-08)
 - Added strong `ReaderPreferences` / `ReaderThemeMode` domain contracts with
   explicit defaults and valid ranges for font size, line height, horizontal

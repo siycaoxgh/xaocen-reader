@@ -80,8 +80,8 @@ class PagedReaderController extends ChangeNotifier {
   late TextStyle _style;
   late double _width;
   late double _height;
-  final double horizontalPadding;
-  final double verticalPadding;
+  late double horizontalPadding;
+  late double verticalPadding;
   final int previousWindowPages;
   final int nextWindowPages;
 
@@ -101,6 +101,19 @@ class PagedReaderController extends ChangeNotifier {
   ReaderBlockIndex get blockIndex => _blockIndex;
 
   bool _disposed = false;
+  int _writeFreezeDepth = 0;
+
+  bool get writesFrozen => _writeFreezeDepth > 0;
+
+  void freezeWrites() {
+    _writeFreezeDepth++;
+    _generation++;
+    _debounce?.cancel();
+  }
+
+  void unfreezeWrites() {
+    if (_writeFreezeDepth > 0) _writeFreezeDepth--;
+  }
 
   Timer? _debounce;
   static const Duration _debounceDuration = Duration(milliseconds: 400);
@@ -255,9 +268,23 @@ class PagedReaderController extends ChangeNotifier {
     required double width,
     required double height,
     required TextStyle style,
+    double? horizontalPadding,
+    double? verticalPadding,
   }) {
-    if (width == _width && height == _height && identical(style, _style)) {
-      return false;
+    final nextHorizontalPadding = horizontalPadding ?? this.horizontalPadding;
+    final nextVerticalPadding = verticalPadding ?? this.verticalPadding;
+    final nextMetricsKey = textStyleMetricsKey(style);
+    final metricsUnchanged =
+        width == _width &&
+        height == _height &&
+        nextMetricsKey == textStyleMetricsKey(_style) &&
+        nextHorizontalPadding == this.horizontalPadding &&
+        nextVerticalPadding == this.verticalPadding;
+    if (metricsUnchanged) {
+      if (style == _style) return false;
+      _style = style;
+      notifyListeners();
+      return true;
     }
     final locator = _confirmedLocator;
     if (locator == null) return false;
@@ -267,6 +294,9 @@ class PagedReaderController extends ChangeNotifier {
     _width = width;
     _height = height;
     _style = style;
+    this.horizontalPadding = nextHorizontalPadding;
+    this.verticalPadding = nextVerticalPadding;
+    _engine.dispose();
     _rebuildEngine();
 
     final page = _engine.pageContaining(
@@ -291,9 +321,22 @@ class PagedReaderController extends ChangeNotifier {
     required double width,
     required double height,
     required TextStyle style,
+    double? horizontalPadding,
+    double? verticalPadding,
   }) {
-    if (width == _width && height == _height && identical(style, _style)) {
-      return false;
+    final nextHorizontalPadding = horizontalPadding ?? this.horizontalPadding;
+    final nextVerticalPadding = verticalPadding ?? this.verticalPadding;
+    final nextMetricsKey = textStyleMetricsKey(style);
+    final metricsUnchanged =
+        width == _width &&
+        height == _height &&
+        nextMetricsKey == textStyleMetricsKey(_style) &&
+        nextHorizontalPadding == this.horizontalPadding &&
+        nextVerticalPadding == this.verticalPadding;
+    if (metricsUnchanged) {
+      if (style == _style) return false;
+      _style = style;
+      return true;
     }
     final locator = _confirmedLocator;
     if (locator == null) return false;
@@ -303,6 +346,9 @@ class PagedReaderController extends ChangeNotifier {
     _width = width;
     _height = height;
     _style = style;
+    this.horizontalPadding = nextHorizontalPadding;
+    this.verticalPadding = nextVerticalPadding;
+    _engine.dispose();
     _rebuildEngine();
 
     final page = _engine.pageContaining(
@@ -340,6 +386,7 @@ class PagedReaderController extends ChangeNotifier {
       // 过期异步结果拒绝（§二十一）：代数变化后不再写旧代位置。
       if (gen != _generation) return;
       if (_disposed) return;
+      if (writesFrozen) return;
       await _progressRepository.saveProgress(
         ReaderProgressState(
           collectionId: collectionId,
@@ -356,7 +403,7 @@ class PagedReaderController extends ChangeNotifier {
     _debounce?.cancel();
     _debounce = null;
     final locator = _confirmedLocator;
-    if (locator == null || _disposed) return;
+    if (locator == null || _disposed || writesFrozen) return;
     await _progressRepository.saveProgress(
       ReaderProgressState(
         collectionId: collectionId,

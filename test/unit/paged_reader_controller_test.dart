@@ -69,6 +69,80 @@ void main() {
   }
 
   group('PagedReaderController', () {
+    test(
+      'metrics relayout invalidates window/signature and preserves exact locator',
+      () {
+        final c = makeController(text: 'a' * 20000, width: 400, height: 600);
+        const anchor = ReaderLocator(
+          collectionId: 'c1',
+          absoluteCharacterOffset: 9876,
+        );
+        c.open(anchor);
+        final oldGeneration = c.generation;
+        final oldSignature = c.lastSignature;
+        final oldWindow = c.window.current;
+
+        c.freezeWrites();
+        final changed = c.relayout(
+          width: 400,
+          height: 600,
+          style: const TextStyle(fontSize: 22, height: 1.8),
+          horizontalPadding: 36,
+          verticalPadding: 24,
+        );
+
+        expect(changed, isTrue);
+        expect(c.generation, greaterThan(oldGeneration));
+        expect(c.lastSignature, isNot(oldSignature));
+        expect(c.window.current, isNot(oldWindow));
+        expect(
+          c.window.current!.contains(anchor.absoluteCharacterOffset),
+          isTrue,
+        );
+        expect(c.confirmedLocator, anchor);
+        expect(c.window.pageCount, lessThanOrEqualTo(6), reason: '不得全文预分页');
+        c.unfreezeWrites();
+        c.dispose();
+      },
+    );
+
+    test('rapid metrics generations leave only final metrics active', () {
+      final c = makeController(text: 'a' * 20000, width: 400, height: 600);
+      const anchor = ReaderLocator(
+        collectionId: 'c1',
+        absoluteCharacterOffset: 9876,
+      );
+      c.open(anchor);
+      for (final size in <double>[18, 20, 24, 22]) {
+        c.relayout(
+          width: 400,
+          height: 600,
+          style: TextStyle(fontSize: size, height: 1.7),
+        );
+      }
+      expect(c.lastSignature.styleMetricsKey, contains('22'));
+      expect(c.currentPage!.contains(anchor.absoluteCharacterOffset), isTrue);
+      expect(c.confirmedLocator, anchor);
+      c.dispose();
+    });
+
+    test(
+      'metrics freeze blocks paged lifecycle/dispose progress writes',
+      () async {
+        final c = makeController(text: 'a' * 20000, width: 400, height: 600);
+        const anchor = ReaderLocator(
+          collectionId: 'c1',
+          absoluteCharacterOffset: 5000,
+        );
+        c.open(anchor);
+        c.freezeWrites();
+        await c.flush();
+        expect(await progressRepo.getProgress('c1'), isNull);
+        c.dispose();
+        expect(await progressRepo.getProgress('c1'), isNull);
+      },
+    );
+
     test('open(anchor)：页面覆盖 anchor，confirmed=精确 anchor（§17）', () {
       final c = makeController();
       final page = c.open(

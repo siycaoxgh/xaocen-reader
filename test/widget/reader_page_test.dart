@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -8,8 +9,10 @@ import 'package:xaocen_reader/data/repositories/reading_progress_repository.dart
 import 'package:xaocen_reader/domain/library/library_entities.dart';
 import 'package:xaocen_reader/domain/local_txt/text_encoding.dart';
 import 'package:xaocen_reader/domain/reader/reader_locator.dart';
+import 'package:xaocen_reader/domain/reader/reader_preferences.dart';
 import 'package:xaocen_reader/reader/normalized_document_loader.dart';
 import 'package:xaocen_reader/reader/reader_page.dart';
+import 'package:xaocen_reader/reader/reader_metrics_signature.dart';
 import 'package:xaocen_reader/reader/reader_text_block.dart';
 
 /// M3 Reader Widget 测试 —— 最小 UI 行为。
@@ -130,11 +133,17 @@ void main() {
     );
   }
 
-  Future<void> pumpReader(WidgetTester tester) async {
+  Future<void> pumpReader(
+    WidgetTester tester, {
+    Stream<ReaderPreferences>? preferencesOverride,
+    ValueChanged<ReaderMetricsRelayoutReport>? onMetricsRelayout,
+  }) async {
     await tester.pumpWidget(
       MaterialApp(
         home: ReaderPage(
           launch: launchContext(),
+          preferencesOverride: preferencesOverride,
+          onMetricsRelayout: onMetricsRelayout,
           documentOverride: NormalizedDocument(
             text: bookText,
             normalizedHash: '',
@@ -157,6 +166,45 @@ void main() {
   }
 
   group('ReaderPage Widget', () {
+    testWidgets('metrics 快速变化只应用最后一代，纵向 confirmed locator 不漂移', (tester) async {
+      final changes = StreamController<ReaderPreferences>(sync: true);
+      final reports = <ReaderMetricsRelayoutReport>[];
+      await pumpReader(
+        tester,
+        preferencesOverride: changes.stream,
+        onMetricsRelayout: reports.add,
+      );
+      changes.add(ReaderPreferences.defaults.copyWith(fontSize: 18));
+      await tester.pump();
+      changes.add(ReaderPreferences.defaults.copyWith(fontSize: 20));
+      await tester.pump();
+      changes.add(ReaderPreferences.defaults.copyWith(fontSize: 24));
+      await tester.pump();
+      changes.add(ReaderPreferences.defaults.copyWith(fontSize: 22));
+      for (var i = 0; i < 12; i++) {
+        await tester.pump();
+      }
+
+      final blocks = tester.widgetList<ReaderTextBlock>(
+        find.byType(ReaderTextBlock),
+      );
+      expect(blocks, isNotEmpty);
+      expect(blocks.every((block) => block.style.fontSize == 22), isTrue);
+      expect(reports, isNotEmpty);
+      expect(reports.last.signature.fontSize, 22);
+      expect(reports.last.logicalError, 0);
+      expect(
+        reports.last.visibleAfter!.contains(
+          reports.last.locatorBefore.absoluteCharacterOffset,
+        ),
+        isTrue,
+      );
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+      unawaited(changes.close());
+    });
+
     testWidgets('打开后显示书名与正文', (tester) async {
       await pumpReader(tester);
       expect(find.text('测试书籍'), findsWidgets); // AppBar 标题

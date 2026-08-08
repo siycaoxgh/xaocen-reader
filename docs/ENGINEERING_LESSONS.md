@@ -684,3 +684,15 @@ schema 1 直接升级时由 current createTable 一次创建完整 reading_progr
 
 **验证**：文件库构造 schema 1 快照直升 schema 4，断言 reading_progress/app_settings 存在且
 reading_mode 只有一列；schema 3→4 另测书库、progress、mode、Locator、managed TXT 保留。
+
+---
+
+## M5.1b 教训（metrics 重排，2026-08-08）
+
+### 分页引擎失效不仅是替换引用
+
+**现象**：metrics/viewport 变化会创建新的 PagedLayoutEngine；若只覆盖字段，旧引擎持有的
+TextPainter 不会释放，连续快速改设置会积累渲染资源。
+
+**正确做法**：generation 先使旧结果失效，显式 dispose 旧 engine，再按新 signature 构建
+engine 和有限 PageWindow；controller 最终 dispose 仍释放当前 engine。

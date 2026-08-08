@@ -1,6 +1,6 @@
 # TEST_VALIDATION_MATRIX.md — XAOCEN Reader v4 验证矩阵
 
-> 状态：M5.1a COMPLETE（`feat/m4-horizontal-reader`）；M4 双平台真人验证基线保持。
+> 状态：M5.1b 实现完成（`feat/m4-horizontal-reader`）；Android metrics 真机验证待设备。
 > 自动测试与真人测试分开记录。**Android Debug 构建 PASS ≠ Android 真机 PASS**，两者分别列出。
 > 真人环境：Windows（本机，用户 + 自动化集成测试）；Android 真机 Redmi K60（23013RK75C / mondrian，Android 15 / API 35，无线 adb）。
 
@@ -10,7 +10,7 @@
 
 ## A. 自动测试（当前全绿）
 
-**单元 + Widget：338 项**（`flutter test`，Windows VM）：
+**单元 + Widget：342 项**（`flutter test`，Windows VM）：
 - M1 系：gb18030_decoder（含全表 23940/锚点 209/四字节/非法/跨块）、txt_encoding_detector、txt_normalizer、txt_toc_scanner（24）、txt_index_cache、large_file_policy
 - M2 系：local_library_test（20）、library_page_test（8）、m0_skeleton_test（6→更新）
 - M3 系：reader_block（9）、reader_locator（10）、reading_progress_repository（8）、reader_controller（12）、normalized_document_loader（9）、reader_page_test（6）、reader_jump（11）、toc_title_persistence（6）、toc_display（4）
@@ -20,9 +20,11 @@
 - M4 系：paged_layout_engine（20）、page_window（7）、paged_reader_controller（18）、paged_reader_view（11）
 - M4 P1 系：reader_progress_state（3+1 迁移）、mode_persistence_contract（4）、mode_persistence_widget（3）
 - M5.1a 系：reader_preferences（11：强类型合同/分类/持久化/watch/reset/fallback/迁移/隔离）
+- M5.1b 系：metrics signature、分页 window invalidation、快速 generation、纵向 widget 保位
 
-**集成测试：8 个文件**（`flutter test integration_test`，Windows 逐文件 + Android 真机）：
+**集成测试：9 个文件**（Windows 逐文件；既有 8 个保持，新增 M5.1b real corpus）：
 `accept_real_files_test` · `accept_real_paged_test` · `hash_contract_flow_test` · `m2_android_verify_test` · `m2_library_flow_test` · `paged_reader_flow_test` · `reader_mode_switch_test` · `vertical_reader_flow_test`
+· `reader_metrics_real_corpus_test`
 
 **构建门禁**：`tool/verify.ps1` 全绿（pub get / format / analyze / test / integration / Windows Release / APK Debug / git diff --check）。
 
@@ -69,6 +71,10 @@
 | 非法设置值逐字段 fallback | ✅ | — | — | — | — |
 | schema 3→4 保留书库/progress/mode/Locator/managed TXT | ✅ | — | — | — | ⏳ 待未来覆盖安装真人验证 |
 | storage key 不泄漏 UI/Controller/Reader | ✅ | — | — | — | — |
+| vertical 字号/行距变化后 locator 精确恢复 | ✅ | ✅ | — | ✅ Windows | ⏳ 无设备 |
+| paged 字号/边距变化后新页包含 locator | ✅ | ✅ | ✅ real corpus | ✅ 4 TXT / 12 anchors | ⏳ 无设备 |
+| 快速 18→20→24→22 仅最终 generation 生效 | ✅ | ✅ | — | ✅ | ⏳ 无设备 |
+| metrics 重排 logical error | 0 | 0 | 0 | 0 | ⏳ 无设备 |
 
 ---
 

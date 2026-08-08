@@ -222,6 +222,7 @@ class _CollectionTile extends ConsumerWidget {
       final repo = ref.read(libraryRepositoryProvider);
       final loader = ref.read(documentLoaderProvider);
       final progressRepo = ref.read(readingProgressRepositoryProvider);
+      final preferencesRepo = ref.read(readerPreferencesRepositoryProvider);
       final docs = await repo.getDocuments(collection.id);
       final toc = await repo.getToc(collection.id);
       if (docs.isEmpty) {
@@ -241,6 +242,7 @@ class _CollectionTile extends ConsumerWidget {
           normalizedCharacterLength: collection.normalizedCharacterLength,
           documentLoader: loader,
           progressRepository: progressRepo,
+          preferencesRepository: preferencesRepo,
           repair: () => _repairCollection(ref, collection.id),
         ),
       );
