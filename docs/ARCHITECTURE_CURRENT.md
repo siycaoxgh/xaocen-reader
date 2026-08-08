@@ -338,3 +338,28 @@ ReaderPage（双模式容器）
 - 切换期间 freezeWrites（旧组件零写入）；generation 拒绝过期异步结果；无固定延迟；
 - 目录跳转：chapter/volume.startCharacterOffset → pageContaining → 标题可见 →
   confirmed = 精确 target（立即防抖保存）；用户主动翻页后才用 page.start 覆盖。
+
+
+---
+
+## 进度持久化合同（M4 P1，schema 3）
+
+### ReaderProgressState
+```
+collectionId
+absoluteCharacterOffset   ← 唯一位置真源（UTF-16 码元偏移）
+readingMode               ← 阅读表现状态（vertical/paged），绝不替代 Locator
+itemIdHint / updatedAt
+```
+
+### 只有 active 模式可提交
+- dispose / lifecycle（inactive/paused/detached）按 `_mode` 路由：
+  `paged → paged.flush()`；`vertical → _controller.flush()`；
+  不再无条件纵向 flush（覆盖竞态已修）。
+- 切换本身零写入（§二十一）；mode 的持久化由退出时 active flush 落盘。
+- 重开：读 ReaderProgressState → 纵向恢复 → mode==paged 时自动切 paged（anchor 不变）。
+- paged 模式下纵向跳转/对齐/finishRestore 全部跳过（防误设 failed）。
+
+### schema 3 迁移
+reading_progress 新增 readingMode TEXT DEFAULT 'vertical'；旧数据默认 vertical；
+删除 collection 时进度级联删除（应用层显式删 + DB CASCADE 双保险）。

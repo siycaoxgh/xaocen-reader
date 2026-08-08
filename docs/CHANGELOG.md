@@ -54,6 +54,21 @@ Legend for validation columns:
 - v→p→v zero-write contract: removed unconditional `paged.flush()` on
   switch-to-vertical (un-turned pages must not write progress).
 
+### M4 P1 fix (2026-08-08): mode + locator persistence closed loop
+- `ReaderProgressState` (collectionId + absoluteCharacterOffset + readingMode +
+  itemIdHint + updatedAt); readingMode is display state, never a locator.
+- Drift schema 2 → 3: `reading_progress.readingMode` TEXT DEFAULT 'vertical';
+  old rows migrate to vertical; no data loss.
+- Only the active reader mode may commit position: dispose/lifecycle flush
+  routes to the active controller (paged.flush() vs vertical flush), never an
+  unconditional vertical flush that would overwrite paged progress.
+- Reopen restores mode + locator: `_start` reads ReaderProgressState, auto
+  switches to paged after vertical restore when saved mode is paged (anchor
+  unchanged); paged-mode guards skip vertical jump/align/finishRestore to
+  avoid spurious state=failed.
+- Also fixed: `removeCollection` explicitly deletes reading_progress; table
+  now uses customConstraint for a real `REFERENCES ... ON DELETE CASCADE`
+  (Drift `references()` was not emitting FK).
 ### Known boundary (see KNOWN_ISSUES.md)
 - backward page-start drift ≤ 2 screens / 100 pages (end chain strictly
   continuous; confirmed locator zero-error).

@@ -621,3 +621,48 @@ dispose flush 落盘（与 M3 一致）；目录跳转=明确用户操作 → �
 **正确做法**：先确认单文件是否通过（hash_contract_test 单独 18s 全过）；重启环境
 （杀 dart/flutter_tester 后再等 flutter 工具恢复正常）后重试全量；**不要**在
 flutter test 运行期间 killall 测试进程。全量 313 项最终 30s 全过。
+
+
+---
+
+## M4 P1 教训（模式 + Locator 持久化，2026-08-08）
+
+### 8. 退出时无条件 flush 旧模式覆盖新进度（P0）
+
+**现象**：纵向 → 切分页 → 翻页到 B → 退出重开 = 纵向 + 旧位置 A。
+
+**根因**：`ReaderPage.dispose()` 里 `paged.flush()`（保存 B）之后**无条件
+`_controller.flush()`（纵向）**——纵向 confirmed 还是切换前的 A → 覆盖 B。
+`didChangeAppLifecycleState`（App 后台）同样无条件纵向 flush。
+
+**错误做法**：dispose/lifecycle 里对两个 controller 都 flush；
+只想到「分页退出要 flush」却忽略「纵向退出也会 flush」。
+
+**正确做法**：**只有「当前激活的 Reader 模式」允许提交位置**——
+dispose/lifecycle 按 `_mode` 路由：`paged → paged.flush()`；`vertical → _controller.flush()`。
+切换本身零写入，mode 的持久化由退出时 active flush 自然落盘。
+**诊断方法**：把每个 saveProgress 调用点打印 `source + mode + offset`，
+能直接看到「paged 保存成功后被 vertical 覆盖」的顺序。
+
+### 9. 重开恢复模式：自动切 paged 触发纵向 align failed（P1）
+
+**现象**：重开（上次 paged）自动切分页后页面变错误页。
+
+**根因**：postFrame 自动 `_switchToPaged()` 后，纵向 `_scheduleSecondStageAlign`
+发现 `_listController.isAttached == false`（body 已切 paged）→ `_alignFailed` →
+`markRestoreFailed` → state=failed → build 返回错误页。
+
+**正确做法**：paged 模式下纵向跳转/对齐/finishRestore 全部跳过
+（`_scheduleJumpToPendingTarget`/`_scheduleSecondStageAlign`/`_alignFailed`/`_finishRestore`
+开头检查 `_mode == paged` 直接标记完成返回）。
+
+### 10. Drift `references()` 未生成 FK（P2，隐蔽）
+
+**现象**：reading_progress 级联删除测试失败；`removeCollection` 删书后进度残留。
+
+**根因**：Drift 生成器在 `text().references(Table, #col)` 下未产出
+REFERENCES 子句（g.dart 全文件 `references:` 出现 0 次）——SQL 层无 FK。
+
+**正确做法**：用 `text().customConstraint('REFERENCES content_collections (id) ON DELETE CASCADE')`
+显式声明；同时应用层（removeCollection）显式删除，双保险。
+**验证**：PRAGMA foreign_keys 查询 + 诊断测试确认 CREATE TABLE SQL 含 REFERENCES。

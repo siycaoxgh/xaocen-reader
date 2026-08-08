@@ -352,3 +352,25 @@ HEAD `f965448`（docs Android 结果），工作区 clean，M3 冻结点。
 ### 状态
 - 分支 feat/m4-horizontal-reader；M4.2 提交后工作区 clean；
 - Android 真机验证待设备上线补做（无线 adb）。
+
+
+---
+
+## M4 P1 — 模式 + Locator 持久化闭环（2026-08-08）
+
+### 问题
+纵向 → 切分页 → 翻到新位置 → 退出重开：模式恢复成纵向、位置恢复成旧纵向位置。
+
+### 根因
+1. dispose/lifecycle 无条件 flush 纵向 controller（旧位置覆盖分页新位置）；
+2. readingMode 只是 session state，未持久化（schema 2 无 readingMode 列）。
+
+### 修复
+- ReaderProgressState（locator + readingMode + updatedAt）；schema 2→3 加 readingMode；
+- 只有 active 模式可提交位置（dispose/lifecycle 按 _mode 路由 flush）；
+- 重开自动恢复模式（postFrame 自动切 paged，anchor 不变）；
+- paged 模式下纵向跳转/对齐/finishRestore 跳过（防误设 failed）；
+- removeCollection 显式删进度 + customConstraint 真 FK（CASCADE）。
+
+### 验证
+327 单元+widget（新增 14 项 P1 专项）+ 8 集成全过；verify.ps1 全绿。

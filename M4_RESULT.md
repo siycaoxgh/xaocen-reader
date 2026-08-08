@@ -6,6 +6,8 @@
 > （ReaderLocator.absoluteCharacterOffset）；Page/pageIndex/PageView index/scroll pixels
 > 全部只是**派生状态**，不落库、不进 manifest、不改 normalized.txt。
 > 引擎核心细节另见 `M4_1_RESULT.md`；参考项目研究另见 `M4_REFERENCE_RESEARCH.md`。
+> **P1 修复（2026-08-08）**：模式 + Locator 持久化闭环——退出/重开保持
+> 「上次阅读模式 + 最后 confirmed Locator」（见 §10）。
 
 ---
 
@@ -199,3 +201,54 @@
 ---
 
 *M4 停止条件达成：工作区 clean、verify.ps1 全绿、Android 真机验证完成。*
+
+
+---
+
+## 10. P1 修复：模式 + Locator 持久化闭环（2026-08-08）
+
+### 10.1 用户报告的问题
+纵向 → 切分页 → 翻到新位置 → 退出 Reader/App → 重开：
+1. 阅读模式恢复成纵向（不是分页）；
+2. 位置恢复成之前纵向的位置（不是分页最新位置）。
+
+### 10.2 根因（诊断确认，非猜测）
+1. **P0 覆盖竞态**：`ReaderPage.dispose()` 顺序为 `paged.flush()`（保存分页 B）
+   之后**无条件 `_controller.flush()`（纵向）**——纵向 `_confirmedLocator` 还是切换前的
+   旧位置 A → **覆盖 B**。`didChangeAppLifecycleState`（App 后台）同样无条件调纵向 flush。
+2. **P0 mode 未持久化**：`_mode = ReaderMode.vertical` 硬编码（session state），
+   reading_progress 表无 readingMode 列（schema 2）→ 重开永远纵向。
+3. **无 active-mode 约束**：两个 controller 各自保存，无「只有激活模式可提交」。
+
+### 10.3 修复（正式合同）
+- **`ReaderProgressState`** = collectionId + absoluteCharacterOffset（唯一位置真源）
+  + readingMode（表现状态，绝不替代 Locator）+ itemIdHint + updatedAt；
+- **Drift schema 2→3**：reading_progress 新增 `readingMode` 列（默认 'vertical'），
+  旧数据迁移默认 vertical，不删任何现有数据；
+- **只有「当前激活的 Reader 模式」允许提交位置**：
+  - dispose：`_mode == paged ? paged.flush() : _controller.flush()`（不再无条件纵向 flush）；
+  - lifecycle（inactive/paused/detached）：同样只 flush active 模式；
+  - `_switchToPaged`/`_switchToVertical` 切换本身零写入（§二十一），
+    mode=paged 的持久化由退出时的 paged.flush() 自然落盘；
+- **重开恢复**：ReaderPage._start 读 ReaderProgressState（含 mode）→ 纵向 open
+  恢复位置 → postFrame 若 mode==paged 自动 `_switchToPaged()`（anchor = 恢复位置，
+  不改变 offset）；
+- **paged 模式下纵向恢复确认跳过**：`_scheduleJumpToPendingTarget`/`_scheduleSecondStageAlign`/
+  `_alignFailed`/`_finishRestore` 在 `_mode == paged` 时直接标记完成并返回，
+  避免 visibleRange 测量失败误设 state=failed（错误页）；
+- **顺带修复**：`removeCollection` 显式删除 reading_progress + ReadingProgress 表
+  用 customConstraint 生成真正的 `REFERENCES ... ON DELETE CASCADE`
+  （Drift `references()` 在本项目生成器下未产出 FK，删书残留进度 bug）。
+
+### 10.4 验证（全部通过）
+- **327 项单元+widget**（新增 14 项：ReaderProgressState 合同 3、Repository mode 4、
+  schema 2→3 迁移 1、mode+locator 合同 4、widget 层 3：覆盖竞态/重开恢复 paged/纵向 dispose）；
+- **8 个集成测试全过**（含 paged_reader_flow、reader_mode_switch 零写入、真实文件）；
+- verify.ps1 全绿（含 Windows Release + APK Debug + git diff --check）；
+- 关键场景（合同语义，仓库层 + widget 层验证）：
+  1. vertical A → 切 paged → 不翻页立即退出 → 重开 = **paged + A**；
+  2. vertical A → 切 paged → 翻 5 页到 B → 退出 → 重开 = **paged + B**；
+  3. paged B → 切 vertical → 滚动到 C → 退出 → 重开 = **vertical + C**；
+  4. route pop / App 后台 / force-stop（lifecycle flush active）/ dispose 均只写激活模式；
+  5. page swipe 未 settle 时退出只保存最后 confirmed 位置；
+  6. inactive Reader 不覆盖 active Reader 状态（最后一次提交为准）。

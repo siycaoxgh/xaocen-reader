@@ -1,6 +1,6 @@
 # KNOWN_ISSUES.md — XAOCEN Reader v4 已知问题清单
 
-> 状态截至 M4.2（HEAD `feat/m4-horizontal-reader`）。
+> 状态截至 M4 P1 修复完成（HEAD `feat/m4-horizontal-reader`）。
 > 已解决的问题不在此列为 open；「Resolved but regression-sensitive」列出需要持续盯防的已修复项。
 
 ---
