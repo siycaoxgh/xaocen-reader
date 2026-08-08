@@ -666,3 +666,21 @@ REFERENCES 子句（g.dart 全文件 `references:` 出现 0 次）——SQL 层�
 **正确做法**：用 `text().customConstraint('REFERENCES content_collections (id) ON DELETE CASCADE')`
 显式声明；同时应用层（removeCollection）显式删除，双保险。
 **验证**：PRAGMA foreign_keys 查询 + 诊断测试确认 CREATE TABLE SQL 含 REFERENCES。
+
+---
+
+## M5.1a 教训（设置持久化，2026-08-08）
+
+### 1. Drift 多级迁移中的 current table shape 重复加列
+
+**现象**：审查 schema 1→4 路径时发现，`from < 2` 的 `createTable(readingProgress)`
+会按当前代码生成包含 readingMode 的完整表；随后 `from < 3` 再 addColumn readingMode，
+跨级升级可能因重复列失败。
+
+**根因**：把迁移步骤误当成历史表快照；Drift `createTable(tableInfo)` 使用的是当前表定义。
+
+**正确做法**：只有真实 schema 2 旧表执行 readingMode addColumn（`from == 2`）；
+schema 1 直接升级时由 current createTable 一次创建完整 reading_progress，再创建 app_settings。
+
+**验证**：文件库构造 schema 1 快照直升 schema 4，断言 reading_progress/app_settings 存在且
+reading_mode 只有一列；schema 3→4 另测书库、progress、mode、Locator、managed TXT 保留。

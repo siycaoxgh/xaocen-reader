@@ -19,8 +19,11 @@
 | M3.2 | 目录完整标题 + 精确跳转 | fix/m3-toc-title-exact-jump | `9bccab6` → `da1a13d` | 6 | 0.1.0-dev.3+3 | 214 测试；真实库 4 本 |
 | M3.3 | 目录自动定位 + 深色可读 | fix/m3-toc-current-item-scroll | `68f4be7` → `ce2ff98` | 5 | 0.1.0-dev.3+3 | 250 测试 |
 | M3.4 | 平铺目录 + 导航合同 | fix/m3-flat-toc | `38575df` → `f965448` | 6 | 0.1.0-dev.3+3 | 259 测试；真机 13/13 |
+| M4 | 横向分页 + 双模式持久化 | feat/m4-horizontal-reader | M3 ff → `2dae263` | — | 0.1.0-dev.4+4 | 327 测试；8 集成；双平台真人验证 |
+| M5.1a | ReaderPreferences + Drift | feat/m4-horizontal-reader | `2dae263` → 本阶段提交 | 1 | 0.1.0-dev.4+4 | 338 测试；schema 3→4 |
 
-合计：48 commits（M0 以来，HEAD 链）；当前分支 `fix/m3-flat-toc`，HEAD `f965448`。
+本阶段提交后合计：67 commits（M0 以来，HEAD 链）；当前分支
+`feat/m4-horizontal-reader`。最终 HEAD 以本阶段提交结果为准。
 
 ---
 
@@ -382,3 +385,27 @@ HEAD `f965448`（docs Android 结果），工作区 clean，M3 冻结点。
 - `C:\Users\TOM\Desktop\测试` 中当前实际存在的全部 4 个 TXT 正常；Flat TOC、
   章节跳转、深色模式未发现明显回归；
 - **M4 状态正式封存为 COMPLETE。**
+
+---
+
+## M5.1a — ReaderPreferences 设置合同 + Drift 持久化（2026-08-08）
+
+### 范围
+只建立强类型 ReaderPreferences、变化分类、AppSettings 持久化与 schema 3→4；
+不修改 Reader UI，不做实时重排，不做 V3 Reader 壳层。
+
+### 实现
+- ReaderPreferences：fontSize、lineHeight、horizontalPadding、verticalPadding、
+  ReaderThemeMode(system/light/dark)，含默认值、合法范围和逐字段 fallback；
+- Metrics = 字号/行高/水平边距/垂直边距；Paint = themeMode；
+- ReaderPreferencesRepository：load/watch/update/resetToDefaults；storage key/value 不越层；
+- schema 4 新增 app_settings，迁移不改 reading_progress、readingMode、Locator 或书库数据；
+- 修复 schema 1 直接跨级升级时 current createTable + 后续 addColumn 重复添加 readingMode 的风险。
+
+### 验证
+新增 11 项：默认值、范围、强类型 API、变化分类、保存读取/watch、重启持久化、
+非法值 fallback、reset 隔离、schema 3→4 数据/managed TXT 保留、schema 1→4、
+storage key 不泄漏。全量 338 unit/widget PASS，8/8 integration PASS，analyze 0 问题。
+
+### 状态
+M5.1a COMPLETE；按用户要求停止，不自动进入 M5.1b。

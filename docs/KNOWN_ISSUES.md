@@ -1,6 +1,6 @@
 # KNOWN_ISSUES.md — XAOCEN Reader v4 已知问题清单
 
-> 状态截至 M4 COMPLETE（`feat/m4-horizontal-reader`）。Windows + Android 真人验证暂未发现明显问题。
+> 状态截至 M5.1a COMPLETE（`feat/m4-horizontal-reader`）。M5.1a 未接入 Reader UI/重排。
 > 已解决的问题不在此列为 open；「Resolved but regression-sensitive」列出需要持续盯防的已修复项。
 
 ---
@@ -35,7 +35,7 @@
 |---|---|
 | 搜索 | FTS5 未建 |
 | 书签 | 未实现 |
-| 完整 Reader 设置 | 字体/行距/背景等设置 UI 未做（主题已有 light/dark/system） |
+| Reader 设置 UI/实时重排 | M5.1a 已完成强类型合同与持久化；Reader 消费、保位重排和 V3 设置面板尚未做 |
 | TTS | 未引入 flutter_tts |
 | RSS / 网络书源 | webfeed/JSON Feed 调研过但未引入；RSS 属 v2.0 范围 |
 | EPUB / PDF | 未实现 |

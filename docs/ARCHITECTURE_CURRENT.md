@@ -1,6 +1,6 @@
 # ARCHITECTURE_CURRENT.md — XAOCEN Reader v4 当前架构与合同
 
-> 只描述当前代码与合同（HEAD `feat/m4-horizontal-reader`，M4.2 完成点）。
+> 只描述当前代码与合同（`feat/m4-horizontal-reader`，M5.1a 完成点）。
 > 不记录历史故事（见 PROJECT_HISTORY.md）。
 > 代码位置均以本仓库实际文件为准。
 
@@ -28,7 +28,7 @@ TOC index  (background Isolate O(n) scan → volume/chapter tree → dedupe →
             UTF-16 offsets) → index.json (atomic write)
         ▼
 Drift four-layer model (content_sources / collections / items / documents /
-        toc_entries / import_records / reading_progress)
+        toc_entries / import_records / reading_progress / app_settings)
         ▼
 Reader  (NormalizedDocumentLoader → ReaderBlockIndex → virtualized vertical
          list → TextPainter layout → ReaderVisibleRange → ReadingProgress)
@@ -38,9 +38,9 @@ Key components by layer (all paths under `lib/`):
 
 | Layer | Files |
 |---|---|
-| domain | `domain/local_txt/` (TextEncoding, TocEntry, TxtIndex, PipelineProgress, LargeFilePolicy), `domain/reader/` (ReaderLocator, ReaderBlock, ReaderVisibleRange), `domain/library/` (entities, import models, NormalizedArtifact, TocIndexLogic) |
+| domain | `domain/local_txt/` (TextEncoding, TocEntry, TxtIndex, PipelineProgress, LargeFilePolicy), `domain/reader/` (ReaderLocator, ReaderBlock, ReaderVisibleRange, ReaderPreferences), `domain/library/` (entities, import models, NormalizedArtifact, TocIndexLogic) |
 | sources | `sources/local_txt/` (gb18030 decoder/index loader/data, encoding detector, normalizer, toc scanner, import service/request/result, index cache, content identity, cancellation) |
-| data | `data/database/` (tables, app_database + generated), `data/repositories/` (local_library_repository, library_file_manager, managed_collection_health, collection_repair_service, reading_progress_repository, encoding_index_provider) |
+| data | `data/database/` (tables, app_database + generated), `data/repositories/` (local_library_repository, library_file_manager, managed_collection_health, collection_repair_service, reading_progress_repository, reader_preferences_repository, encoding_index_provider) |
 | reader | `reader/` (normalized_document_loader, reader_controller, reader_page, reader_text_block, reader_appearance) |
 | app/design | `app/` (bootstrap, app, router, constants, library_page, providers, placeholder_page), `design/` (tokens, theme) |
 
@@ -65,9 +65,9 @@ ContentSource → ContentCollection → ContentItem → ContentDocument
 | ContentItem | chapter (volume is NOT an item) or `whole` | `local-txt:<hash>:chapter:<startCharacterOffset>` / `...:whole` |
 | ContentDocument | a range of normalized.txt (all items of a book reference the SAME normalized.txt) | `local-txt:<hash>:document:<startCharacterOffset>` |
 
-Drift tables (schemaVersion 2): `content_sources`, `content_collections`,
+Drift tables (schemaVersion 4): `content_sources`, `content_collections`,
 `content_items`, `content_documents`, `toc_entries`, `import_records`,
-`reading_progress`. Foreign keys ON; body text is NEVER stored in SQLite
+`reading_progress`, `app_settings`. Foreign keys ON; body text is NEVER stored in SQLite
 (only paths + offsets). Collection delete cascades items/documents/toc/
 progress and cleans the managed directory; external TXT is never deleted.
 
@@ -294,6 +294,8 @@ Two distinct hashes, distinct duties:
     (binbyu/Reader custom license; legado GPL-3.0); behavior-only reuse.
 13. The archived old XAOCEN Reader is never reintroduced.
 14. M4 must not break the M3 vertical Reader (M3 is the freeze baseline).
+15. AppSettings storage keys/values never cross the Repository boundary.
+16. ReaderPreferences never contains readingMode or a reading position.
 
 
 ---
@@ -363,3 +365,32 @@ itemIdHint / updatedAt
 ### schema 3 迁移
 reading_progress 新增 readingMode TEXT DEFAULT 'vertical'；旧数据默认 vertical；
 删除 collection 时进度级联删除（应用层显式删 + DB CASCADE 双保险）。
+
+---
+
+## ReaderPreferences 设置合同（M5.1a，schema 4）
+
+### 强类型边界
+
+`ReaderPreferences` 是全局阅读外观设置，首版字段：
+
+| 字段 | 默认值 | 合法范围 | 变化类别 |
+|---|---:|---:|---|
+| fontSize | 17 | 12–32 | Metrics |
+| lineHeight | 1.7 | 1.2–2.4 | Metrics |
+| horizontalPadding | 16 | 0–64 | Metrics |
+| verticalPadding | 8 | 0–48 | Metrics |
+| themeMode | system | system/light/dark | Paint |
+
+- 缺失、解析失败、NaN/Infinity、越界值按字段回退默认值；不得导致 Reader crash。
+- `readingMode` 不属于 ReaderPreferences，仍按书保存在 ReaderProgressState。
+- ReaderLocator 不变，absoluteCharacterOffset 仍是 normalized.txt UTF-16 唯一位置真源。
+- 本阶段只定义 Metrics/Paint 分类，尚未把设置接入 Reader 或实现 relayout。
+
+### 持久化边界
+
+- schema 4 新增 `app_settings(key, value, updatedAt)`，schema 3→4 只增表不改旧数据；
+- 字符串 key/value 只允许 `ReaderPreferencesRepository` 与数据库生成层解释；
+- 上层只使用 `load()` / `watch()` / `update(ReaderPreferences)` /
+  `resetToDefaults()` 强类型 API；
+- update 以事务写入完整快照；reset 只删除 Reader 拥有的 keys，不影响其他 AppSettings。

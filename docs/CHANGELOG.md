@@ -14,8 +14,25 @@ Legend for validation columns:
 
 ## Unreleased
 
+### M5.1a — ReaderPreferences contract + Drift persistence (2026-08-08)
+- Added strong `ReaderPreferences` / `ReaderThemeMode` domain contracts with
+  explicit defaults and valid ranges for font size, line height, horizontal
+  padding, vertical padding, and system/light/dark theme mode.
+- Added metrics-vs-paint change classification. M5.1a defines the contract only;
+  Reader UI and live relayout are intentionally not connected yet.
+- Added `ReaderPreferencesRepository` (`load`, `watch`, `update`,
+  `resetToDefaults`). Storage key/value strings remain private to the
+  repository/database layer.
+- Drift schema 3 → 4 adds `app_settings`; migration is additive and preserves
+  library rows, reading_progress, readingMode, ReaderLocator, and managed TXT.
+- Invalid/missing/unparseable stored values fall back per field without crash.
+- Fixed direct schema 1 → latest migration so current-table creation does not
+  add `readingMode` twice during a multi-hop upgrade.
+- Validation: 338 unit/widget tests PASS (11 new M5.1a tests), 8/8 existing
+  integration files PASS on Windows when run separately; analyze clean.
+
 ### Planned
-- Search, bookmarks, full reader settings, TTS, RSS, network sources,
+- Reader settings UI/live relayout, search, bookmarks, TTS, RSS, network sources,
   EPUB/PDF (all deferred, see KNOWN_ISSUES.md).
 
 ---

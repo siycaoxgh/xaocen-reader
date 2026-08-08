@@ -189,3 +189,18 @@ class ReadingProgress extends Table {
   @override
   Set<Column> get primaryKey => {collectionId};
 }
+
+/// app_settings —— 应用级设置键值存储（schema 4 新增）。
+///
+/// 字符串 key/value 是 storage 细节，只允许 Repository 解释；
+/// UI、Controller、Reader 只能使用强类型设置模型。
+class AppSettings extends Table {
+  TextColumn get key => text()();
+
+  TextColumn get value => text()();
+
+  DateTimeColumn get updatedAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {key};
+}

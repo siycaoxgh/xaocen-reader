@@ -1,6 +1,6 @@
 # TEST_VALIDATION_MATRIX.md — XAOCEN Reader v4 验证矩阵
 
-> 状态：M4 COMPLETE（`feat/m4-horizontal-reader`）；P1 修复后的 Windows + Android 真人验证已完成。
+> 状态：M5.1a COMPLETE（`feat/m4-horizontal-reader`）；M4 双平台真人验证基线保持。
 > 自动测试与真人测试分开记录。**Android Debug 构建 PASS ≠ Android 真机 PASS**，两者分别列出。
 > 真人环境：Windows（本机，用户 + 自动化集成测试）；Android 真机 Redmi K60（23013RK75C / mondrian，Android 15 / API 35，无线 adb）。
 
@@ -10,7 +10,7 @@
 
 ## A. 自动测试（当前全绿）
 
-**单元 + Widget：327 项**（`flutter test`，Windows VM）：
+**单元 + Widget：338 项**（`flutter test`，Windows VM）：
 - M1 系：gb18030_decoder（含全表 23940/锚点 209/四字节/非法/跨块）、txt_encoding_detector、txt_normalizer、txt_toc_scanner（24）、txt_index_cache、large_file_policy
 - M2 系：local_library_test（20）、library_page_test（8）、m0_skeleton_test（6→更新）
 - M3 系：reader_block（9）、reader_locator（10）、reading_progress_repository（8）、reader_controller（12）、normalized_document_loader（9）、reader_page_test（6）、reader_jump（11）、toc_title_persistence（6）、toc_display（4）
@@ -19,6 +19,7 @@
 - 合同：txt_pipeline_contract（10）、content_navigation_contract（8）
 - M4 系：paged_layout_engine（20）、page_window（7）、paged_reader_controller（18）、paged_reader_view（11）
 - M4 P1 系：reader_progress_state（3+1 迁移）、mode_persistence_contract（4）、mode_persistence_widget（3）
+- M5.1a 系：reader_preferences（11：强类型合同/分类/持久化/watch/reset/fallback/迁移/隔离）
 
 **集成测试：8 个文件**（`flutter test integration_test`，Windows 逐文件 + Android 真机）：
 `accept_real_files_test` · `accept_real_paged_test` · `hash_contract_flow_test` · `m2_android_verify_test` · `m2_library_flow_test` · `paged_reader_flow_test` · `reader_mode_switch_test` · `vertical_reader_flow_test`
@@ -62,6 +63,12 @@
 | 模式+位置持久化（重开 = 上次模式 + 最后 Locator） | ✅ 11 | ✅ 3 | ✅ mode_switch | ✅*（A/B/C 三场景） | ✅*（A/B/C 三场景） |
 | 退出只 flush active 模式（覆盖竞态修复） | ✅ 4 | ✅ 3 | ✅ mode_switch | ✅*（完全退出） | ✅*（force-stop） |
 | schema 2→3 迁移（旧数据默认 vertical） | ✅ 1 | — | — | ✅ | ✅（覆盖安装） |
+| ReaderPreferences 默认值/范围/强类型 API | ✅ | — | — | — | — |
+| Metrics/Paint 变化分类合同 | ✅ | — | — | — | — |
+| AppSettings 保存/读取/watch/reset/重启持久 | ✅ | — | — | — | — |
+| 非法设置值逐字段 fallback | ✅ | — | — | — | — |
+| schema 3→4 保留书库/progress/mode/Locator/managed TXT | ✅ | — | — | — | ⏳ 待未来覆盖安装真人验证 |
+| storage key 不泄漏 UI/Controller/Reader | ✅ | — | — | — | — |
 
 ---
 
@@ -107,3 +114,4 @@ vertical A → paged → 不翻页 → 重开 = paged + A · vertical A → page
 | 多用户/多设备 | 未做 |
 | Android 12 以下版本 | 未测（真机为 Android 15；minSdk 21） |
 | Windows 低 DPI/高 DPI 缩放 | 未专项验证 |
+| M5.1a Reader 设置 UI/实时重排 | 本阶段明确未实现，属于 M5.1b 及后续 |

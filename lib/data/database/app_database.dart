@@ -22,6 +22,7 @@ part 'app_database.g.dart';
     TocEntries,
     ImportRecords,
     ReadingProgress,
+    AppSettings,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -31,7 +32,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting() : super(NativeDatabase.memory());
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   /// 打开应用数据库（support 目录下）。
   static Future<AppDatabase> open() async {
@@ -55,8 +56,15 @@ class AppDatabase extends _$AppDatabase {
       }
       // schema 2 → 3：reading_progress 新增 readingMode 列
       // （阅读表现状态，旧数据默认 'vertical'）。
-      if (from < 3) {
+      // 从 schema 1 直接跨级升级时，上面的 createTable 会按“当前表定义”
+      // 创建 readingMode；只有真实 schema 2 旧表才需要 addColumn。
+      if (from == 2) {
         await m.addColumn(readingProgress, readingProgress.readingMode);
+      }
+      // schema 3 → 4：仅新增 app_settings，不触碰书库、managed TXT、
+      // reading_progress、readingMode 或 ReaderLocator。
+      if (from < 4) {
+        await m.createTable(appSettings);
       }
     },
     beforeOpen: (details) async {
