@@ -1,6 +1,6 @@
 # TEST_VALIDATION_MATRIX.md — XAOCEN Reader v4 验证矩阵
 
-> 状态：M4 P1 修复完成点（HEAD `feat/m4-horizontal-reader`）。
+> 状态：M4 COMPLETE（`feat/m4-horizontal-reader`）；P1 修复后的 Windows + Android 真人验证已完成。
 > 自动测试与真人测试分开记录。**Android Debug 构建 PASS ≠ Android 真机 PASS**，两者分别列出。
 > 真人环境：Windows（本机，用户 + 自动化集成测试）；Android 真机 Redmi K60（23013RK75C / mondrian，Android 15 / API 35，无线 adb）。
 
@@ -20,7 +20,7 @@
 - M4 系：paged_layout_engine（20）、page_window（7）、paged_reader_controller（18）、paged_reader_view（11）
 - M4 P1 系：reader_progress_state（3+1 迁移）、mode_persistence_contract（4）、mode_persistence_widget（3）
 
-**集成测试：5 个文件**（`flutter test integration_test`，Windows 逐文件 + Android 真机）：
+**集成测试：8 个文件**（`flutter test integration_test`，Windows 逐文件 + Android 真机）：
 `accept_real_files_test` · `accept_real_paged_test` · `hash_contract_flow_test` · `m2_android_verify_test` · `m2_library_flow_test` · `paged_reader_flow_test` · `reader_mode_switch_test` · `vertical_reader_flow_test`
 
 **构建门禁**：`tool/verify.ps1` 全绿（pub get / format / analyze / test / integration / Windows Release / APK Debug / git diff --check）。
@@ -45,7 +45,7 @@
 | Reader 打开 | ✅ | ✅ | ✅ | ✅ | ✅（4 本书） |
 | 滚动（滚轮/滚动条/触摸） | — | ✅ | ✅ vertical_flow | ✅ | ✅ |
 | restore（位置恢复/防抖/零写入/生命周期） | ✅ | ✅ | ✅ | ✅（八月初七中段） | ✅（43/548 章恢复） |
-| force-stop 重启 | — | — | ✅ | — | ✅（书架正常数据保留） |
+| force-stop 重启 | — | — | ✅ | — | ✅*（最后模式+位置、书架数据保留） |
 | TOC 完整标题（displayTitle） | ✅ | ✅ | ✅ | ✅（第1章 百世书…） | ✅（目录平铺） |
 | TOC 精确跳转（两阶段字符对齐） | ✅ 11 | ✅ | ✅ | ✅（9 章 offset） | ✅（548→530） |
 | 当前章目录定位（35% 视口/不拉回/定位按钮） | ✅ | ✅ 12 | ✅ | ✅（±1 章） | ✅（42 章 @39%） |
@@ -53,14 +53,14 @@
 | 深色/浅色可读（≥4.5:1） | ✅ | ✅ 8 | — | ✅ | ✅*（用户确认深色可读） |
 | 横竖屏旋转 | — | — | ✅ | — | ✅（渲染正常位置连续） |
 | 外部文件保留（删除/repair/导入均不改外部 TXT） | ✅ | ✅ | ✅ | ✅（hash 不变） | ✅ |
-| 分页引擎（行粒度/LF 边界/end 链连续/surrogate 不拆） | ✅ 20 | ✅ 11 | ✅ accept_real_paged | ✅ | ⏳ 待真机 |
-| 分页惰性窗口（prev2+next3，Page 数与总页数无关） | ✅ 7 | ✅ | ✅ paged_flow | ✅ | ⏳ 待真机 |
-| 双模式切换（v↔p 精确 anchor/零写入/generation） | ✅ 18 | ✅ 11 | ✅ mode_switch | ✅ | ⏳ 待真机 |
-| 分页目录跳转（精确 target/标题可见） | ✅ | ✅ | ✅ paged_flow | ✅ | ⏳ 待真机 |
-| 键盘翻页 / 滑动翻页（Win / Android） | — | ✅ | ✅ paged_flow | ✅ | ⏳ 待真机 |
-| 100 页往返（end 链严格连续，页首 ≤2 屏漂移） | ✅ 20 | — | ✅ accept_real_paged | ✅ | ⏳ 待真机 |
-| 模式+位置持久化（重开 = 上次模式 + 最后 Locator） | ✅ 11 | ✅ 3 | ✅ mode_switch | ✅ | ⏳ 待真机 |
-| 退出只 flush active 模式（覆盖竞态修复） | ✅ 4 | ✅ 3 | ✅ mode_switch | ✅ | ⏳ 待真机 |
+| 分页引擎（行粒度/LF 边界/end 链连续/surrogate 不拆） | ✅ 20 | ✅ 11 | ✅ accept_real_paged | ✅* | ✅* |
+| 分页惰性窗口（prev2+next3，Page 数与总页数无关） | ✅ 7 | ✅ | ✅ paged_flow | ✅* | ✅* |
+| 双模式切换（v↔p 精确 anchor/零写入/generation） | ✅ 18 | ✅ 11 | ✅ mode_switch | ✅* | ✅* |
+| 分页目录跳转（精确 target/标题可见） | ✅ | ✅ | ✅ paged_flow | ✅* | ✅* |
+| 键盘翻页 / 滑动翻页（Win / Android） | — | ✅ | ✅ paged_flow | ✅* | ✅* |
+| 100 页往返（end 链严格连续，页首 ≤2 屏漂移） | ✅ 20 | — | ✅ accept_real_paged | ✅ | ✅*（实际翻页无明显问题） |
+| 模式+位置持久化（重开 = 上次模式 + 最后 Locator） | ✅ 11 | ✅ 3 | ✅ mode_switch | ✅*（A/B/C 三场景） | ✅*（A/B/C 三场景） |
+| 退出只 flush active 模式（覆盖竞态修复） | ✅ 4 | ✅ 3 | ✅ mode_switch | ✅*（完全退出） | ✅*（force-stop） |
 | schema 2→3 迁移（旧数据默认 vertical） | ✅ 1 | — | — | ✅ | ✅（覆盖安装） |
 
 ---
@@ -79,6 +79,9 @@ GB18030 解码输出 · 有章节首屏 · 无章节 7.68MB 首屏 · 真实内�
 ### M3.4（2026-08-07 自动化）— 13/13
 覆盖安装数据存留 · 恢复位置（43/548 章）· 平铺目录无箭头 · 自动定位高亮（42 章 @39%）· 点章节跳转（548→530）· 点卷跳转 · 目录滚动不拉回 · 正文滚动保存恢复 · force-stop · 进程退出重进 · 横竖屏 · 0 crash（pid 23606 全程不变）· 无章节「全文」（Windows 真库验证）
 
+### M4 P1 最终真人验证（2026-08-08）— PASS
+vertical A → paged → 不翻页 → 重开 = paged + A · vertical A → paged → 翻页到 B → 重开 = paged + B · paged B → vertical → 滚动到 C → 重开 = vertical + C · force-stop 重开 · 覆盖安装 schema 2→3 数据保留 · 原有书架/managed TXT 保留 · 4 个真实 TXT 正常 · Flat TOC/章节跳转/深色模式无明显回归
+
 ---
 
 ## D. Windows 真人/验收
@@ -88,6 +91,8 @@ GB18030 解码输出 · 有章节首屏 · 无章节 7.68MB 首屏 · 真实内�
 - M3.1：真实库 3 大文件 repair + 821 行更新、外部 hash 不变、Reader 打开成功。
 - M1/M2：真实文件 473/0 章、9 个指定 offset、二次 cacheHit、外部 hash 不变。
 - 构建：Windows Release exe 可启动（冒烟 6s）；App 日常使用由用户确认。
+- M4 P1：三组模式/位置持久化场景通过；完全退出后重开正常；4 个真实 TXT、
+  原有书架/managed TXT、Flat TOC、章节跳转、深色模式无明显回归。
 
 ---
 

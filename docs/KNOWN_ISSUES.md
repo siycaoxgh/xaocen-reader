@@ -1,13 +1,13 @@
 # KNOWN_ISSUES.md — XAOCEN Reader v4 已知问题清单
 
-> 状态截至 M4 P1 修复完成（HEAD `feat/m4-horizontal-reader`）。
+> 状态截至 M4 COMPLETE（`feat/m4-horizontal-reader`）。Windows + Android 真人验证暂未发现明显问题。
 > 已解决的问题不在此列为 open；「Resolved but regression-sensitive」列出需要持续盯防的已修复项。
 
 ---
 
 ## Current open issues
 
-（截至 M3 冻结点，无已知的 open bug。以下均为验证覆盖的边界行为或工具性限制，见 Known limitations / Deferred。）
+（截至 M4 最终封存，无已知的 open bug。M4 P1 已解决并从已知问题中移除；以下均为验证覆盖的边界行为或工具性限制，见 Known limitations / Deferred。）
 
 ---
 
@@ -57,7 +57,6 @@
 | 外部 TXT 不可修改 | 全阶段红线：repair/删除不得触碰外部文件 | 验收测试断言外部 hash 不变；删除级联测试 |
 | 473 章去重 | M3.2：正文引用行（错别字）曾致 486 章 | 章节编号相同即相邻重复；真实文件 473 断言 |
 | Android APK 正常入口 | flutter test 会覆盖为 test-runner 版 | 测试后必须重新 build apk --debug |
-| schema 2 迁移 | onUpgrade 只增不删 reading_progress；未来 schema 变更需同样谨慎 | 迁移测试 + 真机覆盖安装验证 |
 
 ---
 

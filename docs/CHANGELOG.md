@@ -23,7 +23,7 @@ Legend for validation columns:
 ## 0.1.0-dev.4+4 — M4.2 (2026-08-08)
 
 **Data generation:** `v4-local-1` (unchanged).
-**Drift schema:** 2 (unchanged — no new persisted fields).
+**Drift schema:** 3 (upgraded from 2; reading mode persisted without data loss).
 **Breaking internal changes:** none.
 
 ### Added
@@ -74,10 +74,16 @@ Legend for validation columns:
   continuous; confirmed locator zero-error).
 
 ### Validation
-- 313 unit+widget tests PASS; 8 integration tests PASS (incl. real-file
+- 327 unit+widget tests PASS; 8 integration tests PASS (incl. real-file
   acceptance for 4 real TXT, paged flow, mode-switch); Android real-device
   (Redmi K60) reader_mode_switch 2/2 + paged_reader_flow 1/1 PASS; Windows
   Release build, APK debug build, git diff --check — VERIFY PASSED.
+- Post-P1 user validation PASS on Windows and Android: all three mode/locator
+  reopen scenarios, Windows full exit/reopen, Android force-stop/reopen, and
+  schema 2→3 upgrade-install data retention. Existing bookshelf/managed TXT,
+  all 4 current real TXT, Flat TOC, chapter jumps, and dark mode showed no
+  obvious regression.
+- **M4 status: COMPLETE.**
 - Details: `M4_RESULT.md` (two-tier report: synthetic / real corpus).
 
 ---

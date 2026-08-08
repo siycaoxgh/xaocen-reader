@@ -308,7 +308,7 @@ HEAD `f965448`（docs Android 结果），工作区 clean，M3 冻结点。
 | 0.1.0-dev.3+3 | M3/M3.1 | **2**（+reading_progress） | 1.0.0 | 1.0.0 | 1 | v4-local-1 |
 | 0.1.0-dev.3+3 | M3.2/M3.3/M3.4 | 2 | **2.0.0** | 1.0.0 | 1 | v4-local-1 |
 | 0.1.0-dev.4+4 | M4.1 | 2 | 2.0.0 | 1.0.0 | 1 | v4-local-1 |
-| 0.1.0-dev.4+4 | M4.2 | 2 | 2.0.0 | 1.0.0 | 1 | v4-local-1 |
+| 0.1.0-dev.4+4 | M4.2 / M4 P1 | 3 | 2.0.0 | 1.0.0 | 1 | v4-local-1 |
 
 - GB18030 index asset formatVersion = 1（meta.json 实测：source WHATWG 2024-09-18 snapshot，entryCount 23940，anchorCount 209，sha256 aebe263d…）。
 - 版本确认方式：`git show <milestone commit>:pubspec.yaml` + `lib/app/constants.dart` 与 `lib/data/database/app_database.dart`（schemaVersion=2）实测。
@@ -374,3 +374,11 @@ HEAD `f965448`（docs Android 结果），工作区 clean，M3 冻结点。
 
 ### 验证
 327 单元+widget（新增 14 项 P1 专项）+ 8 集成全过；verify.ps1 全绿。
+
+### 最终真人验证与封存
+- Windows：三组模式/位置持久化场景全部通过，完全退出后重开仍保持最后模式与位置；
+- Android：三组场景全部通过，force-stop 后重开正常；覆盖安装完成 schema 2→3 迁移，
+  原有书架、managed TXT 与阅读数据保留；
+- `C:\Users\TOM\Desktop\测试` 中当前实际存在的全部 4 个 TXT 正常；Flat TOC、
+  章节跳转、深色模式未发现明显回归；
+- **M4 状态正式封存为 COMPLETE。**

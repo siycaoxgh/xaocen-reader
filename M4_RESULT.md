@@ -8,6 +8,7 @@
 > 引擎核心细节另见 `M4_1_RESULT.md`；参考项目研究另见 `M4_REFERENCE_RESEARCH.md`。
 > **P1 修复（2026-08-08）**：模式 + Locator 持久化闭环——退出/重开保持
 > 「上次阅读模式 + 最后 confirmed Locator」（见 §10）。
+> **最终状态：COMPLETE**。P1 修复后的 Windows + Android 真人验证已由用户完成，暂未发现明显问题。
 
 ---
 
@@ -134,18 +135,22 @@
 ### D. Windows 实际运行
 
 - Release 构建成功（`build\windows\x64\runner\Release\xaocen_reader.exe`，36.5s）；
-- 冒烟启动 6s 无崩溃（此前 M4.2 阶段验证）。
+- 冒烟启动 6s 无崩溃（此前 M4.2 阶段验证）；
+- P1 修复后真人验证通过：vertical A → paged → 不翻页 → 完全退出/重开 = paged + A；
+  vertical A → paged → 翻页到 B → 完全退出/重开 = paged + B；
+  paged B → vertical → 滚动到 C → 完全退出/重开 = vertical + C；
+- 4 个实际存在的真实 TXT、原有书架与 managed TXT、Flat TOC、章节跳转、深色模式均未发现明显回归。
 
 ### E. Android 真机（Redmi K60 / Android 15 / 无线 adb，2026-08-08）
-
-> ⚠️ 以下为 **M4 P1 修复前** 的真机结果。P1（模式+Locator 持久化）修复后
-> **尚未做真机复验**——退出重开保持「模式 + 最后位置」需真人验证（见 §11）。
 
 - `flutter test integration_test/reader_mode_switch_test.dart -d <device>`：**2/2 通过**
   （v→p→v 未翻页保精确 anchor + 零写入；翻页后 confirmed 更新 + 目录远跳保存精确 target）；
 - `flutter test integration_test/paged_reader_flow_test.dart -d <device>`：**1/1 通过**
   （导入→纵向→切分页→翻页→切回→重开→目录远跳→重启恢复全链路）；
 - 用户手动导入 4 本真实 TXT（因果快递/无章节/青山/苟在初圣魔门）正常，分页阅读可用；
+- P1 修复后真人复验通过：三组模式/位置持久化场景均符合预期；force-stop 后重开保持最后模式与位置；
+- 覆盖安装完成 schema 2→3 迁移，原有书架、managed TXT 与阅读数据保留；
+- 4 个实际存在的真实 TXT、Flat TOC、章节跳转、深色模式均未发现明显回归；
 - 数据持久性说明：`flutter test` 集成测试结束后会卸载测试 APK 导致 app 数据被清
   （外部 TXT 不受影响），属测试框架副作用，非应用缺陷；重新导入即可恢复。
 
@@ -163,7 +168,7 @@
 | 远距离章节跳转（1/19/42/112/195/258/300/400/473） | ✅（pageContaining + 标题可见 + confirmed 精确 target） |
 | 无章节大文件中段定位 | ✅（25%/50%/75% 仅测试用，生产无百分比定位） |
 | Windows 实际运行 | ✅（Release 构建 + 冒烟 + 全部集成测试） |
-| Android 真机实际运行 | ✅（P1 修复前：reader_mode_switch 2/2 + paged_reader_flow 1/1 真机通过；用户手动导入 4 本真实 TXT 正常使用）<br>⏳ **P1 修复后待重新真机验证** （退出重开保持模式+位置，见 §11 Handoff） |
+| Android 真机实际运行 | ✅（P1 修复后真人验证：三组模式+位置持久化、force-stop 重开、覆盖安装 schema 2→3、书架/managed TXT/4 个真实 TXT 数据保留；Flat TOC、章节跳转、深色模式无明显回归） |
 
 ---
 
@@ -174,14 +179,14 @@
 
 ## 6. 版本与数据
 
-- 版本 `0.1.0-dev.4+4`（M4.1 已 bump）；Drift schema 保持 2（本轮无新持久化字段，
-  禁止无意义升级）；数据代际 `v4-local-1` 不变。
-- reading_progress 结构不变：collectionId + absoluteCharacterOffset + itemIdHint。
+- 版本 `0.1.0-dev.4+4`（M4.1 已 bump）；Drift schema 由 2 升至 3；
+  数据代际 `v4-local-1` 不变。
+- reading_progress 新增 readingMode；ReaderLocator 的 absoluteCharacterOffset 仍是唯一位置真源。
 
 ## 7. 已知问题（详见 KNOWN_ISSUES.md）
 
 1. **backward 页首漂移**（≤ 2 屏/100 页，end 链严格连续；confirmed locator 零误差）。
-2. Android 分页模式下系统返回边缘手势与左右滑动共存（未强占，待真机确认手感）。
+2. Android 分页模式下系统返回边缘手势与左右滑动共存（未强占；真人验证暂未发现明显问题）。
 3. 真实文件 UI 层目录远跳：集成测试用 drag 目录列表（scrollUntilVisible 在
    DraggableScrollableSheet 手势下不稳定，测试侧规避）。
 
@@ -258,15 +263,11 @@
 
 ---
 
-## 11. Handoff / Next Action（2026-08-08 模型切换交接）
-
-详见根目录 `HANDOFF.md`。要点：
+## 11. 最终封存（2026-08-08）
 
 - **M4 P1（模式 + Locator 持久化）已修复并提交**（b389a6a~3d0fba5），
   自动化验证全绿（327 单元+widget + 8 集成 + verify.ps1）；
-- **剩余唯一事项**：P1 修复后的 **Windows + Android 真人验证**
-  （退出重开保持「最后阅读模式 + 最后 confirmed Locator」；
-  force-stop 重启保持；覆盖安装数据保留 + schema 2→3 迁移正常）；
-- 构建产物：Windows `build\windows\x64\runner\Release\xaocen_reader.exe`；
-  Android `build\app\outputs\flutter-apk\app-debug.apk`；
-- 真人验证通过后，M4 才可标记 COMPLETE；之后可 ff 合并回 main。
+- P1 修复后的 Windows + Android 真人验证已完成：三组模式/位置持久化场景、
+  Windows 完全退出重开、Android force-stop 重开、覆盖安装 schema 2→3 与数据保留均通过；
+- 4 个真实 TXT、原有书架与 managed TXT、Flat TOC、章节跳转、深色模式暂未发现明显问题；
+- **M4 状态：COMPLETE。** 不在本次封存中启动 M5。
