@@ -5,6 +5,8 @@ import 'package:xaocen_reader/data/database/app_database.dart';
 import 'package:xaocen_reader/data/repositories/library_file_manager.dart';
 import 'package:xaocen_reader/data/repositories/reading_progress_repository.dart';
 import 'package:xaocen_reader/domain/reader/reader_locator.dart';
+import 'package:xaocen_reader/domain/reader/reader_progress_state.dart';
+import 'package:xaocen_reader/domain/reader/reading_mode.dart';
 import 'package:xaocen_reader/domain/reader/reader_visible_range.dart';
 import 'package:xaocen_reader/reader/normalized_document_loader.dart';
 import 'package:xaocen_reader/reader/reader_controller.dart';
@@ -213,7 +215,11 @@ void main() {
         measuredAt: DateTime.now(),
       );
       await progressRepo.saveProgress(
-        const ReaderLocator(collectionId: 'c1', absoluteCharacterOffset: 9),
+        const ReaderProgressState(
+          collectionId: 'c1',
+          absoluteCharacterOffset: 9,
+          readingMode: ReadingMode.vertical,
+        ),
       );
       await c.open(
         initialLocator: const ReaderLocator(

@@ -1,7 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:xaocen_reader/data/database/app_database.dart';
 import 'package:xaocen_reader/data/repositories/reading_progress_repository.dart';
-import 'package:xaocen_reader/domain/reader/reader_locator.dart';
+import 'package:xaocen_reader/domain/reader/reader_progress_state.dart';
+import 'package:xaocen_reader/domain/reader/reading_mode.dart';
 
 void main() {
   group('ReadingProgressRepository', () {
@@ -54,9 +55,10 @@ void main() {
 
     test('save 后能读取（含 itemIdHint）', () async {
       await repo.saveProgress(
-        const ReaderLocator(
+        ReaderProgressState(
           collectionId: 'local-txt:abc',
           absoluteCharacterOffset: 12345,
+          readingMode: ReadingMode.vertical,
           itemIdHint: 'local-txt:abc:chapter:1000',
         ),
       );
@@ -68,15 +70,17 @@ void main() {
 
     test('upsert：再次 save 覆盖', () async {
       await repo.saveProgress(
-        const ReaderLocator(
+        ReaderProgressState(
           collectionId: 'local-txt:abc',
           absoluteCharacterOffset: 100,
+          readingMode: ReadingMode.vertical,
         ),
       );
       await repo.saveProgress(
-        const ReaderLocator(
+        ReaderProgressState(
           collectionId: 'local-txt:abc',
           absoluteCharacterOffset: 200,
+          readingMode: ReadingMode.vertical,
         ),
       );
       final p = await repo.getProgress('local-txt:abc');
@@ -88,9 +92,10 @@ void main() {
 
     test('clear 后返回 null', () async {
       await repo.saveProgress(
-        const ReaderLocator(
+        ReaderProgressState(
           collectionId: 'local-txt:abc',
           absoluteCharacterOffset: 100,
+          readingMode: ReadingMode.vertical,
         ),
       );
       await repo.clearProgress('local-txt:abc');
@@ -99,9 +104,10 @@ void main() {
 
     test('删除 collection 级联删除进度', () async {
       await repo.saveProgress(
-        const ReaderLocator(
+        ReaderProgressState(
           collectionId: 'local-txt:abc',
           absoluteCharacterOffset: 100,
+          readingMode: ReadingMode.vertical,
         ),
       );
       await (db.delete(
@@ -141,15 +147,17 @@ void main() {
             ),
           );
       await repo.saveProgress(
-        const ReaderLocator(
+        ReaderProgressState(
           collectionId: 'local-txt:abc',
           absoluteCharacterOffset: 1,
+          readingMode: ReadingMode.vertical,
         ),
       );
       await repo.saveProgress(
-        const ReaderLocator(
+        ReaderProgressState(
           collectionId: 'local-txt:def',
           absoluteCharacterOffset: 2,
+          readingMode: ReadingMode.vertical,
         ),
       );
       expect(
