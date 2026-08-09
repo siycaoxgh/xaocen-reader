@@ -14,6 +14,20 @@ Legend for validation columns:
 
 ## Unreleased
 
+### Reader input and chapter pagination policy (2026-08-09)
+- Added the physical-input → `InputBinding` → `ReaderCommand` → Reader action
+  boundary. Default commands are `previousPage` and `nextPage`; keyboard,
+  Windows wheel, and Android volume inputs share the same Dart binding layer.
+- Android host input only reports `volumeUp` / `volumeDown` while paged Reader is
+  active; it does not decide the resulting Reader command.
+- Paged mode now starts every real TOC chapter at a new page, while preserving
+  UTF-16 offsets, contiguous `previous.end == next.start`, and continuous
+  no-chapter pagination. `pagedPolicyVersion` is now 2.
+- Validation so far: analyze, full unit/widget suite, targeted wheel tests,
+  Windows real-corpus chapter checks for all 4 TXT, and Windows Release PASS.
+  Android volume-key device validation is pending reconnection of the wireless
+  ADB target.
+
 ### M5.1e — functional Reader settings panel (2026-08-09)
 - Connected the V3 Interface/Aa entry to persisted font size, line height,
   horizontal/vertical body padding, system/light/dark theme, and per-book mode.

@@ -18,6 +18,7 @@ PagedLayoutEngine _engine(
   String text, {
   double width = 100,
   double height = 100,
+  Iterable<int> chapterStarts = const <int>[],
 }) {
   return PagedLayoutEngine(
     text: text,
@@ -27,6 +28,7 @@ PagedLayoutEngine _engine(
     height: height,
     horizontalPadding: 0,
     verticalPadding: 0,
+    chapterStartOffsets: chapterStarts,
   );
 }
 
@@ -296,6 +298,60 @@ void main() {
       expect(pp.length, 200);
       expect(lp.length, 200);
       expect(portrait.signature.cacheKey, isNot(landscape.signature.cacheKey));
+    });
+
+    test('chapter boundaries start each chapter on a new page', () {
+      final text = 'a' * 150 + '\nCHAPTER\n' + 'b' * 150;
+      final chapter = text.indexOf('CHAPTER');
+      final e = _engine(text, chapterStarts: [chapter]);
+      final pages = <PagedTextRange>[];
+      var p = e.layoutForwardPage(0);
+      while (p != null) {
+        pages.add(p);
+        p = e.layoutForwardPage(p.endCharacterOffset);
+      }
+      final chapterPage = pages.firstWhere(
+        (page) => page.startCharacterOffset == chapter,
+      );
+      expect(chapterPage.startCharacterOffset, chapter);
+      expect(pages[pages.indexOf(chapterPage) - 1].endCharacterOffset, chapter);
+      for (var i = 1; i < pages.length; i++) {
+        expect(pages[i - 1].endCharacterOffset, pages[i].startCharacterOffset);
+      }
+    });
+
+    test('short chapters remain isolated and TOC target is first page', () {
+      final text = 'a' * 20 + '\nB\n' + 'b' * 20 + '\nC\n' + 'c' * 20;
+      final b = text.indexOf('B');
+      final c = text.indexOf('C');
+      final e = _engine(text, chapterStarts: [b, c]);
+      final first = e.layoutForwardPage(0)!;
+      final second = e.layoutForwardPage(first.endCharacterOffset)!;
+      final third = e.layoutForwardPage(second.endCharacterOffset)!;
+      expect(second.startCharacterOffset, b);
+      expect(third.startCharacterOffset, c);
+      expect(e.pageContaining(c)!.startCharacterOffset, c);
+    });
+
+    test('backward pages preserve chapter boundary and no-chapter continuity', () {
+      final text = 'a' * 150 + '\nB\n' + 'b' * 150;
+      final chapter = text.indexOf('B');
+      final e = _engine(text, chapterStarts: [chapter]);
+      final previous = e.layoutPreviousPage(chapter)!;
+      expect(previous.endCharacterOffset, chapter);
+      expect(previous.startCharacterOffset, lessThan(chapter));
+
+      final noChapter = _engine('a' * 1000);
+      var page = noChapter.layoutForwardPage(0)!;
+      var end = 0;
+      while (true) {
+        expect(page.startCharacterOffset, end);
+        end = page.endCharacterOffset;
+        final next = noChapter.layoutForwardPage(end);
+        if (next == null) break;
+        page = next;
+      }
+      expect(end, 1000);
     });
   });
 }

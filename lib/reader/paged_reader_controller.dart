@@ -62,6 +62,7 @@ class PagedReaderController extends ChangeNotifier {
     double? paddingRight,
     this.paragraphSpacing = 0,
     this.firstLineIndent = 0,
+    this.chapterStartOffsets = const <int>[],
     this.previousWindowPages = 2,
     this.nextWindowPages = 3,
   }) : _document = document,
@@ -98,6 +99,7 @@ class PagedReaderController extends ChangeNotifier {
   late double paddingRight;
   late double paragraphSpacing;
   late double firstLineIndent;
+  final List<int> chapterStartOffsets;
   final int previousWindowPages;
   final int nextWindowPages;
 
@@ -456,6 +458,7 @@ class PagedReaderController extends ChangeNotifier {
       paddingRight: paddingRight,
       paragraphSpacing: paragraphSpacing,
       firstLineIndent: firstLineIndent,
+      chapterStartOffsets: chapterStartOffsets,
     );
   }
 

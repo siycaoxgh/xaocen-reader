@@ -169,3 +169,18 @@ vertical A → paged → 不翻页 → 重开 = paged + A · vertical A → page
 | Android user initial human validation | PASS, no obvious issue reported |
 | Android Codex final device session | NOT-RUN, no device connected |
 | Windows Release / Android Debug | PASS / PASS |
+
+## Reader input and chapter pagination follow-up (2026-08-09)
+
+| Validation | Result |
+|---|---|
+| PhysicalInput -> InputBinding -> ReaderCommand defaults | PASS |
+| Arrow / PageUp / PageDown mapping | PASS |
+| Windows paged wheel mapping and throttle | PASS, targeted widget coverage |
+| Vertical wheel behavior remains scroll input | PASS, targeted widget coverage |
+| Chapter starts force a fresh paged page; title at page start | PASS |
+| Forward/backward continuity (`previous.endOffset == next.startOffset`) | PASS |
+| TOC chapter offset resolves to chapter first page | PASS |
+| No-chapter continuous pagination | PASS |
+| All four real TXT files, chapter/anchor continuity, logical error | PASS, 0 |
+| Android volume-key device validation | NOT-RUN, wireless ADB target offline |

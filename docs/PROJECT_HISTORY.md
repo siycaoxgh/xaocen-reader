@@ -463,3 +463,14 @@ and all four real TXT files with logical error 0. Windows user human validation
 reported no obvious issue. Android user initial validation reported no obvious issue;
 no Android device was connected during the Codex final run. M5.1 is COMPLETE and
 M5.2 has not started.
+
+## Reader small-version follow-up — input commands and chapter page policy (2026-08-09)
+
+M5.2 remains paused. Added a platform-neutral physical-input → binding →
+`ReaderCommand` boundary with default previous/next page commands. Windows
+keyboard and wheel inputs share the Dart binding layer; Android's host only
+reports volume inputs while paged Reader is active. Paged pagination policy v2
+uses real TOC chapter start offsets so every chapter title begins a fresh page,
+without changing normalized text or the UTF-16 ReaderLocator contract. All four
+real TXT files pass targeted Windows chapter-boundary and continuity checks;
+Android volume-key validation awaits wireless ADB reconnection.

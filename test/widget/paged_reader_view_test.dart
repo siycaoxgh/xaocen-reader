@@ -2,6 +2,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:xaocen_reader/data/database/app_database.dart';
 import 'package:xaocen_reader/data/repositories/reading_progress_repository.dart';
@@ -306,6 +307,44 @@ void main() {
     expect(c.window.pageCount, lessThanOrEqualTo(10));
     c.dispose();
   });
+
+  testWidgets(
+    'wheel maps to one page command and throttles high frequency input',
+    (tester) async {
+      final c = makeController();
+      c.open(
+        const ReaderLocator(collectionId: 'c1', absoluteCharacterOffset: 0),
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          home: SizedBox(
+            width: 400,
+            height: 600,
+            child: PagedReaderView(controller: c, appearance: appearance()),
+          ),
+        ),
+      );
+      final first = c.currentPage!.startCharacterOffset;
+      await tester.sendEventToBinding(
+        PointerScrollEvent(
+          position: const Offset(200, 300),
+          scrollDelta: const Offset(0, 100),
+        ),
+      );
+      await tester.pump();
+      final afterFirst = c.currentPage!.startCharacterOffset;
+      expect(afterFirst, isNot(first));
+      await tester.sendEventToBinding(
+        PointerScrollEvent(
+          position: const Offset(200, 300),
+          scrollDelta: const Offset(0, 100),
+        ),
+      );
+      await tester.pump();
+      expect(c.currentPage!.startCharacterOffset, afterFirst);
+      c.dispose();
+    },
+  );
 
   testWidgets('20. dispose 无异常', (tester) async {
     final c = makeController();

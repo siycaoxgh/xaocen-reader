@@ -729,3 +729,12 @@ Production schema 4 contains content_collections, but older migration fixtures m
 model only the table relevant to their original transition. A schema 5 seed query now
 checks sqlite_master before selecting existing collections. This preserves real data
 while keeping every supported historical migration path executable.
+
+## Reader input and chapter-boundary lessons (2026-08-09)
+
+Physical keys and gestures should terminate at a small command vocabulary before
+they reach pagination. This keeps Android host code platform-specific only at the
+event-reporting boundary and leaves future user remapping independent of the page
+engine. Chapter starts likewise belong in pagination policy: use real TOC offsets
+as boundaries, allow intentional whitespace at the prior page end, and never add
+synthetic characters to normalized text.

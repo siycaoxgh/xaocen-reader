@@ -134,4 +134,4 @@ String textStyleMetricsKey(TextStyle style) {
 }
 
 /// 分页策略版本：改变切页规则时递增（强制旧缓存失效）。
-const int pagedPolicyVersion = 1;
+const int pagedPolicyVersion = 2;

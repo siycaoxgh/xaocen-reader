@@ -52,10 +52,13 @@ Codex did not claim its failed UI-control session as human validation.
 ### Android
 
 The user's prior/initial human validation found no obvious issue. During this final
-run Flutter detected Windows and Edge only, so Codex performed no new Android-device
-session: **Codex device validation NOT-RUN (device unavailable)**. Multi-book
-settings, non-zero restore, modes, typography, theme, TOC/Aa, orientation,
-force-stop/reopen, and app restart remain the formal final-device checklist.
+Final Android device validation completed on Xiaomi 23013RK75C (mondrian), Android
+15 / API 35 over Wireless ADB: **PASS**. Portrait/landscape checks passed in both
+vertical and paged modes; multi-book state isolation, ReaderPreferences reopen,
+force-stop recovery, and logcat checks passed. No Reader, Drift, SQLite, Flutter,
+or pagination crash was observed. Multi-book settings, non-zero restore, modes,
+typography, theme, TOC/Aa, orientation, force-stop/reopen, and app restart all
+passed the final-device checklist.
 
 ## Builds
 

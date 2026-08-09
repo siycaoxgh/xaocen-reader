@@ -9,6 +9,7 @@ import 'package:xaocen_reader/data/repositories/library_file_manager.dart';
 import 'package:xaocen_reader/data/repositories/local_library_repository.dart';
 import 'package:xaocen_reader/data/repositories/reading_progress_repository.dart';
 import 'package:xaocen_reader/domain/library/library_import_models.dart';
+import 'package:xaocen_reader/domain/library/library_entities.dart';
 import 'package:xaocen_reader/domain/reader/reader_block.dart';
 import 'package:xaocen_reader/domain/reader/reader_locator.dart';
 import 'package:xaocen_reader/domain/reader/reader_progress_state.dart';
@@ -65,6 +66,13 @@ void main() {
             text: document.text,
             targetBlockSize: 6144,
           );
+          final toc = await repository.getToc(imported.collection.id);
+          final chapters = toc
+              .where((entry) => entry.kind == 'chapter')
+              .toList();
+          final chapterStarts = chapters
+              .map((entry) => entry.startCharacterOffset)
+              .toList();
           final offsets = <int>{
             document.text.isEmpty ? 0 : 1,
             document.text.length ~/ 2,
@@ -84,6 +92,7 @@ void main() {
               paddingBottom: 10,
               paddingLeft: 16,
               paddingRight: 18,
+              chapterStartOffsets: chapterStarts,
             );
             final locator = ReaderLocator(
               collectionId: imported.collection.id,
@@ -127,6 +136,47 @@ void main() {
             );
             controller.unfreezeWrites();
             controller.dispose();
+          }
+
+          if (chapters.isNotEmpty) {
+            final samples = <LibraryTocEntry>{
+              chapters.first,
+              chapters[chapters.length ~/ 2],
+              chapters.last,
+            };
+            for (final chapter in samples) {
+              final controller = PagedReaderController(
+                collectionId: imported.collection.id,
+                document: document,
+                progressRepository: progress,
+                blockIndex: blockIndex,
+                style: const TextStyle(fontSize: 17, height: 1.7),
+                width: 400,
+                height: 600,
+                chapterStartOffsets: chapterStarts,
+              );
+              final locator = ReaderLocator(
+                collectionId: imported.collection.id,
+                absoluteCharacterOffset: chapter.startCharacterOffset,
+                itemIdHint: chapter.itemId,
+              );
+              controller.open(locator);
+              expect(
+                controller.currentPage!.startCharacterOffset,
+                chapter.startCharacterOffset,
+                reason: 'TOC chapter must start a fresh page',
+              );
+              var page = controller.currentPage!;
+              for (var i = 0; i < 8; i++) {
+                final next = controller.engine.layoutForwardPage(
+                  page.endCharacterOffset,
+                );
+                if (next == null) break;
+                expect(next.startCharacterOffset, page.endCharacterOffset);
+                page = next;
+              }
+              controller.dispose();
+            }
           }
 
           if (file.path.contains('1-500')) {

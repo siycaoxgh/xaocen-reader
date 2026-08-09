@@ -15,6 +15,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 
 import 'normalized_document_loader.dart';
@@ -22,6 +23,7 @@ import 'page_window.dart';
 import 'paged_reader_controller.dart';
 import 'reader_appearance.dart';
 import 'reader_text_block.dart';
+import 'reader_input.dart';
 
 /// 分页阅读视图。
 class PagedReaderView extends StatefulWidget {
@@ -42,6 +44,10 @@ class _PagedReaderViewState extends State<PagedReaderView> {
   /// 单一 PageController：整个视图生命周期内只创建/释放一次，绝不重建。
   late PageController _pageController;
   final FocusNode _focusNode = FocusNode();
+  final InputBinding _inputBinding = InputBinding.defaults;
+  DateTime? _lastWheelTurn;
+
+  static const _wheelThrottle = Duration(milliseconds: 140);
 
   @override
   void initState() {
@@ -50,6 +56,9 @@ class _PagedReaderViewState extends State<PagedReaderView> {
     _pageController = PageController(
       initialPage: widget.controller.window.currentIndex,
     );
+    // The Android host only reports volume keys while this paged subtree is
+    // active. Mapping to previous/next remains a Dart concern.
+    ReaderInputBridge.activatePaged(_onPhysicalInput);
   }
 
   @override
@@ -57,6 +66,7 @@ class _PagedReaderViewState extends State<PagedReaderView> {
     widget.controller.removeListener(_onControllerChanged);
     _pageController.dispose();
     _focusNode.dispose();
+    ReaderInputBridge.deactivatePaged();
     super.dispose();
   }
 
@@ -120,17 +130,46 @@ class _PagedReaderViewState extends State<PagedReaderView> {
   KeyEventResult _onKeyEvent(FocusNode node, KeyEvent event) {
     if (event is! KeyDownEvent) return KeyEventResult.ignored;
     final key = event.logicalKey;
-    if (key == LogicalKeyboardKey.arrowRight ||
-        key == LogicalKeyboardKey.pageDown) {
-      _turnPage(forward: true);
-      return KeyEventResult.handled;
-    }
-    if (key == LogicalKeyboardKey.arrowLeft ||
-        key == LogicalKeyboardKey.pageUp) {
-      _turnPage(forward: false);
+    final input = switch (key) {
+      LogicalKeyboardKey.arrowRight => PhysicalInput.arrowRight,
+      LogicalKeyboardKey.pageDown => PhysicalInput.pageDown,
+      LogicalKeyboardKey.arrowLeft => PhysicalInput.arrowLeft,
+      LogicalKeyboardKey.pageUp => PhysicalInput.pageUp,
+      _ => null,
+    };
+    if (input != null && _dispatchInput(input)) {
       return KeyEventResult.handled;
     }
     return KeyEventResult.ignored;
+  }
+
+  void _onPhysicalInput(PhysicalInput input) {
+    _dispatchInput(input);
+  }
+
+  bool _dispatchInput(PhysicalInput input) {
+    final command = _inputBinding.commandFor(input);
+    if (command == null) return false;
+    switch (command) {
+      case ReaderCommand.previousPage:
+        _turnPage(forward: false);
+      case ReaderCommand.nextPage:
+        _turnPage(forward: true);
+    }
+    return true;
+  }
+
+  void _onPointerSignal(PointerSignalEvent event) {
+    if (event is! PointerScrollEvent) return;
+    final dy = event.scrollDelta.dy;
+    if (dy == 0) return;
+    final now = DateTime.now();
+    if (_lastWheelTurn != null &&
+        now.difference(_lastWheelTurn!) < _wheelThrottle) {
+      return;
+    }
+    _lastWheelTurn = now;
+    _dispatchInput(dy < 0 ? PhysicalInput.wheelUp : PhysicalInput.wheelDown);
   }
 
   void _turnPage({required bool forward}) {
@@ -182,52 +221,55 @@ class _PagedReaderViewState extends State<PagedReaderView> {
     NormalizedDocument doc,
     ReaderResolvedAppearance appearance,
   ) {
-    return Focus(
-      focusNode: _focusNode,
-      autofocus: true,
-      onKeyEvent: _onKeyEvent,
-      child: PageView.builder(
-        controller: _pageController,
-        itemCount: win.pageCount,
-        onPageChanged: _onPageChanged,
-        itemBuilder: (context, i) {
-          final page = win.pageAt(i);
-          if (page == null) return const SizedBox.shrink();
-          final text = doc.text.substring(
-            page.startCharacterOffset,
-            page.endCharacterOffset,
-          );
-          return ColoredBox(
-            color: appearance.backgroundColor,
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(
-                widget.controller.paddingLeft,
-                widget.controller.paddingTop,
-                widget.controller.paddingRight,
-                widget.controller.paddingBottom,
-              ),
-              child: Align(
-                alignment: Alignment.topLeft,
-                child: ReaderTextBlock(
-                  text: text,
-                  style: appearance.baseTextStyle,
-                  paragraphSpacing: widget.controller.paragraphSpacing,
-                  firstLineIndent: widget.controller.firstLineIndent,
-                  startsAtParagraphBoundary:
-                      page.startCharacterOffset == 0 ||
-                      widget.controller.document.text.codeUnitAt(
-                            page.startCharacterOffset - 1,
-                          ) ==
-                          0x0A,
-                  styleVersion: appearance.textColor.toARGB32(),
-                  textDirection: TextDirection.ltr,
-                  // §八：显示与测量同一宽度（引擎 contentWidth）。
-                  maxWidth: widget.controller.engine.contentWidth,
+    return Listener(
+      onPointerSignal: _onPointerSignal,
+      child: Focus(
+        focusNode: _focusNode,
+        autofocus: true,
+        onKeyEvent: _onKeyEvent,
+        child: PageView.builder(
+          controller: _pageController,
+          itemCount: win.pageCount,
+          onPageChanged: _onPageChanged,
+          itemBuilder: (context, i) {
+            final page = win.pageAt(i);
+            if (page == null) return const SizedBox.shrink();
+            final text = doc.text.substring(
+              page.startCharacterOffset,
+              page.endCharacterOffset,
+            );
+            return ColoredBox(
+              color: appearance.backgroundColor,
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(
+                  widget.controller.paddingLeft,
+                  widget.controller.paddingTop,
+                  widget.controller.paddingRight,
+                  widget.controller.paddingBottom,
+                ),
+                child: Align(
+                  alignment: Alignment.topLeft,
+                  child: ReaderTextBlock(
+                    text: text,
+                    style: appearance.baseTextStyle,
+                    paragraphSpacing: widget.controller.paragraphSpacing,
+                    firstLineIndent: widget.controller.firstLineIndent,
+                    startsAtParagraphBoundary:
+                        page.startCharacterOffset == 0 ||
+                        widget.controller.document.text.codeUnitAt(
+                              page.startCharacterOffset - 1,
+                            ) ==
+                            0x0A,
+                    styleVersion: appearance.textColor.toARGB32(),
+                    textDirection: TextDirection.ltr,
+                    // §八：显示与测量同一宽度（引擎 contentWidth）。
+                    maxWidth: widget.controller.engine.contentWidth,
+                  ),
                 ),
               ),
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }

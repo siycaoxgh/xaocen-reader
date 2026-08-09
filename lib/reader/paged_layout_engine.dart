@@ -38,9 +38,11 @@ class PagedLayoutEngine {
     double? paddingRight,
     this.paragraphSpacing = 0,
     this.firstLineIndent = 0,
+    Iterable<int> chapterStartOffsets = const <int>[],
     this.textScale = 1.0,
     this.policyVersion = pagedPolicyVersion,
-  }) : paddingTop = paddingTop ?? verticalPadding,
+  }) : chapterStartOffsets = _normalizeChapterStarts(chapterStartOffsets),
+       paddingTop = paddingTop ?? verticalPadding,
        paddingBottom = paddingBottom ?? verticalPadding,
        paddingLeft = paddingLeft ?? horizontalPadding,
        paddingRight = paddingRight ?? horizontalPadding;
@@ -67,12 +69,44 @@ class PagedLayoutEngine {
   final double paddingRight;
   final double paragraphSpacing;
   final double firstLineIndent;
+
+  /// Real chapter starts in normalized UTF-16 offsets. Volumes are excluded.
+  final List<int> chapterStartOffsets;
   final double textScale;
   final int policyVersion;
 
   double get contentWidth => math.max(1.0, width - paddingLeft - paddingRight);
   double get contentHeight =>
       math.max(1.0, height - paddingTop - paddingBottom);
+
+  static List<int> _normalizeChapterStarts(Iterable<int> offsets) {
+    final values = offsets.where((o) => o >= 0).toSet().toList()..sort();
+    return List.unmodifiable(values);
+  }
+
+  int? _nextChapterStartAfter(int offset) {
+    for (final start in chapterStartOffsets) {
+      if (start > offset) return start;
+    }
+    return null;
+  }
+
+  int? _chapterStartAt(int offset) {
+    for (final start in chapterStartOffsets) {
+      if (start == offset) return start;
+      if (start > offset) break;
+    }
+    return null;
+  }
+
+  int _latestChapterStartBefore(int offset) {
+    var result = 0;
+    for (final start in chapterStartOffsets) {
+      if (start >= offset) break;
+      result = start;
+    }
+    return result;
+  }
 
   /// 布局签名（resize / orientation / 字体度量变化的判定依据）。
   PagedLayoutSignature get signature => PagedLayoutSignature(
@@ -128,7 +162,16 @@ class PagedLayoutEngine {
     if (len == 0) return null;
     if (startOffset >= len) return null;
 
-    final take = math.min(len - startOffset, candidateChars);
+    final nextChapter = _nextChapterStartAfter(startOffset) ?? len;
+    final take = math.min(
+      math.min(len - startOffset, candidateChars),
+      math.max(0, nextChapter - startOffset),
+    );
+    if (take <= 0) {
+      // A chapter start is always allowed to begin a page, even when the
+      // previous page ended exactly at that same offset.
+      return layoutForwardPage(startOffset + 1);
+    }
     final candidate = text.substring(startOffset, startOffset + take);
     final layout = _layoutCandidate(candidate, startOffset);
 
@@ -210,16 +253,18 @@ class PagedLayoutEngine {
     if (endOffset <= 0) return null;
 
     final take = math.min(endOffset, candidateChars);
-    var start = endOffset - take;
+    final chapterFloor = _latestChapterStartBefore(endOffset);
+    var start = math.max(chapterFloor, endOffset - take);
     // 候选起点回退到 LF 位置（上一行的换行符）：候选首字符 = LF（首行 =
     // LF 空行）——与 forward 页首（LF 位置）同一行边界，getLineBoundary
     // 往回数行精确对称（100 页往返）。无 LF（超长段/纯 wrap）：保持原
     // 起点（wrap 行由宽度决定，行数不变）。
     if (start > 0) {
       final lf = text.lastIndexOf('\n', start - 1);
-      if (lf >= 0) {
+      if (lf >= chapterFloor) {
         start = lf;
       }
+      start = math.max(chapterFloor, start);
     }
     final candidate = text.substring(start, endOffset);
     final layout = _layoutCandidate(candidate, start);
@@ -308,8 +353,11 @@ class PagedLayoutEngine {
     }
     final target = targetOffset.clamp(0, len);
 
+    final exactChapterStart = _chapterStartAt(target);
     final anchor =
-        blockIndex?.blockForOffset(target)?.startCharacterOffset ?? 0;
+        exactChapterStart ??
+        blockIndex?.blockForOffset(target)?.startCharacterOffset ??
+        0;
 
     var page = layoutForwardPage(anchor);
     var guard = 0;

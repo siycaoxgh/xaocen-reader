@@ -556,6 +556,10 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
       paddingRight: _preferences.paddingRight,
       paragraphSpacing: _preferences.paragraphSpacing,
       firstLineIndent: _preferences.firstLineIndent,
+      chapterStartOffsets: widget.launch.toc
+          .where((entry) => entry.kind == 'chapter')
+          .map((entry) => entry.startCharacterOffset)
+          .toList(),
     );
     paged.addListener(_onPagedControllerChanged);
     final page = paged.open(anchor);

@@ -458,3 +458,17 @@ surface is V3 Reader chrome, vertical/paged engines, per-book ReaderLocator,
 per-book readingMode, per-book ReaderPreferences, complete basic typography,
 four-direction padding, system/light/dark, exact-locator relayout, persistence,
 and Flat TOC. Schema remains 5. No M5.2 capability is included.
+
+## Reader input and paged chapter policy (follow-up, 2026-08-09)
+
+Physical input is intentionally separated from Reader actions:
+`PhysicalInput -> InputBinding -> ReaderCommand -> Reader action`. The default
+binding maps arrows, PageUp/PageDown, and paged Windows wheel events to
+`previousPage`/`nextPage`. Android's host bridge reports only `volumeUp` or
+`volumeDown` while paged Reader is active; Dart owns the command mapping. The
+bridge is inactive for vertical Reader and all non-Reader screens.
+
+Paged pagination uses `pagedPolicyVersion = 2`. Real TOC chapter start offsets
+are boundary anchors: a chapter title starts a new page, while the previous page
+may end early. Page ranges remain contiguous and preserve UTF-16 offsets. A
+no-chapter document keeps continuous pagination, and vertical layout is unchanged.

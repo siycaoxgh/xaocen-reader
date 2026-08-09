@@ -7,6 +7,11 @@
 
 ## Current open issues
 
+- Reader input/chapter-policy follow-up is implemented, but Android volume-key
+  validation is pending because the previously confirmed Wireless ADB target is
+  currently offline. No APK reinstall or data reset is being used to bypass
+  this device-state issue.
+
 （截至 M4 最终封存，无已知的 open bug。M4 P1 已解决并从已知问题中移除；以下均为验证覆盖的边界行为或工具性限制，见 Known limitations / Deferred。）
 
 - M5.1e 未发现新的 Reader engine P1/P2；字号、行距、双向边距、主题、
