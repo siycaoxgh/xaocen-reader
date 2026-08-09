@@ -1,6 +1,6 @@
 # ARCHITECTURE_CURRENT.md — XAOCEN Reader v4 当前架构与合同
 
-> 只描述当前代码与合同（`feat/m4-horizontal-reader`，M5.1d 完成点）。
+> 只描述当前代码与合同（`feat/m4-horizontal-reader`，M5.1e 完成点）。
 > 不记录历史故事（见 PROJECT_HISTORY.md）。
 > 代码位置均以本仓库实际文件为准。
 
@@ -50,17 +50,25 @@ Layering rules (enforced by structure, not by tooling):
 - UI only reaches data through Repository / Controller (never Drift directly).
 - `data` may depend on `domain`; `sources` may depend on `domain` but not pages.
 
-### Reader shell contract (M5.1d)
+### Reader shell and settings contract (M5.1d–e)
 
 - `ReaderPage` owns Reader engine lifecycle; `ReaderChrome` owns only transient
   top/bottom controls and typed entry callbacks.
 - Chrome is layered over a full stable Reader viewport with `Stack`. Visibility
   changes must not alter metrics, invoke Locator restore, or write progress.
 - The toolbar exposes Flat TOC, current per-book mode, Interface/Aa, and More.
-  Aa/More are preview containers until M5.1e; TTS is not exposed as enabled.
+  Interface/Aa opens the functional settings sheet; TTS is not exposed as enabled.
 - Below 720 logical pixels the toolbar follows available width; on wider Windows
   layouts it is centered and capped at 520 logical pixels.
 - Colors reuse `ColorScheme`/`ReaderResolvedAppearance`; theme remains paint-only.
+- Slider `onChanged` changes only sheet-local draft values. `onChangeEnd` submits a
+  complete strong `ReaderPreferences` snapshot. `ReaderPage` immediately applies it
+  and serializes repository writes through a single-flight/latest-pending queue.
+- Font size, line height, and both paddings enter the existing M5.1b metrics state
+  machine. Theme never enters that state machine. Mode selection calls the existing
+  per-collection M4 transition and never enters `ReaderPreferences`.
+- Reset deletes only Reader-owned AppSettings keys and immediately reapplies the
+  strong default snapshot; it does not alter per-book mode or Locator.
 
 ---
 

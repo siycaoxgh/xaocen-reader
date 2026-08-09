@@ -6,10 +6,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:xaocen_reader/data/database/app_database.dart';
 import 'package:xaocen_reader/data/repositories/library_file_manager.dart';
 import 'package:xaocen_reader/data/repositories/reading_progress_repository.dart';
+import 'package:xaocen_reader/data/repositories/reader_preferences_repository.dart';
 import 'package:xaocen_reader/domain/library/library_entities.dart';
 import 'package:xaocen_reader/domain/local_txt/text_encoding.dart';
 import 'package:xaocen_reader/domain/reader/reader_locator.dart';
 import 'package:xaocen_reader/domain/reader/reader_preferences.dart';
+import 'package:xaocen_reader/domain/reader/reader_progress_state.dart';
+import 'package:xaocen_reader/domain/reader/reading_mode.dart';
 import 'package:xaocen_reader/reader/normalized_document_loader.dart';
 import 'package:xaocen_reader/reader/reader_page.dart';
 import 'package:xaocen_reader/reader/reader_chrome.dart';
@@ -77,7 +80,9 @@ void main() {
     }
   });
 
-  ReaderLaunchContext launchContext() {
+  ReaderLaunchContext launchContext({
+    ReaderPreferencesRepository? preferencesRepository,
+  }) {
     return ReaderLaunchContext(
       collection: LibraryCollection(
         id: 'local-txt:abc',
@@ -131,6 +136,7 @@ void main() {
       normalizedCharacterLength: bookText.length,
       documentLoader: loader,
       progressRepository: progressRepo,
+      preferencesRepository: preferencesRepository,
     );
   }
 
@@ -138,12 +144,15 @@ void main() {
     WidgetTester tester, {
     Stream<ReaderPreferences>? preferencesOverride,
     ValueChanged<ReaderMetricsRelayoutReport>? onMetricsRelayout,
+    ReaderPreferencesRepository? preferencesRepository,
+    ReaderProgressState? initialStateOverride,
   }) async {
     await tester.pumpWidget(
       MaterialApp(
         home: ReaderPage(
-          launch: launchContext(),
+          launch: launchContext(preferencesRepository: preferencesRepository),
           preferencesOverride: preferencesOverride,
+          initialStateOverride: initialStateOverride,
           onMetricsRelayout: onMetricsRelayout,
           documentOverride: NormalizedDocument(
             text: bookText,
@@ -214,8 +223,8 @@ void main() {
       changes.add(ReaderPreferences.defaults.copyWith(fontSize: 24));
       await tester.pump();
       changes.add(ReaderPreferences.defaults.copyWith(fontSize: 22));
-      for (var i = 0; i < 12; i++) {
-        await tester.pump();
+      for (var i = 0; i < 8; i++) {
+        await tester.pump(const Duration(milliseconds: 50));
       }
 
       final blocks = tester.widgetList<ReaderTextBlock>(
@@ -273,19 +282,183 @@ void main() {
       expect(await progressRepo.getProgress('local-txt:abc'), isNull);
     });
 
-    testWidgets('Aa and more open honest placeholder panels', (tester) async {
-      await pumpReader(tester);
+    testWidgets(
+      'Aa opens complete settings panel; opening and closing writes no progress',
+      (tester) async {
+        await pumpReader(tester);
+        await tester.tap(find.byKey(readerAppearanceActionKey));
+        await tester.pumpAndSettle();
+        expect(find.text('阅读界面'), findsOneWidget);
+        expect(find.byKey(readerFontSizeSliderKey), findsOneWidget);
+        expect(find.byKey(readerLineHeightSliderKey), findsOneWidget);
+        expect(find.byKey(readerHorizontalPaddingSliderKey), findsOneWidget);
+        expect(find.byKey(readerVerticalPaddingSliderKey), findsOneWidget);
+        expect(find.byKey(readerThemeControlKey), findsOneWidget);
+        expect(find.byKey(readerSettingsModeControlKey), findsOneWidget);
+        expect(find.byKey(readerResetPreferencesKey), findsOneWidget);
+        expect(await progressRepo.getProgress('local-txt:abc'), isNull);
+        await tester.tapAt(const Offset(10, 10));
+        await tester.pumpAndSettle();
+        expect(await progressRepo.getProgress('local-txt:abc'), isNull);
+
+        await tester.tap(find.byKey(readerMoreActionKey));
+        await tester.pumpAndSettle();
+        expect(find.textContaining('朗读当前未实现'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'settings metrics commit relayouts at exact Locator and persists final draft',
+      (tester) async {
+        final repository = ReaderPreferencesRepository(db: db);
+        final reports = <ReaderMetricsRelayoutReport>[];
+        await pumpReader(
+          tester,
+          preferencesRepository: repository,
+          onMetricsRelayout: reports.add,
+        );
+        await tester.tap(find.byKey(readerAppearanceActionKey));
+        await tester.pumpAndSettle();
+
+        for (final key in [
+          readerFontSizeSliderKey,
+          readerLineHeightSliderKey,
+          readerHorizontalPaddingSliderKey,
+          readerVerticalPaddingSliderKey,
+        ]) {
+          await tester.ensureVisible(find.byKey(key));
+          await tester.pump();
+          await tester.drag(find.byKey(key), const Offset(48, 0));
+          for (var i = 0; i < 8; i++) {
+            await tester.pump(const Duration(milliseconds: 50));
+          }
+        }
+
+        expect(reports.length, greaterThanOrEqualTo(3));
+        expect(reports.every((report) => report.logicalError == 0), isTrue);
+        final stored = await repository.load();
+        expect(stored.fontSize, isNot(ReaderPreferences.defaultFontSize));
+        expect(stored.lineHeight, isNot(ReaderPreferences.defaultLineHeight));
+        expect(
+          stored.horizontalPadding,
+          isNot(ReaderPreferences.defaultHorizontalPadding),
+        );
+        expect(
+          stored.verticalPadding,
+          isNot(ReaderPreferences.defaultVerticalPadding),
+        );
+        expect(await progressRepo.getProgress('local-txt:abc'), isNull);
+        await tester.tapAt(const Offset(10, 10));
+        await tester.pumpAndSettle();
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(milliseconds: 100));
+      },
+    );
+
+    testWidgets('theme is paint-only and reset restores persisted defaults', (
+      tester,
+    ) async {
+      final repository = ReaderPreferencesRepository(db: db);
+      final reports = <ReaderMetricsRelayoutReport>[];
+      await pumpReader(
+        tester,
+        preferencesRepository: repository,
+        onMetricsRelayout: reports.add,
+      );
       await tester.tap(find.byKey(readerAppearanceActionKey));
       await tester.pumpAndSettle();
-      expect(find.text('阅读界面'), findsOneWidget);
-      expect(find.textContaining('M5.1e'), findsOneWidget);
+      await tester.tap(find.text('深色'));
+      await tester.pumpAndSettle();
+      expect((await repository.load()).themeMode, ReaderThemeMode.dark);
+      expect(reports, isEmpty);
+      expect(await progressRepo.getProgress('local-txt:abc'), isNull);
+
+      await tester.drag(
+        find.byKey(readerFontSizeSliderKey),
+        const Offset(80, 0),
+      );
+      for (var i = 0; i < 12; i++) {
+        await tester.pump();
+      }
+      await tester.tap(find.byKey(readerResetPreferencesKey));
+      for (var i = 0; i < 12; i++) {
+        await tester.pump();
+      }
+      expect(await repository.load(), ReaderPreferences.defaults);
       await tester.tapAt(const Offset(10, 10));
       await tester.pumpAndSettle();
-
-      await tester.tap(find.byKey(readerMoreActionKey));
-      await tester.pumpAndSettle();
-      expect(find.textContaining('朗读当前未实现'), findsOneWidget);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(milliseconds: 100));
     });
+
+    testWidgets(
+      'paged settings metrics repaginate around the exact non-zero Locator',
+      (tester) async {
+        final repository = ReaderPreferencesRepository(db: db);
+        final reports = <ReaderMetricsRelayoutReport>[];
+        await pumpReader(
+          tester,
+          preferencesRepository: repository,
+          onMetricsRelayout: reports.add,
+          initialStateOverride: ReaderProgressState(
+            collectionId: 'local-txt:abc',
+            absoluteCharacterOffset: 12,
+            readingMode: ReadingMode.paged,
+            updatedAt: DateTime(2026),
+          ),
+        );
+        await tester.tap(find.byKey(readerAppearanceActionKey));
+        await tester.pumpAndSettle();
+        await tester.drag(
+          find.byKey(readerFontSizeSliderKey),
+          const Offset(70, 0),
+        );
+        for (var i = 0; i < 12; i++) {
+          await tester.pump(const Duration(milliseconds: 50));
+        }
+        final report = reports.last;
+        expect(report.locatorBefore.absoluteCharacterOffset, 12);
+        expect(report.logicalError, 0);
+        expect(report.pageAfter!.contains(12), isTrue);
+        await tester.tapAt(const Offset(10, 10));
+        await tester.pumpAndSettle();
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(milliseconds: 100));
+      },
+    );
+
+    testWidgets(
+      'rapid slider commits persist only the final snapshot generation',
+      (tester) async {
+        final repository = ReaderPreferencesRepository(db: db);
+        final reports = <ReaderMetricsRelayoutReport>[];
+        await pumpReader(
+          tester,
+          preferencesRepository: repository,
+          onMetricsRelayout: reports.add,
+        );
+        await tester.tap(find.byKey(readerAppearanceActionKey));
+        await tester.pumpAndSettle();
+        final slider = find.byKey(readerFontSizeSliderKey);
+        await tester.drag(slider, const Offset(20, 0));
+        await tester.drag(slider, const Offset(60, 0));
+        await tester.drag(slider, const Offset(-30, 0));
+        await tester.drag(slider, const Offset(45, 0));
+        for (var i = 0; i < 20; i++) {
+          await tester.pump();
+        }
+        final displayed = tester.widget<Slider>(
+          find.descendant(of: slider, matching: find.byType(Slider)),
+        );
+        expect((await repository.load()).fontSize, displayed.value);
+        expect(reports.last.logicalError, 0);
+        expect(reports.last.signature.fontSize, displayed.value);
+        await tester.tapAt(const Offset(10, 10));
+        await tester.pumpAndSettle();
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(milliseconds: 100));
+      },
+    );
 
     testWidgets(
       'Reader chrome adapts to portrait landscape and desktop resize',

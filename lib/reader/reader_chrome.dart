@@ -10,6 +10,16 @@ const readerTocActionKey = Key('reader-toc-action');
 const readerAppearanceActionKey = Key('reader-appearance-action');
 const readerMoreActionKey = Key('reader-more-action');
 const readerModeActionKey = Key('reader-mode-action');
+const readerSettingsSheetKey = Key('reader-settings-sheet');
+const readerFontSizeSliderKey = Key('reader-font-size-slider');
+const readerLineHeightSliderKey = Key('reader-line-height-slider');
+const readerHorizontalPaddingSliderKey = Key(
+  'reader-horizontal-padding-slider',
+);
+const readerVerticalPaddingSliderKey = Key('reader-vertical-padding-slider');
+const readerThemeControlKey = Key('reader-theme-control');
+const readerSettingsModeControlKey = Key('reader-settings-mode-control');
+const readerResetPreferencesKey = Key('reader-reset-preferences');
 
 class ReaderChrome extends StatelessWidget {
   const ReaderChrome({
@@ -221,39 +231,216 @@ class _ChromeAction extends StatelessWidget {
   }
 }
 
-Future<void> showReaderAppearancePreview(
+Future<void> showReaderSettings(
   BuildContext context, {
   required ReaderPreferences preferences,
   required ReaderMode mode,
+  required ValueChanged<ReaderPreferences> onPreferencesCommitted,
+  required ValueChanged<ReaderMode> onModeSelected,
+  required VoidCallback onResetPreferences,
 }) {
+  final isDesktop = MediaQuery.sizeOf(context).width >= 720;
   return showModalBottomSheet<void>(
     context: context,
+    isScrollControlled: true,
     showDragHandle: true,
-    builder: (context) => SafeArea(
-      child: Padding(
+    constraints: BoxConstraints(maxWidth: isDesktop ? 560 : double.infinity),
+    builder: (context) => ReaderSettingsSheet(
+      preferences: preferences,
+      mode: mode,
+      onPreferencesCommitted: onPreferencesCommitted,
+      onModeSelected: onModeSelected,
+      onResetPreferences: onResetPreferences,
+    ),
+  );
+}
+
+class ReaderSettingsSheet extends StatefulWidget {
+  const ReaderSettingsSheet({
+    super.key,
+    required this.preferences,
+    required this.mode,
+    required this.onPreferencesCommitted,
+    required this.onModeSelected,
+    required this.onResetPreferences,
+  });
+
+  final ReaderPreferences preferences;
+  final ReaderMode mode;
+  final ValueChanged<ReaderPreferences> onPreferencesCommitted;
+  final ValueChanged<ReaderMode> onModeSelected;
+  final VoidCallback onResetPreferences;
+
+  @override
+  State<ReaderSettingsSheet> createState() => _ReaderSettingsSheetState();
+}
+
+class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
+  late ReaderPreferences _draft = widget.preferences;
+  late ReaderMode _mode = widget.mode;
+
+  void _commit(ReaderPreferences value) {
+    setState(() => _draft = value);
+    widget.onPreferencesCommitted(value);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: SingleChildScrollView(
+        key: readerSettingsSheetKey,
         padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('阅读界面', style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 8),
-            Text(
-              '字号 ${preferences.fontSize.toStringAsFixed(0)}  ·  '
-              '行距 ${preferences.lineHeight.toStringAsFixed(1)}  ·  '
-              '${mode == ReaderMode.paged ? '分页' : '滚动'}',
-              style: Theme.of(context).textTheme.bodyMedium,
+            const SizedBox(height: 16),
+            _PreferenceSlider(
+              key: readerFontSizeSliderKey,
+              label: '字号',
+              value: _draft.fontSize,
+              min: ReaderPreferences.minFontSize,
+              max: ReaderPreferences.maxFontSize,
+              divisions: 20,
+              valueLabel: _draft.fontSize.toStringAsFixed(0),
+              onDraftChanged: (value) =>
+                  setState(() => _draft = _draft.copyWith(fontSize: value)),
+              onCommitted: (value) => _commit(_draft.copyWith(fontSize: value)),
+            ),
+            _PreferenceSlider(
+              key: readerLineHeightSliderKey,
+              label: '行距',
+              value: _draft.lineHeight,
+              min: ReaderPreferences.minLineHeight,
+              max: ReaderPreferences.maxLineHeight,
+              divisions: 12,
+              valueLabel: _draft.lineHeight.toStringAsFixed(1),
+              onDraftChanged: (value) =>
+                  setState(() => _draft = _draft.copyWith(lineHeight: value)),
+              onCommitted: (value) =>
+                  _commit(_draft.copyWith(lineHeight: value)),
+            ),
+            _PreferenceSlider(
+              key: readerHorizontalPaddingSliderKey,
+              label: '水平正文边距',
+              value: _draft.horizontalPadding,
+              min: ReaderPreferences.minHorizontalPadding,
+              max: ReaderPreferences.maxHorizontalPadding,
+              divisions: 16,
+              valueLabel: _draft.horizontalPadding.toStringAsFixed(0),
+              onDraftChanged: (value) => setState(
+                () => _draft = _draft.copyWith(horizontalPadding: value),
+              ),
+              onCommitted: (value) =>
+                  _commit(_draft.copyWith(horizontalPadding: value)),
+            ),
+            _PreferenceSlider(
+              key: readerVerticalPaddingSliderKey,
+              label: '垂直正文边距',
+              value: _draft.verticalPadding,
+              min: ReaderPreferences.minVerticalPadding,
+              max: ReaderPreferences.maxVerticalPadding,
+              divisions: 12,
+              valueLabel: _draft.verticalPadding.toStringAsFixed(0),
+              onDraftChanged: (value) => setState(
+                () => _draft = _draft.copyWith(verticalPadding: value),
+              ),
+              onCommitted: (value) =>
+                  _commit(_draft.copyWith(verticalPadding: value)),
             ),
             const SizedBox(height: 12),
-            Text(
-              '字号、行距、边距与主题调节将在 M5.1e 提供。',
-              style: Theme.of(context).textTheme.bodySmall,
+            Text('主题', style: Theme.of(context).textTheme.titleSmall),
+            const SizedBox(height: 8),
+            SegmentedButton<ReaderThemeMode>(
+              key: readerThemeControlKey,
+              segments: const [
+                ButtonSegment(value: ReaderThemeMode.system, label: Text('系统')),
+                ButtonSegment(value: ReaderThemeMode.light, label: Text('浅色')),
+                ButtonSegment(value: ReaderThemeMode.dark, label: Text('深色')),
+              ],
+              selected: {_draft.themeMode},
+              onSelectionChanged: (selection) =>
+                  _commit(_draft.copyWith(themeMode: selection.single)),
+            ),
+            const SizedBox(height: 20),
+            Text('阅读模式（本书）', style: Theme.of(context).textTheme.titleSmall),
+            const SizedBox(height: 8),
+            SegmentedButton<ReaderMode>(
+              key: readerSettingsModeControlKey,
+              segments: const [
+                ButtonSegment(value: ReaderMode.vertical, label: Text('滚动')),
+                ButtonSegment(value: ReaderMode.paged, label: Text('分页')),
+              ],
+              selected: {_mode},
+              onSelectionChanged: (selection) {
+                final next = selection.single;
+                setState(() => _mode = next);
+                widget.onModeSelected(next);
+              },
+            ),
+            const SizedBox(height: 20),
+            OutlinedButton.icon(
+              key: readerResetPreferencesKey,
+              onPressed: () {
+                setState(() => _draft = ReaderPreferences.defaults);
+                widget.onResetPreferences();
+              },
+              icon: const Icon(Icons.restart_alt_rounded),
+              label: const Text('恢复默认设置'),
             ),
           ],
         ),
       ),
-    ),
-  );
+    );
+  }
+}
+
+class _PreferenceSlider extends StatelessWidget {
+  const _PreferenceSlider({
+    super.key,
+    required this.label,
+    required this.value,
+    required this.min,
+    required this.max,
+    required this.divisions,
+    required this.valueLabel,
+    required this.onDraftChanged,
+    required this.onCommitted,
+  });
+
+  final String label;
+  final double value;
+  final double min;
+  final double max;
+  final int divisions;
+  final String valueLabel;
+  final ValueChanged<double> onDraftChanged;
+  final ValueChanged<double> onCommitted;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(child: Text(label)),
+            Text(valueLabel, style: Theme.of(context).textTheme.labelLarge),
+          ],
+        ),
+        Slider(
+          value: value,
+          min: min,
+          max: max,
+          divisions: divisions,
+          label: valueLabel,
+          onChanged: onDraftChanged,
+          onChangeEnd: onCommitted,
+        ),
+      ],
+    );
+  }
 }
 
 Future<void> showReaderMorePreview(BuildContext context) {

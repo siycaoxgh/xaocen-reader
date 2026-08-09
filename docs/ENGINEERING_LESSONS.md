@@ -705,3 +705,12 @@ engine 和有限 PageWindow；controller 最终 dispose 仍释放当前 engine�
 恢复当成旧模式工作直接跳过。解冻边界也不能以 Future 完成为准，只能以真实 visible range
 包含目标 Locator 且 confirmed 相等为准。核心切换测试必须使用非零 X，并直接调用强类型菜单
 回调；offset 0 与不可靠 popup 坐标 tap 都会制造假阳性。
+
+---
+
+## M5.1e 教训（设置面板持久化测试，2026-08-09）
+
+带 Drift `watch()` 的 widget 测试若在页面仍挂载时先 `db.close()`，数据库关闭会等待仍活跃的
+stream，而页面的 subscription 又尚未进入 dispose，表现为测试进程无 CPU、无断言输出地挂起。
+正确 teardown 顺序是先关闭 modal、卸载 Reader 并推进一帧完成 subscription cancel，最后关闭
+测试数据库。该问题只影响测试资源生命周期，不应通过业务层固定 delay 掩盖。

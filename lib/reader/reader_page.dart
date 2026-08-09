@@ -132,6 +132,9 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
   bool _metricsWritesFrozen = false;
   ReaderVisibleRange? _metricsVisibleBefore;
   PagedTextRange? _metricsPageBefore;
+  ReaderPreferences? _pendingPreferencesWrite;
+  bool _pendingPreferencesReset = false;
+  bool _preferencesWriteInFlight = false;
 
   /// Reader 视觉合同（P1：从 Theme 解析，禁止正文硬编码颜色）。
   late ReaderResolvedAppearance _appearance;
@@ -322,6 +325,44 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
     }
     _metricsSignature = nextSignature;
     _beginMetricsRelayout(next);
+  }
+
+  void _commitPreferences(ReaderPreferences next) {
+    _onPreferencesChanged(next);
+    final repository = widget.launch.preferencesRepository;
+    if (repository == null) return;
+    _pendingPreferencesReset = false;
+    _pendingPreferencesWrite = next;
+    if (!_preferencesWriteInFlight) unawaited(_drainPreferencesWrites());
+  }
+
+  Future<void> _drainPreferencesWrites() async {
+    final repository = widget.launch.preferencesRepository;
+    if (repository == null || _preferencesWriteInFlight) return;
+    _preferencesWriteInFlight = true;
+    try {
+      while (_pendingPreferencesReset || _pendingPreferencesWrite != null) {
+        if (_pendingPreferencesReset) {
+          _pendingPreferencesReset = false;
+          await repository.resetToDefaults();
+        } else if (_pendingPreferencesWrite case final next?) {
+          _pendingPreferencesWrite = null;
+          await repository.update(next);
+        }
+      }
+    } finally {
+      _preferencesWriteInFlight = false;
+    }
+  }
+
+  void _resetPreferences() {
+    _onPreferencesChanged(ReaderPreferences.defaults);
+    _pendingPreferencesWrite = null;
+    _pendingPreferencesReset = true;
+    final repository = widget.launch.preferencesRepository;
+    if (repository != null && !_preferencesWriteInFlight) {
+      unawaited(_drainPreferencesWrites());
+    }
   }
 
   void _freezeMetricsWrites() {
@@ -1158,10 +1199,13 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
             },
             onAppearance: () {
               _showChrome();
-              showReaderAppearancePreview(
+              showReaderSettings(
                 context,
                 preferences: _preferences,
                 mode: _mode,
+                onPreferencesCommitted: _commitPreferences,
+                onModeSelected: _selectMode,
+                onResetPreferences: _resetPreferences,
               );
             },
             onMore: () {

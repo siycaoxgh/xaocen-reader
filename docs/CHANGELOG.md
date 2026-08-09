@@ -14,6 +14,19 @@ Legend for validation columns:
 
 ## Unreleased
 
+### M5.1e — functional Reader settings panel (2026-08-09)
+- Connected the V3 Interface/Aa entry to persisted font size, line height,
+  horizontal/vertical body padding, system/light/dark theme, and per-book mode.
+- Slider movement remains local draft state; only drag-end snapshots are applied.
+  Persistence uses a single-flight latest-pending queue to avoid write storms.
+- Metrics reuse the M5.1b freeze/capture/relayout/exact-confirm/unfreeze contract;
+  theme remains paint-only and reading mode remains per collection.
+- Added responsive mobile/desktop sheet, reset-to-defaults, and zero-progress-write
+  coverage for panel open/close and theme changes.
+- Validation: analyze clean; 356/356 unit/widget; 9/9 Windows integration files
+  (12 scenarios); all 4 real TXT / 12 anchors logical error 0.
+- Android device: NOT-RUN / deferred to M5.1 final validation.
+
 ### M5.1d — V3 daily Reader shell (2026-08-09)
 - Replaced the engineering-style successful Reader `AppBar` with stable overlay
   chrome: a light top action region and a responsive bottom reading toolbar.
