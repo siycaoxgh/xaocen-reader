@@ -17,9 +17,12 @@ import 'package:super_sliver_list/super_sliver_list.dart';
 
 import '../design/theme/app_theme.dart';
 import '../data/repositories/reading_progress_repository.dart';
+import '../data/repositories/reader_bookmark_repository.dart';
 import '../data/repositories/reader_preferences_repository.dart';
+import '../domain/library/current_chapter_resolver.dart';
 import '../domain/library/library_entities.dart';
 import '../domain/library/toc_index.dart';
+import '../domain/reader/reader_bookmark.dart';
 import '../domain/reader/reader_locator.dart';
 import '../domain/reader/paged_text_range.dart';
 import '../domain/reader/reader_block.dart';
@@ -45,6 +48,7 @@ class ReaderLaunchContext {
     required this.normalizedCharacterLength,
     required this.documentLoader,
     required this.progressRepository,
+    this.bookmarkRepository,
     this.preferencesRepository,
     this.repair,
   });
@@ -58,6 +62,7 @@ class ReaderLaunchContext {
   final int normalizedCharacterLength;
   final NormalizedDocumentLoader documentLoader;
   final ReadingProgressRepository progressRepository;
+  final ReaderBookmarkRepository? bookmarkRepository;
   final ReaderPreferencesRepository? preferencesRepository;
 
   /// 修复回调（由书架页注入）：返回 null 表示成功，否则返回错误信息。
@@ -128,6 +133,7 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
   late ReaderMetricsSignature _metricsSignature =
       ReaderMetricsSignature.fromPreferences(_preferences);
   StreamSubscription<ReaderPreferences>? _preferencesSubscription;
+  List<ReaderBookmark> _bookmarks = const [];
   int _metricsGeneration = 0;
   ReaderLocator? _metricsAnchor;
   bool _metricsWritesFrozen = false;
@@ -229,7 +235,6 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
     _controller.visibleRangeProvider = _measureVisibleRange;
     _controller.blockLayoutResolver = (index) => _layoutByIndex(index);
     _controller.addListener(_onControllerChanged);
-
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) unawaited(_initializePreferencesAndStart());
     });
@@ -1237,6 +1242,8 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
             visible: _chromeVisible,
             title: widget.launch.collection.title,
             mode: _mode,
+            currentChapterTitle: _currentChapterTitle,
+            progressPercent: _progressPercent,
             onBack: () => Navigator.of(context).pop(),
             onToc: () {
               _showChrome();
@@ -1257,6 +1264,7 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
               _showChrome();
               showReaderMorePreview(context);
             },
+            onBookmarks: _openBookmarks,
             onModeSelected: (mode) {
               _showChrome();
               _selectMode(mode);
@@ -1378,6 +1386,148 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
     final bottom = top + _scroll.position.viewportDimension;
     final range = _visibleRangeForScroll(top, bottom);
     return range.startCharacterOffset;
+  }
+
+  ReaderLocator? get _activeConfirmedLocator => _mode == ReaderMode.paged
+      ? _pagedController?.confirmedLocator
+      : _controller.confirmedLocator;
+
+  LibraryTocEntry? _currentChapterForOffset(int offset) =>
+      CurrentChapterResolver.resolve(offset, widget.launch.toc);
+
+  String? get _currentChapterTitle {
+    final offset = _activeConfirmedLocator?.absoluteCharacterOffset;
+    if (offset == null) return null;
+    return _currentChapterForOffset(offset)?.displayTitle ?? '全文';
+  }
+
+  double? get _progressPercent {
+    final offset = _activeConfirmedLocator?.absoluteCharacterOffset;
+    final length = widget.launch.normalizedCharacterLength;
+    if (offset == null || length <= 0) return null;
+    return (offset / length).clamp(0.0, 1.0).toDouble();
+  }
+
+  ReaderBookmarkViewData _bookmarkViewData(ReaderBookmark bookmark) {
+    final document = _controller.document;
+    final status = deriveReaderBookmarkStatus(
+      bookmark,
+      currentNormalizedHash: document?.normalizedHash,
+      normalizedCharacterLength: document?.text.length,
+    );
+    final chapter = status.isOrphan
+        ? null
+        : _currentChapterForOffset(bookmark.absoluteCharacterOffset);
+    return ReaderBookmarkViewData(
+      bookmark: bookmark,
+      chapterTitle: chapter?.displayTitle ?? '全文',
+      snippet: status.isOrphan
+          ? ''
+          : _bookmarkSnippet(bookmark.absoluteCharacterOffset),
+      status: status,
+    );
+  }
+
+  String _bookmarkSnippet(int offset) {
+    final text = _controller.document?.text;
+    if (text == null || offset < 0 || offset > text.length) return '';
+    final start = (offset - 32).clamp(0, text.length).toInt();
+    final end = (offset + 96).clamp(0, text.length).toInt();
+    return text.substring(start, end).replaceAll(RegExp(r'\s+'), ' ').trim();
+  }
+
+  void _openBookmarks() {
+    _showChrome();
+    unawaited(_loadAndOpenBookmarks());
+  }
+
+  Future<void> _loadAndOpenBookmarks() async {
+    final repository = widget.launch.bookmarkRepository;
+    if (repository != null) {
+      final bookmarks = await repository.loadForCollection(
+        widget.launch.collection.id,
+      );
+      if (!mounted) return;
+      setState(() => _bookmarks = bookmarks);
+    }
+    if (!mounted) return;
+    showReaderBookmarks(
+      context,
+      collectionTitle: widget.launch.collection.title,
+      bookmarks: _bookmarks.map(_bookmarkViewData).toList(growable: false),
+      onCreate: _createBookmark,
+      onJump: _jumpToBookmark,
+      onDelete: _deleteBookmark,
+    );
+  }
+
+  List<ReaderBookmarkViewData> _currentBookmarkViews([
+    List<ReaderBookmark>? bookmarks,
+  ]) =>
+      (bookmarks ?? _bookmarks).map(_bookmarkViewData).toList(growable: false);
+
+  Future<List<ReaderBookmarkViewData>> _createBookmark() async {
+    final repository = widget.launch.bookmarkRepository;
+    final locator = _activeConfirmedLocator;
+    final document = _controller.document;
+    if (repository == null || locator == null || document == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('当前阅读位置尚未确认')));
+      }
+      return _currentBookmarkViews();
+    }
+    await repository.create(
+      collectionId: locator.collectionId,
+      absoluteCharacterOffset: locator.absoluteCharacterOffset,
+      normalizedHashAtCreation: document.normalizedHash,
+      bookTitleSnapshot: widget.launch.collection.title,
+    );
+    final latest = await repository.loadForCollection(locator.collectionId);
+    if (mounted) setState(() => _bookmarks = latest);
+    if (!mounted) return _currentBookmarkViews(latest);
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('书签已保存')));
+    return _currentBookmarkViews(latest);
+  }
+
+  Future<List<ReaderBookmarkViewData>> _deleteBookmark(
+    ReaderBookmark bookmark,
+  ) async {
+    final repository = widget.launch.bookmarkRepository;
+    if (repository == null) return _currentBookmarkViews();
+    await repository.delete(bookmark.id);
+    final latest = await repository.loadForCollection(
+      widget.launch.collection.id,
+    );
+    if (mounted) setState(() => _bookmarks = latest);
+    return _currentBookmarkViews(latest);
+  }
+
+  Future<void> _jumpToBookmark(ReaderBookmark bookmark) async {
+    final document = _controller.document;
+    final status = deriveReaderBookmarkStatus(
+      bookmark,
+      currentNormalizedHash: document?.normalizedHash,
+      normalizedCharacterLength: document?.text.length,
+    );
+    if (status.isOrphan) return;
+    if (_mode == ReaderMode.paged) {
+      final paged = _pagedController;
+      if (paged == null) return;
+      final page = paged.jumpToOffset(bookmark.absoluteCharacterOffset);
+      assert(page.contains(bookmark.absoluteCharacterOffset));
+      if (mounted) setState(() {});
+      return;
+    }
+    _tocJumpPending = true;
+    _alignRetries = 0;
+    await _controller.jumpToOffset(bookmark.absoluteCharacterOffset);
+    if (!mounted) return;
+    setState(() {});
+    _scheduleJumpToPendingTarget();
   }
 
   void _openToc() {

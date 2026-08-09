@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:xaocen_reader/data/database/app_database.dart';
 import 'package:xaocen_reader/data/repositories/library_file_manager.dart';
 import 'package:xaocen_reader/data/repositories/reading_progress_repository.dart';
+import 'package:xaocen_reader/data/repositories/reader_bookmark_repository.dart';
 import 'package:xaocen_reader/data/repositories/reader_preferences_repository.dart';
 import 'package:xaocen_reader/domain/library/library_entities.dart';
 import 'package:xaocen_reader/domain/local_txt/text_encoding.dart';
@@ -26,6 +27,7 @@ void main() {
   late NormalizedDocumentLoader loader;
   late AppDatabase db;
   late ReadingProgressRepository progressRepo;
+  late ReaderBookmarkRepository bookmarkRepo;
 
   const bookText = '第一章 开端\n第一行正文内容。\n第二章 发展\n第二行正文内容。\n第三章 结局\n第三行正文内容。';
 
@@ -35,6 +37,7 @@ void main() {
     loader = NormalizedDocumentLoader(fileManager: fileManager);
     db = AppDatabase.forTesting();
     progressRepo = ReadingProgressRepository(db: db);
+    bookmarkRepo = ReaderBookmarkRepository(db: db);
     // seed collection（reading_progress 外键依赖）
     final now = DateTime.now();
     await db
@@ -82,6 +85,7 @@ void main() {
 
   ReaderLaunchContext launchContext({
     ReaderPreferencesRepository? preferencesRepository,
+    ReaderBookmarkRepository? bookmarkRepository,
   }) {
     return ReaderLaunchContext(
       collection: LibraryCollection(
@@ -136,6 +140,7 @@ void main() {
       normalizedCharacterLength: bookText.length,
       documentLoader: loader,
       progressRepository: progressRepo,
+      bookmarkRepository: bookmarkRepository,
       preferencesRepository: preferencesRepository,
     );
   }
@@ -145,12 +150,16 @@ void main() {
     Stream<ReaderPreferences>? preferencesOverride,
     ValueChanged<ReaderMetricsRelayoutReport>? onMetricsRelayout,
     ReaderPreferencesRepository? preferencesRepository,
+    ReaderBookmarkRepository? bookmarkRepository,
     ReaderProgressState? initialStateOverride,
   }) async {
     await tester.pumpWidget(
       MaterialApp(
         home: ReaderPage(
-          launch: launchContext(preferencesRepository: preferencesRepository),
+          launch: launchContext(
+            preferencesRepository: preferencesRepository,
+            bookmarkRepository: bookmarkRepository,
+          ),
           preferencesOverride: preferencesOverride,
           initialStateOverride: initialStateOverride,
           onMetricsRelayout: onMetricsRelayout,
@@ -575,6 +584,64 @@ void main() {
       await tester.pump(const Duration(milliseconds: 200));
       final p = await progressRepo.getProgress('local-txt:abc');
       expect(p, isNotNull, reason: '目录跳转确认后保存');
+    });
+
+    testWidgets('M5.2b progress and chapter display use confirmed Locator', (
+      tester,
+    ) async {
+      await pumpReader(tester);
+      expect(find.textContaining('0%'), findsOneWidget);
+      expect(await progressRepo.getProgress('local-txt:abc'), isNull);
+    });
+
+    testWidgets('M5.2b bookmark create/list/delete does not write progress', (
+      tester,
+    ) async {
+      await pumpReader(
+        tester,
+        bookmarkRepository: bookmarkRepo,
+        initialStateOverride: const ReaderProgressState(
+          collectionId: 'local-txt:abc',
+          absoluteCharacterOffset: 12,
+          readingMode: ReadingMode.vertical,
+        ),
+      );
+      await tester.tap(find.byKey(readerBookmarksActionKey));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(readerBookmarkCreateKey));
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 300));
+      final bookmarks = await bookmarkRepo.loadForCollection('local-txt:abc');
+      expect(bookmarks, hasLength(1));
+      expect(bookmarks.single.absoluteCharacterOffset, 12);
+      expect(await progressRepo.getProgress('local-txt:abc'), isNull);
+
+      expect(find.byKey(readerBookmarkListKey), findsOneWidget);
+      expect(find.textContaining('Offset 12'), findsOneWidget);
+      await tester.tap(find.byIcon(Icons.delete_outline));
+      await tester.pumpAndSettle();
+      expect(await bookmarkRepo.loadForCollection('local-txt:abc'), isEmpty);
+      expect(await progressRepo.getProgress('local-txt:abc'), isNull);
+    });
+
+    testWidgets('M5.2b vertical bookmark jump confirms exact offset', (
+      tester,
+    ) async {
+      await bookmarkRepo.create(
+        collectionId: 'local-txt:abc',
+        absoluteCharacterOffset: 24,
+        normalizedHashAtCreation: '',
+        bookTitleSnapshot: '娴嬭瘯涔︾睄',
+      );
+      await pumpReader(tester, bookmarkRepository: bookmarkRepo);
+      await tester.tap(find.byKey(readerBookmarksActionKey));
+      await tester.pumpAndSettle();
+      await tester.tap(find.textContaining('Offset 24'));
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 200));
+      final progress = await progressRepo.getProgress('local-txt:abc');
+      expect(progress, isNotNull);
+      expect(progress!.absoluteCharacterOffset, 24);
     });
 
     testWidgets('dispose 无异常', (tester) async {

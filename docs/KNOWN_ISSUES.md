@@ -1,6 +1,6 @@
 # KNOWN_ISSUES.md — XAOCEN Reader v4 已知问题清单
 
-> 状态截至 M5.1e COMPLETE（`feat/m4-horizontal-reader`）。Android 真机统一延后到 M5.1 收尾。
+> 状态截至 M5.2b COMPLETE（`feat/m4-horizontal-reader`）。Android 真机按后续统一复核安排。
 > 已解决的问题不在此列为 open；「Resolved but regression-sensitive」列出需要持续盯防的已修复项。
 
 ---
@@ -10,9 +10,8 @@
 ## M5.2a status (2026-08-09)
 
 - No new Reader P1/P2 issue was found in the M5.2a persistence foundation.
-- Bookmark UI, recent-reading UI, in-book search, and FTS5 remain intentionally
-  deferred to later M5.2 stages; schema/domain support alone is not a user-facing
-  feature.
+- Recent-reading UI, in-book search, and FTS5 remain intentionally deferred to
+  later M5.2 stages; bookmark UI is now delivered in M5.2b.
 - Reading-history snapshots are display-only. They must never be used to restore
   a deleted book or replace `reading_progress` as the Locator source.
 
@@ -53,13 +52,13 @@
 | 项 | 说明 |
 |---|---|
 | 搜索 | FTS5 未建 |
-| 书签 | 未实现 |
-| Reader V3 壳层/设置 UI | Metrics 与 theme paint 已完成；完整 V3 Reader UI 尚未做 |
+| 书内书签 | M5.2b 已实现；跨书历史入口仍未实现 |
+| Reader V3 壳层/设置 UI | M5.1d/e 已实现；更完整的后续信息架构仍未做 |
 | M5.1 Android 最终真机验证 | M5.1c/d/e 开发阶段仅要求 Debug build；真人/真实语料统一在 M5.1 收尾执行 |
 | TTS | 未引入 flutter_tts |
 | RSS / 网络书源 | webfeed/JSON Feed 调研过但未引入；RSS 属 v2.0 范围 |
 | EPUB / PDF | 未实现 |
-| 完整 V3 UI | 当前为最小功能 UI；统一 UI 未做 |
+| 更完整的信息架构 UI | 当前 Reader 已有 V3 壳层、进度和书签；最近阅读/历史/搜索入口未做 |
 | 云同步 / 账号 | 未做 |
 | 多设备同步 | 未做 |
 
@@ -90,6 +89,13 @@
 4. **`tool/inspect_managed_txt.dart`** 依赖 `sqlite3` 直接依赖（pubspec 显式加入，原为传递依赖）—— 属工具链用途，勿移除。
 5. **父目录 `m1_cache/`、`m1_cache_notoc/`** 是 M1 阶段 inspect 工具的缓存产物（管理目录，不在仓库内），非外部 TXT 旁缓存。
 6. **`docs/README.md` 的权威文档索引**未列 M1–M3.4 报告（本任务新增 6 份长期文档后应同步更新索引——见最终交付说明）。
+## M5.2b status update (2026-08-09)
+
+- No new Reader P1/P2 issue was found. Progress/chapter display and current-book
+  bookmark CRUD/navigation are implemented with exact Locator contracts.
+- Bookmark orphan status is explicit and dynamic; orphan navigation is disabled,
+  while deletion remains available. Four real TXT files reported logical error 0.
+
 ## M5.1e.1 status update (2026-08-09)
 
 - The P1 “saved panel values but default body layout after reopen” is resolved by

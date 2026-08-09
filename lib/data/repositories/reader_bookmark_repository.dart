@@ -9,16 +9,21 @@ class ReaderBookmarkRepository {
 
   final AppDatabase _db;
 
-  Future<List<domain.ReaderBookmark>> loadForCollection(String collectionId) async {
-    final rows = await (_db.select(_db.readerBookmarks)
-          ..where((t) => t.collectionId.equals(collectionId))
-          ..orderBy([(t) => OrderingTerm.desc(t.updatedAt)])).get();
+  Future<List<domain.ReaderBookmark>> loadForCollection(
+    String collectionId,
+  ) async {
+    final rows =
+        await (_db.select(_db.readerBookmarks)
+              ..where((t) => t.collectionId.equals(collectionId))
+              ..orderBy([(t) => OrderingTerm.desc(t.updatedAt)]))
+            .get();
     return rows.map(_map).toList(growable: false);
   }
 
   Future<List<domain.ReaderBookmark>> loadAll() async {
-    final rows = await (_db.select(_db.readerBookmarks)
-          ..orderBy([(t) => OrderingTerm.desc(t.updatedAt)])).get();
+    final rows = await (_db.select(
+      _db.readerBookmarks,
+    )..orderBy([(t) => OrderingTerm.desc(t.updatedAt)])).get();
     return rows.map(_map).toList(growable: false);
   }
 
@@ -38,23 +43,38 @@ class ReaderBookmarkRepository {
     DateTime? now,
   }) async {
     final timestamp = now ?? DateTime.now();
-    final id = 'bookmark-${timestamp.microsecondsSinceEpoch}';
-    await _db.into(_db.readerBookmarks).insert(
-      ReaderBookmarksCompanion.insert(
-        id: id,
-        collectionId: Value(collectionId),
-        absoluteCharacterOffset: absoluteCharacterOffset,
-        normalizedHashAtCreation: Value(normalizedHashAtCreation),
-        bookTitleSnapshot: bookTitleSnapshot,
-        note: Value(note),
-        createdAt: timestamp,
-        updatedAt: timestamp,
-      ),
-    );
+    final duplicate =
+        await (_db.select(_db.readerBookmarks)
+              ..where(
+                (t) =>
+                    t.collectionId.equals(collectionId) &
+                    t.absoluteCharacterOffset.equals(absoluteCharacterOffset),
+              )
+              ..limit(1))
+            .getSingleOrNull();
+    if (duplicate != null) return _map(duplicate);
+    // Include the book and locator so two books created in the same clock
+    // tick cannot collide on the global bookmark primary key.
+    final id =
+        'bookmark-${timestamp.microsecondsSinceEpoch}-$collectionId-$absoluteCharacterOffset';
+    await _db
+        .into(_db.readerBookmarks)
+        .insert(
+          ReaderBookmarksCompanion.insert(
+            id: id,
+            collectionId: Value(collectionId),
+            absoluteCharacterOffset: absoluteCharacterOffset,
+            normalizedHashAtCreation: Value(normalizedHashAtCreation),
+            bookTitleSnapshot: bookTitleSnapshot,
+            note: Value(note),
+            createdAt: timestamp,
+            updatedAt: timestamp,
+          ),
+        );
     return _map(
-      await (_db.select(_db.readerBookmarks)
-            ..where((t) => t.id.equals(id)))
-          .getSingle(),
+      await (_db.select(
+        _db.readerBookmarks,
+      )..where((t) => t.id.equals(id))).getSingle(),
     );
   }
 
@@ -63,9 +83,9 @@ class ReaderBookmarkRepository {
   }
 
   Future<domain.ReaderBookmark?> get(String id) async {
-    final row = await (_db.select(_db.readerBookmarks)
-          ..where((t) => t.id.equals(id)))
-        .getSingleOrNull();
+    final row = await (_db.select(
+      _db.readerBookmarks,
+    )..where((t) => t.id.equals(id))).getSingleOrNull();
     return row == null ? null : _map(row);
   }
 

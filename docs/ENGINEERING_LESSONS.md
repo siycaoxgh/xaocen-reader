@@ -756,3 +756,12 @@ in-memory database.
 count are calculated from `reading_sessions`; duplicating those totals in history
 would create a second mutable truth that can drift during pause/resume or crash
 recovery.
+
+### M5.2b Reader panels must not leak long-lived Drift watchers
+
+A widget-level Drift `watch()` subscription kept the test isolate alive during
+Reader teardown even after the visible panel had closed. For this short-lived
+current-book panel, load the scoped bookmark list when opening it and explicitly
+refresh after create/delete. The UI remains current without adding a lifecycle
+watcher to the Reader route; any future always-live list must await/verify
+subscription cancellation as part of route disposal.

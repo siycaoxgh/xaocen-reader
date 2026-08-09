@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../domain/reader/reader_bookmark.dart';
 import '../domain/reader/reader_preferences.dart';
 import 'reader_mode.dart';
 
@@ -9,6 +10,9 @@ const readerBottomChromeKey = Key('reader-bottom-chrome');
 const readerTocActionKey = Key('reader-toc-action');
 const readerAppearanceActionKey = Key('reader-appearance-action');
 const readerMoreActionKey = Key('reader-more-action');
+const readerBookmarksActionKey = Key('reader-bookmarks-action');
+const readerBookmarkCreateKey = Key('reader-bookmark-create');
+const readerBookmarkListKey = Key('reader-bookmark-list');
 const readerModeActionKey = Key('reader-mode-action');
 const readerSettingsSheetKey = Key('reader-settings-sheet');
 const readerFontSizeSliderKey = Key('reader-font-size-slider');
@@ -36,7 +40,10 @@ class ReaderChrome extends StatelessWidget {
     required this.onToc,
     required this.onAppearance,
     required this.onMore,
+    required this.onBookmarks,
     required this.onModeSelected,
+    this.currentChapterTitle,
+    this.progressPercent,
   });
 
   final bool visible;
@@ -46,7 +53,10 @@ class ReaderChrome extends StatelessWidget {
   final VoidCallback onToc;
   final VoidCallback onAppearance;
   final VoidCallback onMore;
+  final VoidCallback onBookmarks;
   final ValueChanged<ReaderMode> onModeSelected;
+  final String? currentChapterTitle;
+  final double? progressPercent;
 
   @override
   Widget build(BuildContext context) {
@@ -97,6 +107,17 @@ class ReaderChrome extends StatelessWidget {
                               style: Theme.of(context).textTheme.labelSmall
                                   ?.copyWith(color: colorScheme.primary),
                             ),
+                            if (currentChapterTitle != null ||
+                                progressPercent != null)
+                              Text(
+                                '${currentChapterTitle ?? '全文'} · ${progressPercent == null ? '--' : '${(progressPercent! * 100).round()}%'}',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context).textTheme.labelSmall
+                                    ?.copyWith(
+                                      color: colorScheme.onSurfaceVariant,
+                                    ),
+                              ),
                           ],
                         ),
                       ),
@@ -162,6 +183,12 @@ class ReaderChrome extends StatelessWidget {
                                 ? ReaderMode.vertical
                                 : ReaderMode.paged,
                           ),
+                        ),
+                        _ChromeAction(
+                          key: readerBookmarksActionKey,
+                          icon: Icons.bookmark_outline,
+                          label: '书签',
+                          onPressed: onBookmarks,
                         ),
                         _ChromeAction(
                           key: readerAppearanceActionKey,
@@ -548,6 +575,152 @@ class _PreferenceSlider extends StatelessWidget {
     );
   }
 }
+
+@immutable
+class ReaderBookmarkViewData {
+  const ReaderBookmarkViewData({
+    required this.bookmark,
+    required this.chapterTitle,
+    required this.snippet,
+    required this.status,
+  });
+
+  final ReaderBookmark bookmark;
+  final String chapterTitle;
+  final String snippet;
+  final ReaderBookmarkStatus status;
+}
+
+Future<void> showReaderBookmarks(
+  BuildContext context, {
+  required String collectionTitle,
+  required List<ReaderBookmarkViewData> bookmarks,
+  required Future<List<ReaderBookmarkViewData>> Function() onCreate,
+  required Future<void> Function(ReaderBookmark) onJump,
+  required Future<List<ReaderBookmarkViewData>> Function(ReaderBookmark)
+  onDelete,
+}) {
+  final isDesktop = MediaQuery.sizeOf(context).width >= 720;
+  var visibleBookmarks = bookmarks;
+  return showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: true,
+    constraints: BoxConstraints(maxWidth: isDesktop ? 640 : double.infinity),
+    builder: (sheetContext) => StatefulBuilder(
+      builder: (sheetContext, setSheetState) => SafeArea(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.sizeOf(sheetContext).height * 0.78,
+          ),
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 4, 12, 8),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        '书签 · $collectionTitle',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(sheetContext).textTheme.titleMedium,
+                      ),
+                    ),
+                    FilledButton.tonalIcon(
+                      key: readerBookmarkCreateKey,
+                      onPressed: () async {
+                        final latest = await onCreate();
+                        setSheetState(() => visibleBookmarks = latest);
+                      },
+                      icon: const Icon(Icons.add, size: 18),
+                      label: const Text('添加'),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              Expanded(
+                child: visibleBookmarks.isEmpty
+                    ? const Center(child: Text('暂无书签'))
+                    : ListView.separated(
+                        key: readerBookmarkListKey,
+                        padding: const EdgeInsets.fromLTRB(12, 8, 12, 20),
+                        itemCount: visibleBookmarks.length,
+                        separatorBuilder: (_, _) => const Divider(height: 1),
+                        itemBuilder: (context, index) {
+                          final item = visibleBookmarks[index];
+                          final orphan = item.status.isOrphan;
+                          return ListTile(
+                            key: Key('reader-bookmark-${item.bookmark.id}'),
+                            leading: Icon(
+                              orphan
+                                  ? Icons.bookmark_remove_outlined
+                                  : Icons.bookmark,
+                              color: orphan
+                                  ? Theme.of(context).colorScheme.error
+                                  : Theme.of(context).colorScheme.primary,
+                            ),
+                            title: Text(
+                              orphan
+                                  ? '不可定位 · ${item.chapterTitle}'
+                                  : item.chapterTitle,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            subtitle: Text(
+                              [
+                                if (item.snippet.isNotEmpty) item.snippet,
+                                if (item.bookmark.note?.isNotEmpty == true)
+                                  '备注：${item.bookmark.note}',
+                                'Offset ${item.bookmark.absoluteCharacterOffset} · ${_formatBookmarkTime(item.bookmark.createdAt)}',
+                                if (orphan)
+                                  '不可定位：${_orphanReasonLabel(item.status.reason!)}',
+                              ].join('\n'),
+                              maxLines: 4,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            isThreeLine: true,
+                            onTap: orphan
+                                ? null
+                                : () {
+                                    Navigator.of(sheetContext).pop();
+                                    Future<void>.microtask(
+                                      () => onJump(item.bookmark),
+                                    );
+                                  },
+                            trailing: IconButton(
+                              tooltip: '删除书签',
+                              icon: const Icon(Icons.delete_outline),
+                              onPressed: () async {
+                                final latest = await onDelete(item.bookmark);
+                                setSheetState(() => visibleBookmarks = latest);
+                              },
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+String _formatBookmarkTime(DateTime value) {
+  final local = value.toLocal();
+  return '${local.year}-${local.month.toString().padLeft(2, '0')}-${local.day.toString().padLeft(2, '0')} '
+      '${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
+}
+
+String _orphanReasonLabel(ReaderBookmarkOrphanReason reason) =>
+    switch (reason) {
+      ReaderBookmarkOrphanReason.collectionRemoved => '书籍已移出书架',
+      ReaderBookmarkOrphanReason.normalizedHashMismatch => '正文版本已变化',
+      ReaderBookmarkOrphanReason.offsetOutOfBounds => '位置超出正文范围',
+    };
 
 Future<void> showReaderMorePreview(BuildContext context) {
   return showModalBottomSheet<void>(

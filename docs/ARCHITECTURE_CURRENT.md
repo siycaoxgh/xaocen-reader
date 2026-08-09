@@ -1,6 +1,6 @@
 # ARCHITECTURE_CURRENT.md — XAOCEN Reader v4 当前架构与合同
 
-> 只描述当前代码与合同（`feat/m4-horizontal-reader`，M5.1e 完成点）。
+> 只描述当前代码与合同（`feat/m4-horizontal-reader`，M5.2b 完成点）。
 > 不记录历史故事（见 PROJECT_HISTORY.md）。
 > 代码位置均以本仓库实际文件为准。
 
@@ -40,7 +40,7 @@ Key components by layer (all paths under `lib/`):
 |---|---|
 | domain | `domain/local_txt/` (TextEncoding, TocEntry, TxtIndex, PipelineProgress, LargeFilePolicy), `domain/reader/` (ReaderLocator, ReaderBlock, ReaderVisibleRange, ReaderPreferences), `domain/library/` (entities, import models, NormalizedArtifact, TocIndexLogic) |
 | sources | `sources/local_txt/` (gb18030 decoder/index loader/data, encoding detector, normalizer, toc scanner, import service/request/result, index cache, content identity, cancellation) |
-| data | `data/database/` (tables, app_database + generated), `data/repositories/` (local_library_repository, library_file_manager, managed_collection_health, collection_repair_service, reading_progress_repository, reader_preferences_repository, encoding_index_provider) |
+| data | `data/database/` (tables, app_database + generated), `data/repositories/` (local_library_repository, library_file_manager, managed_collection_health, collection_repair_service, reading_progress_repository, reader_preferences_repository, reader_bookmark_repository, reading_history_repository, reading_session_repository, encoding_index_provider) |
 | reader | `reader/` (normalized_document_loader, reader_controller, reader_page, reader_chrome, reader_text_block, reader_appearance) |
 | app/design | `app/` (bootstrap, app, router, constants, library_page, providers, placeholder_page), `design/` (tokens, theme) |
 
@@ -70,6 +70,25 @@ Layering rules (enforced by structure, not by tooling):
 - Reset deletes only Reader-owned AppSettings keys and immediately reapplies the
   strong default snapshot; it does not alter per-book mode or Locator.
 
+### Reader progress and bookmarks (M5.2b)
+
+- Reader progress is display-only: the active confirmed `ReaderLocator` divided
+  by normalized UTF-16 document length produces the percentage. It is never a
+  persisted progress field.
+- `CurrentChapterResolver` is the sole UI chapter resolver. It selects the last
+  real `chapter` entry with `startCharacterOffset <= Locator`; volumes and
+  chapter-less TXT do not become chapters.
+- `ReaderBookmarkRepository` scopes rows by `collectionId`. A bookmark stores
+  the absolute UTF-16 offset, normalized hash-at-creation, title snapshot,
+  optional note, and timestamps. Duplicate collection+offset creation is
+  idempotent.
+- Orphan state is derived at display/navigation time from collection linkage,
+  normalized-hash mismatch, or offset bounds. It is not persisted; orphan rows
+  remain deletable and cannot be navigated.
+- Bookmark jumps call the existing Reader Locator restore contract: vertical
+  waits for visible-range confirmation, while paged resolves the containing
+  page. Panels and progress display never write `reading_progress`.
+
 ---
 
 ## 2. Four-layer content model
@@ -85,9 +104,10 @@ ContentSource → ContentCollection → ContentItem → ContentDocument
 | ContentItem | chapter (volume is NOT an item) or `whole` | `local-txt:<hash>:chapter:<startCharacterOffset>` / `...:whole` |
 | ContentDocument | a range of normalized.txt (all items of a book reference the SAME normalized.txt) | `local-txt:<hash>:document:<startCharacterOffset>` |
 
-Drift tables (schemaVersion 4): `content_sources`, `content_collections`,
+Drift tables (schemaVersion 6): `content_sources`, `content_collections`,
 `content_items`, `content_documents`, `toc_entries`, `import_records`,
-`reading_progress`, `app_settings`. Foreign keys ON; body text is NEVER stored in SQLite
+`reading_progress`, `app_settings`, `reader_bookmarks`, `reading_history`,
+`reading_sessions`. Foreign keys ON; body text is NEVER stored in SQLite
 (only paths + offsets). Collection delete cascades items/documents/toc/
 progress and cleans the managed directory; external TXT is never deleted.
 

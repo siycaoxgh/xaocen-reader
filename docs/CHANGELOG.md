@@ -14,6 +14,20 @@ Legend for validation columns:
 
 ## Unreleased
 
+### M5.2b — Reader progress and current-book bookmarks (2026-08-09)
+- Added derived Reader progress display: current chapter plus whole-book
+  percentage from the confirmed UTF-16 Locator and normalized length.
+- Added current-book bookmark create/list/delete/jump. Bookmark navigation uses
+  exact Locator restore in vertical mode and page containment in paged mode.
+- Bookmark chapter/context text is derived dynamically. Orphan rows are clearly
+  non-navigable but remain deletable; duplicate collection+offset creation is
+  idempotent.
+- Panel operations do not write reading progress, ReaderPreferences, history, or
+  sessions. Schema remains 6.
+- Validation: 373/373 unit/contract/widget tests, 9/9 Windows integration files
+  (12 scenarios), all 4 real TXT logical error 0, Windows Release PASS, Android
+  Debug PASS.
+
 ### M5.2a — history, bookmarks, and session persistence (2026-08-09)
 - Added schema 6 with `reader_bookmarks`, `reading_history`, and
   `reading_sessions`.

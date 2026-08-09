@@ -487,3 +487,15 @@ source for aggregate duration and session count. CurrentChapterResolver derives 
 chapter only from the last TOC chapter start at or before the confirmed Locator;
 volumes and no-chapter TXT return no chapter. Schema 5→6 migration and actual
 SQLite foreign-key actions were validated.
+
+## M5.2b — Reader progress and current-book bookmarks (2026-08-09)
+
+M5.2b connected the persistence foundation to the Reader without changing schema
+6. Progress is derived from the active confirmed UTF-16 Locator and normalized
+document length; chapter display delegates to CurrentChapterResolver. The Reader
+toolbar now opens a responsive current-book bookmark panel with create, dynamic
+chapter/context display, delete, orphan-safe handling, and exact vertical/paged
+Locator jumps. Duplicate collection+offset creation is idempotent and panel
+operations do not write reading_progress. Full 373-test automation, nine
+Windows integration files, all four real TXT logical-error-zero checks, Windows
+Release, and Android Debug passed.
