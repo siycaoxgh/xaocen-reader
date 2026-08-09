@@ -27,6 +27,7 @@ import '../domain/reader/reader_locator.dart';
 import '../domain/reader/paged_text_range.dart';
 import '../domain/reader/reader_block.dart';
 import '../domain/reader/reader_preferences.dart';
+import '../domain/reader/reader_search.dart';
 import '../domain/reader/reader_visible_range.dart';
 import 'normalized_document_loader.dart';
 import 'paged_reader_controller.dart';
@@ -36,6 +37,7 @@ import 'reader_chrome.dart';
 import 'reader_controller.dart';
 import 'reader_mode.dart';
 import 'reader_metrics_signature.dart';
+import 'reader_search.dart';
 import '../domain/reader/reader_progress_state.dart';
 import 'reader_text_block.dart';
 
@@ -134,6 +136,7 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
       ReaderMetricsSignature.fromPreferences(_preferences);
   StreamSubscription<ReaderPreferences>? _preferencesSubscription;
   List<ReaderBookmark> _bookmarks = const [];
+  late final ReaderSearchService _searchService;
   int _metricsGeneration = 0;
   ReaderLocator? _metricsAnchor;
   bool _metricsWritesFrozen = false;
@@ -208,6 +211,7 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
+    _searchService = ReaderSearchService();
     WidgetsBinding.instance.addObserver(this);
     _controller = ReaderController(
       collectionId: widget.launch.collection.id,
@@ -302,6 +306,7 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
   @override
   void dispose() {
     _modeGeneration++;
+    _searchService.cancel();
     _modeRestoreAnchor = null;
     _modeRestoreGeneration = null;
     _metricsGeneration++;
@@ -1265,6 +1270,7 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
               showReaderMorePreview(context);
             },
             onBookmarks: _openBookmarks,
+            onSearch: _openSearch,
             onModeSelected: (mode) {
               _showChrome();
               _selectMode(mode);
@@ -1434,6 +1440,60 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
     final start = (offset - 32).clamp(0, text.length).toInt();
     final end = (offset + 96).clamp(0, text.length).toInt();
     return text.substring(start, end).replaceAll(RegExp(r'\s+'), ' ').trim();
+  }
+
+  void _openSearch() {
+    _showChrome();
+    unawaited(
+      showReaderSearch(
+        context,
+        onQueryChanged: _searchCurrentBook,
+        onResultTap: _jumpToSearchResult,
+      ).whenComplete(_searchService.cancel),
+    );
+  }
+
+  Future<List<ReaderSearchResult>> _searchCurrentBook(String query) async {
+    final document = _controller.document;
+    if (document == null || query.isEmpty) {
+      _searchService.cancel();
+      return const [];
+    }
+    try {
+      final results = await _searchService.search(
+        text: document.text,
+        query: query,
+        toc: widget.launch.toc,
+      );
+      return results;
+    } on ReaderSearchCancelled {
+      return const [];
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  Future<void> _jumpToSearchResult(ReaderSearchResult result) async {
+    final document = _controller.document;
+    if (document == null ||
+        result.startOffset < 0 ||
+        result.startOffset > document.text.length) {
+      return;
+    }
+    if (_mode == ReaderMode.paged) {
+      final paged = _pagedController;
+      if (paged == null) return;
+      final page = paged.jumpToOffset(result.startOffset);
+      assert(page.contains(result.startOffset));
+      if (mounted) setState(() {});
+      return;
+    }
+    _tocJumpPending = true;
+    _alignRetries = 0;
+    await _controller.jumpToOffset(result.startOffset);
+    if (!mounted) return;
+    setState(() {});
+    _scheduleJumpToPendingTarget();
   }
 
   void _openBookmarks() {

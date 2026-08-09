@@ -1,6 +1,6 @@
 # KNOWN_ISSUES.md — XAOCEN Reader v4 已知问题清单
 
-> 状态截至 M5.2b COMPLETE（`feat/m4-horizontal-reader`）。Android 真机按后续统一复核安排。
+> 状态截至 M5.2c COMPLETE（`feat/m4-horizontal-reader`）。Android 真机按后续统一复核安排。
 > 已解决的问题不在此列为 open；「Resolved but regression-sensitive」列出需要持续盯防的已修复项。
 
 ---
@@ -10,8 +10,9 @@
 ## M5.2a status (2026-08-09)
 
 - No new Reader P1/P2 issue was found in the M5.2a persistence foundation.
-- Recent-reading UI, in-book search, and FTS5 remain intentionally deferred to
-  later M5.2 stages; bookmark UI is now delivered in M5.2b.
+- Recent-reading UI, reading-history UI, cross-book search, search history, and
+  FTS5 remain intentionally deferred to later M5.2 stages; current-book search
+  is delivered in M5.2c.
 - Reading-history snapshots are display-only. They must never be used to restore
   a deleted book or replace `reading_progress` as the Locator source.
 
@@ -95,6 +96,13 @@
   bookmark CRUD/navigation are implemented with exact Locator contracts.
 - Bookmark orphan status is explicit and dynamic; orphan navigation is disabled,
   while deletion remains available. Four real TXT files reported logical error 0.
+
+## M5.2c status update (2026-08-09)
+
+- No new Reader P1/P2 issue was found. Current-book normalized.txt search uses
+  transient UTF-16 results, cancellable worker isolates, and generation checks.
+- Cross-book search, FTS5 indexing, search history, recent-reading UI, and
+  reading-history UI remain intentionally deferred.
 
 ## M5.1e.1 status update (2026-08-09)
 

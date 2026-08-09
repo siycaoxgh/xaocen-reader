@@ -14,6 +14,18 @@ Legend for validation columns:
 
 ## Unreleased
 
+### M5.2c — current-book search and exact result jumps (2026-08-09)
+- Added normalized.txt-only current-book substring search with a debounced
+  worker isolate, cancellation, generation protection, and a 100-result cap.
+- Search results use UTF-16 code-unit offsets, safe context bounds, dynamic
+  `CurrentChapterResolver` chapter titles, and highlighted snippets.
+- Added responsive Android/Windows search panels. Result taps restore the exact
+  hit Locator in vertical or paged mode; panel/query operations do not write
+  reading progress. Schema remains 6.
+- Validation: 381/381 unit/contract/widget tests, 10/10 Windows integration
+  files (13 scenarios), all four real TXT anchor searches logical error 0,
+  Windows Release PASS, Android Debug PASS.
+
 ### M5.2b — Reader progress and current-book bookmarks (2026-08-09)
 - Added derived Reader progress display: current chapter plus whole-book
   percentage from the confirmed UTF-16 Locator and normalized length.

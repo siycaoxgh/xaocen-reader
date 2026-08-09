@@ -1,6 +1,6 @@
 # ARCHITECTURE_CURRENT.md — XAOCEN Reader v4 当前架构与合同
 
-> 只描述当前代码与合同（`feat/m4-horizontal-reader`，M5.2b 完成点）。
+> 只描述当前代码与合同（`feat/m4-horizontal-reader`，M5.2c 完成点）。
 > 不记录历史故事（见 PROJECT_HISTORY.md）。
 > 代码位置均以本仓库实际文件为准。
 
@@ -88,6 +88,20 @@ Layering rules (enforced by structure, not by tooling):
 - Bookmark jumps call the existing Reader Locator restore contract: vertical
   waits for visible-range confirmation, while paged resolves the containing
   page. Panels and progress display never write `reading_progress`.
+
+### Current-book search (M5.2c)
+
+- `ReaderSearchService` receives only the active normalized document text and
+  scans ordinary contiguous substrings in a worker isolate. The worker is
+  cancellable; a monotonically increasing generation rejects stale results.
+- Matching folds ASCII case only; Chinese, digits, punctuation, and surrogate
+  code units remain literal. Results are capped at 100 and contain UTF-16
+  start/end/context offsets plus a snippet. Chapter titles are filled by
+  `CurrentChapterResolver` after the isolate returns.
+- Search results are transient. No result, query, page index, percentage, or
+  search history is stored in Drift. The Reader search sheet debounces input,
+  highlights the hit context, and uses the existing exact vertical/paged Locator
+  restore path when a row is tapped.
 
 ---
 

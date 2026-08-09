@@ -765,3 +765,14 @@ current-book panel, load the scoped bookmark list when opening it and explicitly
 refresh after create/delete. The UI remains current without adding a lifecycle
 watcher to the Reader route; any future always-live list must await/verify
 subscription cancellation as part of route disposal.
+
+## M5.2c lessons (2026-08-09)
+
+### Isolate result messages should use primitive maps
+
+Sending domain instances directly through a Flutter worker isolate can arrive as
+an unrecognized list payload in the desktop test runner even though the pure
+Dart unit runner accepts it. Search workers therefore return lists of primitive
+`Map<String, Object>` rows and reconstruct the strong `ReaderSearchResult` on
+the receiving side. This keeps the cross-isolate boundary explicit and makes
+stale-generation/cancellation behavior deterministic.

@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../domain/reader/reader_bookmark.dart';
 import '../domain/reader/reader_preferences.dart';
+import '../domain/reader/reader_search.dart';
 import 'reader_mode.dart';
 
 const readerChromeToggleKey = Key('reader-chrome-toggle');
@@ -11,6 +14,7 @@ const readerTocActionKey = Key('reader-toc-action');
 const readerAppearanceActionKey = Key('reader-appearance-action');
 const readerMoreActionKey = Key('reader-more-action');
 const readerBookmarksActionKey = Key('reader-bookmarks-action');
+const readerSearchActionKey = Key('reader-search-action');
 const readerBookmarkCreateKey = Key('reader-bookmark-create');
 const readerBookmarkListKey = Key('reader-bookmark-list');
 const readerModeActionKey = Key('reader-mode-action');
@@ -41,6 +45,7 @@ class ReaderChrome extends StatelessWidget {
     required this.onAppearance,
     required this.onMore,
     required this.onBookmarks,
+    required this.onSearch,
     required this.onModeSelected,
     this.currentChapterTitle,
     this.progressPercent,
@@ -54,6 +59,7 @@ class ReaderChrome extends StatelessWidget {
   final VoidCallback onAppearance;
   final VoidCallback onMore;
   final VoidCallback onBookmarks;
+  final VoidCallback onSearch;
   final ValueChanged<ReaderMode> onModeSelected;
   final String? currentChapterTitle;
   final double? progressPercent;
@@ -189,6 +195,12 @@ class ReaderChrome extends StatelessWidget {
                           icon: Icons.bookmark_outline,
                           label: '书签',
                           onPressed: onBookmarks,
+                        ),
+                        _ChromeAction(
+                          key: readerSearchActionKey,
+                          icon: Icons.search,
+                          label: '搜索',
+                          onPressed: onSearch,
                         ),
                         _ChromeAction(
                           key: readerAppearanceActionKey,
@@ -572,6 +584,185 @@ class _PreferenceSlider extends StatelessWidget {
           onChangeEnd: onCommitted,
         ),
       ],
+    );
+  }
+}
+
+Future<void> showReaderSearch(
+  BuildContext context, {
+  required Future<List<ReaderSearchResult>> Function(String) onQueryChanged,
+  required Future<void> Function(ReaderSearchResult) onResultTap,
+}) {
+  final isDesktop = MediaQuery.sizeOf(context).width >= 720;
+  return showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: true,
+    constraints: BoxConstraints(maxWidth: isDesktop ? 680 : double.infinity),
+    builder: (sheetContext) => _ReaderSearchSheet(
+      onQueryChanged: onQueryChanged,
+      onResultTap: onResultTap,
+    ),
+  );
+}
+
+class _ReaderSearchSheet extends StatefulWidget {
+  const _ReaderSearchSheet({
+    required this.onQueryChanged,
+    required this.onResultTap,
+  });
+
+  final Future<List<ReaderSearchResult>> Function(String) onQueryChanged;
+  final Future<void> Function(ReaderSearchResult) onResultTap;
+
+  @override
+  State<_ReaderSearchSheet> createState() => _ReaderSearchSheetState();
+}
+
+class _ReaderSearchSheetState extends State<_ReaderSearchSheet> {
+  final _queryController = TextEditingController();
+  Timer? _debounce;
+  int _generation = 0;
+  List<ReaderSearchResult> _results = const [];
+  bool _searching = false;
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _queryController.dispose();
+    super.dispose();
+  }
+
+  void _onQueryChanged(String query) {
+    final generation = ++_generation;
+    _debounce?.cancel();
+    if (query.isEmpty) {
+      setState(() {
+        _results = const [];
+        _searching = false;
+      });
+      return;
+    }
+    setState(() => _searching = true);
+    _debounce = Timer(const Duration(milliseconds: 220), () async {
+      try {
+        final results = await widget.onQueryChanged(query);
+        if (!mounted || generation != _generation) return;
+        setState(() {
+          _results = results;
+          _searching = false;
+        });
+      } catch (_) {
+        if (!mounted || generation != _generation) return;
+        setState(() {
+          _results = const [];
+          _searching = false;
+        });
+      }
+    });
+  }
+
+  void _clear() {
+    _queryController.clear();
+    _onQueryChanged('');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final height = MediaQuery.sizeOf(context).height * 0.82;
+    return SafeArea(
+      child: SizedBox(
+        height: height,
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+              child: TextField(
+                autofocus: true,
+                controller: _queryController,
+                onChanged: _onQueryChanged,
+                textInputAction: TextInputAction.search,
+                decoration: InputDecoration(
+                  prefixIcon: const Icon(Icons.search),
+                  hintText: '搜索当前书正文',
+                  suffixIcon: _queryController.text.isEmpty
+                      ? null
+                      : IconButton(
+                          tooltip: '清空搜索',
+                          onPressed: _clear,
+                          icon: const Icon(Icons.clear),
+                        ),
+                  border: const OutlineInputBorder(),
+                ),
+              ),
+            ),
+            if (_searching) const LinearProgressIndicator(minHeight: 2),
+            Expanded(
+              child: _results.isEmpty
+                  ? Center(
+                      child: Text(
+                        _queryController.text.isEmpty ? '输入关键词开始搜索' : '无结果',
+                      ),
+                    )
+                  : ListView.separated(
+                      key: const Key('reader-search-results'),
+                      padding: const EdgeInsets.fromLTRB(12, 4, 12, 20),
+                      itemCount: _results.length,
+                      separatorBuilder: (_, _) => const Divider(height: 1),
+                      itemBuilder: (context, index) {
+                        final result = _results[index];
+                        return ListTile(
+                          key: Key('reader-search-result-$index'),
+                          title: Text(
+                            '#${index + 1} · ${result.derivedChapterTitle}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          subtitle: _highlightedSnippet(context, result),
+                          onTap: () {
+                            Navigator.of(context).pop();
+                            Future<void>.microtask(
+                              () => widget.onResultTap(result),
+                            );
+                          },
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _highlightedSnippet(BuildContext context, ReaderSearchResult result) {
+    final start = (result.startOffset - result.contextStartOffset).clamp(
+      0,
+      result.snippet.length,
+    );
+    final end = (result.endOffset - result.contextStartOffset).clamp(
+      start,
+      result.snippet.length,
+    );
+    final style = Theme.of(context).textTheme.bodyMedium;
+    return Text.rich(
+      TextSpan(
+        style: style,
+        children: [
+          TextSpan(text: result.snippet.substring(0, start)),
+          TextSpan(
+            text: result.snippet.substring(start, end),
+            style: style?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: Theme.of(context).colorScheme.primary,
+              backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+            ),
+          ),
+          TextSpan(text: result.snippet.substring(end)),
+        ],
+      ),
+      maxLines: 3,
+      overflow: TextOverflow.ellipsis,
     );
   }
 }

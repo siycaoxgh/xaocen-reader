@@ -10,6 +10,7 @@ import 'package:xaocen_reader/data/repositories/library_file_manager.dart';
 import 'package:xaocen_reader/data/repositories/reading_progress_repository.dart';
 import 'package:xaocen_reader/domain/reader/reader_block.dart';
 import 'package:xaocen_reader/domain/reader/reader_locator.dart';
+import 'package:xaocen_reader/domain/reader/reader_search.dart';
 import 'package:xaocen_reader/domain/reader/reader_visible_range.dart';
 import 'package:xaocen_reader/reader/normalized_document_loader.dart';
 import 'package:xaocen_reader/reader/paged_reader_controller.dart';
@@ -69,6 +70,28 @@ void main() {
   }
 
   group('PagedReaderController', () {
+    test(
+      'M5.2c search result jumps to containing page without replacing offset',
+      () {
+        final controller = makeController(text: 'searchable ' * 2000);
+        controller.open(
+          const ReaderLocator(collectionId: 'c1', absoluteCharacterOffset: 0),
+        );
+        const result = ReaderSearchResult(
+          startOffset: 1234,
+          endOffset: 1240,
+          contextStartOffset: 1200,
+          contextEndOffset: 1300,
+          snippet: 'searchable',
+          derivedChapterTitle: '全文',
+        );
+        final page = controller.jumpToOffset(result.startOffset);
+        expect(page.contains(result.startOffset), isTrue);
+        expect(controller.confirmedLocator?.absoluteCharacterOffset, 1234);
+        controller.dispose();
+      },
+    );
+
     test(
       'metrics relayout invalidates window/signature and preserves exact locator',
       () {

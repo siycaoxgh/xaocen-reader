@@ -1,6 +1,6 @@
 # TEST_VALIDATION_MATRIX.md — XAOCEN Reader v4 验证矩阵
 
-> 状态：M5.2b COMPLETE（`feat/m4-horizontal-reader`）；Android 真机继续按后续统一复核安排。
+> 状态：M5.2c COMPLETE（`feat/m4-horizontal-reader`）；Android 真机继续按后续统一复核安排。
 > 自动测试与真人测试分开记录。**Android Debug 构建 PASS ≠ Android 真机 PASS**，两者分别列出。
 > 真人环境：Windows（本机，用户 + 自动化集成测试）；Android 真机 Redmi K60（23013RK75C / mondrian，Android 15 / API 35，无线 adb）。
 
@@ -10,7 +10,7 @@
 
 ## A. 自动测试（当前全绿）
 
-**单元 + Widget：373 项**（`flutter test`，Windows VM）：
+**单元 + Widget：381 项**（`flutter test`，Windows VM）：
 - M1 系：gb18030_decoder（含全表 23940/锚点 209/四字节/非法/跨块）、txt_encoding_detector、txt_normalizer、txt_toc_scanner（24）、txt_index_cache、large_file_policy
 - M2 系：local_library_test（20）、library_page_test（8）、m0_skeleton_test（6→更新）
 - M3 系：reader_block（9）、reader_locator（10）、reading_progress_repository（8）、reader_controller（12）、normalized_document_loader（9）、reader_page_test（6）、reader_jump（11）、toc_title_persistence（6）、toc_display（4）
@@ -25,10 +25,12 @@
 - M5.1d 系：V3 overlay chrome、显隐零写入、目录/Aa/更多入口、手机横竖屏与 Windows 限宽响应式
 - M5.1e 系：四类 metrics 设置、theme/mode、draft→commit、latest pending、reset、paged 非零 Locator
 - M5.2b 系：confirmed Locator 进度/章节显示、书签重复合同、A/B 隔离、动态 orphan、创建/列表/删除、vertical 精确跳转
+- M5.2c 系：UTF-16 搜索匹配、surrogate/context、章节派生、generation/cancellation、搜索面板 debounce/highlight/结果点击
 
-**集成测试：9 个文件 / 12 个测试场景**（Windows 逐文件）：
+**集成测试：10 个文件 / 13 个测试场景**（Windows 逐文件）：
 `accept_real_files_test` · `accept_real_paged_test` · `hash_contract_flow_test` · `m2_android_verify_test` · `m2_library_flow_test` · `paged_reader_flow_test` · `reader_mode_switch_test` · `vertical_reader_flow_test`
 · `reader_metrics_real_corpus_test`
+· `reader_search_real_corpus_test`
 
 **构建门禁**：`tool/verify.ps1` 全绿（pub get / format / analyze / test / integration / Windows Release / APK Debug / git diff --check）。
 
@@ -57,6 +59,13 @@
 | 书签 paged containing-page jump | ✅ | ✅*（控制器合同） | ✅*（现有分页链路） | ✅ | ⏳ 后续统一真机复核 |
 | 书签 orphan 动态状态/禁止错误跳转/可删除 | ✅ | ✅ | — | ✅ | ⏳ 后续统一真机复核 |
 | 书签面板开关/删除零 progress 写入 | ✅ | ✅ | — | ✅ | ⏳ 后续统一真机复核 |
+| 当前书 normalized.txt 普通搜索 | ✅ | ✅ | ✅ real corpus | ✅ | ⏳ 后续统一真机复核 |
+| 中文/英文/数字/大小写/重复匹配 | ✅ | ✅ | ✅ | ✅ | ⏳ 后续统一真机复核 |
+| UTF-16 surrogate 与 context 边界 | ✅ | ✅ | ✅ | ✅ | ⏳ 后续统一真机复核 |
+| 搜索结果 CurrentChapterResolver 章节派生 | ✅ | ✅ | ✅ | ✅ | ⏳ 后续统一真机复核 |
+| vertical/paged 搜索结果精确跳转 | ✅ | ✅*（现有分页 containment 合同） | ✅ | ✅ | ⏳ 后续统一真机复核 |
+| debounce / isolate cancellation / generation | ✅ | ✅ | ✅ | ✅ | ⏳ 后续统一真机复核 |
+| 清空/关闭搜索零 progress 写入 | ✅ | ✅ | — | ✅ | ⏳ 后续统一真机复核 |
 | 滚动（滚轮/滚动条/触摸） | — | ✅ | ✅ vertical_flow | ✅ | ✅ |
 | restore（位置恢复/防抖/零写入/生命周期） | ✅ | ✅ | ✅ | ✅（八月初七中段） | ✅（43/548 章恢复） |
 | force-stop 重启 | — | — | ✅ | — | ✅*（最后模式+位置、书架数据保留） |
@@ -139,7 +148,7 @@ vertical A → paged → 不翻页 → 重开 = paged + A · vertical A → page
 |---|---|
 | >50MB 文件真机打开路径 | 未验证（策略为拒绝，仅阈值单测） |
 | EPUB/RSS 等非 TXT 源 | 未实现，无测试 |
-| 书内搜索/TTS | 未实现，无测试 |
+| FTS5/跨书搜索/搜索历史/TTS | 未实现，无测试 |
 | Release 版 Android 内存实测 | 未测（PSS 281MB 为 Debug 值） |
 | 多用户/多设备 | 未做 |
 | Android 12 以下版本 | 未测（真机为 Android 15；minSdk 21） |

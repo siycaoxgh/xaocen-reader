@@ -499,3 +499,14 @@ Locator jumps. Duplicate collection+offset creation is idempotent and panel
 operations do not write reading_progress. Full 373-test automation, nine
 Windows integration files, all four real TXT logical-error-zero checks, Windows
 Release, and Android Debug passed.
+
+## M5.2c — current-book search and exact result jumps (2026-08-09)
+
+M5.2c added normalized.txt-only ordinary substring search without a schema
+change. Each query runs in a cancellable worker isolate with a 220ms UI debounce,
+generation protection, and a 100-result cap. Results retain UTF-16 code-unit
+start/end/context offsets and derive chapter names through CurrentChapterResolver.
+The responsive Reader search panel highlights context and restores the exact hit
+Locator in vertical or paged mode. Synthetic coverage and all-four-TXT Windows
+anchor searches passed; full automation reached 381 tests and 10 integration
+files / 13 scenarios.
