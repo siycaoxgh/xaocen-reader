@@ -10,9 +10,9 @@
 ## M5.2a status (2026-08-09)
 
 - No new Reader P1/P2 issue was found in the M5.2a persistence foundation.
-- Recent-reading UI, reading-history UI, cross-book search, search history, and
-  FTS5 remain intentionally deferred to later M5.2 stages; current-book search
-  is delivered in M5.2c.
+- Cross-book search, search history, and FTS5 remain intentionally deferred to
+  later M5.2 stages; current-book search, Recent Reading, and Reading History
+  are delivered in M5.2c/d.
 - Reading-history snapshots are display-only. They must never be used to restore
   a deleted book or replace `reading_progress` as the Locator source.
 
