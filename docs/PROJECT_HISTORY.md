@@ -510,3 +510,16 @@ The responsive Reader search panel highlights context and restores the exact hit
 Locator in vertical or paged mode. Synthetic coverage and all-four-TXT Windows
 anchor searches passed; full automation reached 381 tests and 10 integration
 files / 13 scenarios.
+
+## M5.2d — recent reading, reading history, and Reader sessions (2026-08-09)
+
+M5.2d completed the M5.2 foundation without changing schema 6. Recent Reading is
+derived from current-library history rows with valid sessions and `lastReadAt`
+ordering. A responsive Reading History page keeps deleted-book snapshots and
+session statistics, permits continuation only while the collection exists, and
+deletes a history row with its sessions only. Reader lifecycle now starts exactly
+one session after the first visible/page confirmation, pauses/resumes with app
+lifecycle, ends on route disposal, and updates display-only chapter/progress
+snapshots. Aggregate duration and count remain `SUM/COUNT(reading_sessions)`.
+The full suite reached 382 passing tests; existing four-TXT logical-error-zero
+checks remain green.

@@ -9,8 +9,11 @@ import '../data/repositories/local_library_repository.dart';
 import '../data/repositories/reading_progress_repository.dart';
 import '../data/repositories/reader_bookmark_repository.dart';
 import '../data/repositories/reader_preferences_repository.dart';
+import '../data/repositories/reading_history_repository.dart';
+import '../data/repositories/reading_session_repository.dart';
 import '../domain/library/library_entities.dart';
 import '../domain/library/library_import_models.dart';
+import '../domain/reader/reading_history.dart';
 import '../domain/local_txt/pipeline_progress.dart';
 import '../reader/normalized_document_loader.dart';
 import '../sources/local_txt/txt_cancellation.dart';
@@ -77,6 +80,24 @@ final readerPreferencesRepositoryProvider =
     Provider<ReaderPreferencesRepository>((ref) {
       return ReaderPreferencesRepository(db: ref.watch(databaseProvider));
     });
+
+final readingHistoryRepositoryProvider = Provider<ReadingHistoryRepository>((
+  ref,
+) {
+  return ReadingHistoryRepository(db: ref.watch(databaseProvider));
+});
+
+final recentReadingProvider = FutureProvider<List<ReadingHistoryEntry>>((ref) {
+  return ref
+      .watch(readingHistoryRepositoryProvider)
+      .loadRecentInLibrary(limit: 2);
+});
+
+final readingSessionRepositoryProvider = Provider<ReadingSessionRepository>((
+  ref,
+) {
+  return ReadingSessionRepository(db: ref.watch(databaseProvider));
+});
 
 /// 导入进度状态。
 class ImportProgressState {

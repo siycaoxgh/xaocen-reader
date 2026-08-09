@@ -1,6 +1,6 @@
 # TEST_VALIDATION_MATRIX.md — XAOCEN Reader v4 验证矩阵
 
-> 状态：M5.2c COMPLETE（`feat/m4-horizontal-reader`）；Android 真机继续按后续统一复核安排。
+> 状态：M5.2d COMPLETE（`feat/m4-horizontal-reader`）；Android 真机继续按后续统一复核安排。
 > 自动测试与真人测试分开记录。**Android Debug 构建 PASS ≠ Android 真机 PASS**，两者分别列出。
 > 真人环境：Windows（本机，用户 + 自动化集成测试）；Android 真机 Redmi K60（23013RK75C / mondrian，Android 15 / API 35，无线 adb）。
 
@@ -10,7 +10,7 @@
 
 ## A. 自动测试（当前全绿）
 
-**单元 + Widget：381 项**（`flutter test`，Windows VM）：
+**单元 + Widget：382 项**（`flutter test`，Windows VM）：
 - M1 系：gb18030_decoder（含全表 23940/锚点 209/四字节/非法/跨块）、txt_encoding_detector、txt_normalizer、txt_toc_scanner（24）、txt_index_cache、large_file_policy
 - M2 系：local_library_test（20）、library_page_test（8）、m0_skeleton_test（6→更新）
 - M3 系：reader_block（9）、reader_locator（10）、reading_progress_repository（8）、reader_controller（12）、normalized_document_loader（9）、reader_page_test（6）、reader_jump（11）、toc_title_persistence（6）、toc_display（4）
@@ -26,6 +26,7 @@
 - M5.1e 系：四类 metrics 设置、theme/mode、draft→commit、latest pending、reset、paged 非零 Locator
 - M5.2b 系：confirmed Locator 进度/章节显示、书签重复合同、A/B 隔离、动态 orphan、创建/列表/删除、vertical 精确跳转
 - M5.2c 系：UTF-16 搜索匹配、surrogate/context、章节派生、generation/cancellation、搜索面板 debounce/highlight/结果点击
+- M5.2d 系：ReadingSession visible-confirm/lifecycle、SUM/COUNT 聚合、最近阅读派生、历史 detach/delete、A/B 历史隔离
 
 **集成测试：10 个文件 / 13 个测试场景**（Windows 逐文件）：
 `accept_real_files_test` · `accept_real_paged_test` · `hash_contract_flow_test` · `m2_android_verify_test` · `m2_library_flow_test` · `paged_reader_flow_test` · `reader_mode_switch_test` · `vertical_reader_flow_test`
@@ -66,6 +67,11 @@
 | vertical/paged 搜索结果精确跳转 | ✅ | ✅*（现有分页 containment 合同） | ✅ | ✅ | ⏳ 后续统一真机复核 |
 | debounce / isolate cancellation / generation | ✅ | ✅ | ✅ | ✅ | ⏳ 后续统一真机复核 |
 | 清空/关闭搜索零 progress 写入 | ✅ | ✅ | — | ✅ | ⏳ 后续统一真机复核 |
+| 最近阅读（仍在书架、有效 session、lastReadAt 排序、limit 2） | ✅ | ✅ | — | ✅ | ⏳ 后续统一真机复核 |
+| 阅读历史快照/时长/session 次数/继续阅读 | ✅ | ✅ | — | ✅ | ⏳ 后续统一真机复核 |
+| 删除书籍后历史保留、最近阅读消失 | ✅ | ✅ | — | ✅ | ⏳ 后续统一真机复核 |
+| 删除历史级联 sessions 且不影响书架/progress/preferences | ✅ | ✅ | — | ✅ | ⏳ 后续统一真机复核 |
+| Reader session 首次 confirm、pause/resume、route end、不重复创建 | ✅ | ✅ | ✅ | ✅ | ⏳ 后续统一真机复核 |
 | 滚动（滚轮/滚动条/触摸） | — | ✅ | ✅ vertical_flow | ✅ | ✅ |
 | restore（位置恢复/防抖/零写入/生命周期） | ✅ | ✅ | ✅ | ✅（八月初七中段） | ✅（43/548 章恢复） |
 | force-stop 重启 | — | — | ✅ | — | ✅*（最后模式+位置、书架数据保留） |
@@ -217,3 +223,14 @@ vertical A → paged → 不翻页 → 重开 = paged + A · vertical A → page
 | Visible-confirm / pause / resume / route-end lifecycle contract | PASS |
 | CurrentChapterResolver chapter-only and no-chapter behavior | PASS |
 | M5.2a targeted unit/migration tests | 7/7 PASS |
+
+## M5.2d final validation (2026-08-09)
+
+| Validation | Result |
+|---|---|
+| Full unit/contract/widget | 382/382 PASS |
+| M5.2d history/session persistence coverage | PASS |
+| Existing Windows integration baseline | 10 files / 13 scenarios PASS when run individually |
+| Four real TXT regression / logical error | PASS, 0 |
+| Windows Release / Android Debug | PASS |
+| Android real device | Deferred to unified final device pass |

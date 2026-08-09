@@ -19,6 +19,8 @@ import '../design/theme/app_theme.dart';
 import '../data/repositories/reading_progress_repository.dart';
 import '../data/repositories/reader_bookmark_repository.dart';
 import '../data/repositories/reader_preferences_repository.dart';
+import '../data/repositories/reading_history_repository.dart';
+import '../data/repositories/reading_session_repository.dart';
 import '../domain/library/current_chapter_resolver.dart';
 import '../domain/library/library_entities.dart';
 import '../domain/library/toc_index.dart';
@@ -52,6 +54,8 @@ class ReaderLaunchContext {
     required this.progressRepository,
     this.bookmarkRepository,
     this.preferencesRepository,
+    this.readingHistoryRepository,
+    this.readingSessionRepository,
     this.repair,
   });
 
@@ -66,6 +70,8 @@ class ReaderLaunchContext {
   final ReadingProgressRepository progressRepository;
   final ReaderBookmarkRepository? bookmarkRepository;
   final ReaderPreferencesRepository? preferencesRepository;
+  final ReadingHistoryRepository? readingHistoryRepository;
+  final ReadingSessionRepository? readingSessionRepository;
 
   /// 修复回调（由书架页注入）：返回 null 表示成功，否则返回错误信息。
   final Future<String?> Function()? repair;
@@ -178,6 +184,11 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
   int? _modeRestoreGeneration;
   bool _suppressProgrammaticScrollNotifications = false;
   bool _chromeVisible = true;
+  ReadingSessionLifecycle? _readingSession;
+  bool _sessionStartInFlight = false;
+  String? _historyEntryId;
+  int? _lastHistoryOffset;
+  Future<void> _historyWriteTail = Future<void>.value();
 
   void _toggleChrome() {
     setState(() => _chromeVisible = !_chromeVisible);
@@ -303,10 +314,69 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
     }
   }
 
+  Future<void> _beginReadingSessionAfterConfirm() async {
+    if (_readingSession != null || _sessionStartInFlight || !mounted) return;
+    _sessionStartInFlight = true;
+    final historyRepo = widget.launch.readingHistoryRepository;
+    final sessionsRepo = widget.launch.readingSessionRepository;
+    final locator = _activeConfirmedLocator;
+    if (historyRepo == null || sessionsRepo == null || locator == null) {
+      _sessionStartInFlight = false;
+      return;
+    }
+    final history = await historyRepo.ensureForCollection(
+      collectionId: widget.launch.collection.id,
+      bookTitleSnapshot: widget.launch.collection.title,
+      normalizedHashSnapshot: _controller.document?.normalizedHash,
+    );
+    if (!mounted) {
+      _sessionStartInFlight = false;
+      return;
+    }
+    final lifecycle = ReadingSessionLifecycle(
+      repository: sessionsRepo,
+      historyEntryId: history.id,
+    );
+    await lifecycle.startAfterVisibleConfirm();
+    if (!mounted) {
+      unawaited(lifecycle.end());
+      _sessionStartInFlight = false;
+      return;
+    }
+    _readingSession = lifecycle;
+    _historyEntryId = history.id;
+    _sessionStartInFlight = false;
+    await _recordHistorySnapshot(force: true);
+  }
+
+  Future<void> _recordHistorySnapshot({bool force = false}) async {
+    final historyRepo = widget.launch.readingHistoryRepository;
+    final historyId = _historyEntryId;
+    final locator = _activeConfirmedLocator;
+    if (historyRepo == null || historyId == null || locator == null) return;
+    if (!force && _lastHistoryOffset == locator.absoluteCharacterOffset) return;
+    _lastHistoryOffset = locator.absoluteCharacterOffset;
+    final chapter = _currentChapterForOffset(locator.absoluteCharacterOffset);
+    final percent = _progressPercent;
+    final progress = percent == null
+        ? null
+        : '${(percent * 100).toStringAsFixed(1)}%';
+    _historyWriteTail = _historyWriteTail.then(
+      (_) => historyRepo.recordRead(
+        historyEntryId: historyId,
+        at: DateTime.now(),
+        chapterTitleSnapshot: chapter?.displayTitle,
+        progressSnapshot: progress,
+      ),
+    );
+    await _historyWriteTail;
+  }
+
   @override
   void dispose() {
     _modeGeneration++;
     _searchService.cancel();
+    unawaited(_readingSession?.end() ?? Future<void>.value());
     _modeRestoreAnchor = null;
     _modeRestoreGeneration = null;
     _metricsGeneration++;
@@ -339,8 +409,10 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
         state == AppLifecycleState.detached) {
       if (_modeRestoreAnchor != null) {
         _cancelModeRestore(revertToPaged: true);
+        unawaited(_readingSession?.pause() ?? Future<void>.value());
         return;
       }
+      unawaited(_readingSession?.pause() ?? Future<void>.value());
       // M4 P1：只 flush 当前激活模式，
       // 避免 inactive 纵向覆盖分页新位置。
       if (_mode == ReaderMode.paged) {
@@ -348,6 +420,8 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
       } else {
         _controller.flush(source: ReaderPositionEventSource.lifecycleFlush);
       }
+    } else if (state == AppLifecycleState.resumed) {
+      unawaited(_readingSession?.resume() ?? Future<void>.value());
     }
   }
 
@@ -511,6 +585,7 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
   /// 分页控制器变化（窗口重建/翻页后）→ setState。
   void _onPagedControllerChanged() {
     if (mounted) setState(() {});
+    unawaited(_recordHistorySnapshot());
   }
 
   // ---- M4：模式切换（§十七~§二十一）----
@@ -701,6 +776,7 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
       } else {
         _repairing = false;
         setState(() {});
+        unawaited(_recordHistorySnapshot());
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('修复失败: $err')));
@@ -749,6 +825,11 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
         _scheduleJumpToPendingTarget();
+      });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _mode == ReaderMode.paged) {
+          unawaited(_beginReadingSessionAfterConfirm());
+        }
       });
     });
   }
@@ -1026,6 +1107,10 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
         _metricsVisibleBefore = null;
         _unfreezeMetricsWrites();
       }
+      if (_readingSession == null) {
+        unawaited(_beginReadingSessionAfterConfirm());
+      }
+      unawaited(_recordHistorySnapshot());
       _restoreFinished = true;
       setState(() {});
     });
@@ -1376,6 +1461,7 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
         topVisibleCharacterOffset: topOffset,
         source: _userSource(notification),
       );
+      unawaited(_recordHistorySnapshot());
       if (notification is ScrollEndNotification) {
         _controller.flush(source: ReaderPositionEventSource.userScrollbar);
       }

@@ -1,6 +1,6 @@
 # ARCHITECTURE_CURRENT.md — XAOCEN Reader v4 当前架构与合同
 
-> 只描述当前代码与合同（`feat/m4-horizontal-reader`，M5.2c 完成点）。
+> 只描述当前代码与合同（`feat/m4-horizontal-reader`，M5.2d 完成点）。
 > 不记录历史故事（见 PROJECT_HISTORY.md）。
 > 代码位置均以本仓库实际文件为准。
 
@@ -528,3 +528,18 @@ history deletion cascades its sessions. Home recent-reading is derived from
 history rows whose collection still exists, ordered by `lastReadAt`, limited to
 one or two items. `CurrentChapterResolver` recognizes chapter TOC entries only;
 volumes and no-chapter TXT return null.
+
+## M5.2d application surfaces and lifecycle wiring
+
+`LibraryPage` presents a derived Recent Reading section and a Reading History
+entry point. `ReadingHistoryPage` loads history rows through repositories,
+derives duration/count from `reading_sessions`, resolves whether a collection is
+still present, and never uses snapshots as a Locator. Existing collections open
+through the normal `ReaderLaunchContext`; detached rows are display-only.
+
+`ReaderPage` receives history/session repositories through its launch context.
+After the first confirmed visible/page restore it creates one
+`ReadingSessionLifecycle`; app inactive/paused calls `pause`, resume calls
+`resume`, and route disposal calls `end`. Locator changes update only the
+display snapshots (`lastChapterTitleSnapshot` / `lastProgressSnapshot`); the
+canonical position remains `reading_progress`.

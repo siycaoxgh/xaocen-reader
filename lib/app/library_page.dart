@@ -8,9 +8,11 @@ import '../domain/library/library_entities.dart';
 import '../domain/library/library_import_models.dart';
 import '../domain/local_txt/large_file_policy.dart';
 import '../domain/local_txt/pipeline_progress.dart';
+import '../domain/reader/reading_history.dart';
 import '../data/repositories/collection_repair_service.dart';
 import '../reader/reader_page.dart';
 import 'providers.dart';
+import 'reading_history_page.dart';
 
 /// M2 最小书架 —— 本地书库（功能性界面，非 V3 统一 UI）。
 class LibraryPage extends ConsumerStatefulWidget {
@@ -30,6 +32,21 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
       appBar: AppBar(
         title: const Text('XAOCEN Reader v4'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        actions: [
+          TextButton.icon(
+            onPressed: () async {
+              await Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const ReadingHistoryPage()),
+              );
+              if (mounted) {
+                ref.invalidate(collectionsProvider);
+                ref.invalidate(recentReadingProvider);
+              }
+            },
+            icon: const Icon(Icons.history),
+            label: const Text('阅读历史'),
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -79,6 +96,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
             ),
           ),
           const Divider(),
+          _RecentReadingSection(onOpen: (entry) => _openHistoryEntry(entry)),
           Expanded(
             child: collections.when(
               data: (list) => list.isEmpty
@@ -132,6 +150,75 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
       return '${(size / 1024 / 1024).toStringAsFixed(1)}MB';
     }
     return '${(size / 1024).toStringAsFixed(0)}KB';
+  }
+
+  Future<void> _openHistoryEntry(ReadingHistoryEntry entry) async {
+    final collection = await ref
+        .read(libraryRepositoryProvider)
+        .getCollection(entry.collectionId);
+    if (collection == null || !mounted) return;
+    final docs = await ref
+        .read(libraryRepositoryProvider)
+        .getDocuments(collection.id);
+    final toc = await ref.read(libraryRepositoryProvider).getToc(collection.id);
+    if (!mounted || docs.isEmpty) return;
+    await openReader(
+      context,
+      ReaderLaunchContext(
+        collection: collection,
+        documents: docs,
+        toc: toc,
+        normalizedCharacterLength: collection.normalizedCharacterLength,
+        documentLoader: ref.read(documentLoaderProvider),
+        progressRepository: ref.read(readingProgressRepositoryProvider),
+        bookmarkRepository: ref.read(readerBookmarkRepositoryProvider),
+        preferencesRepository: ref.read(readerPreferencesRepositoryProvider),
+        readingHistoryRepository: ref.read(readingHistoryRepositoryProvider),
+        readingSessionRepository: ref.read(readingSessionRepositoryProvider),
+      ),
+    );
+    ref.invalidate(recentReadingProvider);
+  }
+}
+
+class _RecentReadingSection extends ConsumerWidget {
+  const _RecentReadingSection({required this.onOpen});
+  final ValueChanged<ReadingHistoryEntry> onOpen;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final recent = ref.watch(recentReadingProvider);
+    return recent.when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
+      data: (entries) {
+        if (entries.isEmpty) return const SizedBox.shrink();
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Padding(
+              padding: EdgeInsets.fromLTRB(16, 8, 16, 4),
+              child: Text(
+                '最近阅读',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+            ...entries.map(
+              (entry) => ListTile(
+                leading: const Icon(Icons.menu_book_outlined),
+                title: Text(entry.bookTitleSnapshot),
+                subtitle: Text(
+                  '${entry.lastChapterTitleSnapshot ?? '全文'} · ${entry.lastProgressSnapshot ?? '未记录进度'}',
+                ),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => onOpen(entry),
+              ),
+            ),
+            const Divider(height: 1),
+          ],
+        );
+      },
+    );
   }
 }
 
@@ -245,6 +332,8 @@ class _CollectionTile extends ConsumerWidget {
           progressRepository: progressRepo,
           bookmarkRepository: bookmarkRepo,
           preferencesRepository: preferencesRepo,
+          readingHistoryRepository: ref.read(readingHistoryRepositoryProvider),
+          readingSessionRepository: ref.read(readingSessionRepositoryProvider),
           repair: () => _repairCollection(ref, collection.id),
         ),
       );

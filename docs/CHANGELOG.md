@@ -14,6 +14,16 @@ Legend for validation columns:
 
 ## Unreleased
 
+### M5.2d — recent reading, history, and Reader sessions (2026-08-09)
+- Added derived home Recent Reading (up to two current library books) without a
+  second position/time source.
+- Added Reading History with snapshot display, session-derived duration/count,
+  continuation for existing books, detached-book display, and per-entry deletion.
+- Connected Reader lifecycle to ReadingSession start/pause/resume/end and history
+  display snapshots. Schema remains 6.
+- Validation: 382/382 unit/contract/widget tests and M5.2d persistence coverage;
+  existing Windows integration and four-TXT logical-error-zero checks retained.
+
 ### M5.2c — current-book search and exact result jumps (2026-08-09)
 - Added normalized.txt-only current-book substring search with a debounced
   worker isolate, cancellation, generation protection, and a 100-result cap.

@@ -101,8 +101,8 @@
 
 - No new Reader P1/P2 issue was found. Current-book normalized.txt search uses
   transient UTF-16 results, cancellable worker isolates, and generation checks.
-- Cross-book search, FTS5 indexing, search history, recent-reading UI, and
-  reading-history UI remain intentionally deferred.
+- Cross-book search, FTS5 indexing, and search history remain intentionally
+  deferred. Recent Reading and Reading History are implemented in M5.2d.
 
 ## M5.1e.1 status update (2026-08-09)
 
@@ -111,6 +111,12 @@
 - ReaderPreferences is now per book in schema 5; no known cross-book preference
   contamination remains.
 - Android device validation remains NOT-RUN / deferred to M5.1 final validation.
+
+## M5.2d status update (2026-08-09)
+
+- Recent Reading, Reading History, and Reader session lifecycle are implemented.
+- No new P1/P2 issue was found in the persistence or lifecycle regression tests.
+- Cross-book search, FTS5, search history, RSS/EPUB/TTS remain deferred.
 ## M5.1 final seal (2026-08-09)
 
 - No new M5.1 P1/P2 Reader issue was found in final automated or Windows user
