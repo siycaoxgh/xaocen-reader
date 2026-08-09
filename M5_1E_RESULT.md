@@ -63,3 +63,8 @@ Status: **COMPLETE**
 
 The Android APK is rebuilt after all tests as the normal application entry.
 M5.1e.1 stops here and does not enter M5.1f.
+
+## Final seal
+
+M5.1f completed the full regression, user validation record, and final packaging.
+M5.1 is now **COMPLETE**; see `M5_1_FINAL_RESULT.md`.

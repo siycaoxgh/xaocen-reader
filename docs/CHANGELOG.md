@@ -500,3 +500,13 @@ Not a release; recorded for completeness.
   typography never mutates normalized text.
 - 355 contracts/unit/widget and 9 integration suites (12 scenarios) pass; all four
   real TXT files pass typography relayout with logical error 0.
+# M5.1 COMPLETE — final regression and seal (2026-08-09)
+
+- Sealed M5.1 as “Reader UI + per-book Reading Preferences”.
+- Final regression: analyze clean; 355 contracts/unit/widget and 9 integration
+  suites (12 scenarios) pass.
+- All four current real TXT files pass at beginning/middle/end anchors; metrics
+  relayout logical error is 0 for all 12 anchors.
+- Recorded Windows user human validation as PASS and Android user initial human
+  validation separately from Codex's unavailable final device session.
+- Rebuilt final Windows Release and normal-entry Android Debug APK.

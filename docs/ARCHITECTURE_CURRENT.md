@@ -451,3 +451,10 @@ ReaderLocator 或 reading_progress；vertical/paged 只更新颜色绘制。
 - Paragraph spacing and first-line indent are visual coordinates over unchanged
   normalized text. Every layout line retains its original UTF-16 start/end range.
 - Schema 4 -> 5 is additive and seeds legacy global settings per existing collection.
+## M5.1 sealed capability (COMPLETE)
+
+M5.1 is the production Reader UI and per-book reading-preferences layer. Its stable
+surface is V3 Reader chrome, vertical/paged engines, per-book ReaderLocator,
+per-book readingMode, per-book ReaderPreferences, complete basic typography,
+four-direction padding, system/light/dark, exact-locator relayout, persistence,
+and Flat TOC. Schema remains 5. No M5.2 capability is included.

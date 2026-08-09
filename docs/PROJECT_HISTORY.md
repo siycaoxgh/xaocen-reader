@@ -452,3 +452,14 @@ where the panel showed saved values but body layout used defaults. Letter spacin
 paragraph spacing, first-line indent, and four independent paddings joined the
 metrics contract. All four real TXT files passed at 12 anchors with logical error 0.
 M5.1e.1 completed without entering M5.1f.
+## M5.1 final seal — COMPLETE (2026-08-09)
+
+M5.1a through M5.1e.1 were closed by M5.1f without adding features. The completed
+milestone is “Reader UI + per-book Reading Preferences”: V3 Reader shell, dual
+modes, per-book Locator/mode/preferences, full basic typography, four paddings,
+three-state theme, exact-position relayout, persistence, and Flat TOC. Final
+regression passed 355 contracts/unit/widget, 9 integration suites / 12 scenarios,
+and all four real TXT files with logical error 0. Windows user human validation
+reported no obvious issue. Android user initial validation reported no obvious issue;
+no Android device was connected during the Codex final run. M5.1 is COMPLETE and
+M5.2 has not started.

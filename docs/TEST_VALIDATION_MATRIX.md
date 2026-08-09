@@ -152,3 +152,20 @@ vertical A → paged → 不翻页 → 重开 = paged + A · vertical A → page
 | Windows integration | 9/9 suites, 12/12 scenarios PASS |
 | Real corpus (`C:\Users\TOM\Desktop\测试`, all 4 TXT, 12 anchors) | PASS, logical error 0 |
 | Android real device | NOT-RUN / deferred to M5.1 final validation |
+## M5.1 final validation (COMPLETE)
+
+| Validation | Final result |
+|---|---|
+| flutter analyze | PASS, 0 issues |
+| Contract + unit + widget | 355/355 PASS |
+| Integration | 9/9 suites, 12/12 scenarios PASS |
+| Real corpus, all four current TXT | PASS |
+| Beginning/middle/end metrics anchors | 12/12, logical error 0 |
+| Per-book Locator / mode / preferences, A/B isolation, restart | PASS |
+| Non-zero vertical/paged switching and latest generation | PASS |
+| Typography does not mutate normalized.txt | PASS |
+| Theme paint-only / current-book reset / Flat TOC / Aa / resize | PASS |
+| Windows user human validation | PASS, no obvious issue reported |
+| Android user initial human validation | PASS, no obvious issue reported |
+| Android Codex final device session | NOT-RUN, no device connected |
+| Windows Release / Android Debug | PASS / PASS |

@@ -83,3 +83,11 @@
 - ReaderPreferences is now per book in schema 5; no known cross-book preference
   contamination remains.
 - Android device validation remains NOT-RUN / deferred to M5.1 final validation.
+## M5.1 final seal (2026-08-09)
+
+- No new M5.1 P1/P2 Reader issue was found in final automated or Windows user
+  validation. M5.1 is COMPLETE.
+- Android final Codex device validation was NOT-RUN because no device was connected.
+  The user's initial human test found no obvious issue; the formal checklist remains
+  recorded in `M5_1_FINAL_RESULT.md` for the next available device session.
+- Existing documented limitations outside M5.1 remain unchanged; no M5.2 work began.

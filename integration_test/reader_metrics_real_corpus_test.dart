@@ -66,7 +66,7 @@ void main() {
             targetBlockSize: 6144,
           );
           final offsets = <int>{
-            0,
+            document.text.isEmpty ? 0 : 1,
             document.text.length ~/ 2,
             document.text.isEmpty ? 0 : document.text.length - 1,
           };
