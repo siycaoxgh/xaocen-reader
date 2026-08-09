@@ -96,6 +96,9 @@ class _ReadingHistoryPageState extends ConsumerState<ReadingHistoryPage> {
         preferencesRepository: ref.read(readerPreferencesRepositoryProvider),
         readingHistoryRepository: ref.read(readingHistoryRepositoryProvider),
         readingSessionRepository: ref.read(readingSessionRepositoryProvider),
+        inputBindingsRepository: ref.read(
+          readerInputBindingsRepositoryProvider,
+        ),
       ),
     );
     _refresh();

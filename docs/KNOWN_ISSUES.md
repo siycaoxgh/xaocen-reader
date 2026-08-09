@@ -125,6 +125,15 @@
 - Input capture, physical-event routing to the new bindings, and custom-binding
   settings UI remain intentionally deferred to M5.3c. Existing default Reader
   input behavior is unchanged.
+
+## M5.3c+d status update (2026-08-10)
+
+- Unified routing and Android capture bridge are complete; no new P1/P2 issue
+  was found in automated or Windows integration validation.
+- Custom-binding settings UI, conflict confirmation, and user-facing capture
+  flow remain intentionally deferred to M5.3e.
+- Android physical-device validation remains NOT-RUN / deferred; Android Debug
+  build passed.
 ## M5.1 final seal (2026-08-09)
 
 - No new M5.1 P1/P2 Reader issue was found in final automated or Windows user

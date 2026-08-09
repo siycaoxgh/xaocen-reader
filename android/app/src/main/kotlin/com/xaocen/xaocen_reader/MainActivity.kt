@@ -8,6 +8,7 @@ import io.flutter.plugin.common.MethodChannel
 class MainActivity : FlutterActivity() {
     private val channelName = "xaocen.reader/paged_input"
     private var pagedReaderActive = false
+    private var inputCaptureActive = false
     private lateinit var inputChannel: MethodChannel
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -19,6 +20,10 @@ class MainActivity : FlutterActivity() {
                     pagedReaderActive = call.arguments as? Boolean ?: false
                     result.success(null)
                 }
+                "setInputCaptureActive" -> {
+                    inputCaptureActive = call.arguments as? Boolean ?: false
+                    result.success(null)
+                }
                 else -> result.notImplemented()
             }
         }
@@ -27,12 +32,12 @@ class MainActivity : FlutterActivity() {
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         val isVolume = event.keyCode == KeyEvent.KEYCODE_VOLUME_UP ||
             event.keyCode == KeyEvent.KEYCODE_VOLUME_DOWN
-        if (pagedReaderActive && isVolume) {
+        if ((pagedReaderActive || inputCaptureActive) && isVolume) {
             if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
                 val input = if (event.keyCode == KeyEvent.KEYCODE_VOLUME_UP) {
-                    "volumeUp"
+                    "android.volumeUp"
                 } else {
-                    "volumeDown"
+                    "android.volumeDown"
                 }
                 inputChannel.invokeMethod("volumeInput", input)
             }

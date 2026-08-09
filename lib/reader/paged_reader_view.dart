@@ -24,6 +24,7 @@ import 'paged_reader_controller.dart';
 import 'reader_appearance.dart';
 import 'reader_text_block.dart';
 import 'reader_input.dart';
+import 'reader_input_router.dart';
 
 /// 分页阅读视图。
 class PagedReaderView extends StatefulWidget {
@@ -31,10 +32,12 @@ class PagedReaderView extends StatefulWidget {
     super.key,
     required this.controller,
     required this.appearance,
+    this.inputRouter,
   });
 
   final PagedReaderController controller;
   final ReaderResolvedAppearance appearance;
+  final ReaderInputRouter? inputRouter;
 
   @override
   State<PagedReaderView> createState() => _PagedReaderViewState();
@@ -56,9 +59,6 @@ class _PagedReaderViewState extends State<PagedReaderView> {
     _pageController = PageController(
       initialPage: widget.controller.window.currentIndex,
     );
-    // The Android host only reports volume keys while this paged subtree is
-    // active. Mapping to previous/next remains a Dart concern.
-    ReaderInputBridge.activatePaged(_onPhysicalInput);
   }
 
   @override
@@ -66,7 +66,6 @@ class _PagedReaderViewState extends State<PagedReaderView> {
     widget.controller.removeListener(_onControllerChanged);
     _pageController.dispose();
     _focusNode.dispose();
-    ReaderInputBridge.deactivatePaged();
     super.dispose();
   }
 
@@ -143,11 +142,21 @@ class _PagedReaderViewState extends State<PagedReaderView> {
     return KeyEventResult.ignored;
   }
 
-  void _onPhysicalInput(PhysicalInput input) {
-    _dispatchInput(input);
-  }
-
   bool _dispatchInput(PhysicalInput input) {
+    final router = widget.inputRouter;
+    if (router != null) {
+      final id = switch (input) {
+        PhysicalInput.arrowLeft => PhysicalInputId.keyboardArrowLeft,
+        PhysicalInput.arrowRight => PhysicalInputId.keyboardArrowRight,
+        PhysicalInput.pageUp => PhysicalInputId.keyboardPageUp,
+        PhysicalInput.pageDown => PhysicalInputId.keyboardPageDown,
+        PhysicalInput.wheelUp => PhysicalInputId.mouseWheelUp,
+        PhysicalInput.wheelDown => PhysicalInputId.mouseWheelDown,
+        PhysicalInput.volumeUp => PhysicalInputId.androidVolumeUp,
+        PhysicalInput.volumeDown => PhysicalInputId.androidVolumeDown,
+      };
+      return router.handlePhysicalInput(id);
+    }
     final command = _inputBinding.commandFor(input);
     if (command == null) return false;
     switch (command) {

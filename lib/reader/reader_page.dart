@@ -12,13 +12,16 @@ library;
 
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:super_sliver_list/super_sliver_list.dart';
 
 import '../design/theme/app_theme.dart';
 import '../data/repositories/reading_progress_repository.dart';
 import '../data/repositories/reader_bookmark_repository.dart';
 import '../data/repositories/reader_preferences_repository.dart';
+import '../data/repositories/reader_input_bindings_repository.dart';
 import '../data/repositories/reading_history_repository.dart';
 import '../data/repositories/reading_session_repository.dart';
 import '../domain/library/current_chapter_resolver.dart';
@@ -37,6 +40,8 @@ import 'paged_reader_view.dart';
 import 'reader_appearance.dart';
 import 'reader_chrome.dart';
 import 'reader_controller.dart';
+import 'reader_input.dart';
+import 'reader_input_router.dart';
 import 'reader_mode.dart';
 import 'reader_metrics_signature.dart';
 import 'reader_search.dart';
@@ -54,6 +59,7 @@ class ReaderLaunchContext {
     required this.progressRepository,
     this.bookmarkRepository,
     this.preferencesRepository,
+    this.inputBindingsRepository,
     this.readingHistoryRepository,
     this.readingSessionRepository,
     this.repair,
@@ -70,6 +76,7 @@ class ReaderLaunchContext {
   final ReadingProgressRepository progressRepository;
   final ReaderBookmarkRepository? bookmarkRepository;
   final ReaderPreferencesRepository? preferencesRepository;
+  final ReaderInputBindingsRepository? inputBindingsRepository;
   final ReadingHistoryRepository? readingHistoryRepository;
   final ReadingSessionRepository? readingSessionRepository;
 
@@ -152,6 +159,7 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
   ReaderPreferences? _pendingPreferencesWrite;
   bool _pendingPreferencesReset = false;
   bool _preferencesWriteInFlight = false;
+  late final ReaderInputRouter _inputRouter;
 
   /// Reader 视觉合同（P1：从 Theme 解析，禁止正文硬编码颜色）。
   late ReaderResolvedAppearance _appearance;
@@ -194,6 +202,48 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
     setState(() => _chromeVisible = !_chromeVisible);
   }
 
+  void _onInputHostStateChanged({
+    required bool pagedActive,
+    required bool captureActive,
+  }) {
+    unawaited(
+      ReaderInputBridge.setActiveState(
+        pagedActive: pagedActive,
+        inputCaptureActive: captureActive,
+      ),
+    );
+  }
+
+  void _routerPreviousPage() {
+    if (_mode != ReaderMode.paged) return;
+    _pagedController?.previousPage();
+    if (mounted) setState(() {});
+  }
+
+  void _routerNextPage() {
+    if (_mode != ReaderMode.paged) return;
+    _pagedController?.nextPage();
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _routerPreviousChapter() =>
+      _jumpToAdjacentChapter(forward: false);
+
+  Future<void> _routerNextChapter() => _jumpToAdjacentChapter(forward: true);
+
+  Future<void> _jumpToAdjacentChapter({required bool forward}) async {
+    final chapters = _readerChapters;
+    final locator = _activeConfirmedLocator;
+    if (chapters.isEmpty || locator == null) return;
+    final current = _currentChapterForOffset(locator.absoluteCharacterOffset);
+    final currentIndex = current == null
+        ? (forward ? -1 : 0)
+        : chapters.indexWhere((entry) => entry.id == current.id);
+    final targetIndex = currentIndex + (forward ? 1 : -1);
+    if (targetIndex < 0 || targetIndex >= chapters.length) return;
+    await _restoreToChapter(chapters[targetIndex]);
+  }
+
   void _showChrome() {
     if (_chromeVisible) return;
     setState(() => _chromeVisible = true);
@@ -223,6 +273,27 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     _searchService = ReaderSearchService();
+    _inputRouter = ReaderInputRouter(
+      platform: defaultTargetPlatform == TargetPlatform.android
+          ? ReaderInputPlatform.android
+          : ReaderInputPlatform.windows,
+      repository: widget.launch.inputBindingsRepository,
+      onPreviousPage: _routerPreviousPage,
+      onNextPage: _routerNextPage,
+      onPreviousChapter: _routerPreviousChapter,
+      onNextChapter: _routerNextChapter,
+      onToggleReaderControls: _toggleChrome,
+      onOpenToc: _openToc,
+      onHostStateChanged: _onInputHostStateChanged,
+    );
+    unawaited(_inputRouter.start());
+    unawaited(
+      ReaderInputBridge.activate(
+        pagedActive: false,
+        inputCaptureActive: false,
+        onInput: _inputRouter.handlePhysicalInput,
+      ),
+    );
     WidgetsBinding.instance.addObserver(this);
     _controller = ReaderController(
       collectionId: widget.launch.collection.id,
@@ -399,6 +470,8 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
     _pagedController = null;
     _controller.dispose();
     _scroll.dispose();
+    unawaited(_inputRouter.dispose());
+    unawaited(ReaderInputBridge.deactivate());
     super.dispose();
   }
 
@@ -407,6 +480,7 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
     if (state == AppLifecycleState.inactive ||
         state == AppLifecycleState.paused ||
         state == AppLifecycleState.detached) {
+      _inputRouter.invalidatePendingInput();
       if (_modeRestoreAnchor != null) {
         _cancelModeRestore(revertToPaged: true);
         unawaited(_readingSession?.pause() ?? Future<void>.value());
@@ -438,6 +512,7 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
       return;
     }
     _metricsSignature = nextSignature;
+    _inputRouter.invalidatePendingInput();
     _beginMetricsRelayout(next);
   }
 
@@ -652,6 +727,7 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
     assert(page.contains(anchorOffset), '切换锚点必须在页面范围内');
     _pagedController = paged;
     _mode = ReaderMode.paged;
+    _inputRouter.setPagedActive(true);
     _transition = ReaderModeTransitionState.idle;
     _controller.unfreezeWrites();
     if (gen != _modeGeneration) return; // 切换期间又切换：丢弃旧代
@@ -677,6 +753,7 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
     _controller.freezeWrites();
     // Activate the target subtree before scheduling its two-stage restore.
     _mode = ReaderMode.vertical;
+    _inputRouter.setPagedActive(false);
     _modeRestoreAnchor = locator;
     _modeRestoreGeneration = gen;
     _suppressProgrammaticScrollNotifications = true;
@@ -728,6 +805,7 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
   /// 模式切换入口（AppBar 菜单）。
   void _selectMode(ReaderMode mode) {
     if (mode == _mode && _transition == ReaderModeTransitionState.idle) return;
+    _inputRouter.invalidatePendingInput();
     _cancelModeRestore();
     if (mode == _mode) return;
     _cancelMetricsRelayout();
@@ -1326,7 +1404,13 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
             key: readerChromeToggleKey,
             behavior: HitTestBehavior.translucent,
             onTap: _toggleChrome,
-            child: readerContent,
+            child: Focus(
+              autofocus: _mode == ReaderMode.vertical,
+              onKeyEvent: _mode == ReaderMode.vertical
+                  ? _onVerticalKeyEvent
+                  : null,
+              child: readerContent,
+            ),
           ),
           ReaderChrome(
             visible: _chromeVisible,
@@ -1434,6 +1518,15 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
     );
   }
 
+  KeyEventResult _onVerticalKeyEvent(FocusNode node, KeyEvent event) {
+    if (event is! KeyDownEvent) return KeyEventResult.ignored;
+    final input = physicalInputIdForKey(event.logicalKey);
+    if (input != null && _inputRouter.handlePhysicalInput(input)) {
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
+  }
+
   /// M4：分页模式 body。
   ///
   /// 记录视口尺寸（供切换锚点用）；引擎尺寸与渲染约束的同步由
@@ -1444,7 +1537,11 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
     return LayoutBuilder(
       builder: (context, constraints) {
         _pagedViewportSize = Size(constraints.maxWidth, constraints.maxHeight);
-        return PagedReaderView(controller: paged, appearance: _appearance);
+        return PagedReaderView(
+          controller: paged,
+          appearance: _appearance,
+          inputRouter: _inputRouter,
+        );
       },
     );
   }
@@ -1486,6 +1583,9 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
 
   LibraryTocEntry? _currentChapterForOffset(int offset) =>
       CurrentChapterResolver.resolve(offset, widget.launch.toc);
+
+  List<LibraryTocEntry> get _readerChapters =>
+      widget.launch.toc.where((entry) => entry.kind == 'chapter').toList();
 
   String? get _currentChapterTitle {
     final offset = _activeConfirmedLocator?.absoluteCharacterOffset;
@@ -1697,6 +1797,10 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
 
   Future<void> _jumpToChapter(LibraryTocEntry entry) async {
     Navigator.of(context).pop(); // close sheet
+    await _restoreToChapter(entry);
+  }
+
+  Future<void> _restoreToChapter(LibraryTocEntry entry) async {
     // M4：分页模式目录跳转（§二十四：confirmed = 精确 target offset）。
     if (_mode == ReaderMode.paged) {
       final paged = _pagedController;

@@ -536,3 +536,16 @@ Explicit null disables a binding, malformed data falls back only the affected
 platform, unknown rows are ignored, and old profiles merge missing defaults.
 Schema remains 6. Capture, routing, and settings UI are intentionally deferred
 to M5.3c.
+
+## M5.3c+d — unified input routing and capture (2026-08-10)
+
+The persisted input contract was connected through one ReaderInputRouter for
+Windows keyboard/wheel and Android volume events. All six semantic commands are
+dispatched from the active platform profile; page commands are paged-only,
+while chapter commands resolve real chapter offsets and reuse exact vertical or
+paged Locator restore. Profile hot reload and operation generations reject stale
+events across mode, metrics, lifecycle, capture, and dispose transitions.
+Android MainActivity reports stable volume IDs and gates interception on
+paged/capture state. The first-input capture domain was added without settings
+UI. Schema remains 6. Full automation reached 396 tests; Windows integration
+ran as 10 files / 13 scenarios.

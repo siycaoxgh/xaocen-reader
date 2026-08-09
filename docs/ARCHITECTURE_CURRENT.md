@@ -119,6 +119,24 @@ Layering rules (enforced by structure, not by tooling):
 - M5.3a+b intentionally leaves the existing route, Android capture bridge, and
   binding settings UI unchanged; M5.3c will consume this contract.
 
+### Reader input routing and capture (M5.3c+d)
+
+- `ReaderInputRouter` is the only Reader input-to-action dispatcher. It watches
+  the current platform profile, maps stable physical IDs to the six semantic
+  commands, and invokes ReaderPage callbacks. Pagination and Locator code do
+  not know about physical keys.
+- Page actions are guarded by paged mode. Chapter actions select only real TOC
+  chapter entries and call the existing exact Locator restore path in vertical
+  or paged mode. Toggle-controls and open-TOC reuse existing callbacks without
+  progress or session writes.
+- Router generations invalidate queued events on profile/mode/metrics changes,
+  lifecycle interruption, capture transitions, and dispose. Profile timestamps
+  reject late stale watch events.
+- `ReaderInputCapture` consumes one physical input, reports it to the caller,
+  and never dispatches a `ReaderCommand`; cancellation/disposal clears it.
+- Android `MainActivity` translates volume key-down events to stable IDs and
+  intercepts them only while paged Reader or capture is active.
+
 ---
 
 ## 2. Four-layer content model

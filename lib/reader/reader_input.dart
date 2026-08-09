@@ -4,9 +4,8 @@ import '../domain/reader/reader_input_bindings.dart';
 
 export '../domain/reader/reader_input_bindings.dart';
 
-/// Legacy route adapter. M5.3a/b persist [ReaderInputProfile], while the
-/// existing paged route continues to use its default in-memory adapter until
-/// the M5.3c input router lands.
+/// Legacy adapter retained for standalone PagedReaderView tests. The active
+/// ReaderPage route uses [ReaderInputRouter] and persisted profiles.
 final class InputBinding {
   const InputBinding._(this._bindings);
 
@@ -39,6 +38,14 @@ enum PhysicalInput {
   pageDown,
 }
 
+PhysicalInputId? physicalInputIdForKey(LogicalKeyboardKey key) => switch (key) {
+  LogicalKeyboardKey.arrowRight => PhysicalInputId.keyboardArrowRight,
+  LogicalKeyboardKey.pageDown => PhysicalInputId.keyboardPageDown,
+  LogicalKeyboardKey.arrowLeft => PhysicalInputId.keyboardArrowLeft,
+  LogicalKeyboardKey.pageUp => PhysicalInputId.keyboardPageUp,
+  _ => null,
+};
+
 /// Minimal Android host bridge. The host only reports physical volume input;
 /// the binding above decides which ReaderCommand it means.
 final class ReaderInputBridge {
@@ -46,22 +53,56 @@ final class ReaderInputBridge {
 
   static const _channel = MethodChannel('xaocen.reader/paged_input');
 
-  static Future<void> activatePaged(
-    void Function(PhysicalInput input) onInput,
-  ) async {
+  static Future<void> activate({
+    required bool pagedActive,
+    required bool inputCaptureActive,
+    required void Function(PhysicalInputId input) onInput,
+  }) async {
     _channel.setMethodCallHandler((call) async {
       if (call.method != 'volumeInput') return null;
       final value = call.arguments as String?;
       final input = switch (value) {
-        'volumeUp' => PhysicalInput.volumeUp,
-        'volumeDown' => PhysicalInput.volumeDown,
+        'android.volumeUp' || 'volumeUp' => PhysicalInputId.androidVolumeUp,
+        'android.volumeDown' ||
+        'volumeDown' => PhysicalInputId.androidVolumeDown,
         _ => null,
       };
       if (input != null) onInput(input);
       return null;
     });
+    await setActiveState(
+      pagedActive: pagedActive,
+      inputCaptureActive: inputCaptureActive,
+    );
+  }
+
+  static Future<void> activatePaged(
+    void Function(PhysicalInput input) onInput,
+  ) async {
+    await activate(
+      pagedActive: true,
+      inputCaptureActive: false,
+      onInput: (input) {
+        final legacy = switch (input) {
+          PhysicalInputId.androidVolumeUp => PhysicalInput.volumeUp,
+          PhysicalInputId.androidVolumeDown => PhysicalInput.volumeDown,
+          _ => null,
+        };
+        if (legacy != null) onInput(legacy);
+      },
+    );
+  }
+
+  static Future<void> setActiveState({
+    required bool pagedActive,
+    required bool inputCaptureActive,
+  }) async {
     try {
-      await _channel.invokeMethod<void>('setPagedActive', true);
+      await _channel.invokeMethod<void>('setPagedActive', pagedActive);
+      await _channel.invokeMethod<void>(
+        'setInputCaptureActive',
+        inputCaptureActive,
+      );
     } on MissingPluginException {
       // Desktop and test hosts have no Android bridge.
     }
@@ -69,8 +110,14 @@ final class ReaderInputBridge {
 
   static Future<void> deactivatePaged() async {
     _channel.setMethodCallHandler(null);
+    await setActiveState(pagedActive: false, inputCaptureActive: false);
+  }
+
+  static Future<void> deactivate() async {
+    _channel.setMethodCallHandler(null);
     try {
       await _channel.invokeMethod<void>('setPagedActive', false);
+      await _channel.invokeMethod<void>('setInputCaptureActive', false);
     } on MissingPluginException {
       // Desktop and test hosts have no Android bridge.
     }

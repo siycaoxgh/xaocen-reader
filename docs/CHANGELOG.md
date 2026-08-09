@@ -14,6 +14,18 @@ Legend for validation columns:
 
 ## Unreleased
 
+### M5.3c+d — unified Reader input router and capture bridge (2026-08-10)
+- Added `ReaderInputRouter` for profile-driven Windows keyboard/wheel and
+  Android volume dispatch to all six Reader commands.
+- Added exact previous/next chapter navigation through real TOC chapter
+  offsets, reusing the existing vertical/paged Locator restore path.
+- Added profile hot reload, operation-generation invalidation, and a capture
+  domain that consumes the first physical input without executing commands.
+- Android host now exposes paged/capture active state and reports stable volume
+  input IDs; vertical Reader and non-Reader volume behavior remain untouched.
+- Validation: 396/396 automated tests; 10 integration files / 13 scenarios;
+  Windows Release and Android Debug PASS. Android device validation deferred.
+
 ### M5.3a+b — typed Reader input bindings (2026-08-09)
 - Added the typed `ReaderCommand`, stable `PhysicalInputId`, and
   platform-scoped `ReaderInputProfile` contracts.

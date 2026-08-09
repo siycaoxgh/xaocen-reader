@@ -235,6 +235,26 @@ vertical A → paged → 不翻页 → 重开 = paged + A · vertical A → page
 | Windows Release / Android Debug | PASS |
 | Android real device | Deferred to unified final device pass |
 
+## M5.3c+d input routing and capture (2026-08-10)
+
+| Validation | Result |
+|---|---|
+| Profile-driven Windows keyboard and wheel routing | PASS |
+| Profile-driven Android volume routing contract | PASS |
+| Custom page command and explicit null binding | PASS |
+| Previous/next chapter uses real chapter offsets | PASS, exact Locator path |
+| Vertical chapter restore / paged chapter restore | PASS |
+| Toggle controls / open TOC side-effect contract | PASS |
+| Profile watch hot reload | PASS |
+| Capture consumes first input and does not dispatch | PASS |
+| Capture cancel / mode generation / dispose invalidation | PASS |
+| Android paged/capture host state bridge | PASS, Debug build |
+| Full unit/contract/widget | 396/396 PASS |
+| Windows integration | 10 files / 13 scenarios PASS |
+| Windows Release / Android Debug | PASS / PASS |
+| Four real TXT logical error | PASS, 0 |
+| Android real device | NOT-RUN / deferred |
+
 ## M5.3a+b input binding contract (2026-08-09)
 
 | Validation | Result |
