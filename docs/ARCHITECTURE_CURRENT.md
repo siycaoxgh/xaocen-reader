@@ -435,3 +435,19 @@ ReaderLocator 或 reading_progress；vertical/paged 只更新颜色绘制。
 - 上层只使用 `load()` / `watch()` / `update(ReaderPreferences)` /
   `resetToDefaults()` 强类型 API；
 - update 以事务写入完整快照；reset 只删除 Reader 拥有的 keys，不影响其他 AppSettings。
+## ReaderPreferences per-collection contract (M5.1e.1, schema 5)
+
+- ReaderPreferences is reading appearance for one collection, not application-global
+  state. ReaderProgressState remains a separate per-collection record for Locator and
+  readingMode; neither model reads or overwrites the other.
+- Persistence is `reader_preferences` keyed by collectionId. Only the typed repository
+  accepts collectionId; UI and Reader never read storage keys or Drift rows directly.
+- Reader startup must load saved preferences before its first effective body layout.
+  A repository watch is installed for the same collection after the initial snapshot.
+- Metrics: fontSize, letterSpacing, lineHeight, paragraphSpacing, firstLineIndent,
+  paddingTop/Bottom/Left/Right. Paint: themeMode.
+- Metrics changes retain the existing freeze/capture/relayout/exact restore/visible
+  confirm/unfreeze state machine. Theme remains paint-only.
+- Paragraph spacing and first-line indent are visual coordinates over unchanged
+  normalized text. Every layout line retains its original UTF-16 start/end range.
+- Schema 4 -> 5 is additive and seeds legacy global settings per existing collection.

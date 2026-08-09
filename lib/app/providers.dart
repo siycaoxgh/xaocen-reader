@@ -8,7 +8,6 @@ import '../data/repositories/library_file_manager.dart';
 import '../data/repositories/local_library_repository.dart';
 import '../data/repositories/reading_progress_repository.dart';
 import '../data/repositories/reader_preferences_repository.dart';
-import '../domain/reader/reader_preferences.dart';
 import '../domain/library/library_entities.dart';
 import '../domain/library/library_import_models.dart';
 import '../domain/local_txt/pipeline_progress.dart';
@@ -71,10 +70,6 @@ final readerPreferencesRepositoryProvider =
     Provider<ReaderPreferencesRepository>((ref) {
       return ReaderPreferencesRepository(db: ref.watch(databaseProvider));
     });
-
-final readerPreferencesProvider = StreamProvider<ReaderPreferences>((ref) {
-  return ref.watch(readerPreferencesRepositoryProvider).watch();
-});
 
 /// 导入进度状态。
 class ImportProgressState {

@@ -15,6 +15,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:super_sliver_list/super_sliver_list.dart';
 
+import '../design/theme/app_theme.dart';
 import '../data/repositories/reading_progress_repository.dart';
 import '../data/repositories/reader_preferences_repository.dart';
 import '../domain/library/library_entities.dart';
@@ -132,6 +133,7 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
   bool _metricsWritesFrozen = false;
   ReaderVisibleRange? _metricsVisibleBefore;
   PagedTextRange? _metricsPageBefore;
+  bool _preferencesReady = false;
   ReaderPreferences? _pendingPreferencesWrite;
   bool _pendingPreferencesReset = false;
   bool _preferencesWriteInFlight = false;
@@ -228,16 +230,54 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
     _controller.blockLayoutResolver = (index) => _layoutByIndex(index);
     _controller.addListener(_onControllerChanged);
 
-    final preferencesStream =
-        widget.preferencesOverride ??
-        widget.launch.preferencesRepository?.watch();
-    if (preferencesStream != null) {
-      _preferencesSubscription = preferencesStream.listen(
-        _onPreferencesChanged,
-      );
-    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) unawaited(_initializePreferencesAndStart());
+    });
+  }
 
-    _start();
+  Future<void> _initializePreferencesAndStart() async {
+    final repository = widget.launch.preferencesRepository;
+    final collectionId = widget.launch.collection.id;
+    if (widget.preferencesOverride case final override?) {
+      _preferencesSubscription = override.listen(_onPreferencesChanged);
+    } else if (repository != null) {
+      final saved = await repository.load(collectionId);
+      if (!mounted) return;
+      _preferences = saved;
+      _metricsSignature = ReaderMetricsSignature.fromPreferences(saved);
+      _preferencesSubscription = repository
+          .watch(collectionId)
+          .listen(_onPreferencesChanged);
+    }
+    if (!mounted) return;
+    _preferencesReady = true;
+    _resolveAppearance();
+    setState(() {});
+    await _start();
+  }
+
+  ThemeData _effectiveReaderTheme() => switch (_preferences.themeMode) {
+    ReaderThemeMode.system => Theme.of(context),
+    ReaderThemeMode.light => AppTheme.light(),
+    ReaderThemeMode.dark => AppTheme.dark(),
+  };
+
+  void _resolveAppearance() {
+    final scheme = _effectiveReaderTheme().colorScheme;
+    _appearance = ReaderResolvedAppearance(
+      backgroundColor: scheme.surface,
+      textColor: scheme.onSurface,
+      secondaryTextColor: scheme.onSurfaceVariant,
+      headingColor: scheme.onSurface,
+      selectionColor: scheme.primaryContainer,
+      baseTextStyle: TextStyle(
+        fontSize: _preferences.fontSize,
+        height: _preferences.lineHeight,
+        letterSpacing: _preferences.letterSpacing,
+        color: scheme.onSurface,
+      ),
+    );
+    _bodyStyle = _appearance.baseTextStyle;
   }
 
   @override
@@ -249,12 +289,7 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
       // P1：主题切换 → 解析新外观。颜色变化只触发重绘
       // （RenderReaderTextBlock.style setter 区分度量/颜色），
       // 不重建 block 索引、不写进度、阅读 offset 保持不变。
-      _appearance = resolveReaderAppearance(
-        context,
-        fontSize: _preferences.fontSize,
-        lineHeight: _preferences.lineHeight,
-      );
-      _bodyStyle = _appearance.baseTextStyle;
+      _resolveAppearance();
       if (mounted) setState(() {});
     }
   }
@@ -313,12 +348,7 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
     _preferences = next;
     if (nextSignature == _metricsSignature) {
       if (next.themeMode != previous.themeMode) {
-        _appearance = resolveReaderAppearance(
-          context,
-          fontSize: next.fontSize,
-          lineHeight: next.lineHeight,
-        );
-        _bodyStyle = _appearance.baseTextStyle;
+        _resolveAppearance();
         setState(() {});
       }
       return;
@@ -344,10 +374,10 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
       while (_pendingPreferencesReset || _pendingPreferencesWrite != null) {
         if (_pendingPreferencesReset) {
           _pendingPreferencesReset = false;
-          await repository.resetToDefaults();
+          await repository.resetToDefaults(widget.launch.collection.id);
         } else if (_pendingPreferencesWrite case final next?) {
           _pendingPreferencesWrite = null;
-          await repository.update(next);
+          await repository.update(widget.launch.collection.id, next);
         }
       }
     } finally {
@@ -396,12 +426,7 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
         ? _pagedController?.confirmedLocator
         : _controller.confirmedLocator;
     if (activeLocator == null) {
-      _appearance = resolveReaderAppearance(
-        context,
-        fontSize: next.fontSize,
-        lineHeight: next.lineHeight,
-      );
-      _bodyStyle = _appearance.baseTextStyle;
+      _resolveAppearance();
       setState(() {});
       return;
     }
@@ -415,12 +440,7 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
         ? _pagedController?.currentPage
         : null;
     _freezeMetricsWrites();
-    _appearance = resolveReaderAppearance(
-      context,
-      fontSize: next.fontSize,
-      lineHeight: next.lineHeight,
-    );
-    _bodyStyle = _appearance.baseTextStyle;
+    _resolveAppearance();
 
     if (_mode == ReaderMode.paged) {
       final paged = _pagedController;
@@ -433,8 +453,12 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
         width: size.width > 0 ? size.width : paged.engine.width,
         height: size.height > 0 ? size.height : paged.engine.height,
         style: _bodyStyle,
-        horizontalPadding: next.horizontalPadding,
-        verticalPadding: next.verticalPadding,
+        paddingTop: next.paddingTop,
+        paddingBottom: next.paddingBottom,
+        paddingLeft: next.paddingLeft,
+        paddingRight: next.paddingRight,
+        paragraphSpacing: next.paragraphSpacing,
+        firstLineIndent: next.firstLineIndent,
       );
       if (generation != _metricsGeneration || !mounted) return;
       final page = paged.currentPage;
@@ -526,8 +550,12 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
       style: _pagedBodyStyle,
       width: width,
       height: height,
-      horizontalPadding: _preferences.horizontalPadding,
-      verticalPadding: _preferences.verticalPadding,
+      paddingTop: _preferences.paddingTop,
+      paddingBottom: _preferences.paddingBottom,
+      paddingLeft: _preferences.paddingLeft,
+      paddingRight: _preferences.paddingRight,
+      paragraphSpacing: _preferences.paragraphSpacing,
+      firstLineIndent: _preferences.firstLineIndent,
     );
     paged.addListener(_onPagedControllerChanged);
     final page = paged.open(anchor);
@@ -1102,6 +1130,19 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
+    return Theme(
+      data: _effectiveReaderTheme(),
+      child: Builder(builder: _buildReader),
+    );
+  }
+
+  Widget _buildReader(BuildContext context) {
+    if (!_preferencesReady) {
+      return Scaffold(
+        appBar: AppBar(title: Text(widget.launch.collection.title)),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
     final state = _controller.state;
     if (state == ReaderState.failed) {
       final err = _controller.error ?? '';
@@ -1233,9 +1274,11 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
           _DebugBar(controller: _controller, page: this),
         Expanded(
           child: Padding(
-            padding: EdgeInsets.symmetric(
-              horizontal: _preferences.horizontalPadding,
-              vertical: _preferences.verticalPadding,
+            padding: EdgeInsets.fromLTRB(
+              _preferences.paddingLeft,
+              _preferences.paddingTop,
+              _preferences.paddingRight,
+              _preferences.paddingBottom,
             ),
             child: Scrollbar(
               controller: _scroll,
@@ -1261,9 +1304,16 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
                       style: _bodyStyle,
                       styleVersion: _appearance.textColor.toARGB32(),
                       textDirection: TextDirection.ltr,
+                      paragraphSpacing: _preferences.paragraphSpacing,
+                      firstLineIndent: _preferences.firstLineIndent,
+                      startsAtParagraphBoundary:
+                          block.startCharacterOffset == 0 ||
+                          doc.text.codeUnitAt(block.startCharacterOffset - 1) ==
+                              0x0A,
                       maxWidth:
                           MediaQuery.of(context).size.width -
-                          (_preferences.horizontalPadding * 2),
+                          _preferences.paddingLeft -
+                          _preferences.paddingRight,
                       onLayout: (layout) {
                         final ro = key.currentContext?.findRenderObject();
                         if (ro is RenderReaderTextBlock) {

@@ -200,15 +200,25 @@ class _PagedReaderViewState extends State<PagedReaderView> {
           return ColoredBox(
             color: appearance.backgroundColor,
             child: Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: widget.controller.horizontalPadding,
-                vertical: widget.controller.verticalPadding,
+              padding: EdgeInsets.fromLTRB(
+                widget.controller.paddingLeft,
+                widget.controller.paddingTop,
+                widget.controller.paddingRight,
+                widget.controller.paddingBottom,
               ),
               child: Align(
                 alignment: Alignment.topLeft,
                 child: ReaderTextBlock(
                   text: text,
                   style: appearance.baseTextStyle,
+                  paragraphSpacing: widget.controller.paragraphSpacing,
+                  firstLineIndent: widget.controller.firstLineIndent,
+                  startsAtParagraphBoundary:
+                      page.startCharacterOffset == 0 ||
+                      widget.controller.document.text.codeUnitAt(
+                            page.startCharacterOffset - 1,
+                          ) ==
+                          0x0A,
                   styleVersion: appearance.textColor.toARGB32(),
                   textDirection: TextDirection.ltr,
                   // §八：显示与测量同一宽度（引擎 contentWidth）。

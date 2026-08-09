@@ -13,10 +13,15 @@ const readerModeActionKey = Key('reader-mode-action');
 const readerSettingsSheetKey = Key('reader-settings-sheet');
 const readerFontSizeSliderKey = Key('reader-font-size-slider');
 const readerLineHeightSliderKey = Key('reader-line-height-slider');
+const readerLetterSpacingSliderKey = Key('reader-letter-spacing-slider');
+const readerParagraphSpacingSliderKey = Key('reader-paragraph-spacing-slider');
+const readerFirstLineIndentSliderKey = Key('reader-first-line-indent-slider');
 const readerHorizontalPaddingSliderKey = Key(
   'reader-horizontal-padding-slider',
 );
 const readerVerticalPaddingSliderKey = Key('reader-vertical-padding-slider');
+const readerPaddingRightSliderKey = Key('reader-padding-right-slider');
+const readerPaddingBottomSliderKey = Key('reader-padding-bottom-slider');
 const readerThemeControlKey = Key('reader-theme-control');
 const readerSettingsModeControlKey = Key('reader-settings-mode-control');
 const readerResetPreferencesKey = Key('reader-reset-preferences');
@@ -303,10 +308,26 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
               min: ReaderPreferences.minFontSize,
               max: ReaderPreferences.maxFontSize,
               divisions: 20,
+              step: ReaderPreferences.fontSizeStep,
               valueLabel: _draft.fontSize.toStringAsFixed(0),
               onDraftChanged: (value) =>
                   setState(() => _draft = _draft.copyWith(fontSize: value)),
               onCommitted: (value) => _commit(_draft.copyWith(fontSize: value)),
+            ),
+            _PreferenceSlider(
+              key: readerLetterSpacingSliderKey,
+              label: '字距',
+              value: _draft.letterSpacing,
+              min: ReaderPreferences.minLetterSpacing,
+              max: ReaderPreferences.maxLetterSpacing,
+              divisions: 30,
+              step: ReaderPreferences.letterSpacingStep,
+              valueLabel: _draft.letterSpacing.toStringAsFixed(2),
+              onDraftChanged: (value) => setState(
+                () => _draft = _draft.copyWith(letterSpacing: value),
+              ),
+              onCommitted: (value) =>
+                  _commit(_draft.copyWith(letterSpacing: value)),
             ),
             _PreferenceSlider(
               key: readerLineHeightSliderKey,
@@ -315,6 +336,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
               min: ReaderPreferences.minLineHeight,
               max: ReaderPreferences.maxLineHeight,
               divisions: 12,
+              step: ReaderPreferences.lineHeightStep,
               valueLabel: _draft.lineHeight.toStringAsFixed(1),
               onDraftChanged: (value) =>
                   setState(() => _draft = _draft.copyWith(lineHeight: value)),
@@ -322,32 +344,91 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
                   _commit(_draft.copyWith(lineHeight: value)),
             ),
             _PreferenceSlider(
+              key: readerParagraphSpacingSliderKey,
+              label: '段距',
+              value: _draft.paragraphSpacing,
+              min: ReaderPreferences.minParagraphSpacing,
+              max: ReaderPreferences.maxParagraphSpacing,
+              divisions: 32,
+              step: ReaderPreferences.paragraphSpacingStep,
+              valueLabel: _draft.paragraphSpacing.toStringAsFixed(0),
+              onDraftChanged: (value) => setState(
+                () => _draft = _draft.copyWith(paragraphSpacing: value),
+              ),
+              onCommitted: (value) =>
+                  _commit(_draft.copyWith(paragraphSpacing: value)),
+            ),
+            _PreferenceSlider(
+              key: readerFirstLineIndentSliderKey,
+              label: '首行缩进（字宽）',
+              value: _draft.firstLineIndent,
+              min: ReaderPreferences.minFirstLineIndent,
+              max: ReaderPreferences.maxFirstLineIndent,
+              divisions: 8,
+              step: ReaderPreferences.firstLineIndentStep,
+              valueLabel: _draft.firstLineIndent.toStringAsFixed(1),
+              onDraftChanged: (value) => setState(
+                () => _draft = _draft.copyWith(firstLineIndent: value),
+              ),
+              onCommitted: (value) =>
+                  _commit(_draft.copyWith(firstLineIndent: value)),
+            ),
+            _PreferenceSlider(
               key: readerHorizontalPaddingSliderKey,
-              label: '水平正文边距',
-              value: _draft.horizontalPadding,
+              label: '左边距',
+              value: _draft.paddingLeft,
               min: ReaderPreferences.minHorizontalPadding,
               max: ReaderPreferences.maxHorizontalPadding,
               divisions: 16,
-              valueLabel: _draft.horizontalPadding.toStringAsFixed(0),
-              onDraftChanged: (value) => setState(
-                () => _draft = _draft.copyWith(horizontalPadding: value),
-              ),
+              step: ReaderPreferences.paddingStep,
+              valueLabel: _draft.paddingLeft.toStringAsFixed(0),
+              onDraftChanged: (value) =>
+                  setState(() => _draft = _draft.copyWith(paddingLeft: value)),
               onCommitted: (value) =>
-                  _commit(_draft.copyWith(horizontalPadding: value)),
+                  _commit(_draft.copyWith(paddingLeft: value)),
+            ),
+            _PreferenceSlider(
+              key: readerPaddingRightSliderKey,
+              label: '右边距',
+              value: _draft.paddingRight,
+              min: ReaderPreferences.minHorizontalPadding,
+              max: ReaderPreferences.maxHorizontalPadding,
+              divisions: 16,
+              step: ReaderPreferences.paddingStep,
+              valueLabel: _draft.paddingRight.toStringAsFixed(0),
+              onDraftChanged: (value) =>
+                  setState(() => _draft = _draft.copyWith(paddingRight: value)),
+              onCommitted: (value) =>
+                  _commit(_draft.copyWith(paddingRight: value)),
             ),
             _PreferenceSlider(
               key: readerVerticalPaddingSliderKey,
-              label: '垂直正文边距',
-              value: _draft.verticalPadding,
+              label: '上边距',
+              value: _draft.paddingTop,
               min: ReaderPreferences.minVerticalPadding,
               max: ReaderPreferences.maxVerticalPadding,
               divisions: 12,
-              valueLabel: _draft.verticalPadding.toStringAsFixed(0),
+              step: ReaderPreferences.paddingStep,
+              valueLabel: _draft.paddingTop.toStringAsFixed(0),
+              onDraftChanged: (value) =>
+                  setState(() => _draft = _draft.copyWith(paddingTop: value)),
+              onCommitted: (value) =>
+                  _commit(_draft.copyWith(paddingTop: value)),
+            ),
+            _PreferenceSlider(
+              key: readerPaddingBottomSliderKey,
+              label: '下边距',
+              value: _draft.paddingBottom,
+              min: ReaderPreferences.minVerticalPadding,
+              max: ReaderPreferences.maxVerticalPadding,
+              divisions: 12,
+              step: ReaderPreferences.paddingStep,
+              valueLabel: _draft.paddingBottom.toStringAsFixed(0),
               onDraftChanged: (value) => setState(
-                () => _draft = _draft.copyWith(verticalPadding: value),
+                () => _draft = _draft.copyWith(paddingBottom: value),
               ),
               onCommitted: (value) =>
-                  _commit(_draft.copyWith(verticalPadding: value)),
+                  _commit(_draft.copyWith(paddingBottom: value)),
             ),
             const SizedBox(height: 12),
             Text('主题', style: Theme.of(context).textTheme.titleSmall),
@@ -404,6 +485,7 @@ class _PreferenceSlider extends StatelessWidget {
     required this.min,
     required this.max,
     required this.divisions,
+    required this.step,
     required this.valueLabel,
     required this.onDraftChanged,
     required this.onCommitted,
@@ -414,6 +496,7 @@ class _PreferenceSlider extends StatelessWidget {
   final double min;
   final double max;
   final int divisions;
+  final double step;
   final String valueLabel;
   final ValueChanged<double> onDraftChanged;
   final ValueChanged<double> onCommitted;
@@ -426,7 +509,30 @@ class _PreferenceSlider extends StatelessWidget {
         Row(
           children: [
             Expanded(child: Text(label)),
-            Text(valueLabel, style: Theme.of(context).textTheme.labelLarge),
+            IconButton(
+              visualDensity: VisualDensity.compact,
+              tooltip: '$label 减少',
+              onPressed: value <= min
+                  ? null
+                  : () => onCommitted((value - step).clamp(min, max)),
+              icon: const Icon(Icons.remove, size: 18),
+            ),
+            SizedBox(
+              width: 42,
+              child: Text(
+                valueLabel,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.labelLarge,
+              ),
+            ),
+            IconButton(
+              visualDensity: VisualDensity.compact,
+              tooltip: '$label 增加',
+              onPressed: value >= max
+                  ? null
+                  : () => onCommitted((value + step).clamp(min, max)),
+              icon: const Icon(Icons.add, size: 18),
+            ),
           ],
         ),
         Slider(

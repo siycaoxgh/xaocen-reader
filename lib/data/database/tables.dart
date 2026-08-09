@@ -204,3 +204,27 @@ class AppSettings extends Table {
   @override
   Set<Column> get primaryKey => {key};
 }
+
+/// reader_preferences —— per-collection Reader appearance (schema 5).
+class ReaderPreferencesRows extends Table {
+  @override
+  String get tableName => 'reader_preferences';
+
+  TextColumn get collectionId => text().customConstraint(
+    'NOT NULL REFERENCES content_collections (id) ON DELETE CASCADE',
+  )();
+  RealColumn get fontSize => real()();
+  RealColumn get letterSpacing => real()();
+  RealColumn get lineHeight => real()();
+  RealColumn get paragraphSpacing => real()();
+  RealColumn get firstLineIndent => real()();
+  RealColumn get paddingTop => real()();
+  RealColumn get paddingBottom => real()();
+  RealColumn get paddingLeft => real()();
+  RealColumn get paddingRight => real()();
+  TextColumn get themeMode => text()();
+  DateTimeColumn get updatedAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {collectionId};
+}

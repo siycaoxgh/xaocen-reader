@@ -73,8 +73,10 @@ class PagedLayoutSignature {
   const PagedLayoutSignature({
     required this.width,
     required this.height,
-    required this.horizontalPadding,
-    required this.verticalPadding,
+    required this.paddingTop,
+    required this.paddingBottom,
+    required this.paddingLeft,
+    required this.paddingRight,
     required this.textScale,
     required this.styleMetricsKey,
     required this.paginationPolicyVersion,
@@ -86,8 +88,10 @@ class PagedLayoutSignature {
   /// 内容区高度（viewport 高）。
   final double height;
 
-  final double horizontalPadding;
-  final double verticalPadding;
+  final double paddingTop;
+  final double paddingBottom;
+  final double paddingLeft;
+  final double paddingRight;
 
   /// 文本缩放（TextScaler 的 scale 值）。
   final double textScale;
@@ -100,7 +104,7 @@ class PagedLayoutSignature {
   /// 稳定签名值（用作缓存 key / 变化检测）。
   String get cacheKey =>
       'w=${width.toStringAsFixed(1)};h=${height.toStringAsFixed(1)};'
-      'hp=$horizontalPadding;vp=$verticalPadding;ts=$textScale;'
+      'pt=$paddingTop;pb=$paddingBottom;pl=$paddingLeft;pr=$paddingRight;ts=$textScale;'
       'sm=$styleMetricsKey;pv=$paginationPolicyVersion';
 
   @override

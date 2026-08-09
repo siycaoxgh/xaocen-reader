@@ -441,3 +441,14 @@ M5.1 最终收尾验证。M5.1c COMPLETE，不进入 M5.1d。
 完成严格状态机：激活 vertical 后恢复，真实可见范围包含 X 且 confirmed=X 才 idle/unfreeze。
 补齐双向、快速 generation、继续阅读重开及 A/B 多书隔离测试；schema 4、Preferences、TXT、
 TOC、Theme、UI 均未改变。
+## M5.1e.1 — per-book typography settings and reopen P1 (2026-08-09)
+
+ReaderPreferences was corrected from global scope to collection scope. Schema 5
+adds `reader_preferences(collection_id PK/FK, ...)`; the schema 4 global snapshot
+is seeded into every existing book once, without changing books, managed TXT,
+reading_progress, readingMode, or ReaderLocator. Reader startup now awaits the
+current book's saved preferences before the first effective layout, fixing the P1
+where the panel showed saved values but body layout used defaults. Letter spacing,
+paragraph spacing, first-line indent, and four independent paddings joined the
+metrics contract. All four real TXT files passed at 12 anchors with logical error 0.
+M5.1e.1 completed without entering M5.1f.

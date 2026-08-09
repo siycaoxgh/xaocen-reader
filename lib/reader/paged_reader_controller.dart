@@ -56,6 +56,12 @@ class PagedReaderController extends ChangeNotifier {
     required double height,
     this.horizontalPadding = 16,
     this.verticalPadding = 8,
+    double? paddingTop,
+    double? paddingBottom,
+    double? paddingLeft,
+    double? paddingRight,
+    this.paragraphSpacing = 0,
+    this.firstLineIndent = 0,
     this.previousWindowPages = 2,
     this.nextWindowPages = 3,
   }) : _document = document,
@@ -64,6 +70,10 @@ class PagedReaderController extends ChangeNotifier {
        _style = style,
        _width = width,
        _height = height {
+    this.paddingTop = paddingTop ?? verticalPadding;
+    this.paddingBottom = paddingBottom ?? verticalPadding;
+    this.paddingLeft = paddingLeft ?? horizontalPadding;
+    this.paddingRight = paddingRight ?? horizontalPadding;
     _window = PageWindow(
       previousCount: previousWindowPages,
       nextCount: nextWindowPages,
@@ -82,6 +92,12 @@ class PagedReaderController extends ChangeNotifier {
   late double _height;
   late double horizontalPadding;
   late double verticalPadding;
+  late double paddingTop;
+  late double paddingBottom;
+  late double paddingLeft;
+  late double paddingRight;
+  late double paragraphSpacing;
+  late double firstLineIndent;
   final int previousWindowPages;
   final int nextWindowPages;
 
@@ -270,16 +286,42 @@ class PagedReaderController extends ChangeNotifier {
     required TextStyle style,
     double? horizontalPadding,
     double? verticalPadding,
+    double? paddingTop,
+    double? paddingBottom,
+    double? paddingLeft,
+    double? paddingRight,
+    double? paragraphSpacing,
+    double? firstLineIndent,
   }) {
     final nextHorizontalPadding = horizontalPadding ?? this.horizontalPadding;
     final nextVerticalPadding = verticalPadding ?? this.verticalPadding;
+    final nextTop =
+        paddingTop ??
+        (verticalPadding != null ? nextVerticalPadding : this.paddingTop);
+    final nextBottom =
+        paddingBottom ??
+        (verticalPadding != null ? nextVerticalPadding : this.paddingBottom);
+    final nextLeft =
+        paddingLeft ??
+        (horizontalPadding != null ? nextHorizontalPadding : this.paddingLeft);
+    final nextRight =
+        paddingRight ??
+        (horizontalPadding != null ? nextHorizontalPadding : this.paddingRight);
+    final nextParagraphSpacing = paragraphSpacing ?? this.paragraphSpacing;
+    final nextFirstLineIndent = firstLineIndent ?? this.firstLineIndent;
     final nextMetricsKey = textStyleMetricsKey(style);
     final metricsUnchanged =
         width == _width &&
         height == _height &&
         nextMetricsKey == textStyleMetricsKey(_style) &&
         nextHorizontalPadding == this.horizontalPadding &&
-        nextVerticalPadding == this.verticalPadding;
+        nextVerticalPadding == this.verticalPadding &&
+        nextTop == this.paddingTop &&
+        nextBottom == this.paddingBottom &&
+        nextLeft == this.paddingLeft &&
+        nextRight == this.paddingRight &&
+        nextParagraphSpacing == this.paragraphSpacing &&
+        nextFirstLineIndent == this.firstLineIndent;
     if (metricsUnchanged) {
       if (style == _style) return false;
       _style = style;
@@ -296,6 +338,12 @@ class PagedReaderController extends ChangeNotifier {
     _style = style;
     this.horizontalPadding = nextHorizontalPadding;
     this.verticalPadding = nextVerticalPadding;
+    this.paddingTop = nextTop;
+    this.paddingBottom = nextBottom;
+    this.paddingLeft = nextLeft;
+    this.paddingRight = nextRight;
+    this.paragraphSpacing = nextParagraphSpacing;
+    this.firstLineIndent = nextFirstLineIndent;
     _engine.dispose();
     _rebuildEngine();
 
@@ -323,16 +371,42 @@ class PagedReaderController extends ChangeNotifier {
     required TextStyle style,
     double? horizontalPadding,
     double? verticalPadding,
+    double? paddingTop,
+    double? paddingBottom,
+    double? paddingLeft,
+    double? paddingRight,
+    double? paragraphSpacing,
+    double? firstLineIndent,
   }) {
     final nextHorizontalPadding = horizontalPadding ?? this.horizontalPadding;
     final nextVerticalPadding = verticalPadding ?? this.verticalPadding;
+    final nextTop =
+        paddingTop ??
+        (verticalPadding != null ? nextVerticalPadding : this.paddingTop);
+    final nextBottom =
+        paddingBottom ??
+        (verticalPadding != null ? nextVerticalPadding : this.paddingBottom);
+    final nextLeft =
+        paddingLeft ??
+        (horizontalPadding != null ? nextHorizontalPadding : this.paddingLeft);
+    final nextRight =
+        paddingRight ??
+        (horizontalPadding != null ? nextHorizontalPadding : this.paddingRight);
+    final nextParagraphSpacing = paragraphSpacing ?? this.paragraphSpacing;
+    final nextFirstLineIndent = firstLineIndent ?? this.firstLineIndent;
     final nextMetricsKey = textStyleMetricsKey(style);
     final metricsUnchanged =
         width == _width &&
         height == _height &&
         nextMetricsKey == textStyleMetricsKey(_style) &&
         nextHorizontalPadding == this.horizontalPadding &&
-        nextVerticalPadding == this.verticalPadding;
+        nextVerticalPadding == this.verticalPadding &&
+        nextTop == this.paddingTop &&
+        nextBottom == this.paddingBottom &&
+        nextLeft == this.paddingLeft &&
+        nextRight == this.paddingRight &&
+        nextParagraphSpacing == this.paragraphSpacing &&
+        nextFirstLineIndent == this.firstLineIndent;
     if (metricsUnchanged) {
       if (style == _style) return false;
       _style = style;
@@ -348,6 +422,12 @@ class PagedReaderController extends ChangeNotifier {
     _style = style;
     this.horizontalPadding = nextHorizontalPadding;
     this.verticalPadding = nextVerticalPadding;
+    this.paddingTop = nextTop;
+    this.paddingBottom = nextBottom;
+    this.paddingLeft = nextLeft;
+    this.paddingRight = nextRight;
+    this.paragraphSpacing = nextParagraphSpacing;
+    this.firstLineIndent = nextFirstLineIndent;
     _engine.dispose();
     _rebuildEngine();
 
@@ -370,6 +450,12 @@ class PagedReaderController extends ChangeNotifier {
       height: _height,
       horizontalPadding: horizontalPadding,
       verticalPadding: verticalPadding,
+      paddingTop: paddingTop,
+      paddingBottom: paddingBottom,
+      paddingLeft: paddingLeft,
+      paddingRight: paddingRight,
+      paragraphSpacing: paragraphSpacing,
+      firstLineIndent: firstLineIndent,
     );
   }
 

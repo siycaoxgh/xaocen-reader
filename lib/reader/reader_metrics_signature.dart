@@ -1,45 +1,71 @@
-import '../domain/reader/reader_preferences.dart';
-import '../domain/reader/reader_locator.dart';
-import '../domain/reader/reader_visible_range.dart';
 import '../domain/reader/paged_text_range.dart';
+import '../domain/reader/reader_locator.dart';
+import '../domain/reader/reader_preferences.dart';
+import '../domain/reader/reader_visible_range.dart';
 
-/// Reader metrics 的稳定签名。只包含会改变排版的参数；themeMode 不参与。
 final class ReaderMetricsSignature {
   const ReaderMetricsSignature({
     required this.fontSize,
+    required this.letterSpacing,
     required this.lineHeight,
-    required this.horizontalPadding,
-    required this.verticalPadding,
+    required this.paragraphSpacing,
+    required this.firstLineIndent,
+    required this.paddingTop,
+    required this.paddingBottom,
+    required this.paddingLeft,
+    required this.paddingRight,
   });
 
-  factory ReaderMetricsSignature.fromPreferences(ReaderPreferences value) {
-    return ReaderMetricsSignature(
-      fontSize: value.fontSize,
-      lineHeight: value.lineHeight,
-      horizontalPadding: value.horizontalPadding,
-      verticalPadding: value.verticalPadding,
-    );
-  }
+  factory ReaderMetricsSignature.fromPreferences(ReaderPreferences value) =>
+      ReaderMetricsSignature(
+        fontSize: value.fontSize,
+        letterSpacing: value.letterSpacing,
+        lineHeight: value.lineHeight,
+        paragraphSpacing: value.paragraphSpacing,
+        firstLineIndent: value.firstLineIndent,
+        paddingTop: value.paddingTop,
+        paddingBottom: value.paddingBottom,
+        paddingLeft: value.paddingLeft,
+        paddingRight: value.paddingRight,
+      );
 
   final double fontSize;
+  final double letterSpacing;
   final double lineHeight;
-  final double horizontalPadding;
-  final double verticalPadding;
+  final double paragraphSpacing;
+  final double firstLineIndent;
+  final double paddingTop;
+  final double paddingBottom;
+  final double paddingLeft;
+  final double paddingRight;
 
   @override
   bool operator ==(Object other) =>
       other is ReaderMetricsSignature &&
       fontSize == other.fontSize &&
+      letterSpacing == other.letterSpacing &&
       lineHeight == other.lineHeight &&
-      horizontalPadding == other.horizontalPadding &&
-      verticalPadding == other.verticalPadding;
+      paragraphSpacing == other.paragraphSpacing &&
+      firstLineIndent == other.firstLineIndent &&
+      paddingTop == other.paddingTop &&
+      paddingBottom == other.paddingBottom &&
+      paddingLeft == other.paddingLeft &&
+      paddingRight == other.paddingRight;
 
   @override
-  int get hashCode =>
-      Object.hash(fontSize, lineHeight, horizontalPadding, verticalPadding);
+  int get hashCode => Object.hash(
+    fontSize,
+    letterSpacing,
+    lineHeight,
+    paragraphSpacing,
+    firstLineIndent,
+    paddingTop,
+    paddingBottom,
+    paddingLeft,
+    paddingRight,
+  );
 }
 
-/// 一次 metrics 保位重排的可验证结果。
 final class ReaderMetricsRelayoutReport {
   const ReaderMetricsRelayoutReport({
     required this.generation,
@@ -51,7 +77,6 @@ final class ReaderMetricsRelayoutReport {
     this.pageBefore,
     this.pageAfter,
   });
-
   final int generation;
   final ReaderLocator locatorBefore;
   final ReaderLocator locatorAfter;
@@ -60,7 +85,6 @@ final class ReaderMetricsRelayoutReport {
   final ReaderVisibleRange? visibleAfter;
   final PagedTextRange? pageBefore;
   final PagedTextRange? pageAfter;
-
   int get logicalError =>
       (locatorAfter.absoluteCharacterOffset -
               locatorBefore.absoluteCharacterOffset)

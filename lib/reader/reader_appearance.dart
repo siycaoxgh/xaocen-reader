@@ -44,6 +44,7 @@ ReaderResolvedAppearance resolveReaderAppearance(
   BuildContext context, {
   double fontSize = 17,
   double lineHeight = 1.7,
+  double letterSpacing = 0,
 }) {
   final scheme = Theme.of(context).colorScheme;
   final textColor = scheme.onSurface;
@@ -56,6 +57,7 @@ ReaderResolvedAppearance resolveReaderAppearance(
     baseTextStyle: TextStyle(
       fontSize: fontSize,
       height: lineHeight,
+      letterSpacing: letterSpacing,
       color: textColor,
     ),
   );

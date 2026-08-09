@@ -177,6 +177,52 @@ void main() {
 
   group('ReaderPage Widget', () {
     testWidgets(
+      'reopen uses this book saved preferences for the first effective layout',
+      (tester) async {
+        final repository = ReaderPreferencesRepository(db: db);
+        final saved = ReaderPreferences.defaults.copyWith(
+          fontSize: 23,
+          letterSpacing: .35,
+          lineHeight: 2,
+          paragraphSpacing: 7,
+          firstLineIndent: 2,
+          paddingTop: 12,
+          paddingBottom: 18,
+          paddingLeft: 24,
+          paddingRight: 30,
+          themeMode: ReaderThemeMode.dark,
+        );
+        await repository.update('local-txt:abc', saved);
+
+        Future<void> expectSavedLayout() async {
+          final block = tester.widget<ReaderTextBlock>(
+            find.byType(ReaderTextBlock).first,
+          );
+          expect(block.style.fontSize, saved.fontSize);
+          expect(block.style.letterSpacing, saved.letterSpacing);
+          expect(block.style.height, saved.lineHeight);
+          expect(block.paragraphSpacing, saved.paragraphSpacing);
+          expect(block.firstLineIndent, saved.firstLineIndent);
+          expect(
+            block.maxWidth,
+            closeTo(800 - saved.paddingLeft - saved.paddingRight, .01),
+          );
+        }
+
+        await pumpReader(tester, preferencesRepository: repository);
+        await expectSavedLayout();
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(milliseconds: 100));
+
+        await pumpReader(tester, preferencesRepository: repository);
+        await expectSavedLayout();
+        expect(await repository.load('local-txt:abc'), saved);
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(milliseconds: 100));
+      },
+    );
+
+    testWidgets(
       'theme-only preferences do not restore locator or write progress',
       (tester) async {
         final changes = StreamController<ReaderPreferences>(sync: true);
@@ -336,17 +382,11 @@ void main() {
 
         expect(reports.length, greaterThanOrEqualTo(3));
         expect(reports.every((report) => report.logicalError == 0), isTrue);
-        final stored = await repository.load();
+        final stored = await repository.load('local-txt:abc');
         expect(stored.fontSize, isNot(ReaderPreferences.defaultFontSize));
         expect(stored.lineHeight, isNot(ReaderPreferences.defaultLineHeight));
-        expect(
-          stored.horizontalPadding,
-          isNot(ReaderPreferences.defaultHorizontalPadding),
-        );
-        expect(
-          stored.verticalPadding,
-          isNot(ReaderPreferences.defaultVerticalPadding),
-        );
+        expect(stored.paddingLeft, isNot(ReaderPreferences.defaultPaddingLeft));
+        expect(stored.paddingTop, isNot(ReaderPreferences.defaultPaddingTop));
         expect(await progressRepo.getProgress('local-txt:abc'), isNull);
         await tester.tapAt(const Offset(10, 10));
         await tester.pumpAndSettle();
@@ -367,12 +407,19 @@ void main() {
       );
       await tester.tap(find.byKey(readerAppearanceActionKey));
       await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('深色'));
+      await tester.pump();
       await tester.tap(find.text('深色'));
       await tester.pumpAndSettle();
-      expect((await repository.load()).themeMode, ReaderThemeMode.dark);
+      expect(
+        (await repository.load('local-txt:abc')).themeMode,
+        ReaderThemeMode.dark,
+      );
       expect(reports, isEmpty);
       expect(await progressRepo.getProgress('local-txt:abc'), isNull);
 
+      await tester.ensureVisible(find.byKey(readerFontSizeSliderKey));
+      await tester.pump();
       await tester.drag(
         find.byKey(readerFontSizeSliderKey),
         const Offset(80, 0),
@@ -380,11 +427,16 @@ void main() {
       for (var i = 0; i < 12; i++) {
         await tester.pump();
       }
+      await tester.ensureVisible(find.byKey(readerResetPreferencesKey));
+      await tester.pump();
       await tester.tap(find.byKey(readerResetPreferencesKey));
       for (var i = 0; i < 12; i++) {
         await tester.pump();
       }
-      expect(await repository.load(), ReaderPreferences.defaults);
+      expect(
+        await repository.load('local-txt:abc'),
+        ReaderPreferences.defaults,
+      );
       await tester.tapAt(const Offset(10, 10));
       await tester.pumpAndSettle();
       await tester.pumpWidget(const SizedBox.shrink());
@@ -450,7 +502,10 @@ void main() {
         final displayed = tester.widget<Slider>(
           find.descendant(of: slider, matching: find.byType(Slider)),
         );
-        expect((await repository.load()).fontSize, displayed.value);
+        expect(
+          (await repository.load('local-txt:abc')).fontSize,
+          displayed.value,
+        );
         expect(reports.last.logicalError, 0);
         expect(reports.last.signature.fontSize, displayed.value);
         await tester.tapAt(const Offset(10, 10));

@@ -137,3 +137,18 @@ vertical A → paged → 不翻页 → 重开 = paged + A · vertical A → page
 | Android 12 以下版本 | 未测（真机为 Android 15；minSdk 21） |
 | Windows 低 DPI/高 DPI 缩放 | 未专项验证 |
 | M5.1a Reader 设置 UI/实时重排 | 本阶段明确未实现，属于 M5.1b 及后续 |
+## M5.1e.1 validation
+
+| Area | Result |
+|---|---|
+| Schema 4 -> 5, legacy settings seed, books/progress preserved | PASS |
+| Per-book save/load/watch/restart and A/B isolation | PASS |
+| Reset defaults affects current book only | PASS |
+| Reopen first effective body layout uses saved current-book values | PASS |
+| Invalid/non-finite/out-of-range values fallback per field | PASS |
+| Letter/line/paragraph/indent/four-padding metrics preserve Locator | PASS, logical error 0 |
+| Theme remains paint-only | PASS |
+| Contracts + unit + widget | 355/355 PASS |
+| Windows integration | 9/9 suites, 12/12 scenarios PASS |
+| Real corpus (`C:\Users\TOM\Desktop\测试`, all 4 TXT, 12 anchors) | PASS, logical error 0 |
+| Android real device | NOT-RUN / deferred to M5.1 final validation |

@@ -714,3 +714,18 @@ engine 和有限 PageWindow；controller 最终 dispose 仍释放当前 engine�
 stream，而页面的 subscription 又尚未进入 dispose，表现为测试进程无 CPU、无断言输出地挂起。
 正确 teardown 顺序是先关闭 modal、卸载 Reader 并推进一帧完成 subscription cancel，最后关闭
 测试数据库。该问题只影响测试资源生命周期，不应通过业务层固定 delay 掩盖。
+## M5.1e.1 lessons (2026-08-09)
+
+### Persisted state must gate the first layout, not merely update it later
+
+A watch stream can eventually make controls display the saved values while an earlier
+Reader layout has already committed defaults. For layout-critical persisted state,
+startup needs an explicit initial-load barrier: load the current collection snapshot,
+derive metrics, subscribe to that same collection, then create the Reader layout.
+
+### Additive migrations must tolerate sparse historical test schemas
+
+Production schema 4 contains content_collections, but older migration fixtures may
+model only the table relevant to their original transition. A schema 5 seed query now
+checks sqlite_master before selecting existing collections. This preserves real data
+while keeping every supported historical migration path executable.

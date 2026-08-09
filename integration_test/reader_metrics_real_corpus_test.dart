@@ -25,7 +25,7 @@ void main() {
   );
 
   test(
-    'M5.1b real corpus metrics relayout: all TXT, logical error 0',
+    'M5.1e.1 real corpus typography relayout: all TXT, logical error 0',
     () async {
       final corpus = Directory(corpusPath);
       expect(await corpus.exists(), isTrue, reason: '真实语料目录必须存在: $corpusPath');
@@ -80,8 +80,10 @@ void main() {
               style: const TextStyle(fontSize: 17, height: 1.7),
               width: 400,
               height: 600,
-              horizontalPadding: 16,
-              verticalPadding: 8,
+              paddingTop: 8,
+              paddingBottom: 10,
+              paddingLeft: 16,
+              paddingRight: 18,
             );
             final locator = ReaderLocator(
               collectionId: imported.collection.id,
@@ -95,9 +97,17 @@ void main() {
             controller.relayout(
               width: 400,
               height: 600,
-              style: const TextStyle(fontSize: 22, height: 1.9),
-              horizontalPadding: 32,
-              verticalPadding: 20,
+              style: const TextStyle(
+                fontSize: 22,
+                height: 1.9,
+                letterSpacing: .3,
+              ),
+              paragraphSpacing: 6,
+              firstLineIndent: 2,
+              paddingTop: 14,
+              paddingBottom: 20,
+              paddingLeft: 26,
+              paddingRight: 34,
             );
             final after = controller.currentPage!;
             final afterLocator = controller.confirmedLocator!;
@@ -111,7 +121,7 @@ void main() {
             expect(controller.window.pageCount, lessThanOrEqualTo(6));
             // ignore: avoid_print
             print(
-              'M5.1b corpus=${file.uri.pathSegments.last} '
+              'M5.1e.1 corpus=${file.uri.pathSegments.last} '
               'locator=$offset->$afterLocator before=$before after=$after '
               'logicalError=$logicalError',
             );
@@ -150,5 +160,6 @@ void main() {
         }
       }
     },
+    timeout: const Timeout(Duration(minutes: 5)),
   );
 }

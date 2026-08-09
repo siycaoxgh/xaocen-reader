@@ -76,3 +76,10 @@
 4. **`tool/inspect_managed_txt.dart`** 依赖 `sqlite3` 直接依赖（pubspec 显式加入，原为传递依赖）—— 属工具链用途，勿移除。
 5. **父目录 `m1_cache/`、`m1_cache_notoc/`** 是 M1 阶段 inspect 工具的缓存产物（管理目录，不在仓库内），非外部 TXT 旁缓存。
 6. **`docs/README.md` 的权威文档索引**未列 M1–M3.4 报告（本任务新增 6 份长期文档后应同步更新索引——见最终交付说明）。
+## M5.1e.1 status update (2026-08-09)
+
+- The P1 “saved panel values but default body layout after reopen” is resolved by
+  gating Reader startup on the current collection's saved preferences.
+- ReaderPreferences is now per book in schema 5; no known cross-book preference
+  contamination remains.
+- Android device validation remains NOT-RUN / deferred to M5.1 final validation.

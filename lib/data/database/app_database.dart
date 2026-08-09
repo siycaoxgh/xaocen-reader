@@ -23,6 +23,7 @@ part 'app_database.g.dart';
     ImportRecords,
     ReadingProgress,
     AppSettings,
+    ReaderPreferencesRows,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -32,7 +33,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting() : super(NativeDatabase.memory());
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   /// 打开应用数据库（support 目录下）。
   static Future<AppDatabase> open() async {
@@ -65,6 +66,38 @@ class AppDatabase extends _$AppDatabase {
       // reading_progress、readingMode 或 ReaderLocator。
       if (from < 4) {
         await m.createTable(appSettings);
+      }
+      if (from < 5) {
+        await m.createTable(readerPreferencesRows);
+        // Preserve legacy global M5.1a-e values by seeding every existing book.
+        // Invalid values remain harmless: the repository validates every field.
+        final hasCollectionsTable =
+            await customSelect(
+              "SELECT 1 FROM sqlite_master "
+              "WHERE type = 'table' AND name = 'content_collections'",
+            ).getSingleOrNull() !=
+            null;
+        if (hasCollectionsTable) {
+          await customStatement('''
+          INSERT INTO reader_preferences (
+            collection_id, font_size, letter_spacing, line_height,
+            paragraph_spacing, first_line_indent, padding_top, padding_bottom,
+            padding_left, padding_right, theme_mode, updated_at
+          )
+          SELECT id,
+            COALESCE((SELECT CAST(value AS REAL) FROM app_settings WHERE key='reader.fontSize'), 17),
+            0,
+            COALESCE((SELECT CAST(value AS REAL) FROM app_settings WHERE key='reader.lineHeight'), 1.7),
+            0, 0,
+            COALESCE((SELECT CAST(value AS REAL) FROM app_settings WHERE key='reader.verticalPadding'), 8),
+            COALESCE((SELECT CAST(value AS REAL) FROM app_settings WHERE key='reader.verticalPadding'), 8),
+            COALESCE((SELECT CAST(value AS REAL) FROM app_settings WHERE key='reader.horizontalPadding'), 16),
+            COALESCE((SELECT CAST(value AS REAL) FROM app_settings WHERE key='reader.horizontalPadding'), 16),
+            COALESCE((SELECT value FROM app_settings WHERE key='reader.themeMode'), 'system'),
+            CAST(strftime('%s','now') AS INTEGER)
+          FROM content_collections
+        ''');
+        }
       }
     },
     beforeOpen: (details) async {

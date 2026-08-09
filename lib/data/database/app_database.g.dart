@@ -4104,6 +4104,758 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
   }
 }
 
+class $ReaderPreferencesRowsTable extends ReaderPreferencesRows
+    with TableInfo<$ReaderPreferencesRowsTable, ReaderPreferencesRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ReaderPreferencesRowsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _collectionIdMeta = const VerificationMeta(
+    'collectionId',
+  );
+  @override
+  late final GeneratedColumn<String> collectionId = GeneratedColumn<String>(
+    'collection_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints:
+        'NOT NULL REFERENCES content_collections (id) ON DELETE CASCADE',
+  );
+  static const VerificationMeta _fontSizeMeta = const VerificationMeta(
+    'fontSize',
+  );
+  @override
+  late final GeneratedColumn<double> fontSize = GeneratedColumn<double>(
+    'font_size',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _letterSpacingMeta = const VerificationMeta(
+    'letterSpacing',
+  );
+  @override
+  late final GeneratedColumn<double> letterSpacing = GeneratedColumn<double>(
+    'letter_spacing',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _lineHeightMeta = const VerificationMeta(
+    'lineHeight',
+  );
+  @override
+  late final GeneratedColumn<double> lineHeight = GeneratedColumn<double>(
+    'line_height',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _paragraphSpacingMeta = const VerificationMeta(
+    'paragraphSpacing',
+  );
+  @override
+  late final GeneratedColumn<double> paragraphSpacing = GeneratedColumn<double>(
+    'paragraph_spacing',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _firstLineIndentMeta = const VerificationMeta(
+    'firstLineIndent',
+  );
+  @override
+  late final GeneratedColumn<double> firstLineIndent = GeneratedColumn<double>(
+    'first_line_indent',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _paddingTopMeta = const VerificationMeta(
+    'paddingTop',
+  );
+  @override
+  late final GeneratedColumn<double> paddingTop = GeneratedColumn<double>(
+    'padding_top',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _paddingBottomMeta = const VerificationMeta(
+    'paddingBottom',
+  );
+  @override
+  late final GeneratedColumn<double> paddingBottom = GeneratedColumn<double>(
+    'padding_bottom',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _paddingLeftMeta = const VerificationMeta(
+    'paddingLeft',
+  );
+  @override
+  late final GeneratedColumn<double> paddingLeft = GeneratedColumn<double>(
+    'padding_left',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _paddingRightMeta = const VerificationMeta(
+    'paddingRight',
+  );
+  @override
+  late final GeneratedColumn<double> paddingRight = GeneratedColumn<double>(
+    'padding_right',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _themeModeMeta = const VerificationMeta(
+    'themeMode',
+  );
+  @override
+  late final GeneratedColumn<String> themeMode = GeneratedColumn<String>(
+    'theme_mode',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    collectionId,
+    fontSize,
+    letterSpacing,
+    lineHeight,
+    paragraphSpacing,
+    firstLineIndent,
+    paddingTop,
+    paddingBottom,
+    paddingLeft,
+    paddingRight,
+    themeMode,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'reader_preferences';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ReaderPreferencesRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('collection_id')) {
+      context.handle(
+        _collectionIdMeta,
+        collectionId.isAcceptableOrUnknown(
+          data['collection_id']!,
+          _collectionIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_collectionIdMeta);
+    }
+    if (data.containsKey('font_size')) {
+      context.handle(
+        _fontSizeMeta,
+        fontSize.isAcceptableOrUnknown(data['font_size']!, _fontSizeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_fontSizeMeta);
+    }
+    if (data.containsKey('letter_spacing')) {
+      context.handle(
+        _letterSpacingMeta,
+        letterSpacing.isAcceptableOrUnknown(
+          data['letter_spacing']!,
+          _letterSpacingMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_letterSpacingMeta);
+    }
+    if (data.containsKey('line_height')) {
+      context.handle(
+        _lineHeightMeta,
+        lineHeight.isAcceptableOrUnknown(data['line_height']!, _lineHeightMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_lineHeightMeta);
+    }
+    if (data.containsKey('paragraph_spacing')) {
+      context.handle(
+        _paragraphSpacingMeta,
+        paragraphSpacing.isAcceptableOrUnknown(
+          data['paragraph_spacing']!,
+          _paragraphSpacingMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_paragraphSpacingMeta);
+    }
+    if (data.containsKey('first_line_indent')) {
+      context.handle(
+        _firstLineIndentMeta,
+        firstLineIndent.isAcceptableOrUnknown(
+          data['first_line_indent']!,
+          _firstLineIndentMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_firstLineIndentMeta);
+    }
+    if (data.containsKey('padding_top')) {
+      context.handle(
+        _paddingTopMeta,
+        paddingTop.isAcceptableOrUnknown(data['padding_top']!, _paddingTopMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_paddingTopMeta);
+    }
+    if (data.containsKey('padding_bottom')) {
+      context.handle(
+        _paddingBottomMeta,
+        paddingBottom.isAcceptableOrUnknown(
+          data['padding_bottom']!,
+          _paddingBottomMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_paddingBottomMeta);
+    }
+    if (data.containsKey('padding_left')) {
+      context.handle(
+        _paddingLeftMeta,
+        paddingLeft.isAcceptableOrUnknown(
+          data['padding_left']!,
+          _paddingLeftMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_paddingLeftMeta);
+    }
+    if (data.containsKey('padding_right')) {
+      context.handle(
+        _paddingRightMeta,
+        paddingRight.isAcceptableOrUnknown(
+          data['padding_right']!,
+          _paddingRightMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_paddingRightMeta);
+    }
+    if (data.containsKey('theme_mode')) {
+      context.handle(
+        _themeModeMeta,
+        themeMode.isAcceptableOrUnknown(data['theme_mode']!, _themeModeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_themeModeMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {collectionId};
+  @override
+  ReaderPreferencesRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ReaderPreferencesRow(
+      collectionId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}collection_id'],
+      )!,
+      fontSize: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}font_size'],
+      )!,
+      letterSpacing: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}letter_spacing'],
+      )!,
+      lineHeight: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}line_height'],
+      )!,
+      paragraphSpacing: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}paragraph_spacing'],
+      )!,
+      firstLineIndent: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}first_line_indent'],
+      )!,
+      paddingTop: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}padding_top'],
+      )!,
+      paddingBottom: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}padding_bottom'],
+      )!,
+      paddingLeft: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}padding_left'],
+      )!,
+      paddingRight: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}padding_right'],
+      )!,
+      themeMode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}theme_mode'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $ReaderPreferencesRowsTable createAlias(String alias) {
+    return $ReaderPreferencesRowsTable(attachedDatabase, alias);
+  }
+}
+
+class ReaderPreferencesRow extends DataClass
+    implements Insertable<ReaderPreferencesRow> {
+  final String collectionId;
+  final double fontSize;
+  final double letterSpacing;
+  final double lineHeight;
+  final double paragraphSpacing;
+  final double firstLineIndent;
+  final double paddingTop;
+  final double paddingBottom;
+  final double paddingLeft;
+  final double paddingRight;
+  final String themeMode;
+  final DateTime updatedAt;
+  const ReaderPreferencesRow({
+    required this.collectionId,
+    required this.fontSize,
+    required this.letterSpacing,
+    required this.lineHeight,
+    required this.paragraphSpacing,
+    required this.firstLineIndent,
+    required this.paddingTop,
+    required this.paddingBottom,
+    required this.paddingLeft,
+    required this.paddingRight,
+    required this.themeMode,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['collection_id'] = Variable<String>(collectionId);
+    map['font_size'] = Variable<double>(fontSize);
+    map['letter_spacing'] = Variable<double>(letterSpacing);
+    map['line_height'] = Variable<double>(lineHeight);
+    map['paragraph_spacing'] = Variable<double>(paragraphSpacing);
+    map['first_line_indent'] = Variable<double>(firstLineIndent);
+    map['padding_top'] = Variable<double>(paddingTop);
+    map['padding_bottom'] = Variable<double>(paddingBottom);
+    map['padding_left'] = Variable<double>(paddingLeft);
+    map['padding_right'] = Variable<double>(paddingRight);
+    map['theme_mode'] = Variable<String>(themeMode);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  ReaderPreferencesRowsCompanion toCompanion(bool nullToAbsent) {
+    return ReaderPreferencesRowsCompanion(
+      collectionId: Value(collectionId),
+      fontSize: Value(fontSize),
+      letterSpacing: Value(letterSpacing),
+      lineHeight: Value(lineHeight),
+      paragraphSpacing: Value(paragraphSpacing),
+      firstLineIndent: Value(firstLineIndent),
+      paddingTop: Value(paddingTop),
+      paddingBottom: Value(paddingBottom),
+      paddingLeft: Value(paddingLeft),
+      paddingRight: Value(paddingRight),
+      themeMode: Value(themeMode),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory ReaderPreferencesRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ReaderPreferencesRow(
+      collectionId: serializer.fromJson<String>(json['collectionId']),
+      fontSize: serializer.fromJson<double>(json['fontSize']),
+      letterSpacing: serializer.fromJson<double>(json['letterSpacing']),
+      lineHeight: serializer.fromJson<double>(json['lineHeight']),
+      paragraphSpacing: serializer.fromJson<double>(json['paragraphSpacing']),
+      firstLineIndent: serializer.fromJson<double>(json['firstLineIndent']),
+      paddingTop: serializer.fromJson<double>(json['paddingTop']),
+      paddingBottom: serializer.fromJson<double>(json['paddingBottom']),
+      paddingLeft: serializer.fromJson<double>(json['paddingLeft']),
+      paddingRight: serializer.fromJson<double>(json['paddingRight']),
+      themeMode: serializer.fromJson<String>(json['themeMode']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'collectionId': serializer.toJson<String>(collectionId),
+      'fontSize': serializer.toJson<double>(fontSize),
+      'letterSpacing': serializer.toJson<double>(letterSpacing),
+      'lineHeight': serializer.toJson<double>(lineHeight),
+      'paragraphSpacing': serializer.toJson<double>(paragraphSpacing),
+      'firstLineIndent': serializer.toJson<double>(firstLineIndent),
+      'paddingTop': serializer.toJson<double>(paddingTop),
+      'paddingBottom': serializer.toJson<double>(paddingBottom),
+      'paddingLeft': serializer.toJson<double>(paddingLeft),
+      'paddingRight': serializer.toJson<double>(paddingRight),
+      'themeMode': serializer.toJson<String>(themeMode),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  ReaderPreferencesRow copyWith({
+    String? collectionId,
+    double? fontSize,
+    double? letterSpacing,
+    double? lineHeight,
+    double? paragraphSpacing,
+    double? firstLineIndent,
+    double? paddingTop,
+    double? paddingBottom,
+    double? paddingLeft,
+    double? paddingRight,
+    String? themeMode,
+    DateTime? updatedAt,
+  }) => ReaderPreferencesRow(
+    collectionId: collectionId ?? this.collectionId,
+    fontSize: fontSize ?? this.fontSize,
+    letterSpacing: letterSpacing ?? this.letterSpacing,
+    lineHeight: lineHeight ?? this.lineHeight,
+    paragraphSpacing: paragraphSpacing ?? this.paragraphSpacing,
+    firstLineIndent: firstLineIndent ?? this.firstLineIndent,
+    paddingTop: paddingTop ?? this.paddingTop,
+    paddingBottom: paddingBottom ?? this.paddingBottom,
+    paddingLeft: paddingLeft ?? this.paddingLeft,
+    paddingRight: paddingRight ?? this.paddingRight,
+    themeMode: themeMode ?? this.themeMode,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  ReaderPreferencesRow copyWithCompanion(ReaderPreferencesRowsCompanion data) {
+    return ReaderPreferencesRow(
+      collectionId: data.collectionId.present
+          ? data.collectionId.value
+          : this.collectionId,
+      fontSize: data.fontSize.present ? data.fontSize.value : this.fontSize,
+      letterSpacing: data.letterSpacing.present
+          ? data.letterSpacing.value
+          : this.letterSpacing,
+      lineHeight: data.lineHeight.present
+          ? data.lineHeight.value
+          : this.lineHeight,
+      paragraphSpacing: data.paragraphSpacing.present
+          ? data.paragraphSpacing.value
+          : this.paragraphSpacing,
+      firstLineIndent: data.firstLineIndent.present
+          ? data.firstLineIndent.value
+          : this.firstLineIndent,
+      paddingTop: data.paddingTop.present
+          ? data.paddingTop.value
+          : this.paddingTop,
+      paddingBottom: data.paddingBottom.present
+          ? data.paddingBottom.value
+          : this.paddingBottom,
+      paddingLeft: data.paddingLeft.present
+          ? data.paddingLeft.value
+          : this.paddingLeft,
+      paddingRight: data.paddingRight.present
+          ? data.paddingRight.value
+          : this.paddingRight,
+      themeMode: data.themeMode.present ? data.themeMode.value : this.themeMode,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ReaderPreferencesRow(')
+          ..write('collectionId: $collectionId, ')
+          ..write('fontSize: $fontSize, ')
+          ..write('letterSpacing: $letterSpacing, ')
+          ..write('lineHeight: $lineHeight, ')
+          ..write('paragraphSpacing: $paragraphSpacing, ')
+          ..write('firstLineIndent: $firstLineIndent, ')
+          ..write('paddingTop: $paddingTop, ')
+          ..write('paddingBottom: $paddingBottom, ')
+          ..write('paddingLeft: $paddingLeft, ')
+          ..write('paddingRight: $paddingRight, ')
+          ..write('themeMode: $themeMode, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    collectionId,
+    fontSize,
+    letterSpacing,
+    lineHeight,
+    paragraphSpacing,
+    firstLineIndent,
+    paddingTop,
+    paddingBottom,
+    paddingLeft,
+    paddingRight,
+    themeMode,
+    updatedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ReaderPreferencesRow &&
+          other.collectionId == this.collectionId &&
+          other.fontSize == this.fontSize &&
+          other.letterSpacing == this.letterSpacing &&
+          other.lineHeight == this.lineHeight &&
+          other.paragraphSpacing == this.paragraphSpacing &&
+          other.firstLineIndent == this.firstLineIndent &&
+          other.paddingTop == this.paddingTop &&
+          other.paddingBottom == this.paddingBottom &&
+          other.paddingLeft == this.paddingLeft &&
+          other.paddingRight == this.paddingRight &&
+          other.themeMode == this.themeMode &&
+          other.updatedAt == this.updatedAt);
+}
+
+class ReaderPreferencesRowsCompanion
+    extends UpdateCompanion<ReaderPreferencesRow> {
+  final Value<String> collectionId;
+  final Value<double> fontSize;
+  final Value<double> letterSpacing;
+  final Value<double> lineHeight;
+  final Value<double> paragraphSpacing;
+  final Value<double> firstLineIndent;
+  final Value<double> paddingTop;
+  final Value<double> paddingBottom;
+  final Value<double> paddingLeft;
+  final Value<double> paddingRight;
+  final Value<String> themeMode;
+  final Value<DateTime> updatedAt;
+  final Value<int> rowid;
+  const ReaderPreferencesRowsCompanion({
+    this.collectionId = const Value.absent(),
+    this.fontSize = const Value.absent(),
+    this.letterSpacing = const Value.absent(),
+    this.lineHeight = const Value.absent(),
+    this.paragraphSpacing = const Value.absent(),
+    this.firstLineIndent = const Value.absent(),
+    this.paddingTop = const Value.absent(),
+    this.paddingBottom = const Value.absent(),
+    this.paddingLeft = const Value.absent(),
+    this.paddingRight = const Value.absent(),
+    this.themeMode = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ReaderPreferencesRowsCompanion.insert({
+    required String collectionId,
+    required double fontSize,
+    required double letterSpacing,
+    required double lineHeight,
+    required double paragraphSpacing,
+    required double firstLineIndent,
+    required double paddingTop,
+    required double paddingBottom,
+    required double paddingLeft,
+    required double paddingRight,
+    required String themeMode,
+    required DateTime updatedAt,
+    this.rowid = const Value.absent(),
+  }) : collectionId = Value(collectionId),
+       fontSize = Value(fontSize),
+       letterSpacing = Value(letterSpacing),
+       lineHeight = Value(lineHeight),
+       paragraphSpacing = Value(paragraphSpacing),
+       firstLineIndent = Value(firstLineIndent),
+       paddingTop = Value(paddingTop),
+       paddingBottom = Value(paddingBottom),
+       paddingLeft = Value(paddingLeft),
+       paddingRight = Value(paddingRight),
+       themeMode = Value(themeMode),
+       updatedAt = Value(updatedAt);
+  static Insertable<ReaderPreferencesRow> custom({
+    Expression<String>? collectionId,
+    Expression<double>? fontSize,
+    Expression<double>? letterSpacing,
+    Expression<double>? lineHeight,
+    Expression<double>? paragraphSpacing,
+    Expression<double>? firstLineIndent,
+    Expression<double>? paddingTop,
+    Expression<double>? paddingBottom,
+    Expression<double>? paddingLeft,
+    Expression<double>? paddingRight,
+    Expression<String>? themeMode,
+    Expression<DateTime>? updatedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (collectionId != null) 'collection_id': collectionId,
+      if (fontSize != null) 'font_size': fontSize,
+      if (letterSpacing != null) 'letter_spacing': letterSpacing,
+      if (lineHeight != null) 'line_height': lineHeight,
+      if (paragraphSpacing != null) 'paragraph_spacing': paragraphSpacing,
+      if (firstLineIndent != null) 'first_line_indent': firstLineIndent,
+      if (paddingTop != null) 'padding_top': paddingTop,
+      if (paddingBottom != null) 'padding_bottom': paddingBottom,
+      if (paddingLeft != null) 'padding_left': paddingLeft,
+      if (paddingRight != null) 'padding_right': paddingRight,
+      if (themeMode != null) 'theme_mode': themeMode,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ReaderPreferencesRowsCompanion copyWith({
+    Value<String>? collectionId,
+    Value<double>? fontSize,
+    Value<double>? letterSpacing,
+    Value<double>? lineHeight,
+    Value<double>? paragraphSpacing,
+    Value<double>? firstLineIndent,
+    Value<double>? paddingTop,
+    Value<double>? paddingBottom,
+    Value<double>? paddingLeft,
+    Value<double>? paddingRight,
+    Value<String>? themeMode,
+    Value<DateTime>? updatedAt,
+    Value<int>? rowid,
+  }) {
+    return ReaderPreferencesRowsCompanion(
+      collectionId: collectionId ?? this.collectionId,
+      fontSize: fontSize ?? this.fontSize,
+      letterSpacing: letterSpacing ?? this.letterSpacing,
+      lineHeight: lineHeight ?? this.lineHeight,
+      paragraphSpacing: paragraphSpacing ?? this.paragraphSpacing,
+      firstLineIndent: firstLineIndent ?? this.firstLineIndent,
+      paddingTop: paddingTop ?? this.paddingTop,
+      paddingBottom: paddingBottom ?? this.paddingBottom,
+      paddingLeft: paddingLeft ?? this.paddingLeft,
+      paddingRight: paddingRight ?? this.paddingRight,
+      themeMode: themeMode ?? this.themeMode,
+      updatedAt: updatedAt ?? this.updatedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (collectionId.present) {
+      map['collection_id'] = Variable<String>(collectionId.value);
+    }
+    if (fontSize.present) {
+      map['font_size'] = Variable<double>(fontSize.value);
+    }
+    if (letterSpacing.present) {
+      map['letter_spacing'] = Variable<double>(letterSpacing.value);
+    }
+    if (lineHeight.present) {
+      map['line_height'] = Variable<double>(lineHeight.value);
+    }
+    if (paragraphSpacing.present) {
+      map['paragraph_spacing'] = Variable<double>(paragraphSpacing.value);
+    }
+    if (firstLineIndent.present) {
+      map['first_line_indent'] = Variable<double>(firstLineIndent.value);
+    }
+    if (paddingTop.present) {
+      map['padding_top'] = Variable<double>(paddingTop.value);
+    }
+    if (paddingBottom.present) {
+      map['padding_bottom'] = Variable<double>(paddingBottom.value);
+    }
+    if (paddingLeft.present) {
+      map['padding_left'] = Variable<double>(paddingLeft.value);
+    }
+    if (paddingRight.present) {
+      map['padding_right'] = Variable<double>(paddingRight.value);
+    }
+    if (themeMode.present) {
+      map['theme_mode'] = Variable<String>(themeMode.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ReaderPreferencesRowsCompanion(')
+          ..write('collectionId: $collectionId, ')
+          ..write('fontSize: $fontSize, ')
+          ..write('letterSpacing: $letterSpacing, ')
+          ..write('lineHeight: $lineHeight, ')
+          ..write('paragraphSpacing: $paragraphSpacing, ')
+          ..write('firstLineIndent: $firstLineIndent, ')
+          ..write('paddingTop: $paddingTop, ')
+          ..write('paddingBottom: $paddingBottom, ')
+          ..write('paddingLeft: $paddingLeft, ')
+          ..write('paddingRight: $paddingRight, ')
+          ..write('themeMode: $themeMode, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -4120,6 +4872,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     this,
   );
   late final $AppSettingsTable appSettings = $AppSettingsTable(this);
+  late final $ReaderPreferencesRowsTable readerPreferencesRows =
+      $ReaderPreferencesRowsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -4133,6 +4887,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     importRecords,
     readingProgress,
     appSettings,
+    readerPreferencesRows,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -4142,6 +4897,13 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         limitUpdateKind: UpdateKind.delete,
       ),
       result: [TableUpdate('reading_progress', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'content_collections',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('reader_preferences', kind: UpdateKind.delete)],
     ),
   ]);
 }
@@ -4494,6 +5256,34 @@ final class $$ContentCollectionsTableReferences
       manager.$state.copyWith(prefetchedData: cache),
     );
   }
+
+  static MultiTypedResultKey<
+    $ReaderPreferencesRowsTable,
+    List<ReaderPreferencesRow>
+  >
+  _readerPreferencesRowsRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.readerPreferencesRows,
+        aliasName: $_aliasNameGenerator(
+          db.contentCollections.id,
+          db.readerPreferencesRows.collectionId,
+        ),
+      );
+
+  $$ReaderPreferencesRowsTableProcessedTableManager
+  get readerPreferencesRowsRefs {
+    final manager = $$ReaderPreferencesRowsTableTableManager(
+      $_db,
+      $_db.readerPreferencesRows,
+    ).filter((f) => f.collectionId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _readerPreferencesRowsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 }
 
 class $$ContentCollectionsTableFilterComposer
@@ -4567,6 +5357,32 @@ class $$ContentCollectionsTableFilterComposer
                 $removeJoinBuilderFromRootComposer,
           ),
     );
+    return f(composer);
+  }
+
+  Expression<bool> readerPreferencesRowsRefs(
+    Expression<bool> Function($$ReaderPreferencesRowsTableFilterComposer f) f,
+  ) {
+    final $$ReaderPreferencesRowsTableFilterComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.readerPreferencesRows,
+          getReferencedColumn: (t) => t.collectionId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$ReaderPreferencesRowsTableFilterComposer(
+                $db: $db,
+                $table: $db.readerPreferencesRows,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
     return f(composer);
   }
 }
@@ -4682,6 +5498,32 @@ class $$ContentCollectionsTableAnnotationComposer
     );
     return f(composer);
   }
+
+  Expression<T> readerPreferencesRowsRefs<T extends Object>(
+    Expression<T> Function($$ReaderPreferencesRowsTableAnnotationComposer a) f,
+  ) {
+    final $$ReaderPreferencesRowsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.readerPreferencesRows,
+          getReferencedColumn: (t) => t.collectionId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$ReaderPreferencesRowsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.readerPreferencesRows,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
 }
 
 class $$ContentCollectionsTableTableManager
@@ -4697,7 +5539,10 @@ class $$ContentCollectionsTableTableManager
           $$ContentCollectionsTableUpdateCompanionBuilder,
           (ContentCollection, $$ContentCollectionsTableReferences),
           ContentCollection,
-          PrefetchHooks Function({bool readingProgressRefs})
+          PrefetchHooks Function({
+            bool readingProgressRefs,
+            bool readerPreferencesRowsRefs,
+          })
         > {
   $$ContentCollectionsTableTableManager(
     _$AppDatabase db,
@@ -4767,40 +5612,66 @@ class $$ContentCollectionsTableTableManager
                 ),
               )
               .toList(),
-          prefetchHooksCallback: ({readingProgressRefs = false}) {
-            return PrefetchHooks(
-              db: db,
-              explicitlyWatchedTables: [
-                if (readingProgressRefs) db.readingProgress,
-              ],
-              addJoins: null,
-              getPrefetchedDataCallback: (items) async {
-                return [
-                  if (readingProgressRefs)
-                    await $_getPrefetchedData<
-                      ContentCollection,
-                      $ContentCollectionsTable,
-                      ReadingProgressData
-                    >(
-                      currentTable: table,
-                      referencedTable: $$ContentCollectionsTableReferences
-                          ._readingProgressRefsTable(db),
-                      managerFromTypedResult: (p0) =>
-                          $$ContentCollectionsTableReferences(
-                            db,
-                            table,
-                            p0,
-                          ).readingProgressRefs,
-                      referencedItemsForCurrentItem: (item, referencedItems) =>
-                          referencedItems.where(
-                            (e) => e.collectionId == item.id,
-                          ),
-                      typedResults: items,
-                    ),
-                ];
+          prefetchHooksCallback:
+              ({
+                readingProgressRefs = false,
+                readerPreferencesRowsRefs = false,
+              }) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [
+                    if (readingProgressRefs) db.readingProgress,
+                    if (readerPreferencesRowsRefs) db.readerPreferencesRows,
+                  ],
+                  addJoins: null,
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (readingProgressRefs)
+                        await $_getPrefetchedData<
+                          ContentCollection,
+                          $ContentCollectionsTable,
+                          ReadingProgressData
+                        >(
+                          currentTable: table,
+                          referencedTable: $$ContentCollectionsTableReferences
+                              ._readingProgressRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$ContentCollectionsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).readingProgressRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.collectionId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (readerPreferencesRowsRefs)
+                        await $_getPrefetchedData<
+                          ContentCollection,
+                          $ContentCollectionsTable,
+                          ReaderPreferencesRow
+                        >(
+                          currentTable: table,
+                          referencedTable: $$ContentCollectionsTableReferences
+                              ._readerPreferencesRowsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$ContentCollectionsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).readerPreferencesRowsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.collectionId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
+                  },
+                );
               },
-            );
-          },
         ),
       );
 }
@@ -4817,7 +5688,10 @@ typedef $$ContentCollectionsTableProcessedTableManager =
       $$ContentCollectionsTableUpdateCompanionBuilder,
       (ContentCollection, $$ContentCollectionsTableReferences),
       ContentCollection,
-      PrefetchHooks Function({bool readingProgressRefs})
+      PrefetchHooks Function({
+        bool readingProgressRefs,
+        bool readerPreferencesRowsRefs,
+      })
     >;
 typedef $$ContentItemsTableCreateCompanionBuilder =
     ContentItemsCompanion Function({
@@ -6444,6 +7318,500 @@ typedef $$AppSettingsTableProcessedTableManager =
       AppSetting,
       PrefetchHooks Function()
     >;
+typedef $$ReaderPreferencesRowsTableCreateCompanionBuilder =
+    ReaderPreferencesRowsCompanion Function({
+      required String collectionId,
+      required double fontSize,
+      required double letterSpacing,
+      required double lineHeight,
+      required double paragraphSpacing,
+      required double firstLineIndent,
+      required double paddingTop,
+      required double paddingBottom,
+      required double paddingLeft,
+      required double paddingRight,
+      required String themeMode,
+      required DateTime updatedAt,
+      Value<int> rowid,
+    });
+typedef $$ReaderPreferencesRowsTableUpdateCompanionBuilder =
+    ReaderPreferencesRowsCompanion Function({
+      Value<String> collectionId,
+      Value<double> fontSize,
+      Value<double> letterSpacing,
+      Value<double> lineHeight,
+      Value<double> paragraphSpacing,
+      Value<double> firstLineIndent,
+      Value<double> paddingTop,
+      Value<double> paddingBottom,
+      Value<double> paddingLeft,
+      Value<double> paddingRight,
+      Value<String> themeMode,
+      Value<DateTime> updatedAt,
+      Value<int> rowid,
+    });
+
+final class $$ReaderPreferencesRowsTableReferences
+    extends
+        BaseReferences<
+          _$AppDatabase,
+          $ReaderPreferencesRowsTable,
+          ReaderPreferencesRow
+        > {
+  $$ReaderPreferencesRowsTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $ContentCollectionsTable _collectionIdTable(_$AppDatabase db) =>
+      db.contentCollections.createAlias(
+        $_aliasNameGenerator(
+          db.readerPreferencesRows.collectionId,
+          db.contentCollections.id,
+        ),
+      );
+
+  $$ContentCollectionsTableProcessedTableManager get collectionId {
+    final $_column = $_itemColumn<String>('collection_id')!;
+
+    final manager = $$ContentCollectionsTableTableManager(
+      $_db,
+      $_db.contentCollections,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_collectionIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$ReaderPreferencesRowsTableFilterComposer
+    extends Composer<_$AppDatabase, $ReaderPreferencesRowsTable> {
+  $$ReaderPreferencesRowsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<double> get fontSize => $composableBuilder(
+    column: $table.fontSize,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get letterSpacing => $composableBuilder(
+    column: $table.letterSpacing,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get lineHeight => $composableBuilder(
+    column: $table.lineHeight,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get paragraphSpacing => $composableBuilder(
+    column: $table.paragraphSpacing,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get firstLineIndent => $composableBuilder(
+    column: $table.firstLineIndent,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get paddingTop => $composableBuilder(
+    column: $table.paddingTop,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get paddingBottom => $composableBuilder(
+    column: $table.paddingBottom,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get paddingLeft => $composableBuilder(
+    column: $table.paddingLeft,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get paddingRight => $composableBuilder(
+    column: $table.paddingRight,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get themeMode => $composableBuilder(
+    column: $table.themeMode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$ContentCollectionsTableFilterComposer get collectionId {
+    final $$ContentCollectionsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.collectionId,
+      referencedTable: $db.contentCollections,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ContentCollectionsTableFilterComposer(
+            $db: $db,
+            $table: $db.contentCollections,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ReaderPreferencesRowsTableOrderingComposer
+    extends Composer<_$AppDatabase, $ReaderPreferencesRowsTable> {
+  $$ReaderPreferencesRowsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<double> get fontSize => $composableBuilder(
+    column: $table.fontSize,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get letterSpacing => $composableBuilder(
+    column: $table.letterSpacing,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get lineHeight => $composableBuilder(
+    column: $table.lineHeight,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get paragraphSpacing => $composableBuilder(
+    column: $table.paragraphSpacing,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get firstLineIndent => $composableBuilder(
+    column: $table.firstLineIndent,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get paddingTop => $composableBuilder(
+    column: $table.paddingTop,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get paddingBottom => $composableBuilder(
+    column: $table.paddingBottom,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get paddingLeft => $composableBuilder(
+    column: $table.paddingLeft,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get paddingRight => $composableBuilder(
+    column: $table.paddingRight,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get themeMode => $composableBuilder(
+    column: $table.themeMode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$ContentCollectionsTableOrderingComposer get collectionId {
+    final $$ContentCollectionsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.collectionId,
+      referencedTable: $db.contentCollections,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ContentCollectionsTableOrderingComposer(
+            $db: $db,
+            $table: $db.contentCollections,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ReaderPreferencesRowsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ReaderPreferencesRowsTable> {
+  $$ReaderPreferencesRowsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<double> get fontSize =>
+      $composableBuilder(column: $table.fontSize, builder: (column) => column);
+
+  GeneratedColumn<double> get letterSpacing => $composableBuilder(
+    column: $table.letterSpacing,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get lineHeight => $composableBuilder(
+    column: $table.lineHeight,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get paragraphSpacing => $composableBuilder(
+    column: $table.paragraphSpacing,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get firstLineIndent => $composableBuilder(
+    column: $table.firstLineIndent,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get paddingTop => $composableBuilder(
+    column: $table.paddingTop,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get paddingBottom => $composableBuilder(
+    column: $table.paddingBottom,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get paddingLeft => $composableBuilder(
+    column: $table.paddingLeft,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get paddingRight => $composableBuilder(
+    column: $table.paddingRight,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get themeMode =>
+      $composableBuilder(column: $table.themeMode, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  $$ContentCollectionsTableAnnotationComposer get collectionId {
+    final $$ContentCollectionsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.collectionId,
+          referencedTable: $db.contentCollections,
+          getReferencedColumn: (t) => t.id,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$ContentCollectionsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.contentCollections,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return composer;
+  }
+}
+
+class $$ReaderPreferencesRowsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ReaderPreferencesRowsTable,
+          ReaderPreferencesRow,
+          $$ReaderPreferencesRowsTableFilterComposer,
+          $$ReaderPreferencesRowsTableOrderingComposer,
+          $$ReaderPreferencesRowsTableAnnotationComposer,
+          $$ReaderPreferencesRowsTableCreateCompanionBuilder,
+          $$ReaderPreferencesRowsTableUpdateCompanionBuilder,
+          (ReaderPreferencesRow, $$ReaderPreferencesRowsTableReferences),
+          ReaderPreferencesRow,
+          PrefetchHooks Function({bool collectionId})
+        > {
+  $$ReaderPreferencesRowsTableTableManager(
+    _$AppDatabase db,
+    $ReaderPreferencesRowsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ReaderPreferencesRowsTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$ReaderPreferencesRowsTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$ReaderPreferencesRowsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> collectionId = const Value.absent(),
+                Value<double> fontSize = const Value.absent(),
+                Value<double> letterSpacing = const Value.absent(),
+                Value<double> lineHeight = const Value.absent(),
+                Value<double> paragraphSpacing = const Value.absent(),
+                Value<double> firstLineIndent = const Value.absent(),
+                Value<double> paddingTop = const Value.absent(),
+                Value<double> paddingBottom = const Value.absent(),
+                Value<double> paddingLeft = const Value.absent(),
+                Value<double> paddingRight = const Value.absent(),
+                Value<String> themeMode = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ReaderPreferencesRowsCompanion(
+                collectionId: collectionId,
+                fontSize: fontSize,
+                letterSpacing: letterSpacing,
+                lineHeight: lineHeight,
+                paragraphSpacing: paragraphSpacing,
+                firstLineIndent: firstLineIndent,
+                paddingTop: paddingTop,
+                paddingBottom: paddingBottom,
+                paddingLeft: paddingLeft,
+                paddingRight: paddingRight,
+                themeMode: themeMode,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String collectionId,
+                required double fontSize,
+                required double letterSpacing,
+                required double lineHeight,
+                required double paragraphSpacing,
+                required double firstLineIndent,
+                required double paddingTop,
+                required double paddingBottom,
+                required double paddingLeft,
+                required double paddingRight,
+                required String themeMode,
+                required DateTime updatedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => ReaderPreferencesRowsCompanion.insert(
+                collectionId: collectionId,
+                fontSize: fontSize,
+                letterSpacing: letterSpacing,
+                lineHeight: lineHeight,
+                paragraphSpacing: paragraphSpacing,
+                firstLineIndent: firstLineIndent,
+                paddingTop: paddingTop,
+                paddingBottom: paddingBottom,
+                paddingLeft: paddingLeft,
+                paddingRight: paddingRight,
+                themeMode: themeMode,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$ReaderPreferencesRowsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({collectionId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (collectionId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.collectionId,
+                                referencedTable:
+                                    $$ReaderPreferencesRowsTableReferences
+                                        ._collectionIdTable(db),
+                                referencedColumn:
+                                    $$ReaderPreferencesRowsTableReferences
+                                        ._collectionIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$ReaderPreferencesRowsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ReaderPreferencesRowsTable,
+      ReaderPreferencesRow,
+      $$ReaderPreferencesRowsTableFilterComposer,
+      $$ReaderPreferencesRowsTableOrderingComposer,
+      $$ReaderPreferencesRowsTableAnnotationComposer,
+      $$ReaderPreferencesRowsTableCreateCompanionBuilder,
+      $$ReaderPreferencesRowsTableUpdateCompanionBuilder,
+      (ReaderPreferencesRow, $$ReaderPreferencesRowsTableReferences),
+      ReaderPreferencesRow,
+      PrefetchHooks Function({bool collectionId})
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -6464,4 +7832,6 @@ class $AppDatabaseManager {
       $$ReadingProgressTableTableManager(_db, _db.readingProgress);
   $$AppSettingsTableTableManager get appSettings =>
       $$AppSettingsTableTableManager(_db, _db.appSettings);
+  $$ReaderPreferencesRowsTableTableManager get readerPreferencesRows =>
+      $$ReaderPreferencesRowsTableTableManager(_db, _db.readerPreferencesRows);
 }

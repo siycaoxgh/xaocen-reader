@@ -20,6 +20,7 @@ import 'package:flutter/painting.dart';
 
 import '../domain/reader/paged_text_range.dart';
 import '../domain/reader/reader_block.dart';
+import 'reader_typography_layout.dart';
 
 /// 分页引擎。
 class PagedLayoutEngine {
@@ -31,14 +32,18 @@ class PagedLayoutEngine {
     required this.height,
     this.horizontalPadding = 16,
     this.verticalPadding = 8,
+    double? paddingTop,
+    double? paddingBottom,
+    double? paddingLeft,
+    double? paddingRight,
+    this.paragraphSpacing = 0,
+    this.firstLineIndent = 0,
     this.textScale = 1.0,
     this.policyVersion = pagedPolicyVersion,
-  }) : _tp = TextPainter(
-         textDirection: textDirection,
-         // 与渲染（RenderReaderTextBlock）完全一致：noScaling。
-         // textScale 本轮恒 1.0（未来阅读设置放开时经 signature 重分页）。
-         textScaler: TextScaler.noScaling,
-       );
+  }) : paddingTop = paddingTop ?? verticalPadding,
+       paddingBottom = paddingBottom ?? verticalPadding,
+       paddingLeft = paddingLeft ?? horizontalPadding,
+       paddingRight = paddingRight ?? horizontalPadding;
 
   /// 规范化正文（引用 NormalizedDocument.text，不复制全文）。
   final String text;
@@ -56,23 +61,30 @@ class PagedLayoutEngine {
 
   final double horizontalPadding;
   final double verticalPadding;
+  final double paddingTop;
+  final double paddingBottom;
+  final double paddingLeft;
+  final double paddingRight;
+  final double paragraphSpacing;
+  final double firstLineIndent;
   final double textScale;
   final int policyVersion;
 
-  /// 复用的 TextPainter（同一实例逐次 layout，避免频繁创建）。
-  final TextPainter _tp;
-
-  double get contentWidth => math.max(1.0, width - horizontalPadding * 2);
-  double get contentHeight => math.max(1.0, height - verticalPadding * 2);
+  double get contentWidth => math.max(1.0, width - paddingLeft - paddingRight);
+  double get contentHeight =>
+      math.max(1.0, height - paddingTop - paddingBottom);
 
   /// 布局签名（resize / orientation / 字体度量变化的判定依据）。
   PagedLayoutSignature get signature => PagedLayoutSignature(
     width: width,
     height: height,
-    horizontalPadding: horizontalPadding,
-    verticalPadding: verticalPadding,
+    paddingTop: paddingTop,
+    paddingBottom: paddingBottom,
+    paddingLeft: paddingLeft,
+    paddingRight: paddingRight,
     textScale: textScale,
-    styleMetricsKey: textStyleMetricsKey(style),
+    styleMetricsKey:
+        '${textStyleMetricsKey(style)};ps=$paragraphSpacing;fi=$firstLineIndent',
     paginationPolicyVersion: policyVersion,
   );
 
@@ -80,10 +92,18 @@ class PagedLayoutEngine {
   /// 且与全文页数无关（§九）。
   static const int candidateChars = 32768;
 
-  void _layoutCandidate(String candidate) {
-    _tp.text = TextSpan(text: candidate, style: style);
-    _tp.layout(maxWidth: contentWidth);
-  }
+  ReaderTypographyLayout _layoutCandidate(String candidate, int globalStart) =>
+      ReaderTypographyLayout(
+        text: candidate,
+        style: style,
+        textDirection: textDirection,
+        width: contentWidth,
+        paragraphSpacing: paragraphSpacing,
+        firstLineIndent: firstLineIndent,
+        startsAtParagraphBoundary:
+            globalStart == 0 || text.codeUnitAt(globalStart - 1) == 0x0A,
+        buildFastLineRecords: false,
+      );
 
   /// 页尾 surrogate 修正：不拆 UTF-16 surrogate pair（§三十）。
   int _fixSurrogateBoundary(int offset) {
@@ -110,10 +130,11 @@ class PagedLayoutEngine {
 
     final take = math.min(len - startOffset, candidateChars);
     final candidate = text.substring(startOffset, startOffset + take);
-    _layoutCandidate(candidate);
+    final layout = _layoutCandidate(candidate, startOffset);
 
     // 整块不足一屏（文档尾 / 候选上限内装完）：直接整块一页。
-    if (_tp.height <= contentHeight) {
+    if (layout.height <= contentHeight) {
+      layout.dispose();
       return PagedTextRange(
         startCharacterOffset: startOffset,
         endCharacterOffset: startOffset + take,
@@ -121,42 +142,53 @@ class PagedLayoutEngine {
     }
 
     // 逐渲染行累计高度：取「放得下的最大完整行集合」。
-    final lines = _tp.computeLineMetrics();
+    final fastPainter = layout.fastPainter;
+    final lines = layout.lines;
     var acc = 0.0;
     var lineEnd = 0;
-    var lineStart = 0;
     var found = false;
-    for (final m in lines) {
-      // 严格 ≤ contentHeight（无 ε 容差）：保证页面渲染高度不超 viewport 约束。
-      if (acc + m.height > contentHeight) break;
-      acc += m.height;
-      // lineStart 始终指向「内容行行首」（0 或 LF 后）；getLineBoundary 对
-      // 行首求 [行首, 行尾)，行尾在 LF 前（该行以 LF 结束时）。LF 字符本身
-      // 归入下一页（页面 end 无 trailing LF → 渲染无额外空行，行数与引擎
-      // 累计一致——'a\n' 渲染高 = 2 行，而引擎候选上累计不含 trailing 空行）。
-      final b = _tp.getLineBoundary(TextPosition(offset: lineStart));
-      var end = b.end;
-      // 零宽防御（正常不触发：lineStart 非 LF）：至少推进一个字符。
-      if (end <= lineStart) {
-        end = lineStart + 1;
+    if (fastPainter != null) {
+      var lineStart = 0;
+      for (final m in fastPainter.computeLineMetrics()) {
+        if (acc + m.height > contentHeight) break;
+        acc += m.height;
+        final boundary = fastPainter.getLineBoundary(
+          TextPosition(offset: lineStart),
+        );
+        lineEnd = boundary.end;
+        lineStart =
+            lineEnd < candidate.length && candidate.codeUnitAt(lineEnd) == 0x0A
+            ? lineEnd + 1
+            : lineEnd;
+        found = true;
       }
-      lineEnd = end;
-      // 下一行行首：跳过 LF（lineEnd 是 LF 位置时 +1；wrap 行行尾即行首）。
-      if (lineEnd < candidate.length && candidate.codeUnitAt(lineEnd) == 0x0A) {
-        lineStart = lineEnd + 1;
-      } else {
-        lineStart = lineEnd;
+    } else {
+      for (final m in lines) {
+        // 严格 ≤ contentHeight（无 ε 容差）：保证页面渲染高度不超 viewport 约束。
+        if (acc + m.height > contentHeight) break;
+        acc += m.height;
+        // lineStart 始终指向「内容行行首」（0 或 LF 后）；getLineBoundary 对
+        // 行首求 [行首, 行尾)，行尾在 LF 前（该行以 LF 结束时）。LF 字符本身
+        // 归入下一页（页面 end 无 trailing LF → 渲染无额外空行，行数与引擎
+        // 累计一致——'a\n' 渲染高 = 2 行，而引擎候选上累计不含 trailing 空行）。
+        lineEnd = m.end;
+        found = true;
       }
-      found = true;
     }
     if (!found) {
-      // 首行放不下（极端小 viewport）：至少一页 = 首行。
-      final b = _tp.getLineBoundary(const TextPosition(offset: 0));
-      lineEnd = b.end;
+      if (fastPainter != null) {
+        lineEnd = fastPainter
+            .getLineBoundary(const TextPosition(offset: 0))
+            .end;
+      } else {
+        lineEnd = lines.first.end;
+      }
     }
+    layout.dispose();
 
     var end = _fixSurrogateBoundary(startOffset + math.min(lineEnd, take));
     if (end <= startOffset) {
+      end = math.min(startOffset + 1, len);
       // 防御：永不返回空页 / 造成死循环。
       end = math.min(startOffset + 1, len);
       end = _fixSurrogateBoundary(end);
@@ -190,10 +222,11 @@ class PagedLayoutEngine {
       }
     }
     final candidate = text.substring(start, endOffset);
-    _layoutCandidate(candidate);
+    final layout = _layoutCandidate(candidate, start);
 
     // 整块不足一屏：从候选起点到 endOffset 一页。
-    if (_tp.height <= contentHeight) {
+    if (layout.height <= contentHeight) {
+      layout.dispose();
       return PagedTextRange(
         startCharacterOffset: start,
         endCharacterOffset: endOffset,
@@ -203,28 +236,42 @@ class PagedLayoutEngine {
     // 从末尾往回累计渲染行（getLineBoundary，与 forward 的
     // computeLineMetrics 行划分一致——同布局同文本）：
     // 取「放得下的最大完整行集合」。
-    final lines = _tp.computeLineMetrics();
+    final fastPainter = layout.fastPainter;
+    final lines = layout.lines;
     var acc = 0.0;
     var lineStartRel = candidate.length;
     var found = false;
-    for (var i = lines.length - 1; i >= 0; i--) {
-      final m = lines[i];
+    final lineMetrics = fastPainter?.computeLineMetrics();
+    final lineCount = lineMetrics?.length ?? lines.length;
+    for (var i = lineCount - 1; i >= 0; i--) {
+      final height = lineMetrics?[i].height ?? lines[i].height;
       // 严格 ≤ contentHeight（无 ε 容差）。
-      if (acc + m.height > contentHeight) break;
-      acc += m.height;
-      final b = _tp.getLineBoundary(
-        TextPosition(offset: math.max(0, lineStartRel - 1)),
-      );
-      lineStartRel = b.start;
+      if (acc + height > contentHeight) break;
+      acc += height;
+      if (fastPainter != null) {
+        lineStartRel = fastPainter
+            .getLineBoundary(
+              TextPosition(offset: math.max(0, lineStartRel - 1)),
+            )
+            .start;
+      } else {
+        lineStartRel = lines[i].start;
+      }
       found = true;
     }
     if (!found) {
       // 一整屏都放不下（极端）：取末尾一行。
-      final b = _tp.getLineBoundary(
-        TextPosition(offset: math.max(0, candidate.length - 1)),
-      );
-      lineStartRel = b.start;
+      if (fastPainter != null) {
+        lineStartRel = fastPainter
+            .getLineBoundary(
+              TextPosition(offset: math.max(0, candidate.length - 1)),
+            )
+            .start;
+      } else {
+        lineStartRel = lines.last.start;
+      }
     }
+    layout.dispose();
     // 页首 = 候选内行首；行首前是 LF → 页首 = LF 位置（与 forward 页
     // start = LF 一致）。行首为 0（文档首）时保持 0。
     if (lineStartRel > 0 && candidate.codeUnitAt(lineStartRel - 1) == 0x0A) {
@@ -280,7 +327,5 @@ class PagedLayoutEngine {
   /// 文本末尾是否为页面末尾（endReached 判定辅助）。
   bool isDocumentEnd(int endOffset) => endOffset >= text.length;
 
-  void dispose() {
-    _tp.dispose();
-  }
+  void dispose() {}
 }

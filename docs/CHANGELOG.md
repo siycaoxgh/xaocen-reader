@@ -488,3 +488,15 @@ Not a release; recorded for completeness.
   including 23940-entry table, 4-byte chars, offset stability across font
   size / orientation / re-layout (Android pages differ from Windows due to
   font metrics; offsets identical).
+# M5.1e.1 — per-book ReaderPreferences and reopen-layout P1 (2026-08-09)
+
+- Changed ReaderPreferences from global app_settings state to per-collection typed
+  persistence in schema 5.
+- Added letter spacing, paragraph spacing, first-line indent, and independent top,
+  bottom, left, and right body padding.
+- Fixed reopen using defaults for the body's first layout despite saved panel values;
+  saved per-book preferences now gate Reader startup.
+- Preserved normalized TXT UTF-16 ReaderLocator as the only position truth;
+  typography never mutates normalized text.
+- 355 contracts/unit/widget and 9 integration suites (12 scenarios) pass; all four
+  real TXT files pass typography relayout with logical error 0.
