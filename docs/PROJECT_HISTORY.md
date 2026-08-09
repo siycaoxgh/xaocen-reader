@@ -23,6 +23,7 @@
 | M5.1a | ReaderPreferences + Drift | feat/m4-horizontal-reader | `2dae263` → 本阶段提交 | 1 | 0.1.0-dev.4+4 | 338 测试；schema 3→4 |
 | M5.1b | Metrics 保位重排 | feat/m4-horizontal-reader | `6c85a49` → 本阶段提交 | 1 | 0.1.0-dev.4+4 | 342 测试；Windows 4 TXT logical error 0 |
 | M5.1c | 三态主题 + paint-only | feat/m4-horizontal-reader | `e37e593` → 本阶段提交 | 1 | 0.1.0-dev.4+4 | 346 测试；9 integration；双端构建 |
+| M5.1d | V3 日常 Reader 壳层 | feat/m4-horizontal-reader | `651c7e0` → 本阶段提交 | 1 | 0.1.0-dev.4+4 | 352 测试；9 integration 文件 / 12 场景；双端构建 |
 
 本阶段提交后合计：67 commits（M0 以来，HEAD 链）；当前分支
 `feat/m4-horizontal-reader`。最终 HEAD 以本阶段提交结果为准。

@@ -1,6 +1,6 @@
 # ARCHITECTURE_CURRENT.md — XAOCEN Reader v4 当前架构与合同
 
-> 只描述当前代码与合同（`feat/m4-horizontal-reader`，M5.1c 完成点）。
+> 只描述当前代码与合同（`feat/m4-horizontal-reader`，M5.1d 完成点）。
 > 不记录历史故事（见 PROJECT_HISTORY.md）。
 > 代码位置均以本仓库实际文件为准。
 
@@ -41,7 +41,7 @@ Key components by layer (all paths under `lib/`):
 | domain | `domain/local_txt/` (TextEncoding, TocEntry, TxtIndex, PipelineProgress, LargeFilePolicy), `domain/reader/` (ReaderLocator, ReaderBlock, ReaderVisibleRange, ReaderPreferences), `domain/library/` (entities, import models, NormalizedArtifact, TocIndexLogic) |
 | sources | `sources/local_txt/` (gb18030 decoder/index loader/data, encoding detector, normalizer, toc scanner, import service/request/result, index cache, content identity, cancellation) |
 | data | `data/database/` (tables, app_database + generated), `data/repositories/` (local_library_repository, library_file_manager, managed_collection_health, collection_repair_service, reading_progress_repository, reader_preferences_repository, encoding_index_provider) |
-| reader | `reader/` (normalized_document_loader, reader_controller, reader_page, reader_text_block, reader_appearance) |
+| reader | `reader/` (normalized_document_loader, reader_controller, reader_page, reader_chrome, reader_text_block, reader_appearance) |
 | app/design | `app/` (bootstrap, app, router, constants, library_page, providers, placeholder_page), `design/` (tokens, theme) |
 
 Layering rules (enforced by structure, not by tooling):
@@ -49,6 +49,18 @@ Layering rules (enforced by structure, not by tooling):
 - `reader/engine` components never depend on page Widgets.
 - UI only reaches data through Repository / Controller (never Drift directly).
 - `data` may depend on `domain`; `sources` may depend on `domain` but not pages.
+
+### Reader shell contract (M5.1d)
+
+- `ReaderPage` owns Reader engine lifecycle; `ReaderChrome` owns only transient
+  top/bottom controls and typed entry callbacks.
+- Chrome is layered over a full stable Reader viewport with `Stack`. Visibility
+  changes must not alter metrics, invoke Locator restore, or write progress.
+- The toolbar exposes Flat TOC, current per-book mode, Interface/Aa, and More.
+  Aa/More are preview containers until M5.1e; TTS is not exposed as enabled.
+- Below 720 logical pixels the toolbar follows available width; on wider Windows
+  layouts it is centered and capped at 520 logical pixels.
+- Colors reuse `ColorScheme`/`ReaderResolvedAppearance`; theme remains paint-only.
 
 ---
 

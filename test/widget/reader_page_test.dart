@@ -12,6 +12,7 @@ import 'package:xaocen_reader/domain/reader/reader_locator.dart';
 import 'package:xaocen_reader/domain/reader/reader_preferences.dart';
 import 'package:xaocen_reader/reader/normalized_document_loader.dart';
 import 'package:xaocen_reader/reader/reader_page.dart';
+import 'package:xaocen_reader/reader/reader_chrome.dart';
 import 'package:xaocen_reader/reader/reader_metrics_signature.dart';
 import 'package:xaocen_reader/reader/reader_text_block.dart';
 
@@ -248,6 +249,65 @@ void main() {
       );
       expect(ro, isNotEmpty);
     });
+
+    testWidgets('V3 chrome overlays toggle without progress writes', (
+      tester,
+    ) async {
+      await pumpReader(tester);
+      expect(find.byKey(readerTopChromeKey), findsOneWidget);
+      expect(find.byKey(readerBottomChromeKey), findsOneWidget);
+
+      await tester.tap(find.byKey(readerChromeToggleKey));
+      await tester.pump(const Duration(milliseconds: 150));
+      final top = tester.widget<AnimatedOpacity>(
+        find.ancestor(
+          of: find.byKey(readerTopChromeKey),
+          matching: find.byType(AnimatedOpacity),
+        ),
+      );
+      expect(top.opacity, 0);
+      expect(await progressRepo.getProgress('local-txt:abc'), isNull);
+
+      await tester.tap(find.byKey(readerChromeToggleKey));
+      await tester.pump(const Duration(milliseconds: 150));
+      expect(await progressRepo.getProgress('local-txt:abc'), isNull);
+    });
+
+    testWidgets('Aa and more open honest placeholder panels', (tester) async {
+      await pumpReader(tester);
+      await tester.tap(find.byKey(readerAppearanceActionKey));
+      await tester.pumpAndSettle();
+      expect(find.text('阅读界面'), findsOneWidget);
+      expect(find.textContaining('M5.1e'), findsOneWidget);
+      await tester.tapAt(const Offset(10, 10));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(readerMoreActionKey));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('朗读当前未实现'), findsOneWidget);
+    });
+
+    testWidgets(
+      'Reader chrome adapts to portrait landscape and desktop resize',
+      (tester) async {
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetDevicePixelRatio);
+        addTearDown(tester.view.resetPhysicalSize);
+        tester.view.physicalSize = const Size(390, 844);
+        await pumpReader(tester);
+        expect(tester.takeException(), isNull);
+
+        tester.view.physicalSize = const Size(844, 390);
+        await tester.pump();
+        expect(tester.takeException(), isNull);
+
+        tester.view.physicalSize = const Size(1200, 800);
+        await tester.pump();
+        final bottomSize = tester.getSize(find.byKey(readerBottomChromeKey));
+        expect(bottomSize.width, lessThanOrEqualTo(520));
+        expect(tester.takeException(), isNull);
+      },
+    );
 
     testWidgets('恢复完成前零写入（打开后 DB 无进度）', (tester) async {
       await pumpReader(tester);

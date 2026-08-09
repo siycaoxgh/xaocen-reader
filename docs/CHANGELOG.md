@@ -14,6 +14,19 @@ Legend for validation columns:
 
 ## Unreleased
 
+### M5.1d — V3 daily Reader shell (2026-08-09)
+- Replaced the engineering-style successful Reader `AppBar` with stable overlay
+  chrome: a light top action region and a responsive bottom reading toolbar.
+- Added Directory, current scroll/paged mode, Interface/Aa, and More entry points.
+  Aa/More are honest preview containers; no M5.1e controls or fake TTS action.
+- Reader content remains the full stable viewport beneath the overlays. Showing or
+  hiding chrome does not relayout text, restore a Locator, or write progress.
+- Kept the vertical/paged engines, Flat TOC, per-book mode/progress, schema 4,
+  ReaderPreferences, and theme contracts unchanged.
+- Validation: analyze clean; 352/352 unit/widget; 9/9 Windows integration files
+  (12 scenarios); all 4 real TXT; Windows Release and Android Debug builds PASS.
+- Android device validation: NOT-RUN / deferred to M5.1 final validation.
+
 ### P1 — paged → vertical exact Locator restore (2026-08-09)
 - Fixed the latent M4 mode-state ordering bug that skipped vertical restore while paged was still active.
 - Writes remain frozen until the real visible range contains the captured non-zero Locator and confirmation succeeds.

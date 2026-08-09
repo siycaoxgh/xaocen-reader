@@ -21,12 +21,14 @@ import '../domain/library/library_entities.dart';
 import '../domain/library/toc_index.dart';
 import '../domain/reader/reader_locator.dart';
 import '../domain/reader/paged_text_range.dart';
+import '../domain/reader/reader_block.dart';
 import '../domain/reader/reader_preferences.dart';
 import '../domain/reader/reader_visible_range.dart';
 import 'normalized_document_loader.dart';
 import 'paged_reader_controller.dart';
 import 'paged_reader_view.dart';
 import 'reader_appearance.dart';
+import 'reader_chrome.dart';
 import 'reader_controller.dart';
 import 'reader_mode.dart';
 import 'reader_metrics_signature.dart';
@@ -161,6 +163,16 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
   ReaderLocator? _modeRestoreAnchor;
   int? _modeRestoreGeneration;
   bool _suppressProgrammaticScrollNotifications = false;
+  bool _chromeVisible = true;
+
+  void _toggleChrome() {
+    setState(() => _chromeVisible = !_chromeVisible);
+  }
+
+  void _showChrome() {
+    if (_chromeVisible) return;
+    setState(() => _chromeVisible = true);
+  }
 
   void _traceModeTransition(
     String event, {
@@ -1121,101 +1133,107 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
     final index = _controller.blockIndex!;
     final doc = _controller.document!;
 
+    final readerContent = _mode == ReaderMode.paged && _pagedController != null
+        ? _buildPagedBody(context)
+        : _buildVerticalBody(context, index, doc);
     return Scaffold(
       backgroundColor: _appearance.backgroundColor,
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: Text(
-          widget.launch.collection.title,
-          overflow: TextOverflow.ellipsis,
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.list),
-            tooltip: '目录',
-            onPressed: _openToc,
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          GestureDetector(
+            key: readerChromeToggleKey,
+            behavior: HitTestBehavior.translucent,
+            onTap: _toggleChrome,
+            child: readerContent,
           ),
-          // M4：阅读模式切换（滚动 / 分页），当前模式可识别（§三十九）。
-          PopupMenuButton<ReaderMode>(
-            tooltip: '阅读模式',
-            icon: Icon(
-              _mode == ReaderMode.paged ? Icons.auto_stories : Icons.swap_vert,
-            ),
-            onSelected: _selectMode,
-            itemBuilder: (context) => [
-              CheckedPopupMenuItem(
-                value: ReaderMode.vertical,
-                checked: _mode == ReaderMode.vertical,
-                child: const Text('滚动'),
-              ),
-              CheckedPopupMenuItem(
-                value: ReaderMode.paged,
-                checked: _mode == ReaderMode.paged,
-                child: const Text('分页'),
-              ),
-            ],
+          ReaderChrome(
+            visible: _chromeVisible,
+            title: widget.launch.collection.title,
+            mode: _mode,
+            onBack: () => Navigator.of(context).pop(),
+            onToc: () {
+              _showChrome();
+              _openToc();
+            },
+            onAppearance: () {
+              _showChrome();
+              showReaderAppearancePreview(
+                context,
+                preferences: _preferences,
+                mode: _mode,
+              );
+            },
+            onMore: () {
+              _showChrome();
+              showReaderMorePreview(context);
+            },
+            onModeSelected: (mode) {
+              _showChrome();
+              _selectMode(mode);
+            },
           ),
         ],
       ),
-      body: _mode == ReaderMode.paged && _pagedController != null
-          ? _buildPagedBody(context)
-          : Column(
-              children: [
-                if (const bool.fromEnvironment('XAOCEN_READER_DEBUG'))
-                  _DebugBar(controller: _controller, page: this),
-                Expanded(
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: _preferences.horizontalPadding,
-                      vertical: _preferences.verticalPadding,
-                    ),
-                    child: Scrollbar(
-                      controller: _scroll,
-                      child: NotificationListener<ScrollNotification>(
-                        onNotification: (n) {
-                          _onUserScroll(n);
-                          return false;
-                        },
-                        child: SuperListView.builder(
-                          controller: _scroll,
-                          listController: _listController,
-                          itemCount: index.blockCount,
-                          itemBuilder: (context, i) {
-                            final block = index.blocks[i];
-                            final text = doc.text.substring(
-                              block.startCharacterOffset,
-                              block.endCharacterOffset,
-                            );
-                            final key = _blockKeys[i] ??= GlobalKey();
-                            return ReaderTextBlock(
-                              key: key,
-                              text: text,
-                              style: _bodyStyle,
-                              // 主题变化时递增：保证已构建 block 走 updateRenderObject 更新颜色
-                              styleVersion: _appearance.textColor.toARGB32(),
-                              textDirection: TextDirection.ltr,
-                              maxWidth:
-                                  MediaQuery.of(context).size.width -
-                                  (_preferences.horizontalPadding * 2),
-                              onLayout: (layout) {
-                                final ro = key.currentContext
-                                    ?.findRenderObject();
-                                if (ro is RenderReaderTextBlock) {
-                                  _renderObjects[i] = ro;
-                                }
-                              },
-                            );
-                          },
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+    );
+  }
+
+  Widget _buildVerticalBody(
+    BuildContext context,
+    ReaderBlockIndex index,
+    NormalizedDocument doc,
+  ) {
+    return Column(
+      children: [
+        if (const bool.fromEnvironment('XAOCEN_READER_DEBUG'))
+          _DebugBar(controller: _controller, page: this),
+        Expanded(
+          child: Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: _preferences.horizontalPadding,
+              vertical: _preferences.verticalPadding,
             ),
+            child: Scrollbar(
+              controller: _scroll,
+              child: NotificationListener<ScrollNotification>(
+                onNotification: (n) {
+                  _onUserScroll(n);
+                  return false;
+                },
+                child: SuperListView.builder(
+                  controller: _scroll,
+                  listController: _listController,
+                  itemCount: index.blockCount,
+                  itemBuilder: (context, i) {
+                    final block = index.blocks[i];
+                    final text = doc.text.substring(
+                      block.startCharacterOffset,
+                      block.endCharacterOffset,
+                    );
+                    final key = _blockKeys[i] ??= GlobalKey();
+                    return ReaderTextBlock(
+                      key: key,
+                      text: text,
+                      style: _bodyStyle,
+                      styleVersion: _appearance.textColor.toARGB32(),
+                      textDirection: TextDirection.ltr,
+                      maxWidth:
+                          MediaQuery.of(context).size.width -
+                          (_preferences.horizontalPadding * 2),
+                      onLayout: (layout) {
+                        final ro = key.currentContext?.findRenderObject();
+                        if (ro is RenderReaderTextBlock) {
+                          _renderObjects[i] = ro;
+                        }
+                      },
+                    );
+                  },
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
