@@ -153,9 +153,11 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
   }
 
   Future<void> _openHistoryEntry(ReadingHistoryEntry entry) async {
+    final collectionId = entry.collectionId;
+    if (collectionId == null) return;
     final collection = await ref
         .read(libraryRepositoryProvider)
-        .getCollection(entry.collectionId);
+        .getCollection(collectionId);
     if (collection == null || !mounted) return;
     final docs = await ref
         .read(libraryRepositoryProvider)
