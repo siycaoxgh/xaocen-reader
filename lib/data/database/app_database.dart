@@ -24,6 +24,9 @@ part 'app_database.g.dart';
     ReadingProgress,
     AppSettings,
     ReaderPreferencesRows,
+    ReaderBookmarks,
+    ReadingHistory,
+    ReadingSessions,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -33,7 +36,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting() : super(NativeDatabase.memory());
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   /// 打开应用数据库（support 目录下）。
   static Future<AppDatabase> open() async {
@@ -48,6 +51,7 @@ class AppDatabase extends _$AppDatabase {
     onCreate: (m) async {
       await m.createAll();
       await _createIndexes(customStatement);
+      await _createM52Indexes(customStatement);
     },
     onUpgrade: (m, from, to) async {
       // schema 1 → 2：仅新增 reading_progress 表，不触碰 M2 既有数据。
@@ -99,6 +103,12 @@ class AppDatabase extends _$AppDatabase {
         ''');
         }
       }
+      if (from < 6) {
+        await m.createTable(readerBookmarks);
+        await m.createTable(readingHistory);
+        await m.createTable(readingSessions);
+        await _createM52Indexes(customStatement);
+      }
     },
     beforeOpen: (details) async {
       await customStatement('PRAGMA foreign_keys = ON');
@@ -125,6 +135,21 @@ class AppDatabase extends _$AppDatabase {
     await exec(
       'CREATE INDEX IF NOT EXISTS idx_imports_source '
       'ON import_records (source_hash)',
+    );
+  }
+
+  Future<void> _createM52Indexes(Future<void> Function(String) exec) async {
+    await exec(
+      'CREATE INDEX IF NOT EXISTS idx_reader_bookmarks_collection_offset '
+      'ON reader_bookmarks (collection_id, absolute_character_offset)',
+    );
+    await exec(
+      'CREATE INDEX IF NOT EXISTS idx_reading_history_last_read '
+      'ON reading_history (last_read_at DESC)',
+    );
+    await exec(
+      'CREATE INDEX IF NOT EXISTS idx_reading_sessions_history '
+      'ON reading_sessions (history_entry_id)',
     );
   }
 }

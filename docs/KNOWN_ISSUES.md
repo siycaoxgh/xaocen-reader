@@ -7,6 +7,15 @@
 
 ## Current open issues
 
+## M5.2a status (2026-08-09)
+
+- No new Reader P1/P2 issue was found in the M5.2a persistence foundation.
+- Bookmark UI, recent-reading UI, in-book search, and FTS5 remain intentionally
+  deferred to later M5.2 stages; schema/domain support alone is not a user-facing
+  feature.
+- Reading-history snapshots are display-only. They must never be used to restore
+  a deleted book or replace `reading_progress` as the Locator source.
+
 - Reader input/chapter-policy follow-up is implemented, but Android volume-key
   validation is pending because the previously confirmed Wireless ADB target is
   currently offline. No APK reinstall or data reset is being used to bypass

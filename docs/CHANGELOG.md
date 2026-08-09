@@ -14,6 +14,20 @@ Legend for validation columns:
 
 ## Unreleased
 
+### M5.2a — history, bookmarks, and session persistence (2026-08-09)
+- Added schema 6 with `reader_bookmarks`, `reading_history`, and
+  `reading_sessions`.
+- Bookmark orphan state is derived from collection linkage, normalized hash, and
+  UTF-16 offset bounds; no `isOrphan` column is persisted.
+- ReadingSession is the sole source for aggregate reading duration and session
+  count. History stores book/time/display snapshots only.
+- Collection removal detaches history and bookmarks with `ON DELETE SET NULL`;
+  deleting a history entry cascades its sessions.
+- Added CurrentChapterResolver, which recognizes chapter entries only and
+  returns null for volumes/no-chapter TXT.
+- Validation: analyze clean, targeted M5.2a tests 7/7, real SQLite FK PRAGMA and
+  schema 5→6 migration checks PASS.
+
 ### Reader input and chapter pagination policy (2026-08-09)
 - Added the physical-input → `InputBinding` → `ReaderCommand` → Reader action
   boundary. Default commands are `previousPage` and `nextPage`; keyboard,

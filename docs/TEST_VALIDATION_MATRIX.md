@@ -184,3 +184,19 @@ vertical A → paged → 不翻页 → 重开 = paged + A · vertical A → page
 | No-chapter continuous pagination | PASS |
 | All four real TXT files, chapter/anchor continuity, logical error | PASS, 0 |
 | Android volume-key device validation | NOT-RUN, wireless ADB target offline |
+
+## M5.2a persistence foundation (2026-08-09)
+
+| Validation | Result |
+|---|---|
+| Drift schema 5 -> 6 migration | PASS |
+| Existing reading_progress and non-zero mode preserved through migration | PASS |
+| `PRAGMA foreign_keys` enabled | PASS |
+| history.collectionId `ON DELETE SET NULL` | PASS, real PRAGMA + delete test |
+| bookmarks.collectionId `ON DELETE SET NULL` | PASS, real PRAGMA + delete test |
+| sessions.historyEntryId `ON DELETE CASCADE` | PASS, real PRAGMA + delete test |
+| Bookmark orphan derived without persisted `isOrphan` | PASS |
+| ReadingSession SUM/COUNT aggregate | PASS |
+| Visible-confirm / pause / resume / route-end lifecycle contract | PASS |
+| CurrentChapterResolver chapter-only and no-chapter behavior | PASS |
+| M5.2a targeted unit/migration tests | 7/7 PASS |

@@ -474,3 +474,16 @@ uses real TOC chapter start offsets so every chapter title begins a fresh page,
 without changing normalized text or the UTF-16 ReaderLocator contract. All four
 real TXT files pass targeted Windows chapter-boundary and continuity checks;
 Android volume-key validation awaits wireless ADB reconnection.
+
+## M5.2a — history, bookmarks, and session persistence (2026-08-09)
+
+M5.2a established the persistence/domain foundation without adding UI. Schema 6
+adds nullable collection links for bookmarks and reading history, plus sessions
+that remain attached to a history entry. Collection deletion detaches history and
+bookmarks instead of silently deleting them; deleting a history entry cascades
+only its sessions. Bookmark orphan state is derived at read time from collection
+linkage, normalized hash, and UTF-16 offset bounds. ReadingSession is the sole
+source for aggregate duration and session count. CurrentChapterResolver derives a
+chapter only from the last TOC chapter start at or before the confirmed Locator;
+volumes and no-chapter TXT return no chapter. Schema 5→6 migration and actual
+SQLite foreign-key actions were validated.

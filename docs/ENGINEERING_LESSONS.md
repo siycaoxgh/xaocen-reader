@@ -738,3 +738,21 @@ event-reporting boundary and leaves future user remapping independent of the pag
 engine. Chapter starts likewise belong in pagination policy: use real TOC offsets
 as boundaries, allow intentional whitespace at the prior page end, and never add
 synthetic characters to normalized text.
+
+## M5.2a lessons (2026-08-09)
+
+### Drift FK contracts require real SQLite verification
+
+Nullable historical relations and delete actions are easy to misread from Dart
+table declarations. M5.2a uses explicit `customConstraint` declarations for
+`ON DELETE SET NULL` and `ON DELETE CASCADE`, then verifies the generated schema
+with `PRAGMA foreign_key_list` and exercises actual collection/history deletes.
+Migration tests must reopen a schema-5 SQLite file, not only test a fresh schema-6
+in-memory database.
+
+### Aggregate reading statistics must have one source
+
+`reading_history` stores book and display snapshots only. Duration and session
+count are calculated from `reading_sessions`; duplicating those totals in history
+would create a second mutable truth that can drift during pause/resume or crash
+recovery.

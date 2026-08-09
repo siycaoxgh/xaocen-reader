@@ -4856,6 +4856,1787 @@ class ReaderPreferencesRowsCompanion
   }
 }
 
+class $ReaderBookmarksTable extends ReaderBookmarks
+    with TableInfo<$ReaderBookmarksTable, ReaderBookmark> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ReaderBookmarksTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _collectionIdMeta = const VerificationMeta(
+    'collectionId',
+  );
+  @override
+  late final GeneratedColumn<String> collectionId = GeneratedColumn<String>(
+    'collection_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    $customConstraints:
+        'REFERENCES content_collections (id) ON DELETE SET NULL',
+  );
+  static const VerificationMeta _absoluteCharacterOffsetMeta =
+      const VerificationMeta('absoluteCharacterOffset');
+  @override
+  late final GeneratedColumn<int> absoluteCharacterOffset =
+      GeneratedColumn<int>(
+        'absolute_character_offset',
+        aliasedName,
+        false,
+        type: DriftSqlType.int,
+        requiredDuringInsert: true,
+      );
+  static const VerificationMeta _normalizedHashAtCreationMeta =
+      const VerificationMeta('normalizedHashAtCreation');
+  @override
+  late final GeneratedColumn<String> normalizedHashAtCreation =
+      GeneratedColumn<String>(
+        'normalized_hash_at_creation',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _bookTitleSnapshotMeta = const VerificationMeta(
+    'bookTitleSnapshot',
+  );
+  @override
+  late final GeneratedColumn<String> bookTitleSnapshot =
+      GeneratedColumn<String>(
+        'book_title_snapshot',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: true,
+      );
+  static const VerificationMeta _noteMeta = const VerificationMeta('note');
+  @override
+  late final GeneratedColumn<String> note = GeneratedColumn<String>(
+    'note',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    collectionId,
+    absoluteCharacterOffset,
+    normalizedHashAtCreation,
+    bookTitleSnapshot,
+    note,
+    createdAt,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'reader_bookmarks';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ReaderBookmark> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('collection_id')) {
+      context.handle(
+        _collectionIdMeta,
+        collectionId.isAcceptableOrUnknown(
+          data['collection_id']!,
+          _collectionIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('absolute_character_offset')) {
+      context.handle(
+        _absoluteCharacterOffsetMeta,
+        absoluteCharacterOffset.isAcceptableOrUnknown(
+          data['absolute_character_offset']!,
+          _absoluteCharacterOffsetMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_absoluteCharacterOffsetMeta);
+    }
+    if (data.containsKey('normalized_hash_at_creation')) {
+      context.handle(
+        _normalizedHashAtCreationMeta,
+        normalizedHashAtCreation.isAcceptableOrUnknown(
+          data['normalized_hash_at_creation']!,
+          _normalizedHashAtCreationMeta,
+        ),
+      );
+    }
+    if (data.containsKey('book_title_snapshot')) {
+      context.handle(
+        _bookTitleSnapshotMeta,
+        bookTitleSnapshot.isAcceptableOrUnknown(
+          data['book_title_snapshot']!,
+          _bookTitleSnapshotMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_bookTitleSnapshotMeta);
+    }
+    if (data.containsKey('note')) {
+      context.handle(
+        _noteMeta,
+        note.isAcceptableOrUnknown(data['note']!, _noteMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  ReaderBookmark map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ReaderBookmark(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      collectionId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}collection_id'],
+      ),
+      absoluteCharacterOffset: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}absolute_character_offset'],
+      )!,
+      normalizedHashAtCreation: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}normalized_hash_at_creation'],
+      ),
+      bookTitleSnapshot: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}book_title_snapshot'],
+      )!,
+      note: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}note'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $ReaderBookmarksTable createAlias(String alias) {
+    return $ReaderBookmarksTable(attachedDatabase, alias);
+  }
+}
+
+class ReaderBookmark extends DataClass implements Insertable<ReaderBookmark> {
+  final String id;
+  final String? collectionId;
+  final int absoluteCharacterOffset;
+  final String? normalizedHashAtCreation;
+  final String bookTitleSnapshot;
+  final String? note;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  const ReaderBookmark({
+    required this.id,
+    this.collectionId,
+    required this.absoluteCharacterOffset,
+    this.normalizedHashAtCreation,
+    required this.bookTitleSnapshot,
+    this.note,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    if (!nullToAbsent || collectionId != null) {
+      map['collection_id'] = Variable<String>(collectionId);
+    }
+    map['absolute_character_offset'] = Variable<int>(absoluteCharacterOffset);
+    if (!nullToAbsent || normalizedHashAtCreation != null) {
+      map['normalized_hash_at_creation'] = Variable<String>(
+        normalizedHashAtCreation,
+      );
+    }
+    map['book_title_snapshot'] = Variable<String>(bookTitleSnapshot);
+    if (!nullToAbsent || note != null) {
+      map['note'] = Variable<String>(note);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  ReaderBookmarksCompanion toCompanion(bool nullToAbsent) {
+    return ReaderBookmarksCompanion(
+      id: Value(id),
+      collectionId: collectionId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(collectionId),
+      absoluteCharacterOffset: Value(absoluteCharacterOffset),
+      normalizedHashAtCreation: normalizedHashAtCreation == null && nullToAbsent
+          ? const Value.absent()
+          : Value(normalizedHashAtCreation),
+      bookTitleSnapshot: Value(bookTitleSnapshot),
+      note: note == null && nullToAbsent ? const Value.absent() : Value(note),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory ReaderBookmark.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ReaderBookmark(
+      id: serializer.fromJson<String>(json['id']),
+      collectionId: serializer.fromJson<String?>(json['collectionId']),
+      absoluteCharacterOffset: serializer.fromJson<int>(
+        json['absoluteCharacterOffset'],
+      ),
+      normalizedHashAtCreation: serializer.fromJson<String?>(
+        json['normalizedHashAtCreation'],
+      ),
+      bookTitleSnapshot: serializer.fromJson<String>(json['bookTitleSnapshot']),
+      note: serializer.fromJson<String?>(json['note']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'collectionId': serializer.toJson<String?>(collectionId),
+      'absoluteCharacterOffset': serializer.toJson<int>(
+        absoluteCharacterOffset,
+      ),
+      'normalizedHashAtCreation': serializer.toJson<String?>(
+        normalizedHashAtCreation,
+      ),
+      'bookTitleSnapshot': serializer.toJson<String>(bookTitleSnapshot),
+      'note': serializer.toJson<String?>(note),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  ReaderBookmark copyWith({
+    String? id,
+    Value<String?> collectionId = const Value.absent(),
+    int? absoluteCharacterOffset,
+    Value<String?> normalizedHashAtCreation = const Value.absent(),
+    String? bookTitleSnapshot,
+    Value<String?> note = const Value.absent(),
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) => ReaderBookmark(
+    id: id ?? this.id,
+    collectionId: collectionId.present ? collectionId.value : this.collectionId,
+    absoluteCharacterOffset:
+        absoluteCharacterOffset ?? this.absoluteCharacterOffset,
+    normalizedHashAtCreation: normalizedHashAtCreation.present
+        ? normalizedHashAtCreation.value
+        : this.normalizedHashAtCreation,
+    bookTitleSnapshot: bookTitleSnapshot ?? this.bookTitleSnapshot,
+    note: note.present ? note.value : this.note,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  ReaderBookmark copyWithCompanion(ReaderBookmarksCompanion data) {
+    return ReaderBookmark(
+      id: data.id.present ? data.id.value : this.id,
+      collectionId: data.collectionId.present
+          ? data.collectionId.value
+          : this.collectionId,
+      absoluteCharacterOffset: data.absoluteCharacterOffset.present
+          ? data.absoluteCharacterOffset.value
+          : this.absoluteCharacterOffset,
+      normalizedHashAtCreation: data.normalizedHashAtCreation.present
+          ? data.normalizedHashAtCreation.value
+          : this.normalizedHashAtCreation,
+      bookTitleSnapshot: data.bookTitleSnapshot.present
+          ? data.bookTitleSnapshot.value
+          : this.bookTitleSnapshot,
+      note: data.note.present ? data.note.value : this.note,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ReaderBookmark(')
+          ..write('id: $id, ')
+          ..write('collectionId: $collectionId, ')
+          ..write('absoluteCharacterOffset: $absoluteCharacterOffset, ')
+          ..write('normalizedHashAtCreation: $normalizedHashAtCreation, ')
+          ..write('bookTitleSnapshot: $bookTitleSnapshot, ')
+          ..write('note: $note, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    collectionId,
+    absoluteCharacterOffset,
+    normalizedHashAtCreation,
+    bookTitleSnapshot,
+    note,
+    createdAt,
+    updatedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ReaderBookmark &&
+          other.id == this.id &&
+          other.collectionId == this.collectionId &&
+          other.absoluteCharacterOffset == this.absoluteCharacterOffset &&
+          other.normalizedHashAtCreation == this.normalizedHashAtCreation &&
+          other.bookTitleSnapshot == this.bookTitleSnapshot &&
+          other.note == this.note &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt);
+}
+
+class ReaderBookmarksCompanion extends UpdateCompanion<ReaderBookmark> {
+  final Value<String> id;
+  final Value<String?> collectionId;
+  final Value<int> absoluteCharacterOffset;
+  final Value<String?> normalizedHashAtCreation;
+  final Value<String> bookTitleSnapshot;
+  final Value<String?> note;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  final Value<int> rowid;
+  const ReaderBookmarksCompanion({
+    this.id = const Value.absent(),
+    this.collectionId = const Value.absent(),
+    this.absoluteCharacterOffset = const Value.absent(),
+    this.normalizedHashAtCreation = const Value.absent(),
+    this.bookTitleSnapshot = const Value.absent(),
+    this.note = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ReaderBookmarksCompanion.insert({
+    required String id,
+    this.collectionId = const Value.absent(),
+    required int absoluteCharacterOffset,
+    this.normalizedHashAtCreation = const Value.absent(),
+    required String bookTitleSnapshot,
+    this.note = const Value.absent(),
+    required DateTime createdAt,
+    required DateTime updatedAt,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       absoluteCharacterOffset = Value(absoluteCharacterOffset),
+       bookTitleSnapshot = Value(bookTitleSnapshot),
+       createdAt = Value(createdAt),
+       updatedAt = Value(updatedAt);
+  static Insertable<ReaderBookmark> custom({
+    Expression<String>? id,
+    Expression<String>? collectionId,
+    Expression<int>? absoluteCharacterOffset,
+    Expression<String>? normalizedHashAtCreation,
+    Expression<String>? bookTitleSnapshot,
+    Expression<String>? note,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (collectionId != null) 'collection_id': collectionId,
+      if (absoluteCharacterOffset != null)
+        'absolute_character_offset': absoluteCharacterOffset,
+      if (normalizedHashAtCreation != null)
+        'normalized_hash_at_creation': normalizedHashAtCreation,
+      if (bookTitleSnapshot != null) 'book_title_snapshot': bookTitleSnapshot,
+      if (note != null) 'note': note,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ReaderBookmarksCompanion copyWith({
+    Value<String>? id,
+    Value<String?>? collectionId,
+    Value<int>? absoluteCharacterOffset,
+    Value<String?>? normalizedHashAtCreation,
+    Value<String>? bookTitleSnapshot,
+    Value<String?>? note,
+    Value<DateTime>? createdAt,
+    Value<DateTime>? updatedAt,
+    Value<int>? rowid,
+  }) {
+    return ReaderBookmarksCompanion(
+      id: id ?? this.id,
+      collectionId: collectionId ?? this.collectionId,
+      absoluteCharacterOffset:
+          absoluteCharacterOffset ?? this.absoluteCharacterOffset,
+      normalizedHashAtCreation:
+          normalizedHashAtCreation ?? this.normalizedHashAtCreation,
+      bookTitleSnapshot: bookTitleSnapshot ?? this.bookTitleSnapshot,
+      note: note ?? this.note,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (collectionId.present) {
+      map['collection_id'] = Variable<String>(collectionId.value);
+    }
+    if (absoluteCharacterOffset.present) {
+      map['absolute_character_offset'] = Variable<int>(
+        absoluteCharacterOffset.value,
+      );
+    }
+    if (normalizedHashAtCreation.present) {
+      map['normalized_hash_at_creation'] = Variable<String>(
+        normalizedHashAtCreation.value,
+      );
+    }
+    if (bookTitleSnapshot.present) {
+      map['book_title_snapshot'] = Variable<String>(bookTitleSnapshot.value);
+    }
+    if (note.present) {
+      map['note'] = Variable<String>(note.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ReaderBookmarksCompanion(')
+          ..write('id: $id, ')
+          ..write('collectionId: $collectionId, ')
+          ..write('absoluteCharacterOffset: $absoluteCharacterOffset, ')
+          ..write('normalizedHashAtCreation: $normalizedHashAtCreation, ')
+          ..write('bookTitleSnapshot: $bookTitleSnapshot, ')
+          ..write('note: $note, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $ReadingHistoryTable extends ReadingHistory
+    with TableInfo<$ReadingHistoryTable, ReadingHistoryData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ReadingHistoryTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _collectionIdMeta = const VerificationMeta(
+    'collectionId',
+  );
+  @override
+  late final GeneratedColumn<String> collectionId = GeneratedColumn<String>(
+    'collection_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    $customConstraints:
+        'REFERENCES content_collections (id) ON DELETE SET NULL',
+  );
+  static const VerificationMeta _bookTitleSnapshotMeta = const VerificationMeta(
+    'bookTitleSnapshot',
+  );
+  @override
+  late final GeneratedColumn<String> bookTitleSnapshot =
+      GeneratedColumn<String>(
+        'book_title_snapshot',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: true,
+      );
+  static const VerificationMeta _authorSnapshotMeta = const VerificationMeta(
+    'authorSnapshot',
+  );
+  @override
+  late final GeneratedColumn<String> authorSnapshot = GeneratedColumn<String>(
+    'author_snapshot',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _normalizedHashSnapshotMeta =
+      const VerificationMeta('normalizedHashSnapshot');
+  @override
+  late final GeneratedColumn<String> normalizedHashSnapshot =
+      GeneratedColumn<String>(
+        'normalized_hash_snapshot',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _firstReadAtMeta = const VerificationMeta(
+    'firstReadAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> firstReadAt = GeneratedColumn<DateTime>(
+    'first_read_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _lastReadAtMeta = const VerificationMeta(
+    'lastReadAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> lastReadAt = GeneratedColumn<DateTime>(
+    'last_read_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _lastChapterTitleSnapshotMeta =
+      const VerificationMeta('lastChapterTitleSnapshot');
+  @override
+  late final GeneratedColumn<String> lastChapterTitleSnapshot =
+      GeneratedColumn<String>(
+        'last_chapter_title_snapshot',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _lastProgressSnapshotMeta =
+      const VerificationMeta('lastProgressSnapshot');
+  @override
+  late final GeneratedColumn<String> lastProgressSnapshot =
+      GeneratedColumn<String>(
+        'last_progress_snapshot',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    collectionId,
+    bookTitleSnapshot,
+    authorSnapshot,
+    normalizedHashSnapshot,
+    firstReadAt,
+    lastReadAt,
+    lastChapterTitleSnapshot,
+    lastProgressSnapshot,
+    createdAt,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'reading_history';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ReadingHistoryData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('collection_id')) {
+      context.handle(
+        _collectionIdMeta,
+        collectionId.isAcceptableOrUnknown(
+          data['collection_id']!,
+          _collectionIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('book_title_snapshot')) {
+      context.handle(
+        _bookTitleSnapshotMeta,
+        bookTitleSnapshot.isAcceptableOrUnknown(
+          data['book_title_snapshot']!,
+          _bookTitleSnapshotMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_bookTitleSnapshotMeta);
+    }
+    if (data.containsKey('author_snapshot')) {
+      context.handle(
+        _authorSnapshotMeta,
+        authorSnapshot.isAcceptableOrUnknown(
+          data['author_snapshot']!,
+          _authorSnapshotMeta,
+        ),
+      );
+    }
+    if (data.containsKey('normalized_hash_snapshot')) {
+      context.handle(
+        _normalizedHashSnapshotMeta,
+        normalizedHashSnapshot.isAcceptableOrUnknown(
+          data['normalized_hash_snapshot']!,
+          _normalizedHashSnapshotMeta,
+        ),
+      );
+    }
+    if (data.containsKey('first_read_at')) {
+      context.handle(
+        _firstReadAtMeta,
+        firstReadAt.isAcceptableOrUnknown(
+          data['first_read_at']!,
+          _firstReadAtMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_firstReadAtMeta);
+    }
+    if (data.containsKey('last_read_at')) {
+      context.handle(
+        _lastReadAtMeta,
+        lastReadAt.isAcceptableOrUnknown(
+          data['last_read_at']!,
+          _lastReadAtMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_lastReadAtMeta);
+    }
+    if (data.containsKey('last_chapter_title_snapshot')) {
+      context.handle(
+        _lastChapterTitleSnapshotMeta,
+        lastChapterTitleSnapshot.isAcceptableOrUnknown(
+          data['last_chapter_title_snapshot']!,
+          _lastChapterTitleSnapshotMeta,
+        ),
+      );
+    }
+    if (data.containsKey('last_progress_snapshot')) {
+      context.handle(
+        _lastProgressSnapshotMeta,
+        lastProgressSnapshot.isAcceptableOrUnknown(
+          data['last_progress_snapshot']!,
+          _lastProgressSnapshotMeta,
+        ),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  ReadingHistoryData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ReadingHistoryData(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      collectionId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}collection_id'],
+      ),
+      bookTitleSnapshot: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}book_title_snapshot'],
+      )!,
+      authorSnapshot: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}author_snapshot'],
+      ),
+      normalizedHashSnapshot: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}normalized_hash_snapshot'],
+      ),
+      firstReadAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}first_read_at'],
+      )!,
+      lastReadAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}last_read_at'],
+      )!,
+      lastChapterTitleSnapshot: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}last_chapter_title_snapshot'],
+      ),
+      lastProgressSnapshot: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}last_progress_snapshot'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $ReadingHistoryTable createAlias(String alias) {
+    return $ReadingHistoryTable(attachedDatabase, alias);
+  }
+}
+
+class ReadingHistoryData extends DataClass
+    implements Insertable<ReadingHistoryData> {
+  final String id;
+  final String? collectionId;
+  final String bookTitleSnapshot;
+  final String? authorSnapshot;
+  final String? normalizedHashSnapshot;
+  final DateTime firstReadAt;
+  final DateTime lastReadAt;
+  final String? lastChapterTitleSnapshot;
+  final String? lastProgressSnapshot;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  const ReadingHistoryData({
+    required this.id,
+    this.collectionId,
+    required this.bookTitleSnapshot,
+    this.authorSnapshot,
+    this.normalizedHashSnapshot,
+    required this.firstReadAt,
+    required this.lastReadAt,
+    this.lastChapterTitleSnapshot,
+    this.lastProgressSnapshot,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    if (!nullToAbsent || collectionId != null) {
+      map['collection_id'] = Variable<String>(collectionId);
+    }
+    map['book_title_snapshot'] = Variable<String>(bookTitleSnapshot);
+    if (!nullToAbsent || authorSnapshot != null) {
+      map['author_snapshot'] = Variable<String>(authorSnapshot);
+    }
+    if (!nullToAbsent || normalizedHashSnapshot != null) {
+      map['normalized_hash_snapshot'] = Variable<String>(
+        normalizedHashSnapshot,
+      );
+    }
+    map['first_read_at'] = Variable<DateTime>(firstReadAt);
+    map['last_read_at'] = Variable<DateTime>(lastReadAt);
+    if (!nullToAbsent || lastChapterTitleSnapshot != null) {
+      map['last_chapter_title_snapshot'] = Variable<String>(
+        lastChapterTitleSnapshot,
+      );
+    }
+    if (!nullToAbsent || lastProgressSnapshot != null) {
+      map['last_progress_snapshot'] = Variable<String>(lastProgressSnapshot);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  ReadingHistoryCompanion toCompanion(bool nullToAbsent) {
+    return ReadingHistoryCompanion(
+      id: Value(id),
+      collectionId: collectionId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(collectionId),
+      bookTitleSnapshot: Value(bookTitleSnapshot),
+      authorSnapshot: authorSnapshot == null && nullToAbsent
+          ? const Value.absent()
+          : Value(authorSnapshot),
+      normalizedHashSnapshot: normalizedHashSnapshot == null && nullToAbsent
+          ? const Value.absent()
+          : Value(normalizedHashSnapshot),
+      firstReadAt: Value(firstReadAt),
+      lastReadAt: Value(lastReadAt),
+      lastChapterTitleSnapshot: lastChapterTitleSnapshot == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastChapterTitleSnapshot),
+      lastProgressSnapshot: lastProgressSnapshot == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastProgressSnapshot),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory ReadingHistoryData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ReadingHistoryData(
+      id: serializer.fromJson<String>(json['id']),
+      collectionId: serializer.fromJson<String?>(json['collectionId']),
+      bookTitleSnapshot: serializer.fromJson<String>(json['bookTitleSnapshot']),
+      authorSnapshot: serializer.fromJson<String?>(json['authorSnapshot']),
+      normalizedHashSnapshot: serializer.fromJson<String?>(
+        json['normalizedHashSnapshot'],
+      ),
+      firstReadAt: serializer.fromJson<DateTime>(json['firstReadAt']),
+      lastReadAt: serializer.fromJson<DateTime>(json['lastReadAt']),
+      lastChapterTitleSnapshot: serializer.fromJson<String?>(
+        json['lastChapterTitleSnapshot'],
+      ),
+      lastProgressSnapshot: serializer.fromJson<String?>(
+        json['lastProgressSnapshot'],
+      ),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'collectionId': serializer.toJson<String?>(collectionId),
+      'bookTitleSnapshot': serializer.toJson<String>(bookTitleSnapshot),
+      'authorSnapshot': serializer.toJson<String?>(authorSnapshot),
+      'normalizedHashSnapshot': serializer.toJson<String?>(
+        normalizedHashSnapshot,
+      ),
+      'firstReadAt': serializer.toJson<DateTime>(firstReadAt),
+      'lastReadAt': serializer.toJson<DateTime>(lastReadAt),
+      'lastChapterTitleSnapshot': serializer.toJson<String?>(
+        lastChapterTitleSnapshot,
+      ),
+      'lastProgressSnapshot': serializer.toJson<String?>(lastProgressSnapshot),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  ReadingHistoryData copyWith({
+    String? id,
+    Value<String?> collectionId = const Value.absent(),
+    String? bookTitleSnapshot,
+    Value<String?> authorSnapshot = const Value.absent(),
+    Value<String?> normalizedHashSnapshot = const Value.absent(),
+    DateTime? firstReadAt,
+    DateTime? lastReadAt,
+    Value<String?> lastChapterTitleSnapshot = const Value.absent(),
+    Value<String?> lastProgressSnapshot = const Value.absent(),
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) => ReadingHistoryData(
+    id: id ?? this.id,
+    collectionId: collectionId.present ? collectionId.value : this.collectionId,
+    bookTitleSnapshot: bookTitleSnapshot ?? this.bookTitleSnapshot,
+    authorSnapshot: authorSnapshot.present
+        ? authorSnapshot.value
+        : this.authorSnapshot,
+    normalizedHashSnapshot: normalizedHashSnapshot.present
+        ? normalizedHashSnapshot.value
+        : this.normalizedHashSnapshot,
+    firstReadAt: firstReadAt ?? this.firstReadAt,
+    lastReadAt: lastReadAt ?? this.lastReadAt,
+    lastChapterTitleSnapshot: lastChapterTitleSnapshot.present
+        ? lastChapterTitleSnapshot.value
+        : this.lastChapterTitleSnapshot,
+    lastProgressSnapshot: lastProgressSnapshot.present
+        ? lastProgressSnapshot.value
+        : this.lastProgressSnapshot,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  ReadingHistoryData copyWithCompanion(ReadingHistoryCompanion data) {
+    return ReadingHistoryData(
+      id: data.id.present ? data.id.value : this.id,
+      collectionId: data.collectionId.present
+          ? data.collectionId.value
+          : this.collectionId,
+      bookTitleSnapshot: data.bookTitleSnapshot.present
+          ? data.bookTitleSnapshot.value
+          : this.bookTitleSnapshot,
+      authorSnapshot: data.authorSnapshot.present
+          ? data.authorSnapshot.value
+          : this.authorSnapshot,
+      normalizedHashSnapshot: data.normalizedHashSnapshot.present
+          ? data.normalizedHashSnapshot.value
+          : this.normalizedHashSnapshot,
+      firstReadAt: data.firstReadAt.present
+          ? data.firstReadAt.value
+          : this.firstReadAt,
+      lastReadAt: data.lastReadAt.present
+          ? data.lastReadAt.value
+          : this.lastReadAt,
+      lastChapterTitleSnapshot: data.lastChapterTitleSnapshot.present
+          ? data.lastChapterTitleSnapshot.value
+          : this.lastChapterTitleSnapshot,
+      lastProgressSnapshot: data.lastProgressSnapshot.present
+          ? data.lastProgressSnapshot.value
+          : this.lastProgressSnapshot,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ReadingHistoryData(')
+          ..write('id: $id, ')
+          ..write('collectionId: $collectionId, ')
+          ..write('bookTitleSnapshot: $bookTitleSnapshot, ')
+          ..write('authorSnapshot: $authorSnapshot, ')
+          ..write('normalizedHashSnapshot: $normalizedHashSnapshot, ')
+          ..write('firstReadAt: $firstReadAt, ')
+          ..write('lastReadAt: $lastReadAt, ')
+          ..write('lastChapterTitleSnapshot: $lastChapterTitleSnapshot, ')
+          ..write('lastProgressSnapshot: $lastProgressSnapshot, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    collectionId,
+    bookTitleSnapshot,
+    authorSnapshot,
+    normalizedHashSnapshot,
+    firstReadAt,
+    lastReadAt,
+    lastChapterTitleSnapshot,
+    lastProgressSnapshot,
+    createdAt,
+    updatedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ReadingHistoryData &&
+          other.id == this.id &&
+          other.collectionId == this.collectionId &&
+          other.bookTitleSnapshot == this.bookTitleSnapshot &&
+          other.authorSnapshot == this.authorSnapshot &&
+          other.normalizedHashSnapshot == this.normalizedHashSnapshot &&
+          other.firstReadAt == this.firstReadAt &&
+          other.lastReadAt == this.lastReadAt &&
+          other.lastChapterTitleSnapshot == this.lastChapterTitleSnapshot &&
+          other.lastProgressSnapshot == this.lastProgressSnapshot &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt);
+}
+
+class ReadingHistoryCompanion extends UpdateCompanion<ReadingHistoryData> {
+  final Value<String> id;
+  final Value<String?> collectionId;
+  final Value<String> bookTitleSnapshot;
+  final Value<String?> authorSnapshot;
+  final Value<String?> normalizedHashSnapshot;
+  final Value<DateTime> firstReadAt;
+  final Value<DateTime> lastReadAt;
+  final Value<String?> lastChapterTitleSnapshot;
+  final Value<String?> lastProgressSnapshot;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  final Value<int> rowid;
+  const ReadingHistoryCompanion({
+    this.id = const Value.absent(),
+    this.collectionId = const Value.absent(),
+    this.bookTitleSnapshot = const Value.absent(),
+    this.authorSnapshot = const Value.absent(),
+    this.normalizedHashSnapshot = const Value.absent(),
+    this.firstReadAt = const Value.absent(),
+    this.lastReadAt = const Value.absent(),
+    this.lastChapterTitleSnapshot = const Value.absent(),
+    this.lastProgressSnapshot = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ReadingHistoryCompanion.insert({
+    required String id,
+    this.collectionId = const Value.absent(),
+    required String bookTitleSnapshot,
+    this.authorSnapshot = const Value.absent(),
+    this.normalizedHashSnapshot = const Value.absent(),
+    required DateTime firstReadAt,
+    required DateTime lastReadAt,
+    this.lastChapterTitleSnapshot = const Value.absent(),
+    this.lastProgressSnapshot = const Value.absent(),
+    required DateTime createdAt,
+    required DateTime updatedAt,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       bookTitleSnapshot = Value(bookTitleSnapshot),
+       firstReadAt = Value(firstReadAt),
+       lastReadAt = Value(lastReadAt),
+       createdAt = Value(createdAt),
+       updatedAt = Value(updatedAt);
+  static Insertable<ReadingHistoryData> custom({
+    Expression<String>? id,
+    Expression<String>? collectionId,
+    Expression<String>? bookTitleSnapshot,
+    Expression<String>? authorSnapshot,
+    Expression<String>? normalizedHashSnapshot,
+    Expression<DateTime>? firstReadAt,
+    Expression<DateTime>? lastReadAt,
+    Expression<String>? lastChapterTitleSnapshot,
+    Expression<String>? lastProgressSnapshot,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (collectionId != null) 'collection_id': collectionId,
+      if (bookTitleSnapshot != null) 'book_title_snapshot': bookTitleSnapshot,
+      if (authorSnapshot != null) 'author_snapshot': authorSnapshot,
+      if (normalizedHashSnapshot != null)
+        'normalized_hash_snapshot': normalizedHashSnapshot,
+      if (firstReadAt != null) 'first_read_at': firstReadAt,
+      if (lastReadAt != null) 'last_read_at': lastReadAt,
+      if (lastChapterTitleSnapshot != null)
+        'last_chapter_title_snapshot': lastChapterTitleSnapshot,
+      if (lastProgressSnapshot != null)
+        'last_progress_snapshot': lastProgressSnapshot,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ReadingHistoryCompanion copyWith({
+    Value<String>? id,
+    Value<String?>? collectionId,
+    Value<String>? bookTitleSnapshot,
+    Value<String?>? authorSnapshot,
+    Value<String?>? normalizedHashSnapshot,
+    Value<DateTime>? firstReadAt,
+    Value<DateTime>? lastReadAt,
+    Value<String?>? lastChapterTitleSnapshot,
+    Value<String?>? lastProgressSnapshot,
+    Value<DateTime>? createdAt,
+    Value<DateTime>? updatedAt,
+    Value<int>? rowid,
+  }) {
+    return ReadingHistoryCompanion(
+      id: id ?? this.id,
+      collectionId: collectionId ?? this.collectionId,
+      bookTitleSnapshot: bookTitleSnapshot ?? this.bookTitleSnapshot,
+      authorSnapshot: authorSnapshot ?? this.authorSnapshot,
+      normalizedHashSnapshot:
+          normalizedHashSnapshot ?? this.normalizedHashSnapshot,
+      firstReadAt: firstReadAt ?? this.firstReadAt,
+      lastReadAt: lastReadAt ?? this.lastReadAt,
+      lastChapterTitleSnapshot:
+          lastChapterTitleSnapshot ?? this.lastChapterTitleSnapshot,
+      lastProgressSnapshot: lastProgressSnapshot ?? this.lastProgressSnapshot,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (collectionId.present) {
+      map['collection_id'] = Variable<String>(collectionId.value);
+    }
+    if (bookTitleSnapshot.present) {
+      map['book_title_snapshot'] = Variable<String>(bookTitleSnapshot.value);
+    }
+    if (authorSnapshot.present) {
+      map['author_snapshot'] = Variable<String>(authorSnapshot.value);
+    }
+    if (normalizedHashSnapshot.present) {
+      map['normalized_hash_snapshot'] = Variable<String>(
+        normalizedHashSnapshot.value,
+      );
+    }
+    if (firstReadAt.present) {
+      map['first_read_at'] = Variable<DateTime>(firstReadAt.value);
+    }
+    if (lastReadAt.present) {
+      map['last_read_at'] = Variable<DateTime>(lastReadAt.value);
+    }
+    if (lastChapterTitleSnapshot.present) {
+      map['last_chapter_title_snapshot'] = Variable<String>(
+        lastChapterTitleSnapshot.value,
+      );
+    }
+    if (lastProgressSnapshot.present) {
+      map['last_progress_snapshot'] = Variable<String>(
+        lastProgressSnapshot.value,
+      );
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ReadingHistoryCompanion(')
+          ..write('id: $id, ')
+          ..write('collectionId: $collectionId, ')
+          ..write('bookTitleSnapshot: $bookTitleSnapshot, ')
+          ..write('authorSnapshot: $authorSnapshot, ')
+          ..write('normalizedHashSnapshot: $normalizedHashSnapshot, ')
+          ..write('firstReadAt: $firstReadAt, ')
+          ..write('lastReadAt: $lastReadAt, ')
+          ..write('lastChapterTitleSnapshot: $lastChapterTitleSnapshot, ')
+          ..write('lastProgressSnapshot: $lastProgressSnapshot, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $ReadingSessionsTable extends ReadingSessions
+    with TableInfo<$ReadingSessionsTable, ReadingSession> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ReadingSessionsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _historyEntryIdMeta = const VerificationMeta(
+    'historyEntryId',
+  );
+  @override
+  late final GeneratedColumn<String> historyEntryId = GeneratedColumn<String>(
+    'history_entry_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints:
+        'NOT NULL REFERENCES reading_history (id) ON DELETE CASCADE',
+  );
+  static const VerificationMeta _startedAtMeta = const VerificationMeta(
+    'startedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> startedAt = GeneratedColumn<DateTime>(
+    'started_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _endedAtMeta = const VerificationMeta(
+    'endedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> endedAt = GeneratedColumn<DateTime>(
+    'ended_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _effectiveReadingSecondsMeta =
+      const VerificationMeta('effectiveReadingSeconds');
+  @override
+  late final GeneratedColumn<int> effectiveReadingSeconds =
+      GeneratedColumn<int>(
+        'effective_reading_seconds',
+        aliasedName,
+        false,
+        type: DriftSqlType.int,
+        requiredDuringInsert: true,
+      );
+  static const VerificationMeta _platformMeta = const VerificationMeta(
+    'platform',
+  );
+  @override
+  late final GeneratedColumn<String> platform = GeneratedColumn<String>(
+    'platform',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _deviceIdMeta = const VerificationMeta(
+    'deviceId',
+  );
+  @override
+  late final GeneratedColumn<String> deviceId = GeneratedColumn<String>(
+    'device_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    historyEntryId,
+    startedAt,
+    endedAt,
+    effectiveReadingSeconds,
+    platform,
+    deviceId,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'reading_sessions';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ReadingSession> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('history_entry_id')) {
+      context.handle(
+        _historyEntryIdMeta,
+        historyEntryId.isAcceptableOrUnknown(
+          data['history_entry_id']!,
+          _historyEntryIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_historyEntryIdMeta);
+    }
+    if (data.containsKey('started_at')) {
+      context.handle(
+        _startedAtMeta,
+        startedAt.isAcceptableOrUnknown(data['started_at']!, _startedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_startedAtMeta);
+    }
+    if (data.containsKey('ended_at')) {
+      context.handle(
+        _endedAtMeta,
+        endedAt.isAcceptableOrUnknown(data['ended_at']!, _endedAtMeta),
+      );
+    }
+    if (data.containsKey('effective_reading_seconds')) {
+      context.handle(
+        _effectiveReadingSecondsMeta,
+        effectiveReadingSeconds.isAcceptableOrUnknown(
+          data['effective_reading_seconds']!,
+          _effectiveReadingSecondsMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_effectiveReadingSecondsMeta);
+    }
+    if (data.containsKey('platform')) {
+      context.handle(
+        _platformMeta,
+        platform.isAcceptableOrUnknown(data['platform']!, _platformMeta),
+      );
+    }
+    if (data.containsKey('device_id')) {
+      context.handle(
+        _deviceIdMeta,
+        deviceId.isAcceptableOrUnknown(data['device_id']!, _deviceIdMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  ReadingSession map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ReadingSession(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      historyEntryId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}history_entry_id'],
+      )!,
+      startedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}started_at'],
+      )!,
+      endedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}ended_at'],
+      ),
+      effectiveReadingSeconds: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}effective_reading_seconds'],
+      )!,
+      platform: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}platform'],
+      ),
+      deviceId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}device_id'],
+      ),
+    );
+  }
+
+  @override
+  $ReadingSessionsTable createAlias(String alias) {
+    return $ReadingSessionsTable(attachedDatabase, alias);
+  }
+}
+
+class ReadingSession extends DataClass implements Insertable<ReadingSession> {
+  final String id;
+  final String historyEntryId;
+  final DateTime startedAt;
+  final DateTime? endedAt;
+  final int effectiveReadingSeconds;
+  final String? platform;
+  final String? deviceId;
+  const ReadingSession({
+    required this.id,
+    required this.historyEntryId,
+    required this.startedAt,
+    this.endedAt,
+    required this.effectiveReadingSeconds,
+    this.platform,
+    this.deviceId,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['history_entry_id'] = Variable<String>(historyEntryId);
+    map['started_at'] = Variable<DateTime>(startedAt);
+    if (!nullToAbsent || endedAt != null) {
+      map['ended_at'] = Variable<DateTime>(endedAt);
+    }
+    map['effective_reading_seconds'] = Variable<int>(effectiveReadingSeconds);
+    if (!nullToAbsent || platform != null) {
+      map['platform'] = Variable<String>(platform);
+    }
+    if (!nullToAbsent || deviceId != null) {
+      map['device_id'] = Variable<String>(deviceId);
+    }
+    return map;
+  }
+
+  ReadingSessionsCompanion toCompanion(bool nullToAbsent) {
+    return ReadingSessionsCompanion(
+      id: Value(id),
+      historyEntryId: Value(historyEntryId),
+      startedAt: Value(startedAt),
+      endedAt: endedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(endedAt),
+      effectiveReadingSeconds: Value(effectiveReadingSeconds),
+      platform: platform == null && nullToAbsent
+          ? const Value.absent()
+          : Value(platform),
+      deviceId: deviceId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deviceId),
+    );
+  }
+
+  factory ReadingSession.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ReadingSession(
+      id: serializer.fromJson<String>(json['id']),
+      historyEntryId: serializer.fromJson<String>(json['historyEntryId']),
+      startedAt: serializer.fromJson<DateTime>(json['startedAt']),
+      endedAt: serializer.fromJson<DateTime?>(json['endedAt']),
+      effectiveReadingSeconds: serializer.fromJson<int>(
+        json['effectiveReadingSeconds'],
+      ),
+      platform: serializer.fromJson<String?>(json['platform']),
+      deviceId: serializer.fromJson<String?>(json['deviceId']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'historyEntryId': serializer.toJson<String>(historyEntryId),
+      'startedAt': serializer.toJson<DateTime>(startedAt),
+      'endedAt': serializer.toJson<DateTime?>(endedAt),
+      'effectiveReadingSeconds': serializer.toJson<int>(
+        effectiveReadingSeconds,
+      ),
+      'platform': serializer.toJson<String?>(platform),
+      'deviceId': serializer.toJson<String?>(deviceId),
+    };
+  }
+
+  ReadingSession copyWith({
+    String? id,
+    String? historyEntryId,
+    DateTime? startedAt,
+    Value<DateTime?> endedAt = const Value.absent(),
+    int? effectiveReadingSeconds,
+    Value<String?> platform = const Value.absent(),
+    Value<String?> deviceId = const Value.absent(),
+  }) => ReadingSession(
+    id: id ?? this.id,
+    historyEntryId: historyEntryId ?? this.historyEntryId,
+    startedAt: startedAt ?? this.startedAt,
+    endedAt: endedAt.present ? endedAt.value : this.endedAt,
+    effectiveReadingSeconds:
+        effectiveReadingSeconds ?? this.effectiveReadingSeconds,
+    platform: platform.present ? platform.value : this.platform,
+    deviceId: deviceId.present ? deviceId.value : this.deviceId,
+  );
+  ReadingSession copyWithCompanion(ReadingSessionsCompanion data) {
+    return ReadingSession(
+      id: data.id.present ? data.id.value : this.id,
+      historyEntryId: data.historyEntryId.present
+          ? data.historyEntryId.value
+          : this.historyEntryId,
+      startedAt: data.startedAt.present ? data.startedAt.value : this.startedAt,
+      endedAt: data.endedAt.present ? data.endedAt.value : this.endedAt,
+      effectiveReadingSeconds: data.effectiveReadingSeconds.present
+          ? data.effectiveReadingSeconds.value
+          : this.effectiveReadingSeconds,
+      platform: data.platform.present ? data.platform.value : this.platform,
+      deviceId: data.deviceId.present ? data.deviceId.value : this.deviceId,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ReadingSession(')
+          ..write('id: $id, ')
+          ..write('historyEntryId: $historyEntryId, ')
+          ..write('startedAt: $startedAt, ')
+          ..write('endedAt: $endedAt, ')
+          ..write('effectiveReadingSeconds: $effectiveReadingSeconds, ')
+          ..write('platform: $platform, ')
+          ..write('deviceId: $deviceId')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    historyEntryId,
+    startedAt,
+    endedAt,
+    effectiveReadingSeconds,
+    platform,
+    deviceId,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ReadingSession &&
+          other.id == this.id &&
+          other.historyEntryId == this.historyEntryId &&
+          other.startedAt == this.startedAt &&
+          other.endedAt == this.endedAt &&
+          other.effectiveReadingSeconds == this.effectiveReadingSeconds &&
+          other.platform == this.platform &&
+          other.deviceId == this.deviceId);
+}
+
+class ReadingSessionsCompanion extends UpdateCompanion<ReadingSession> {
+  final Value<String> id;
+  final Value<String> historyEntryId;
+  final Value<DateTime> startedAt;
+  final Value<DateTime?> endedAt;
+  final Value<int> effectiveReadingSeconds;
+  final Value<String?> platform;
+  final Value<String?> deviceId;
+  final Value<int> rowid;
+  const ReadingSessionsCompanion({
+    this.id = const Value.absent(),
+    this.historyEntryId = const Value.absent(),
+    this.startedAt = const Value.absent(),
+    this.endedAt = const Value.absent(),
+    this.effectiveReadingSeconds = const Value.absent(),
+    this.platform = const Value.absent(),
+    this.deviceId = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ReadingSessionsCompanion.insert({
+    required String id,
+    required String historyEntryId,
+    required DateTime startedAt,
+    this.endedAt = const Value.absent(),
+    required int effectiveReadingSeconds,
+    this.platform = const Value.absent(),
+    this.deviceId = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       historyEntryId = Value(historyEntryId),
+       startedAt = Value(startedAt),
+       effectiveReadingSeconds = Value(effectiveReadingSeconds);
+  static Insertable<ReadingSession> custom({
+    Expression<String>? id,
+    Expression<String>? historyEntryId,
+    Expression<DateTime>? startedAt,
+    Expression<DateTime>? endedAt,
+    Expression<int>? effectiveReadingSeconds,
+    Expression<String>? platform,
+    Expression<String>? deviceId,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (historyEntryId != null) 'history_entry_id': historyEntryId,
+      if (startedAt != null) 'started_at': startedAt,
+      if (endedAt != null) 'ended_at': endedAt,
+      if (effectiveReadingSeconds != null)
+        'effective_reading_seconds': effectiveReadingSeconds,
+      if (platform != null) 'platform': platform,
+      if (deviceId != null) 'device_id': deviceId,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ReadingSessionsCompanion copyWith({
+    Value<String>? id,
+    Value<String>? historyEntryId,
+    Value<DateTime>? startedAt,
+    Value<DateTime?>? endedAt,
+    Value<int>? effectiveReadingSeconds,
+    Value<String?>? platform,
+    Value<String?>? deviceId,
+    Value<int>? rowid,
+  }) {
+    return ReadingSessionsCompanion(
+      id: id ?? this.id,
+      historyEntryId: historyEntryId ?? this.historyEntryId,
+      startedAt: startedAt ?? this.startedAt,
+      endedAt: endedAt ?? this.endedAt,
+      effectiveReadingSeconds:
+          effectiveReadingSeconds ?? this.effectiveReadingSeconds,
+      platform: platform ?? this.platform,
+      deviceId: deviceId ?? this.deviceId,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (historyEntryId.present) {
+      map['history_entry_id'] = Variable<String>(historyEntryId.value);
+    }
+    if (startedAt.present) {
+      map['started_at'] = Variable<DateTime>(startedAt.value);
+    }
+    if (endedAt.present) {
+      map['ended_at'] = Variable<DateTime>(endedAt.value);
+    }
+    if (effectiveReadingSeconds.present) {
+      map['effective_reading_seconds'] = Variable<int>(
+        effectiveReadingSeconds.value,
+      );
+    }
+    if (platform.present) {
+      map['platform'] = Variable<String>(platform.value);
+    }
+    if (deviceId.present) {
+      map['device_id'] = Variable<String>(deviceId.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ReadingSessionsCompanion(')
+          ..write('id: $id, ')
+          ..write('historyEntryId: $historyEntryId, ')
+          ..write('startedAt: $startedAt, ')
+          ..write('endedAt: $endedAt, ')
+          ..write('effectiveReadingSeconds: $effectiveReadingSeconds, ')
+          ..write('platform: $platform, ')
+          ..write('deviceId: $deviceId, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -4874,6 +6655,13 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $AppSettingsTable appSettings = $AppSettingsTable(this);
   late final $ReaderPreferencesRowsTable readerPreferencesRows =
       $ReaderPreferencesRowsTable(this);
+  late final $ReaderBookmarksTable readerBookmarks = $ReaderBookmarksTable(
+    this,
+  );
+  late final $ReadingHistoryTable readingHistory = $ReadingHistoryTable(this);
+  late final $ReadingSessionsTable readingSessions = $ReadingSessionsTable(
+    this,
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -4888,6 +6676,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     readingProgress,
     appSettings,
     readerPreferencesRows,
+    readerBookmarks,
+    readingHistory,
+    readingSessions,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -4904,6 +6695,27 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         limitUpdateKind: UpdateKind.delete,
       ),
       result: [TableUpdate('reader_preferences', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'content_collections',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('reader_bookmarks', kind: UpdateKind.update)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'content_collections',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('reading_history', kind: UpdateKind.update)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'reading_history',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('reading_sessions', kind: UpdateKind.delete)],
     ),
   ]);
 }
@@ -5284,6 +7096,50 @@ final class $$ContentCollectionsTableReferences
       manager.$state.copyWith(prefetchedData: cache),
     );
   }
+
+  static MultiTypedResultKey<$ReaderBookmarksTable, List<ReaderBookmark>>
+  _readerBookmarksRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.readerBookmarks,
+    aliasName: $_aliasNameGenerator(
+      db.contentCollections.id,
+      db.readerBookmarks.collectionId,
+    ),
+  );
+
+  $$ReaderBookmarksTableProcessedTableManager get readerBookmarksRefs {
+    final manager = $$ReaderBookmarksTableTableManager(
+      $_db,
+      $_db.readerBookmarks,
+    ).filter((f) => f.collectionId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _readerBookmarksRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$ReadingHistoryTable, List<ReadingHistoryData>>
+  _readingHistoryRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.readingHistory,
+    aliasName: $_aliasNameGenerator(
+      db.contentCollections.id,
+      db.readingHistory.collectionId,
+    ),
+  );
+
+  $$ReadingHistoryTableProcessedTableManager get readingHistoryRefs {
+    final manager = $$ReadingHistoryTableTableManager(
+      $_db,
+      $_db.readingHistory,
+    ).filter((f) => f.collectionId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_readingHistoryRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 }
 
 class $$ContentCollectionsTableFilterComposer
@@ -5383,6 +7239,56 @@ class $$ContentCollectionsTableFilterComposer
                     $removeJoinBuilderFromRootComposer,
               ),
         );
+    return f(composer);
+  }
+
+  Expression<bool> readerBookmarksRefs(
+    Expression<bool> Function($$ReaderBookmarksTableFilterComposer f) f,
+  ) {
+    final $$ReaderBookmarksTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.readerBookmarks,
+      getReferencedColumn: (t) => t.collectionId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ReaderBookmarksTableFilterComposer(
+            $db: $db,
+            $table: $db.readerBookmarks,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> readingHistoryRefs(
+    Expression<bool> Function($$ReadingHistoryTableFilterComposer f) f,
+  ) {
+    final $$ReadingHistoryTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.readingHistory,
+      getReferencedColumn: (t) => t.collectionId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ReadingHistoryTableFilterComposer(
+            $db: $db,
+            $table: $db.readingHistory,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
     return f(composer);
   }
 }
@@ -5524,6 +7430,56 @@ class $$ContentCollectionsTableAnnotationComposer
         );
     return f(composer);
   }
+
+  Expression<T> readerBookmarksRefs<T extends Object>(
+    Expression<T> Function($$ReaderBookmarksTableAnnotationComposer a) f,
+  ) {
+    final $$ReaderBookmarksTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.readerBookmarks,
+      getReferencedColumn: (t) => t.collectionId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ReaderBookmarksTableAnnotationComposer(
+            $db: $db,
+            $table: $db.readerBookmarks,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<T> readingHistoryRefs<T extends Object>(
+    Expression<T> Function($$ReadingHistoryTableAnnotationComposer a) f,
+  ) {
+    final $$ReadingHistoryTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.readingHistory,
+      getReferencedColumn: (t) => t.collectionId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ReadingHistoryTableAnnotationComposer(
+            $db: $db,
+            $table: $db.readingHistory,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$ContentCollectionsTableTableManager
@@ -5542,6 +7498,8 @@ class $$ContentCollectionsTableTableManager
           PrefetchHooks Function({
             bool readingProgressRefs,
             bool readerPreferencesRowsRefs,
+            bool readerBookmarksRefs,
+            bool readingHistoryRefs,
           })
         > {
   $$ContentCollectionsTableTableManager(
@@ -5616,12 +7574,16 @@ class $$ContentCollectionsTableTableManager
               ({
                 readingProgressRefs = false,
                 readerPreferencesRowsRefs = false,
+                readerBookmarksRefs = false,
+                readingHistoryRefs = false,
               }) {
                 return PrefetchHooks(
                   db: db,
                   explicitlyWatchedTables: [
                     if (readingProgressRefs) db.readingProgress,
                     if (readerPreferencesRowsRefs) db.readerPreferencesRows,
+                    if (readerBookmarksRefs) db.readerBookmarks,
+                    if (readingHistoryRefs) db.readingHistory,
                   ],
                   addJoins: null,
                   getPrefetchedDataCallback: (items) async {
@@ -5668,6 +7630,48 @@ class $$ContentCollectionsTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (readerBookmarksRefs)
+                        await $_getPrefetchedData<
+                          ContentCollection,
+                          $ContentCollectionsTable,
+                          ReaderBookmark
+                        >(
+                          currentTable: table,
+                          referencedTable: $$ContentCollectionsTableReferences
+                              ._readerBookmarksRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$ContentCollectionsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).readerBookmarksRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.collectionId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (readingHistoryRefs)
+                        await $_getPrefetchedData<
+                          ContentCollection,
+                          $ContentCollectionsTable,
+                          ReadingHistoryData
+                        >(
+                          currentTable: table,
+                          referencedTable: $$ContentCollectionsTableReferences
+                              ._readingHistoryRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$ContentCollectionsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).readingHistoryRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.collectionId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                     ];
                   },
                 );
@@ -5691,6 +7695,8 @@ typedef $$ContentCollectionsTableProcessedTableManager =
       PrefetchHooks Function({
         bool readingProgressRefs,
         bool readerPreferencesRowsRefs,
+        bool readerBookmarksRefs,
+        bool readingHistoryRefs,
       })
     >;
 typedef $$ContentItemsTableCreateCompanionBuilder =
@@ -7812,6 +9818,1334 @@ typedef $$ReaderPreferencesRowsTableProcessedTableManager =
       ReaderPreferencesRow,
       PrefetchHooks Function({bool collectionId})
     >;
+typedef $$ReaderBookmarksTableCreateCompanionBuilder =
+    ReaderBookmarksCompanion Function({
+      required String id,
+      Value<String?> collectionId,
+      required int absoluteCharacterOffset,
+      Value<String?> normalizedHashAtCreation,
+      required String bookTitleSnapshot,
+      Value<String?> note,
+      required DateTime createdAt,
+      required DateTime updatedAt,
+      Value<int> rowid,
+    });
+typedef $$ReaderBookmarksTableUpdateCompanionBuilder =
+    ReaderBookmarksCompanion Function({
+      Value<String> id,
+      Value<String?> collectionId,
+      Value<int> absoluteCharacterOffset,
+      Value<String?> normalizedHashAtCreation,
+      Value<String> bookTitleSnapshot,
+      Value<String?> note,
+      Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
+      Value<int> rowid,
+    });
+
+final class $$ReaderBookmarksTableReferences
+    extends
+        BaseReferences<_$AppDatabase, $ReaderBookmarksTable, ReaderBookmark> {
+  $$ReaderBookmarksTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $ContentCollectionsTable _collectionIdTable(_$AppDatabase db) =>
+      db.contentCollections.createAlias(
+        $_aliasNameGenerator(
+          db.readerBookmarks.collectionId,
+          db.contentCollections.id,
+        ),
+      );
+
+  $$ContentCollectionsTableProcessedTableManager? get collectionId {
+    final $_column = $_itemColumn<String>('collection_id');
+    if ($_column == null) return null;
+    final manager = $$ContentCollectionsTableTableManager(
+      $_db,
+      $_db.contentCollections,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_collectionIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$ReaderBookmarksTableFilterComposer
+    extends Composer<_$AppDatabase, $ReaderBookmarksTable> {
+  $$ReaderBookmarksTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get absoluteCharacterOffset => $composableBuilder(
+    column: $table.absoluteCharacterOffset,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get normalizedHashAtCreation => $composableBuilder(
+    column: $table.normalizedHashAtCreation,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get bookTitleSnapshot => $composableBuilder(
+    column: $table.bookTitleSnapshot,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get note => $composableBuilder(
+    column: $table.note,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$ContentCollectionsTableFilterComposer get collectionId {
+    final $$ContentCollectionsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.collectionId,
+      referencedTable: $db.contentCollections,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ContentCollectionsTableFilterComposer(
+            $db: $db,
+            $table: $db.contentCollections,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ReaderBookmarksTableOrderingComposer
+    extends Composer<_$AppDatabase, $ReaderBookmarksTable> {
+  $$ReaderBookmarksTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get absoluteCharacterOffset => $composableBuilder(
+    column: $table.absoluteCharacterOffset,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get normalizedHashAtCreation => $composableBuilder(
+    column: $table.normalizedHashAtCreation,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get bookTitleSnapshot => $composableBuilder(
+    column: $table.bookTitleSnapshot,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get note => $composableBuilder(
+    column: $table.note,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$ContentCollectionsTableOrderingComposer get collectionId {
+    final $$ContentCollectionsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.collectionId,
+      referencedTable: $db.contentCollections,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ContentCollectionsTableOrderingComposer(
+            $db: $db,
+            $table: $db.contentCollections,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ReaderBookmarksTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ReaderBookmarksTable> {
+  $$ReaderBookmarksTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get absoluteCharacterOffset => $composableBuilder(
+    column: $table.absoluteCharacterOffset,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get normalizedHashAtCreation => $composableBuilder(
+    column: $table.normalizedHashAtCreation,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get bookTitleSnapshot => $composableBuilder(
+    column: $table.bookTitleSnapshot,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get note =>
+      $composableBuilder(column: $table.note, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  $$ContentCollectionsTableAnnotationComposer get collectionId {
+    final $$ContentCollectionsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.collectionId,
+          referencedTable: $db.contentCollections,
+          getReferencedColumn: (t) => t.id,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$ContentCollectionsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.contentCollections,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return composer;
+  }
+}
+
+class $$ReaderBookmarksTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ReaderBookmarksTable,
+          ReaderBookmark,
+          $$ReaderBookmarksTableFilterComposer,
+          $$ReaderBookmarksTableOrderingComposer,
+          $$ReaderBookmarksTableAnnotationComposer,
+          $$ReaderBookmarksTableCreateCompanionBuilder,
+          $$ReaderBookmarksTableUpdateCompanionBuilder,
+          (ReaderBookmark, $$ReaderBookmarksTableReferences),
+          ReaderBookmark,
+          PrefetchHooks Function({bool collectionId})
+        > {
+  $$ReaderBookmarksTableTableManager(
+    _$AppDatabase db,
+    $ReaderBookmarksTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ReaderBookmarksTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ReaderBookmarksTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ReaderBookmarksTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String?> collectionId = const Value.absent(),
+                Value<int> absoluteCharacterOffset = const Value.absent(),
+                Value<String?> normalizedHashAtCreation = const Value.absent(),
+                Value<String> bookTitleSnapshot = const Value.absent(),
+                Value<String?> note = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ReaderBookmarksCompanion(
+                id: id,
+                collectionId: collectionId,
+                absoluteCharacterOffset: absoluteCharacterOffset,
+                normalizedHashAtCreation: normalizedHashAtCreation,
+                bookTitleSnapshot: bookTitleSnapshot,
+                note: note,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                Value<String?> collectionId = const Value.absent(),
+                required int absoluteCharacterOffset,
+                Value<String?> normalizedHashAtCreation = const Value.absent(),
+                required String bookTitleSnapshot,
+                Value<String?> note = const Value.absent(),
+                required DateTime createdAt,
+                required DateTime updatedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => ReaderBookmarksCompanion.insert(
+                id: id,
+                collectionId: collectionId,
+                absoluteCharacterOffset: absoluteCharacterOffset,
+                normalizedHashAtCreation: normalizedHashAtCreation,
+                bookTitleSnapshot: bookTitleSnapshot,
+                note: note,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$ReaderBookmarksTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({collectionId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (collectionId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.collectionId,
+                                referencedTable:
+                                    $$ReaderBookmarksTableReferences
+                                        ._collectionIdTable(db),
+                                referencedColumn:
+                                    $$ReaderBookmarksTableReferences
+                                        ._collectionIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$ReaderBookmarksTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ReaderBookmarksTable,
+      ReaderBookmark,
+      $$ReaderBookmarksTableFilterComposer,
+      $$ReaderBookmarksTableOrderingComposer,
+      $$ReaderBookmarksTableAnnotationComposer,
+      $$ReaderBookmarksTableCreateCompanionBuilder,
+      $$ReaderBookmarksTableUpdateCompanionBuilder,
+      (ReaderBookmark, $$ReaderBookmarksTableReferences),
+      ReaderBookmark,
+      PrefetchHooks Function({bool collectionId})
+    >;
+typedef $$ReadingHistoryTableCreateCompanionBuilder =
+    ReadingHistoryCompanion Function({
+      required String id,
+      Value<String?> collectionId,
+      required String bookTitleSnapshot,
+      Value<String?> authorSnapshot,
+      Value<String?> normalizedHashSnapshot,
+      required DateTime firstReadAt,
+      required DateTime lastReadAt,
+      Value<String?> lastChapterTitleSnapshot,
+      Value<String?> lastProgressSnapshot,
+      required DateTime createdAt,
+      required DateTime updatedAt,
+      Value<int> rowid,
+    });
+typedef $$ReadingHistoryTableUpdateCompanionBuilder =
+    ReadingHistoryCompanion Function({
+      Value<String> id,
+      Value<String?> collectionId,
+      Value<String> bookTitleSnapshot,
+      Value<String?> authorSnapshot,
+      Value<String?> normalizedHashSnapshot,
+      Value<DateTime> firstReadAt,
+      Value<DateTime> lastReadAt,
+      Value<String?> lastChapterTitleSnapshot,
+      Value<String?> lastProgressSnapshot,
+      Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
+      Value<int> rowid,
+    });
+
+final class $$ReadingHistoryTableReferences
+    extends
+        BaseReferences<
+          _$AppDatabase,
+          $ReadingHistoryTable,
+          ReadingHistoryData
+        > {
+  $$ReadingHistoryTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $ContentCollectionsTable _collectionIdTable(_$AppDatabase db) =>
+      db.contentCollections.createAlias(
+        $_aliasNameGenerator(
+          db.readingHistory.collectionId,
+          db.contentCollections.id,
+        ),
+      );
+
+  $$ContentCollectionsTableProcessedTableManager? get collectionId {
+    final $_column = $_itemColumn<String>('collection_id');
+    if ($_column == null) return null;
+    final manager = $$ContentCollectionsTableTableManager(
+      $_db,
+      $_db.contentCollections,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_collectionIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static MultiTypedResultKey<$ReadingSessionsTable, List<ReadingSession>>
+  _readingSessionsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.readingSessions,
+    aliasName: $_aliasNameGenerator(
+      db.readingHistory.id,
+      db.readingSessions.historyEntryId,
+    ),
+  );
+
+  $$ReadingSessionsTableProcessedTableManager get readingSessionsRefs {
+    final manager = $$ReadingSessionsTableTableManager(
+      $_db,
+      $_db.readingSessions,
+    ).filter((f) => f.historyEntryId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _readingSessionsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+}
+
+class $$ReadingHistoryTableFilterComposer
+    extends Composer<_$AppDatabase, $ReadingHistoryTable> {
+  $$ReadingHistoryTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get bookTitleSnapshot => $composableBuilder(
+    column: $table.bookTitleSnapshot,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get authorSnapshot => $composableBuilder(
+    column: $table.authorSnapshot,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get normalizedHashSnapshot => $composableBuilder(
+    column: $table.normalizedHashSnapshot,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get firstReadAt => $composableBuilder(
+    column: $table.firstReadAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get lastReadAt => $composableBuilder(
+    column: $table.lastReadAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get lastChapterTitleSnapshot => $composableBuilder(
+    column: $table.lastChapterTitleSnapshot,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get lastProgressSnapshot => $composableBuilder(
+    column: $table.lastProgressSnapshot,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$ContentCollectionsTableFilterComposer get collectionId {
+    final $$ContentCollectionsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.collectionId,
+      referencedTable: $db.contentCollections,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ContentCollectionsTableFilterComposer(
+            $db: $db,
+            $table: $db.contentCollections,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  Expression<bool> readingSessionsRefs(
+    Expression<bool> Function($$ReadingSessionsTableFilterComposer f) f,
+  ) {
+    final $$ReadingSessionsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.readingSessions,
+      getReferencedColumn: (t) => t.historyEntryId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ReadingSessionsTableFilterComposer(
+            $db: $db,
+            $table: $db.readingSessions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$ReadingHistoryTableOrderingComposer
+    extends Composer<_$AppDatabase, $ReadingHistoryTable> {
+  $$ReadingHistoryTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get bookTitleSnapshot => $composableBuilder(
+    column: $table.bookTitleSnapshot,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get authorSnapshot => $composableBuilder(
+    column: $table.authorSnapshot,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get normalizedHashSnapshot => $composableBuilder(
+    column: $table.normalizedHashSnapshot,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get firstReadAt => $composableBuilder(
+    column: $table.firstReadAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get lastReadAt => $composableBuilder(
+    column: $table.lastReadAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get lastChapterTitleSnapshot => $composableBuilder(
+    column: $table.lastChapterTitleSnapshot,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get lastProgressSnapshot => $composableBuilder(
+    column: $table.lastProgressSnapshot,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$ContentCollectionsTableOrderingComposer get collectionId {
+    final $$ContentCollectionsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.collectionId,
+      referencedTable: $db.contentCollections,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ContentCollectionsTableOrderingComposer(
+            $db: $db,
+            $table: $db.contentCollections,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ReadingHistoryTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ReadingHistoryTable> {
+  $$ReadingHistoryTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get bookTitleSnapshot => $composableBuilder(
+    column: $table.bookTitleSnapshot,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get authorSnapshot => $composableBuilder(
+    column: $table.authorSnapshot,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get normalizedHashSnapshot => $composableBuilder(
+    column: $table.normalizedHashSnapshot,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get firstReadAt => $composableBuilder(
+    column: $table.firstReadAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get lastReadAt => $composableBuilder(
+    column: $table.lastReadAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get lastChapterTitleSnapshot => $composableBuilder(
+    column: $table.lastChapterTitleSnapshot,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get lastProgressSnapshot => $composableBuilder(
+    column: $table.lastProgressSnapshot,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  $$ContentCollectionsTableAnnotationComposer get collectionId {
+    final $$ContentCollectionsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.collectionId,
+          referencedTable: $db.contentCollections,
+          getReferencedColumn: (t) => t.id,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$ContentCollectionsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.contentCollections,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return composer;
+  }
+
+  Expression<T> readingSessionsRefs<T extends Object>(
+    Expression<T> Function($$ReadingSessionsTableAnnotationComposer a) f,
+  ) {
+    final $$ReadingSessionsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.readingSessions,
+      getReferencedColumn: (t) => t.historyEntryId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ReadingSessionsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.readingSessions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$ReadingHistoryTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ReadingHistoryTable,
+          ReadingHistoryData,
+          $$ReadingHistoryTableFilterComposer,
+          $$ReadingHistoryTableOrderingComposer,
+          $$ReadingHistoryTableAnnotationComposer,
+          $$ReadingHistoryTableCreateCompanionBuilder,
+          $$ReadingHistoryTableUpdateCompanionBuilder,
+          (ReadingHistoryData, $$ReadingHistoryTableReferences),
+          ReadingHistoryData,
+          PrefetchHooks Function({bool collectionId, bool readingSessionsRefs})
+        > {
+  $$ReadingHistoryTableTableManager(
+    _$AppDatabase db,
+    $ReadingHistoryTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ReadingHistoryTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ReadingHistoryTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ReadingHistoryTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String?> collectionId = const Value.absent(),
+                Value<String> bookTitleSnapshot = const Value.absent(),
+                Value<String?> authorSnapshot = const Value.absent(),
+                Value<String?> normalizedHashSnapshot = const Value.absent(),
+                Value<DateTime> firstReadAt = const Value.absent(),
+                Value<DateTime> lastReadAt = const Value.absent(),
+                Value<String?> lastChapterTitleSnapshot = const Value.absent(),
+                Value<String?> lastProgressSnapshot = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ReadingHistoryCompanion(
+                id: id,
+                collectionId: collectionId,
+                bookTitleSnapshot: bookTitleSnapshot,
+                authorSnapshot: authorSnapshot,
+                normalizedHashSnapshot: normalizedHashSnapshot,
+                firstReadAt: firstReadAt,
+                lastReadAt: lastReadAt,
+                lastChapterTitleSnapshot: lastChapterTitleSnapshot,
+                lastProgressSnapshot: lastProgressSnapshot,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                Value<String?> collectionId = const Value.absent(),
+                required String bookTitleSnapshot,
+                Value<String?> authorSnapshot = const Value.absent(),
+                Value<String?> normalizedHashSnapshot = const Value.absent(),
+                required DateTime firstReadAt,
+                required DateTime lastReadAt,
+                Value<String?> lastChapterTitleSnapshot = const Value.absent(),
+                Value<String?> lastProgressSnapshot = const Value.absent(),
+                required DateTime createdAt,
+                required DateTime updatedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => ReadingHistoryCompanion.insert(
+                id: id,
+                collectionId: collectionId,
+                bookTitleSnapshot: bookTitleSnapshot,
+                authorSnapshot: authorSnapshot,
+                normalizedHashSnapshot: normalizedHashSnapshot,
+                firstReadAt: firstReadAt,
+                lastReadAt: lastReadAt,
+                lastChapterTitleSnapshot: lastChapterTitleSnapshot,
+                lastProgressSnapshot: lastProgressSnapshot,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$ReadingHistoryTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback:
+              ({collectionId = false, readingSessionsRefs = false}) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [
+                    if (readingSessionsRefs) db.readingSessions,
+                  ],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (collectionId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.collectionId,
+                                    referencedTable:
+                                        $$ReadingHistoryTableReferences
+                                            ._collectionIdTable(db),
+                                    referencedColumn:
+                                        $$ReadingHistoryTableReferences
+                                            ._collectionIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (readingSessionsRefs)
+                        await $_getPrefetchedData<
+                          ReadingHistoryData,
+                          $ReadingHistoryTable,
+                          ReadingSession
+                        >(
+                          currentTable: table,
+                          referencedTable: $$ReadingHistoryTableReferences
+                              ._readingSessionsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$ReadingHistoryTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).readingSessionsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.historyEntryId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
+                  },
+                );
+              },
+        ),
+      );
+}
+
+typedef $$ReadingHistoryTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ReadingHistoryTable,
+      ReadingHistoryData,
+      $$ReadingHistoryTableFilterComposer,
+      $$ReadingHistoryTableOrderingComposer,
+      $$ReadingHistoryTableAnnotationComposer,
+      $$ReadingHistoryTableCreateCompanionBuilder,
+      $$ReadingHistoryTableUpdateCompanionBuilder,
+      (ReadingHistoryData, $$ReadingHistoryTableReferences),
+      ReadingHistoryData,
+      PrefetchHooks Function({bool collectionId, bool readingSessionsRefs})
+    >;
+typedef $$ReadingSessionsTableCreateCompanionBuilder =
+    ReadingSessionsCompanion Function({
+      required String id,
+      required String historyEntryId,
+      required DateTime startedAt,
+      Value<DateTime?> endedAt,
+      required int effectiveReadingSeconds,
+      Value<String?> platform,
+      Value<String?> deviceId,
+      Value<int> rowid,
+    });
+typedef $$ReadingSessionsTableUpdateCompanionBuilder =
+    ReadingSessionsCompanion Function({
+      Value<String> id,
+      Value<String> historyEntryId,
+      Value<DateTime> startedAt,
+      Value<DateTime?> endedAt,
+      Value<int> effectiveReadingSeconds,
+      Value<String?> platform,
+      Value<String?> deviceId,
+      Value<int> rowid,
+    });
+
+final class $$ReadingSessionsTableReferences
+    extends
+        BaseReferences<_$AppDatabase, $ReadingSessionsTable, ReadingSession> {
+  $$ReadingSessionsTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $ReadingHistoryTable _historyEntryIdTable(_$AppDatabase db) =>
+      db.readingHistory.createAlias(
+        $_aliasNameGenerator(
+          db.readingSessions.historyEntryId,
+          db.readingHistory.id,
+        ),
+      );
+
+  $$ReadingHistoryTableProcessedTableManager get historyEntryId {
+    final $_column = $_itemColumn<String>('history_entry_id')!;
+
+    final manager = $$ReadingHistoryTableTableManager(
+      $_db,
+      $_db.readingHistory,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_historyEntryIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$ReadingSessionsTableFilterComposer
+    extends Composer<_$AppDatabase, $ReadingSessionsTable> {
+  $$ReadingSessionsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get startedAt => $composableBuilder(
+    column: $table.startedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get endedAt => $composableBuilder(
+    column: $table.endedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get effectiveReadingSeconds => $composableBuilder(
+    column: $table.effectiveReadingSeconds,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get platform => $composableBuilder(
+    column: $table.platform,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get deviceId => $composableBuilder(
+    column: $table.deviceId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$ReadingHistoryTableFilterComposer get historyEntryId {
+    final $$ReadingHistoryTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.historyEntryId,
+      referencedTable: $db.readingHistory,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ReadingHistoryTableFilterComposer(
+            $db: $db,
+            $table: $db.readingHistory,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ReadingSessionsTableOrderingComposer
+    extends Composer<_$AppDatabase, $ReadingSessionsTable> {
+  $$ReadingSessionsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get startedAt => $composableBuilder(
+    column: $table.startedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get endedAt => $composableBuilder(
+    column: $table.endedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get effectiveReadingSeconds => $composableBuilder(
+    column: $table.effectiveReadingSeconds,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get platform => $composableBuilder(
+    column: $table.platform,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get deviceId => $composableBuilder(
+    column: $table.deviceId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$ReadingHistoryTableOrderingComposer get historyEntryId {
+    final $$ReadingHistoryTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.historyEntryId,
+      referencedTable: $db.readingHistory,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ReadingHistoryTableOrderingComposer(
+            $db: $db,
+            $table: $db.readingHistory,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ReadingSessionsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ReadingSessionsTable> {
+  $$ReadingSessionsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get startedAt =>
+      $composableBuilder(column: $table.startedAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get endedAt =>
+      $composableBuilder(column: $table.endedAt, builder: (column) => column);
+
+  GeneratedColumn<int> get effectiveReadingSeconds => $composableBuilder(
+    column: $table.effectiveReadingSeconds,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get platform =>
+      $composableBuilder(column: $table.platform, builder: (column) => column);
+
+  GeneratedColumn<String> get deviceId =>
+      $composableBuilder(column: $table.deviceId, builder: (column) => column);
+
+  $$ReadingHistoryTableAnnotationComposer get historyEntryId {
+    final $$ReadingHistoryTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.historyEntryId,
+      referencedTable: $db.readingHistory,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ReadingHistoryTableAnnotationComposer(
+            $db: $db,
+            $table: $db.readingHistory,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ReadingSessionsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ReadingSessionsTable,
+          ReadingSession,
+          $$ReadingSessionsTableFilterComposer,
+          $$ReadingSessionsTableOrderingComposer,
+          $$ReadingSessionsTableAnnotationComposer,
+          $$ReadingSessionsTableCreateCompanionBuilder,
+          $$ReadingSessionsTableUpdateCompanionBuilder,
+          (ReadingSession, $$ReadingSessionsTableReferences),
+          ReadingSession,
+          PrefetchHooks Function({bool historyEntryId})
+        > {
+  $$ReadingSessionsTableTableManager(
+    _$AppDatabase db,
+    $ReadingSessionsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ReadingSessionsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ReadingSessionsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ReadingSessionsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> historyEntryId = const Value.absent(),
+                Value<DateTime> startedAt = const Value.absent(),
+                Value<DateTime?> endedAt = const Value.absent(),
+                Value<int> effectiveReadingSeconds = const Value.absent(),
+                Value<String?> platform = const Value.absent(),
+                Value<String?> deviceId = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ReadingSessionsCompanion(
+                id: id,
+                historyEntryId: historyEntryId,
+                startedAt: startedAt,
+                endedAt: endedAt,
+                effectiveReadingSeconds: effectiveReadingSeconds,
+                platform: platform,
+                deviceId: deviceId,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String historyEntryId,
+                required DateTime startedAt,
+                Value<DateTime?> endedAt = const Value.absent(),
+                required int effectiveReadingSeconds,
+                Value<String?> platform = const Value.absent(),
+                Value<String?> deviceId = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ReadingSessionsCompanion.insert(
+                id: id,
+                historyEntryId: historyEntryId,
+                startedAt: startedAt,
+                endedAt: endedAt,
+                effectiveReadingSeconds: effectiveReadingSeconds,
+                platform: platform,
+                deviceId: deviceId,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$ReadingSessionsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({historyEntryId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (historyEntryId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.historyEntryId,
+                                referencedTable:
+                                    $$ReadingSessionsTableReferences
+                                        ._historyEntryIdTable(db),
+                                referencedColumn:
+                                    $$ReadingSessionsTableReferences
+                                        ._historyEntryIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$ReadingSessionsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ReadingSessionsTable,
+      ReadingSession,
+      $$ReadingSessionsTableFilterComposer,
+      $$ReadingSessionsTableOrderingComposer,
+      $$ReadingSessionsTableAnnotationComposer,
+      $$ReadingSessionsTableCreateCompanionBuilder,
+      $$ReadingSessionsTableUpdateCompanionBuilder,
+      (ReadingSession, $$ReadingSessionsTableReferences),
+      ReadingSession,
+      PrefetchHooks Function({bool historyEntryId})
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -7834,4 +11168,10 @@ class $AppDatabaseManager {
       $$AppSettingsTableTableManager(_db, _db.appSettings);
   $$ReaderPreferencesRowsTableTableManager get readerPreferencesRows =>
       $$ReaderPreferencesRowsTableTableManager(_db, _db.readerPreferencesRows);
+  $$ReaderBookmarksTableTableManager get readerBookmarks =>
+      $$ReaderBookmarksTableTableManager(_db, _db.readerBookmarks);
+  $$ReadingHistoryTableTableManager get readingHistory =>
+      $$ReadingHistoryTableTableManager(_db, _db.readingHistory);
+  $$ReadingSessionsTableTableManager get readingSessions =>
+      $$ReadingSessionsTableTableManager(_db, _db.readingSessions);
 }

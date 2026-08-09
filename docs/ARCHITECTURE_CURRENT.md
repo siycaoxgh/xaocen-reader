@@ -472,3 +472,25 @@ Paged pagination uses `pagedPolicyVersion = 2`. Real TOC chapter start offsets
 are boundary anchors: a chapter title starts a new page, while the previous page
 may end early. Page ranges remain contiguous and preserve UTF-16 offsets. A
 no-chapter document keeps continuous pagination, and vertical layout is unchanged.
+
+## M5.2a history, bookmarks, and sessions (schema 6)
+
+`reading_history` is an aggregate book record, not a second position source. It
+stores nullable `collectionId`, title/author/hash snapshots, first/last read
+timestamps, and last chapter/progress display snapshots. Duration and session
+count are derived exclusively from `reading_sessions` using SUM and COUNT.
+
+`reading_sessions` starts after the first real visible-range/page confirmation,
+accumulates only while Reader is foreground-active, pauses on inactive/paused,
+resumes on foreground, and ends on route pop/dispose. Idle timeout is not part of
+the first contract.
+
+`reader_bookmarks` stores only the normalized UTF-16 offset plus book/hash/note
+snapshots. Orphan status is derived when read: collection missing, normalized
+hash mismatch, or offset out of bounds. There is no persisted `isOrphan` column.
+
+Collection deletion uses `ON DELETE SET NULL` for history and bookmarks, while
+history deletion cascades its sessions. Home recent-reading is derived from
+history rows whose collection still exists, ordered by `lastReadAt`, limited to
+one or two items. `CurrentChapterResolver` recognizes chapter TOC entries only;
+volumes and no-chapter TXT return null.

@@ -228,3 +228,84 @@ class ReaderPreferencesRows extends Table {
   @override
   Set<Column> get primaryKey => {collectionId};
 }
+
+/// Bookmarks are anchored by the normalized UTF-16 offset.  The collection
+/// relation is nullable so a removed book can leave an orphaned bookmark for
+/// the user to inspect or delete.
+class ReaderBookmarks extends Table {
+  TextColumn get id => text()();
+
+  TextColumn get collectionId => text().nullable().customConstraint(
+    'REFERENCES content_collections (id) ON DELETE SET NULL',
+  )();
+
+  IntColumn get absoluteCharacterOffset => integer()();
+
+  TextColumn get normalizedHashAtCreation => text().nullable()();
+
+  TextColumn get bookTitleSnapshot => text()();
+
+  TextColumn get note => text().nullable()();
+
+  DateTimeColumn get createdAt => dateTime()();
+
+  DateTimeColumn get updatedAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+/// One aggregate row per book ever opened in Reader.  It deliberately does
+/// not duplicate locator, duration or session count state.
+class ReadingHistory extends Table {
+  TextColumn get id => text()();
+
+  TextColumn get collectionId => text().nullable().customConstraint(
+    'REFERENCES content_collections (id) ON DELETE SET NULL',
+  )();
+
+  TextColumn get bookTitleSnapshot => text()();
+
+  TextColumn get authorSnapshot => text().nullable()();
+
+  TextColumn get normalizedHashSnapshot => text().nullable()();
+
+  DateTimeColumn get firstReadAt => dateTime()();
+
+  DateTimeColumn get lastReadAt => dateTime()();
+
+  TextColumn get lastChapterTitleSnapshot => text().nullable()();
+
+  TextColumn get lastProgressSnapshot => text().nullable()();
+
+  DateTimeColumn get createdAt => dateTime()();
+
+  DateTimeColumn get updatedAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+/// A single valid foreground Reader session.  Aggregate duration and count
+/// are derived from this table, never maintained as duplicate columns on
+/// [ReadingHistory].
+class ReadingSessions extends Table {
+  TextColumn get id => text()();
+
+  TextColumn get historyEntryId => text().customConstraint(
+    'NOT NULL REFERENCES reading_history (id) ON DELETE CASCADE',
+  )();
+
+  DateTimeColumn get startedAt => dateTime()();
+
+  DateTimeColumn get endedAt => dateTime().nullable()();
+
+  IntColumn get effectiveReadingSeconds => integer()();
+
+  TextColumn get platform => text().nullable()();
+
+  TextColumn get deviceId => text().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
