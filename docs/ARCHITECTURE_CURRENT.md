@@ -103,6 +103,22 @@ Layering rules (enforced by structure, not by tooling):
   highlights the hit context, and uses the existing exact vertical/paged Locator
   restore path when a row is tapped.
 
+### Reader input bindings (M5.3a+b)
+
+- `ReaderCommand` is the semantic command contract; physical events are
+  represented by stable `PhysicalInputId` strings. Neither Flutter key objects,
+  Android key codes, nor host runtime objects are persisted.
+- `ReaderInputProfile` is platform-scoped (`windows` or `android`) and contains
+  versioned typed bindings plus `updatedAt`. It is distinct from per-book
+  `ReaderPreferences` and `ReaderProgressState`.
+- `ReaderInputBindingsRepository` is the only layer that knows the private
+  `app_settings` keys and JSON format. `load/watch/bind/unbind/update/reset`
+  expose only typed profiles. Unknown rows are ignored, explicit null disables
+  an input, malformed platform data falls back only that platform, and older
+  versions merge missing inputs from defaults.
+- M5.3a+b intentionally leaves the existing route, Android capture bridge, and
+  binding settings UI unchanged; M5.3c will consume this contract.
+
 ---
 
 ## 2. Four-layer content model

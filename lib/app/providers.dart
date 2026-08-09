@@ -9,6 +9,7 @@ import '../data/repositories/local_library_repository.dart';
 import '../data/repositories/reading_progress_repository.dart';
 import '../data/repositories/reader_bookmark_repository.dart';
 import '../data/repositories/reader_preferences_repository.dart';
+import '../data/repositories/reader_input_bindings_repository.dart';
 import '../data/repositories/reading_history_repository.dart';
 import '../data/repositories/reading_session_repository.dart';
 import '../domain/library/library_entities.dart';
@@ -79,6 +80,11 @@ final readerBookmarkRepositoryProvider = Provider<ReaderBookmarkRepository>((
 final readerPreferencesRepositoryProvider =
     Provider<ReaderPreferencesRepository>((ref) {
       return ReaderPreferencesRepository(db: ref.watch(databaseProvider));
+    });
+
+final readerInputBindingsRepositoryProvider =
+    Provider<ReaderInputBindingsRepository>((ref) {
+      return ReaderInputBindingsRepository(db: ref.watch(databaseProvider));
     });
 
 final readingHistoryRepositoryProvider = Provider<ReadingHistoryRepository>((

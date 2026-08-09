@@ -155,6 +155,13 @@ class _PagedReaderViewState extends State<PagedReaderView> {
         _turnPage(forward: false);
       case ReaderCommand.nextPage:
         _turnPage(forward: true);
+      case ReaderCommand.previousChapter:
+      case ReaderCommand.nextChapter:
+      case ReaderCommand.toggleReaderControls:
+      case ReaderCommand.openToc:
+        // M5.3a/b defines these commands but deliberately does not route
+        // them into Reader actions yet.
+        break;
     }
     return true;
   }

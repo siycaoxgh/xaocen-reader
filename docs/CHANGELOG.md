@@ -14,6 +14,16 @@ Legend for validation columns:
 
 ## Unreleased
 
+### M5.3a+b — typed Reader input bindings (2026-08-09)
+- Added the typed `ReaderCommand`, stable `PhysicalInputId`, and
+  platform-scoped `ReaderInputProfile` contracts.
+- Added `ReaderInputBindingsRepository` over `app_settings` with defaults,
+  explicit null/unbind semantics, platform-isolated fallback, and profile
+  version migration. Storage keys and JSON remain repository-private.
+- Schema remains 6; input routing, capture bridge, and settings UI remain
+  deferred to M5.3c.
+- Validation: analyze clean; 9/9 targeted repository/domain tests.
+
 ### M5.2d — recent reading, history, and Reader sessions (2026-08-09)
 - Added derived home Recent Reading (up to two current library books) without a
   second position/time source.

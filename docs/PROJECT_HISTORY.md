@@ -523,3 +523,16 @@ lifecycle, ends on route disposal, and updates display-only chapter/progress
 snapshots. Aggregate duration and count remain `SUM/COUNT(reading_sessions)`.
 The full suite reached 382 passing tests; existing four-TXT logical-error-zero
 checks remain green.
+
+## M5.3a+b — typed Reader input bindings and persistence (2026-08-09)
+
+M5.3a+b established the durable input domain contract without changing the
+existing Reader route. `ReaderCommand` now includes page/chapter/control/TOC
+semantics, while `PhysicalInputId` provides stable Windows and Android string
+identifiers. Versioned, platform-isolated `ReaderInputProfile` values are
+stored through the strongly typed `ReaderInputBindingsRepository` over
+`app_settings`; JSON and storage keys remain private to that repository.
+Explicit null disables a binding, malformed data falls back only the affected
+platform, unknown rows are ignored, and old profiles merge missing defaults.
+Schema remains 6. Capture, routing, and settings UI are intentionally deferred
+to M5.3c.

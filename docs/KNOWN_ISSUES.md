@@ -117,6 +117,14 @@
 - Recent Reading, Reading History, and Reader session lifecycle are implemented.
 - No new P1/P2 issue was found in the persistence or lifecycle regression tests.
 - Cross-book search, FTS5, search history, RSS/EPUB/TTS remain deferred.
+
+## M5.3a+b status update (2026-08-09)
+
+- Typed platform input profiles and repository persistence are complete with no
+  new P1/P2 issue found.
+- Input capture, physical-event routing to the new bindings, and custom-binding
+  settings UI remain intentionally deferred to M5.3c. Existing default Reader
+  input behavior is unchanged.
 ## M5.1 final seal (2026-08-09)
 
 - No new M5.1 P1/P2 Reader issue was found in final automated or Windows user

@@ -234,3 +234,20 @@ vertical A → paged → 不翻页 → 重开 = paged + A · vertical A → page
 | Four real TXT regression / logical error | PASS, 0 |
 | Windows Release / Android Debug | PASS |
 | Android real device | Deferred to unified final device pass |
+
+## M5.3a+b input binding contract (2026-08-09)
+
+| Validation | Result |
+|---|---|
+| Typed ReaderCommand and stable PhysicalInputId contract | PASS |
+| Windows default profile | PASS |
+| Android default profile | PASS |
+| bind / unbind with explicit null / reset defaults | PASS |
+| App restart persistence | PASS |
+| Windows / Android profile isolation | PASS |
+| Whole JSON fallback and platform isolation | PASS |
+| Unknown input/command rows ignored; valid/null rows retained | PASS |
+| Older profile version migration fills missing defaults | PASS |
+| ReaderPreferences unaffected; schema remains 6 | PASS |
+| Targeted domain/repository tests | 9/9 PASS |
+| `flutter analyze` / `git diff --check` | PASS |

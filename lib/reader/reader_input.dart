@@ -1,20 +1,12 @@
 import 'package:flutter/services.dart';
 
-/// Physical inputs are deliberately separate from Reader actions so future
-/// user-configurable bindings do not touch the pagination engine.
-enum PhysicalInput {
-  volumeUp,
-  volumeDown,
-  wheelUp,
-  wheelDown,
-  arrowLeft,
-  arrowRight,
-  pageUp,
-  pageDown,
-}
+import '../domain/reader/reader_input_bindings.dart';
 
-enum ReaderCommand { previousPage, nextPage }
+export '../domain/reader/reader_input_bindings.dart';
 
+/// Legacy route adapter. M5.3a/b persist [ReaderInputProfile], while the
+/// existing paged route continues to use its default in-memory adapter until
+/// the M5.3c input router lands.
 final class InputBinding {
   const InputBinding._(this._bindings);
 
@@ -32,6 +24,19 @@ final class InputBinding {
   final Map<PhysicalInput, ReaderCommand> _bindings;
 
   ReaderCommand? commandFor(PhysicalInput input) => _bindings[input];
+}
+
+/// Physical inputs are deliberately separate from Reader actions so future
+/// user-configurable bindings do not touch the pagination engine.
+enum PhysicalInput {
+  volumeUp,
+  volumeDown,
+  wheelUp,
+  wheelDown,
+  arrowLeft,
+  arrowRight,
+  pageUp,
+  pageDown,
 }
 
 /// Minimal Android host bridge. The host only reports physical volume input;
