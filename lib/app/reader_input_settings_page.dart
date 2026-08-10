@@ -17,22 +17,78 @@ class ReaderSettingsPage extends StatelessWidget {
   const ReaderSettingsPage({super.key});
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('阅读设置')),
-    body: ListView(
-      children: [
-        ListTile(
-          leading: const Icon(Icons.keyboard_alt_outlined),
-          title: const Text('按键与操作'),
-          subtitle: const Text('自定义翻页、章节、阅读控制和目录输入'),
-          trailing: const Icon(Icons.chevron_right),
-          onTap: () => Navigator.of(context).push(
-            MaterialPageRoute<void>(
-              builder: (_) => const ReaderInputSettingsPage(),
+  Widget build(BuildContext context) {
+    final desktop = MediaQuery.sizeOf(context).width >= 720;
+    return Scaffold(
+      appBar: AppBar(title: const Text('阅读设置')),
+      body: Center(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: desktop ? 760 : double.infinity,
+          ),
+          child: ListView(
+            padding: EdgeInsets.fromLTRB(
+              desktop ? 32 : 16,
+              20,
+              desktop ? 32 : 16,
+              32,
             ),
+            children: [
+              Text('应用设置', style: Theme.of(context).textTheme.headlineSmall),
+              const SizedBox(height: 4),
+              Text(
+                '按键配置属于应用级设置；每本书的排版与主题仍在 Reader 的 Aa 面板中独立保存。',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 24),
+              _SettingsSectionLabel(label: '输入与操作'),
+              Card(
+                child: ListTile(
+                  leading: const Icon(Icons.keyboard_alt_outlined),
+                  title: const Text('按键与操作'),
+                  subtitle: const Text('自定义翻页、章节、阅读控制和目录输入'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const ReaderInputSettingsPage(),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              _SettingsSectionLabel(label: '阅读外观'),
+              Card(
+                child: ListTile(
+                  leading: const Icon(Icons.text_fields_outlined),
+                  title: const Text('排版与主题'),
+                  subtitle: const Text('请在打开的书籍中点击 Aa，设置字号、间距、边距和主题'),
+                  trailing: const Icon(Icons.info_outline),
+                ),
+              ),
+            ],
           ),
         ),
-      ],
+      ),
+    );
+  }
+}
+
+class _SettingsSectionLabel extends StatelessWidget {
+  const _SettingsSectionLabel({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(left: 4, bottom: 8),
+    child: Text(
+      label,
+      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+        color: Theme.of(context).colorScheme.primary,
+        fontWeight: FontWeight.w700,
+      ),
     ),
   );
 }

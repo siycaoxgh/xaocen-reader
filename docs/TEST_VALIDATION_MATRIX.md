@@ -509,3 +509,14 @@ vertical A → paged → 不翻页 → 重开 = paged + A · vertical A → page
 | Chrome visibility without AutoRead pause | PASS (regression) |
 | Progress labels and ReaderLocator contracts | PASS (regression) |
 | Drift schema | 6, unchanged |
+## M5.5d Me / History / Settings
+
+| Area | Result |
+|---|---|
+| Me information/settings grouping | PASS |
+| Reading History orphan/detached display contract | PASS (existing tests) |
+| Reading History empty state | PASS |
+| Desktop bounded history/settings layout | PASS |
+| Mobile history/settings layout | PASS |
+| Input profile platform isolation/persistence | PASS (regression) |
+| Drift schema | 6, unchanged |

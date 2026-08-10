@@ -182,17 +182,39 @@ class _MeSurface extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
-      children: [
-        Text('\u6211\u7684', style: Theme.of(context).textTheme.headlineSmall),
-        const SizedBox(height: 12),
-        Card(
-          child: Column(
-            children: [
-              ListTile(
+    final desktop = MediaQuery.sizeOf(context).width >= 720;
+    return Align(
+      alignment: Alignment.topCenter,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: desktop ? 760 : double.infinity),
+        child: ListView(
+          padding: EdgeInsets.fromLTRB(
+            desktop ? 32 : 20,
+            20,
+            desktop ? 32 : 20,
+            32,
+          ),
+          children: [
+            Text(
+              '\u6211\u7684',
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '\u4e2a\u4eba\u9605\u8bfb\u4fe1\u606f\u4e0e\u5e94\u7528\u8bbe\u7f6e',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 24),
+            _MeSectionLabel(label: '\u9605\u8bfb\u4fe1\u606f'),
+            Card(
+              child: ListTile(
                 leading: const Icon(Icons.history),
                 title: const Text('\u9605\u8bfb\u5386\u53f2'),
+                subtitle: const Text(
+                  '\u67e5\u770b\u9605\u8bfb\u65f6\u95f4\u3001\u4f1a\u8bdd\u548c\u4e66\u7c4d\u72b6\u6001',
+                ),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () async {
                   await Navigator.of(context).push(
@@ -203,22 +225,53 @@ class _MeSurface extends StatelessWidget {
                   onChanged();
                 },
               ),
-              const Divider(height: 1),
-              ListTile(
+            ),
+            const SizedBox(height: 20),
+            _MeSectionLabel(label: '\u5e94\u7528\u8bbe\u7f6e'),
+            Card(
+              child: ListTile(
                 leading: const Icon(Icons.settings_outlined),
                 title: const Text('\u9605\u8bfb\u8bbe\u7f6e'),
+                subtitle: const Text(
+                  '\u6309\u952e\u4e0e\u64cd\u4f5c\u7b49\u5e94\u7528\u5c42\u8bbe\u7f6e',
+                ),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () async {
                   await Navigator.of(context).pushNamed('/settings');
                   onChanged();
                 },
               ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              '\u6bcf\u672c\u4e66\u7684\u5b57\u53f7\u3001\u95f4\u8ddd\u3001\u8fb9\u8ddd\u548c\u4e3b\u9898\u53ef\u5728 Reader \u4e2d\u901a\u8fc7 Aa \u8c03\u6574\u3002',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
+}
+
+class _MeSectionLabel extends StatelessWidget {
+  const _MeSectionLabel({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(left: 4, bottom: 8),
+    child: Text(
+      label,
+      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+        color: Theme.of(context).colorScheme.primary,
+        fontWeight: FontWeight.w700,
+      ),
+    ),
+  );
 }
 
 class _ShellHeader extends StatelessWidget {

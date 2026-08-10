@@ -829,3 +829,11 @@ same semantic controls in a wider but bounded bar. Existing callbacks are
 unchanged, so opening Aa/TOC/Bookmark/Search/AutoRead retains the existing
 AutoRead pause contract while chrome visibility alone does not pause. No engine,
 Locator, session, or schema behavior changes.
+## M5.5d Me / History / Settings surfaces
+
+The Me surface now separates reading information from application settings.
+ReadingHistoryPage remains an independent history aggregate view with detached
+book/orphan status and delete-history behavior intact. ReaderSettingsPage groups
+application input settings separately from per-book Reader Aa appearance; the
+platform-specific ReaderInputSettingsPage and profile persistence are unchanged.
+All three surfaces use bounded desktop content and mobile-friendly spacing.

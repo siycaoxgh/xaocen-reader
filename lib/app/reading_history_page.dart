@@ -45,39 +45,88 @@ class _ReadingHistoryPageState extends ConsumerState<ReadingHistoryPage> {
   void _refresh() => setState(() => _future = _load());
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('阅读历史')),
-    body: FutureBuilder<List<_HistoryRow>>(
-      future: _future,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState != ConnectionState.done) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        if (snapshot.hasError) {
-          return Center(child: Text('加载失败：${snapshot.error}'));
-        }
-        final rows = snapshot.data ?? const <_HistoryRow>[];
-        if (rows.isEmpty) return const Center(child: Text('还没有阅读历史'));
-        return ListView.separated(
-          padding: const EdgeInsets.all(16),
-          itemCount: rows.length,
-          separatorBuilder: (_, _) => const SizedBox(height: 10),
-          itemBuilder: (context, index) => _HistoryCard(
-            row: rows[index],
-            onContinue: rows[index].collection == null
-                ? null
-                : () => _openReader(rows[index].collection!),
-            onDelete: () async {
-              await ref
-                  .read(readingHistoryRepositoryProvider)
-                  .delete(rows[index].entry.id);
-              _refresh();
-            },
+  Widget build(BuildContext context) {
+    final desktop = MediaQuery.sizeOf(context).width >= 720;
+    return Scaffold(
+      appBar: AppBar(title: const Text('阅读历史')),
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: desktop ? 900 : double.infinity,
+            ),
+            child: FutureBuilder<List<_HistoryRow>>(
+              future: _future,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState != ConnectionState.done) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (snapshot.hasError) {
+                  return Center(child: Text('加载失败：${snapshot.error}'));
+                }
+                final rows = snapshot.data ?? const <_HistoryRow>[];
+                if (rows.isEmpty) {
+                  return Center(
+                    child: Card(
+                      margin: const EdgeInsets.all(24),
+                      child: Padding(
+                        padding: const EdgeInsets.all(28),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.history_outlined,
+                              size: 40,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurfaceVariant,
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              '还没有阅读历史',
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '打开一本书并完成首次阅读后，记录会显示在这里。',
+                              textAlign: TextAlign.center,
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                }
+                return ListView.separated(
+                  padding: EdgeInsets.fromLTRB(
+                    desktop ? 24 : 16,
+                    20,
+                    desktop ? 24 : 16,
+                    32,
+                  ),
+                  itemCount: rows.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: 10),
+                  itemBuilder: (context, index) => _HistoryCard(
+                    row: rows[index],
+                    onContinue: rows[index].collection == null
+                        ? null
+                        : () => _openReader(rows[index].collection!),
+                    onDelete: () async {
+                      await ref
+                          .read(readingHistoryRepositoryProvider)
+                          .delete(rows[index].entry.id);
+                      _refresh();
+                    },
+                  ),
+                );
+              },
+            ),
           ),
-        );
-      },
-    ),
-  );
+        ),
+      ),
+    );
+  }
 
   Future<void> _openReader(LibraryCollection collection) async {
     final repo = ref.read(libraryRepositoryProvider);

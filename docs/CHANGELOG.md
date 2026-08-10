@@ -765,3 +765,8 @@ deferred.
 - Aligned Reader chrome hierarchy with V3: compact mobile primary actions and a stable More panel for low-frequency actions.
 - Kept desktop controls bounded while preserving Search and AutoRead access.
 - Preserved Locator, progress, session, pagination, and AutoRead pause contracts.
+## M5.5d
+
+- Structured Me into reading information and application settings groups.
+- Added responsive bounded layouts and explicit empty state for Reading History.
+- Clarified per-book Aa appearance versus platform-specific application input settings.

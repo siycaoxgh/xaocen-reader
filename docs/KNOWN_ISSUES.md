@@ -232,3 +232,9 @@ navigation issue was introduced.
 Reader operation hierarchy is aligned and responsive. Remaining UI audit items
 are appearance and later Me/settings refinements; no new Reader contract issue
 was introduced.
+## M5.5d status
+
+Me, Reading History, Reader Settings, and platform input settings now have
+separate responsibilities and responsive containers. Remaining visual audit
+items are appearance-only follow-ups; no history, input, or Reader data issue
+was introduced.

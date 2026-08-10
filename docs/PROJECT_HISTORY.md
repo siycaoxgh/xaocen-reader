@@ -708,3 +708,6 @@ Release 与 Android Debug 通过；Android targeted ADB 因设备 offline 延后
 ## M5.5c — Reader 操作层级（2026-08-11）
 
 Reader chrome 按 V3 分层：移动端底栏保留目录、模式、书签、Aa、更多；搜索和自动阅读进入更多面板，Windows 保持限宽桌面控制区并保留高频动作。Chrome/面板行为继续遵守 AutoRead pause 合同，Reader 引擎、位置、Session 和 schema 6 未改。
+## M5.5d — 我的 / 阅读历史 / 设置（2026-08-11）
+
+我的页面按阅读信息与应用设置分组；阅读历史保持独立并增强响应式空态/宽屏布局；阅读设置明确区分应用级按键与每书 Aa 排版设置。历史 orphan、删除书后保留、输入 profile persistence 和 schema 6 均保持。
