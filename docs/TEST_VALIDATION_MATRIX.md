@@ -442,3 +442,15 @@ vertical A → paged → 不翻页 → 重开 = paged + A · vertical A → page
 | Paged mode does not start automatic paging | PASS |
 | Locator / progress / ReadingSession contracts | PASS (unchanged) |
 | UI widget coverage | PASS |
+
+## M5.4b.2 Fine vertical speed (2026-08-11)
+
+| Area | Result |
+|---|---|
+| Five preset mappings | PASS |
+| Custom 12–120 px/s slider, 1 px/s step | PASS |
+| Canonical velocity persistence | PASS |
+| Legacy preset JSON migration | PASS |
+| Debounced repository writes | PASS (contract/widget coverage) |
+| Locator/layout/ReadingSession isolation | PASS |
+| Drift schema | 6, unchanged |

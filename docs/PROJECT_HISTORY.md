@@ -668,3 +668,11 @@ vertical driver. Users can start, pause/resume, stop, and change the five
 vertical speed presets with immediate controller effect and typed preference
 persistence. Paged automatic paging, keep-awake, shortcuts, and schema changes
 remain out of scope.
+
+## M5.4b.2 — Fine vertical speed
+
+Expanded Vertical AutoRead speed selection with a 12–120 px/s, 1 px/s slider
+while retaining the five quick presets. Persistence now has one canonical
+velocity value with deterministic migration from the former preset JSON;
+slider writes are debounced and do not touch position, layout, or session
+contracts.

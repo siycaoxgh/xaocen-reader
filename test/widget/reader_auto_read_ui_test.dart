@@ -17,14 +17,17 @@ void main() {
             builder: (context, _) => ReaderAutoReadSheet(
               mode: ReaderMode.vertical,
               state: controller.state,
-              speedPreset: controller.preferences.verticalSpeedPreset,
+              speedPixelsPerSecond:
+                  controller.preferences.verticalVelocityPixelsPerSecond,
               onStart: controller.start,
               onPause: () =>
                   controller.pause(AutoReadPauseReason.manualNavigation),
               onResume: controller.resume,
               onStop: controller.stop,
-              onSpeedSelected: (preset) => controller.updatePreferences(
-                controller.preferences.copyWith(verticalSpeedPreset: preset),
+              onSpeedChanged: (velocity) => controller.updatePreferences(
+                controller.preferences.copyWith(
+                  verticalVelocityPixelsPerSecond: velocity,
+                ),
               ),
             ),
           ),
@@ -57,6 +60,13 @@ void main() {
       find.text('\u81ea\u52a8\u9605\u8bfb\u4e2d \u00b7 \u5feb'),
       findsOneWidget,
     );
+
+    await tester.drag(
+      find.byKey(const Key('reader-auto-read-speed-slider')),
+      const Offset(-37, 0),
+    );
+    await tester.pump();
+    expect(find.textContaining('\u81ea\u5b9a\u4e49 \u00b7'), findsWidgets);
 
     await tester.tap(find.byKey(const Key('reader-auto-read-stop')));
     await tester.pump();

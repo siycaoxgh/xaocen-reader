@@ -173,6 +173,8 @@ class _ReaderPageState extends State<ReaderPage>
   late final VerticalAutoReadDriver _verticalAutoReadDriver;
   StreamSubscription<AutoReadEvent>? _autoReadEvents;
   StreamSubscription<AutoReadPreferences>? _autoReadPreferencesSubscription;
+  Timer? _autoReadSpeedWriteTimer;
+  int? _pendingAutoReadSpeedWrite;
 
   /// Reader 视觉合同（P1：从 Theme 解析，禁止正文硬编码颜色）。
   late ReaderResolvedAppearance _appearance;
@@ -223,11 +225,11 @@ class _ReaderPageState extends State<ReaderPage>
     setState(() => _chromeVisible = !_chromeVisible);
   }
 
-  /// M5.4b vertical AutoRead is intentionally exposed as a driver contract;
-  /// the user-facing controls are deferred to the later Reader UI slice.
+  /// M5.4b vertical AutoRead is exposed through the existing Reader chrome;
+  /// these methods keep the UI on the driver boundary.
   AutoReadState get autoReadState => _autoReadController.state;
-  VerticalSpeedPreset get autoReadSpeedPreset =>
-      _autoReadController.preferences.verticalSpeedPreset;
+  int get autoReadSpeedPixelsPerSecond =>
+      _autoReadController.preferences.verticalVelocityPixelsPerSecond;
 
   void startVerticalAutoRead() => _verticalAutoReadDriver.start();
 
@@ -250,26 +252,44 @@ class _ReaderPageState extends State<ReaderPage>
         context,
         mode: _mode,
         stateOf: () => _autoReadController.state,
-        speedOf: () => _autoReadController.preferences.verticalSpeedPreset,
+        speedOf: () =>
+            _autoReadController.preferences.verticalVelocityPixelsPerSecond,
         events: _autoReadController.events,
         onStart: startVerticalAutoRead,
         onPause: () =>
             _verticalAutoReadDriver.pause(AutoReadPauseReason.manualNavigation),
         onResume: resumeVerticalAutoRead,
         onStop: stopVerticalAutoRead,
-        onSpeedSelected: _setAutoReadSpeed,
+        onSpeedChanged: _setAutoReadSpeed,
       ),
     );
   }
 
-  void _setAutoReadSpeed(VerticalSpeedPreset preset) {
+  void _setAutoReadSpeed(int velocity) {
     final next = _autoReadController.preferences.copyWith(
-      verticalSpeedPreset: preset,
+      verticalVelocityPixelsPerSecond: velocity,
       updatedAt: DateTime.now().toUtc(),
     );
     _autoReadController.updatePreferences(next);
     final repository = widget.launch.autoReadPreferencesRepository;
-    if (repository != null) unawaited(repository.update(next));
+    _pendingAutoReadSpeedWrite = next.verticalVelocityPixelsPerSecond;
+    _autoReadSpeedWriteTimer?.cancel();
+    if (repository != null) {
+      _autoReadSpeedWriteTimer = Timer(const Duration(milliseconds: 250), () {
+        final pending = _pendingAutoReadSpeedWrite;
+        _pendingAutoReadSpeedWrite = null;
+        if (pending != null) {
+          unawaited(
+            repository.update(
+              _autoReadController.preferences.copyWith(
+                verticalVelocityPixelsPerSecond: pending,
+                updatedAt: DateTime.now().toUtc(),
+              ),
+            ),
+          );
+        }
+      });
+    }
   }
 
   Future<void> _confirmVerticalAutoReadPosition() async {
@@ -596,6 +616,20 @@ class _ReaderPageState extends State<ReaderPage>
 
   @override
   void dispose() {
+    _autoReadSpeedWriteTimer?.cancel();
+    final pendingSpeed = _pendingAutoReadSpeedWrite;
+    final autoReadRepository = widget.launch.autoReadPreferencesRepository;
+    if (pendingSpeed != null && autoReadRepository != null) {
+      unawaited(
+        autoReadRepository.update(
+          _autoReadController.preferences.copyWith(
+            verticalVelocityPixelsPerSecond: pendingSpeed,
+            updatedAt: DateTime.now().toUtc(),
+          ),
+        ),
+      );
+    }
+    _pendingAutoReadSpeedWrite = null;
     _autoReadEvents?.cancel();
     _autoReadPreferencesSubscription?.cancel();
     _verticalAutoReadDriver.interrupt(AutoReadPauseReason.lifecycle);
@@ -1689,8 +1723,8 @@ class _ReaderPageState extends State<ReaderPage>
             chapterPageCount: _chapterPageMetrics?.totalPageCount,
             progressPercent: _progressPercent,
             autoReadState: _autoReadController.state,
-            autoReadSpeedPreset:
-                _autoReadController.preferences.verticalSpeedPreset,
+            autoReadSpeedPixelsPerSecond:
+                _autoReadController.preferences.verticalVelocityPixelsPerSecond,
             onBack: () => Navigator.of(context).pop(),
             onToc: () {
               _showChrome();

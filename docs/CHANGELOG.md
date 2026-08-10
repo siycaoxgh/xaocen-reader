@@ -676,7 +676,16 @@ Not a release; recorded for completeness.
   no-chapter TXT remains `全文` plus whole-book progress.
 - Schema remains 6. Automated tests, all four real TXT files (logical error 0),
   Windows Release, and Android Debug passed. Android device validation is
-  deferred.
+deferred.
+
+### M5.4b.2 — Fine vertical speed
+
+- Retained the five Vertical AutoRead presets and added a 12–120 px/s slider
+  with 1 px/s steps.
+- Persisted one canonical `verticalVelocityPixelsPerSecond` value; legacy
+  preset JSON migrates safely and new writes do not duplicate the field.
+- Applied slider changes immediately with debounced typed repository writes;
+  schema remains 6 and reading position/session contracts are unchanged.
 
 ### M5.3.2 label correction
 

@@ -28,6 +28,22 @@ void main() {
     expect(preferences.verticalVelocityPixelsPerSecond, 40);
   });
 
+  test('custom velocity is canonical and preset is derived', () async {
+    await repository.update(
+      AutoReadPreferences(verticalVelocityPixelsPerSecond: 47),
+    );
+    final loaded = await repository.load();
+    expect(loaded.verticalVelocityPixelsPerSecond, 47);
+    expect(loaded.verticalSpeedPreset, isNull);
+
+    final row = await (db.select(
+      db.appSettings,
+    )..where((t) => t.key.equals(_key))).getSingle();
+    final json = jsonDecode(row.value) as Map<String, dynamic>;
+    expect(json['verticalVelocityPixelsPerSecond'], 47);
+    expect(json.containsKey('verticalSpeedPreset'), isFalse);
+  });
+
   test('update, setters, reset, and watch persist typed values', () async {
     final values = <AutoReadPreferences>[];
     final subscription = repository.watch().listen(values.add);
@@ -93,6 +109,32 @@ void main() {
     expect(preferences.version, AutoReadPreferences.currentVersion);
     expect(preferences.verticalSpeedPreset, VerticalSpeedPreset.fast);
     expect(preferences.pagedIntervalSeconds, 3);
+
+    await _putRaw(
+      db,
+      _key,
+      jsonEncode({
+        'version': 1,
+        'verticalSpeedPreset': 'fast',
+        'pagedIntervalSeconds': 3,
+      }),
+    );
+    preferences = await repository.load();
+    expect(preferences.verticalVelocityPixelsPerSecond, 76);
+    expect(preferences.verticalSpeedPreset, VerticalSpeedPreset.fast);
+
+    await _putRaw(
+      db,
+      _key,
+      jsonEncode({
+        'version': 2,
+        'verticalVelocityPixelsPerSecond': 121,
+        'pagedIntervalSeconds': 3,
+      }),
+    );
+    preferences = await repository.load();
+    expect(preferences.verticalVelocityPixelsPerSecond, 40);
+    expect(preferences.verticalSpeedPreset, VerticalSpeedPreset.standard);
 
     await _putRaw(db, _key, jsonEncode({'version': 999}));
     preferences = await repository.load();

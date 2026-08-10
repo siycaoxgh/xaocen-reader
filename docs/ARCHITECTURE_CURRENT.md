@@ -743,3 +743,13 @@ are derived from the controller, and speed changes update the active driver
 immediately and persist through `AutoReadPreferencesRepository`. Paged mode
 does not start an automatic paging driver. No position, progress, session, or
 schema contract changed.
+
+### M5.4b.2 — Fine vertical speed
+
+`AutoReadPreferences` now stores one canonical integer
+`verticalVelocityPixelsPerSecond` in the typed app-settings repository. The
+five presets remain UI mappings, while non-preset values are displayed as
+custom speeds. Legacy version-1 `verticalSpeedPreset` JSON is migrated on
+read; new JSON does not duplicate the preset field. The Reader applies slider
+changes immediately and debounces persistence. Schema remains 6 and speed
+changes do not affect ReaderLocator, layout, progress, or ReadingSession.

@@ -60,7 +60,8 @@ class ReaderChrome extends StatelessWidget {
     required this.onModeSelected,
     this.onAutoRead,
     this.autoReadState = AutoReadState.idle,
-    this.autoReadSpeedPreset = VerticalSpeedPreset.standard,
+    this.autoReadSpeedPixelsPerSecond =
+        AutoReadPreferences.defaultVerticalVelocityPixelsPerSecond,
     this.currentChapterTitle,
     this.currentChapterNumber,
     this.chapterProgressPercent,
@@ -81,7 +82,7 @@ class ReaderChrome extends StatelessWidget {
   final ValueChanged<ReaderMode> onModeSelected;
   final VoidCallback? onAutoRead;
   final AutoReadState autoReadState;
-  final VerticalSpeedPreset autoReadSpeedPreset;
+  final int autoReadSpeedPixelsPerSecond;
   final String? currentChapterTitle;
   final int? currentChapterNumber;
   final double? chapterProgressPercent;
@@ -311,7 +312,7 @@ class ReaderChrome extends StatelessWidget {
                                 ? Icons.pause_circle_outline
                                 : Icons.auto_stories_outlined,
                             label: autoReadState == AutoReadState.running
-                                ? '\u81ea\u52a8\u9605\u8bfb\u4e2d \u00b7 ${_autoReadSpeedLabel(autoReadSpeedPreset)}'
+                                ? '\u81ea\u52a8\u9605\u8bfb\u4e2d \u00b7 ${_autoReadSpeedLabel(autoReadSpeedPixelsPerSecond)}'
                                 : '\u81ea\u52a8\u9605\u8bfb',
                             selected: autoReadState == AutoReadState.running,
                             onPressed: onAutoRead!,
@@ -341,7 +342,7 @@ class ReaderChrome extends StatelessWidget {
   }
 }
 
-String _autoReadSpeedLabel(VerticalSpeedPreset preset) => switch (preset) {
+String _autoReadPresetLabel(VerticalSpeedPreset preset) => switch (preset) {
   VerticalSpeedPreset.slow => '\u6162',
   VerticalSpeedPreset.slower => '\u8f83\u6162',
   VerticalSpeedPreset.standard => '\u6807\u51c6',
@@ -349,17 +350,24 @@ String _autoReadSpeedLabel(VerticalSpeedPreset preset) => switch (preset) {
   VerticalSpeedPreset.fast => '\u5feb',
 };
 
+String _autoReadSpeedLabel(int velocity) {
+  final preset = VerticalSpeedPresetValues.fromVelocity(velocity);
+  return preset == null
+      ? '\u81ea\u5b9a\u4e49 \u00b7 $velocity px/s'
+      : _autoReadPresetLabel(preset);
+}
+
 Future<void> showReaderAutoReadControls(
   BuildContext context, {
   required ReaderMode mode,
   required AutoReadState Function() stateOf,
-  required VerticalSpeedPreset Function() speedOf,
+  required int Function() speedOf,
   required Stream<AutoReadEvent> events,
   required VoidCallback onStart,
   required VoidCallback onPause,
   required VoidCallback onResume,
   required VoidCallback onStop,
-  required ValueChanged<VerticalSpeedPreset> onSpeedSelected,
+  required ValueChanged<int> onSpeedChanged,
 }) {
   final isDesktop = MediaQuery.sizeOf(context).width >= 720;
   return showModalBottomSheet<void>(
@@ -373,12 +381,12 @@ Future<void> showReaderAutoReadControls(
         key: readerAutoReadSheetKey,
         mode: mode,
         state: stateOf(),
-        speedPreset: speedOf(),
+        speedPixelsPerSecond: speedOf(),
         onStart: onStart,
         onPause: onPause,
         onResume: onResume,
         onStop: onStop,
-        onSpeedSelected: onSpeedSelected,
+        onSpeedChanged: onSpeedChanged,
       ),
     ),
   );
@@ -389,26 +397,26 @@ class ReaderAutoReadSheet extends StatelessWidget {
     super.key,
     required this.mode,
     required this.state,
-    required this.speedPreset,
+    required this.speedPixelsPerSecond,
     required this.onStart,
     required this.onPause,
     required this.onResume,
     required this.onStop,
-    required this.onSpeedSelected,
+    required this.onSpeedChanged,
   });
 
   final ReaderMode mode;
   final AutoReadState state;
-  final VerticalSpeedPreset speedPreset;
+  final int speedPixelsPerSecond;
   final VoidCallback onStart;
   final VoidCallback onPause;
   final VoidCallback onResume;
   final VoidCallback onStop;
-  final ValueChanged<VerticalSpeedPreset> onSpeedSelected;
+  final ValueChanged<int> onSpeedChanged;
 
   String get _status => switch (state) {
     AutoReadState.running =>
-      '\u81ea\u52a8\u9605\u8bfb\u4e2d \u00b7 ${_autoReadSpeedLabel(speedPreset)}',
+      '\u81ea\u52a8\u9605\u8bfb\u4e2d \u00b7 ${_autoReadSpeedLabel(speedPixelsPerSecond)}',
     AutoReadState.paused => '\u81ea\u52a8\u9605\u8bfb\u5df2\u6682\u505c',
     AutoReadState.stoppedAtEnd => '\u5df2\u8bfb\u5230\u672c\u4e66\u672b\u5c3e',
     AutoReadState.idle => '\u81ea\u52a8\u9605\u8bfb',
@@ -486,19 +494,52 @@ class ReaderAutoReadSheet extends StatelessWidget {
             const SizedBox(height: 18),
             Text('\u901f\u5ea6', style: Theme.of(context).textTheme.labelLarge),
             const SizedBox(height: 8),
-            SegmentedButton<VerticalSpeedPreset>(
-              key: const Key('reader-auto-read-speed'),
-              segments: [
+            Wrap(
+              key: const Key('reader-auto-read-speed-presets'),
+              spacing: 8,
+              runSpacing: 8,
+              children: [
                 for (final preset in VerticalSpeedPreset.values)
-                  ButtonSegment(
-                    value: preset,
-                    label: Text(_autoReadSpeedLabel(preset)),
+                  ChoiceChip(
+                    label: Text(_autoReadPresetLabel(preset)),
+                    selected:
+                        speedPixelsPerSecond == preset.velocityPixelsPerSecond,
+                    onSelected: vertical
+                        ? (_) => onSpeedChanged(preset.velocityPixelsPerSecond)
+                        : null,
                   ),
               ],
-              selected: {speedPreset},
-              onSelectionChanged: vertical
-                  ? (selection) => onSpeedSelected(selection.first)
+            ),
+            const SizedBox(height: 8),
+            Slider(
+              key: const Key('reader-auto-read-speed-slider'),
+              min: AutoReadPreferences.minVerticalVelocityPixelsPerSecond
+                  .toDouble(),
+              max: AutoReadPreferences.maxVerticalVelocityPixelsPerSecond
+                  .toDouble(),
+              divisions:
+                  AutoReadPreferences.maxVerticalVelocityPixelsPerSecond -
+                  AutoReadPreferences.minVerticalVelocityPixelsPerSecond,
+              value: speedPixelsPerSecond
+                  .toDouble()
+                  .clamp(
+                    AutoReadPreferences.minVerticalVelocityPixelsPerSecond
+                        .toDouble(),
+                    AutoReadPreferences.maxVerticalVelocityPixelsPerSecond
+                        .toDouble(),
+                  )
+                  .toDouble(),
+              label: _autoReadSpeedLabel(speedPixelsPerSecond),
+              onChanged: vertical
+                  ? (value) => onSpeedChanged(value.round())
                   : null,
+            ),
+            Align(
+              alignment: Alignment.center,
+              child: Text(
+                _autoReadSpeedLabel(speedPixelsPerSecond),
+                key: const Key('reader-auto-read-speed-value'),
+              ),
             ),
           ],
         ),

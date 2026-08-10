@@ -58,3 +58,20 @@ contracts remain unchanged.
 
 Widget coverage was added for the bottom action, state transitions, and live
 speed selection.
+
+## M5.4b.2 — Fine vertical speed
+
+Vertical AutoRead keeps the five quick presets (18/28/40/56/76 px/s) and adds
+a 12–120 px/s slider with 1 px/s steps. The persisted canonical value is now
+`verticalVelocityPixelsPerSecond`; the UI derives a preset label only for exact
+preset values and otherwise shows a custom value such as `自定义 · 47 px/s`.
+
+Version 1 JSON containing `verticalSpeedPreset` is read and migrated to the
+canonical velocity. New writes do not contain both fields. Slider changes are
+applied immediately to the existing driver/controller, while repository writes
+are debounced and flushed on disposal. No Locator, layout, progress, session,
+or Drift schema behavior changed.
+
+Validation for this slice: full Flutter tests **443/443 PASS**, Windows
+integration **11 files / 14 scenarios PASS**, Windows Release and Android Debug
+builds PASS, and `git diff --check` PASS.

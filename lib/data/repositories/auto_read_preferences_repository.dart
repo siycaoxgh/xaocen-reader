@@ -31,7 +31,8 @@ final class AutoReadPreferencesRepository {
 
   Future<void> update(AutoReadPreferences preferences) async {
     final safe = AutoReadPreferences(
-      verticalSpeedPreset: preferences.verticalSpeedPreset,
+      verticalVelocityPixelsPerSecond:
+          preferences.verticalVelocityPixelsPerSecond,
       pagedIntervalSeconds: preferences.pagedIntervalSeconds,
       version: preferences.version,
       updatedAt: preferences.updatedAt,
@@ -48,10 +49,14 @@ final class AutoReadPreferencesRepository {
   }
 
   Future<void> setVerticalSpeed(VerticalSpeedPreset preset) async {
+    await setVerticalVelocity(preset.velocityPixelsPerSecond);
+  }
+
+  Future<void> setVerticalVelocity(int velocity) async {
     final current = await load();
     await update(
       current.copyWith(
-        verticalSpeedPreset: preset,
+        verticalVelocityPixelsPerSecond: velocity,
         updatedAt: DateTime.now().toUtc(),
       ),
     );
@@ -73,7 +78,8 @@ final class AutoReadPreferencesRepository {
 
   Map<String, Object?> _encode(AutoReadPreferences preferences) => {
     'version': preferences.version,
-    'verticalSpeedPreset': preferences.verticalSpeedPreset.name,
+    'verticalVelocityPixelsPerSecond':
+        preferences.verticalVelocityPixelsPerSecond,
     'pagedIntervalSeconds': preferences.pagedIntervalSeconds,
     'updatedAt': preferences.updatedAt.toUtc().toIso8601String(),
   };
@@ -88,8 +94,12 @@ final class AutoReadPreferencesRepository {
       if (version is! int || version > AutoReadPreferences.currentVersion) {
         return defaults;
       }
+      final velocity = _parseCanonicalVelocity(
+        decoded['verticalVelocityPixelsPerSecond'],
+      );
       return AutoReadPreferences(
-        verticalSpeedPreset: _parsePreset(decoded['verticalSpeedPreset']),
+        verticalVelocityPixelsPerSecond:
+            velocity ?? _parseLegacyPreset(decoded['verticalSpeedPreset']),
         pagedIntervalSeconds: _parseInterval(decoded['pagedIntervalSeconds']),
         version: version,
         updatedAt: _parseDate(decoded['updatedAt']) ?? defaults.updatedAt,
@@ -99,11 +109,23 @@ final class AutoReadPreferencesRepository {
     }
   }
 
-  VerticalSpeedPreset _parsePreset(Object? value) =>
-      VerticalSpeedPreset.values.firstWhere(
+  int? _parseCanonicalVelocity(Object? value) {
+    if (value is! num || value.isNaN || value.isInfinite) return null;
+    final velocity = value.toInt();
+    if (value != velocity) return null;
+    if (velocity < AutoReadPreferences.minVerticalVelocityPixelsPerSecond ||
+        velocity > AutoReadPreferences.maxVerticalVelocityPixelsPerSecond) {
+      return null;
+    }
+    return velocity;
+  }
+
+  int _parseLegacyPreset(Object? value) => VerticalSpeedPreset.values
+      .firstWhere(
         (preset) => preset.name == value,
         orElse: () => AutoReadPreferences.defaultVerticalSpeedPreset,
-      );
+      )
+      .velocityPixelsPerSecond;
 
   int _parseInterval(Object? value) =>
       value is int &&
