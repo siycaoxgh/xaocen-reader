@@ -676,3 +676,14 @@ while retaining the five quick presets. Persistence now has one canonical
 velocity value with deterministic migration from the former preset JSON;
 slider writes are debounced and do not touch position, layout, or session
 contracts.
+
+## M5.4c — Paged AutoRead
+
+Added the first paged automatic-reading driver without changing the Reader UI.
+The driver paces one-shot requests to `PagedReaderController.nextPage()` at the
+canonical 3/5/8/10/15-second intervals and waits for confirmation before
+allowing another operation. Generation checks reject stale ticks after
+preference, mode, lifecycle, manual-navigation, or dispose interruptions.
+Manual navigation pauses without auto-resume; a real controller EOF becomes
+`stoppedAtEnd`. Page indices, window indices, timer state, and scroll pixels are
+not persisted; schema remains 6.

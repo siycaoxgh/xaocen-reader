@@ -753,3 +753,20 @@ custom speeds. Legacy version-1 `verticalSpeedPreset` JSON is migrated on
 read; new JSON does not duplicate the preset field. The Reader applies slider
 changes immediately and debounces persistence. Schema remains 6 and speed
 changes do not affect ReaderLocator, layout, progress, or ReadingSession.
+
+## M5.4c — Paged AutoRead
+
+`PagedAutoReadDriver` is the timer-driven adapter for paged automatic reading.
+It owns pacing, lifecycle interruption, and operation serialization. Each tick
+calls only the existing `PagedReaderController.nextPage()`; it never touches
+PageView/PageController indices or introduces a page-index position source.
+Bounded PageWindow expansion, chapter-first-page policy, gesture-tail recovery,
+pagination generation, and Locator confirmation remain controller-owned.
+
+The driver uses the typed global paged interval (3/5/8/10/15 seconds, default
+5). One-shot timers are scheduled only after navigation and visible/page
+confirmation finish, so concurrent navigation cannot occur. Generation checks
+reject stale work after preference, manual-navigation, mode/lifecycle, or
+dispose interruptions. Manual input pauses without auto-resume; a real
+`endReached` result becomes `stoppedAtEnd` without looping. No persistence or
+schema change is introduced.

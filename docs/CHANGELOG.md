@@ -722,3 +722,12 @@ deferred.
   by the existing AutoReadController/VerticalAutoReadDriver.
 - Paged automatic paging, keep-awake, shortcuts, and schema changes remain
   deferred.
+
+### M5.4c — Paged AutoRead
+
+- Added a non-UI `PagedAutoReadDriver` using the existing bounded paged
+  controller and canonical 3/5/8/10/15-second intervals.
+- Serialized each timer tick through `nextPage()` plus visible/page confirm;
+  stale generations, lifecycle interruptions, and manual navigation are safe.
+- Real EOF stops at `stoppedAtEnd`; no page index, timer remainder, or second
+  Locator/progress source was added. Drift schema remains 6.

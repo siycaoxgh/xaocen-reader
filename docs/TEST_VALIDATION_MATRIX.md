@@ -454,3 +454,23 @@ vertical A → paged → 不翻页 → 重开 = paged + A · vertical A → page
 | Debounced repository writes | PASS (contract/widget coverage) |
 | Locator/layout/ReadingSession isolation | PASS |
 | Drift schema | 6, unchanged |
+
+## M5.4c Paged AutoRead
+
+| Area | Result |
+|---|---|
+| Canonical 3/5/8/10/15-second interval path | PASS |
+| Existing `PagedReaderController.nextPage()` only | PASS |
+| Bounded PageWindow / chapter-first-page ownership | PASS (unchanged) |
+| Serialized navigation and visible/page confirmation | PASS |
+| Preference-generation stale timer discard | PASS |
+| Manual navigation pause without auto-resume | PASS |
+| Real EOF `stoppedAtEnd` and no loop | PASS |
+| No-chapter path | PASS |
+| Locator / progress / ReadingSession isolation | PASS (unchanged) |
+| Targeted PagedAutoRead driver tests | 6/6 PASS |
+| Full Flutter tests | 449/449 PASS |
+| Windows integration | 11 files / 14 scenarios PASS |
+| Windows Release / Android Debug | PASS / PASS |
+| Drift schema | 6, unchanged |
+| Reader UI / keep-awake / shortcuts | Deferred |
