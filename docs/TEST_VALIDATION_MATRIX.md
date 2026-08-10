@@ -24,6 +24,18 @@
 | Four real TXT corpus / logical error | PASS / 0 |
 | Windows Release / Android Debug | PASS / PASS |
 | Drift schema | 6, unchanged |
+
+## M5.3.2 label correction (2026-08-10)
+
+| Gate | Result |
+|---|---|
+| Vertical exact labels | PASS: `本章 68%` / `全书 37%` |
+| Paged exact labels | PASS: `本章 7 / 12 页` / `全书 37%` |
+| No-chapter exact labels | PASS: `全文` / `全书 37%` |
+| Full unit/contract/widget | 424/424 PASS |
+| Windows integration | 11 files / 14 scenarios PASS |
+| Windows Release / Android Debug | PASS / PASS |
+| Android real device | NOT-RUN / deferred |
 | Android real device | Not run in this coding pass |
 
 ## M5.3.1.1 — Paged Reader gesture window-tail fix (2026-08-10)

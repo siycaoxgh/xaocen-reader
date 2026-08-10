@@ -1758,7 +1758,7 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
   String? get _currentChapterTitle {
     if (_activeConfirmedLocator == null) return null;
     final boundary = _currentChapterBoundary;
-    return boundary?.chapter.displayTitle ?? '全文';
+    return boundary?.chapter.displayTitle ?? ReaderProgressLabels.wholeDocument;
   }
 
   double? get _chapterProgressPercent {

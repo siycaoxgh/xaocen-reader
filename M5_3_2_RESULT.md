@@ -50,3 +50,11 @@ schema or persistence model changed.
 - Android Debug: PASS — `build\app\outputs\flutter-apk\app-debug.apk`.
 
 No Drift migration was required; schema remains **6**.
+
+## Paged progress label correction
+
+The first M5.3.2 implementation accidentally contained mojibake literals in
+the new paged-only labels. Vertical labels were already valid. The fix replaces
+those literals with UTF-8 text and centralizes `本章`, `全书`, `全文`, and `页`
+in `ReaderProgressLabels`; metrics and pagination code are unchanged.
+Exact widget assertions now cover Vertical, Paged, and no-chapter output.

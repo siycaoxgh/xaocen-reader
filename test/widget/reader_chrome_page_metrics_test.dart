@@ -31,7 +31,58 @@ void main() {
       ),
     );
 
-    expect(find.textContaining('/ 12'), findsOneWidget);
-    expect(find.textContaining('37%'), findsOneWidget);
+    expect(find.text('第53章  City Edge'), findsOneWidget);
+    expect(find.text('本章 7 / 12 页'), findsOneWidget);
+    expect(find.text('全书 37%'), findsOneWidget);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ReaderChrome(
+            visible: true,
+            title: 'Book',
+            mode: ReaderMode.vertical,
+            onBack: () {},
+            onToc: () {},
+            onAppearance: () {},
+            onMore: () {},
+            onBookmarks: () {},
+            onSearch: () {},
+            onModeSelected: (_) {},
+            currentChapterTitle: 'City Edge',
+            currentChapterNumber: 53,
+            chapterProgressPercent: 0.68,
+            progressPercent: 0.37,
+          ),
+        ),
+      ),
+    );
+    expect(find.text('第53章  City Edge'), findsOneWidget);
+    expect(find.text('本章 68%'), findsOneWidget);
+    expect(find.text('全书 37%'), findsOneWidget);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ReaderChrome(
+            visible: true,
+            title: 'Book',
+            mode: ReaderMode.paged,
+            onBack: () {},
+            onToc: () {},
+            onAppearance: () {},
+            onMore: () {},
+            onBookmarks: () {},
+            onSearch: () {},
+            onModeSelected: (_) {},
+            currentChapterTitle: '全文',
+            progressPercent: 0.37,
+          ),
+        ),
+      ),
+    );
+    expect(find.text('全文'), findsOneWidget);
+    expect(find.text('全书 37%'), findsOneWidget);
+    expect(find.textContaining('本章'), findsNothing);
   });
 }

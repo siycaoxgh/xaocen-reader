@@ -837,3 +837,12 @@ after the first frame and yields in small batches. A controller layout
 generation check is required in addition to the UI request generation: a
 silent relayout can replace the engine without notifying the parent, and an
 old metrics task must be discarded before it publishes a value.
+
+## M5.3.2 label correction lesson (2026-08-10)
+
+### Validate newly added UI literals as runtime strings
+
+The existing Vertical labels were valid UTF-8, but the first Paged-only labels
+were committed as mojibake. Compile success and numeric page tests did not
+catch this. Shared label constants plus exact rendered-string widget tests are
+now required for every new progress presentation.

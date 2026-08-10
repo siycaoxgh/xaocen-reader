@@ -34,6 +34,13 @@ const readerThemeControlKey = Key('reader-theme-control');
 const readerSettingsModeControlKey = Key('reader-settings-mode-control');
 const readerResetPreferencesKey = Key('reader-reset-preferences');
 
+abstract final class ReaderProgressLabels {
+  static const chapter = '本章';
+  static const wholeBook = '全书';
+  static const wholeDocument = '全文';
+  static const pages = '页';
+}
+
 class ReaderChrome extends StatelessWidget {
   const ReaderChrome({
     super.key,
@@ -129,7 +136,8 @@ class ReaderChrome extends StatelessWidget {
                                     progressPercent != null)) ...[
                               Text(
                                 currentChapterNumber == null
-                                    ? (currentChapterTitle ?? '全文')
+                                    ? (currentChapterTitle ??
+                                          ReaderProgressLabels.wholeDocument)
                                     : '第$currentChapterNumber章  ${currentChapterTitle ?? ''}',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
@@ -143,7 +151,7 @@ class ReaderChrome extends StatelessWidget {
                                 children: [
                                   if (chapterProgressPercent != null)
                                     Text(
-                                      '本章 ${(chapterProgressPercent! * 100).round()}%',
+                                      '${ReaderProgressLabels.chapter} ${(chapterProgressPercent! * 100).round()}%',
                                       style: Theme.of(context)
                                           .textTheme
                                           .labelSmall
@@ -154,7 +162,7 @@ class ReaderChrome extends StatelessWidget {
                                   const Spacer(),
                                   if (progressPercent != null)
                                     Text(
-                                      '全书 ${(progressPercent! * 100).round()}%',
+                                      '${ReaderProgressLabels.wholeBook} ${(progressPercent! * 100).round()}%',
                                       style: Theme.of(context)
                                           .textTheme
                                           .labelSmall
@@ -170,8 +178,9 @@ class ReaderChrome extends StatelessWidget {
                                     progressPercent != null)) ...[
                               Text(
                                 currentChapterNumber == null
-                                    ? (currentChapterTitle ?? '鍏ㄦ枃')
-                                    : '绗?currentChapterNumber绔? ${currentChapterTitle ?? ''}',
+                                    ? (currentChapterTitle ??
+                                          ReaderProgressLabels.wholeDocument)
+                                    : '第$currentChapterNumber章  ${currentChapterTitle ?? ''}',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: Theme.of(context).textTheme.labelSmall
@@ -185,7 +194,7 @@ class ReaderChrome extends StatelessWidget {
                                   if (chapterPageNumber != null &&
                                       chapterPageCount != null)
                                     Text(
-                                      '鏈珷 $chapterPageNumber / $chapterPageCount 页',
+                                      '${ReaderProgressLabels.chapter} $chapterPageNumber / $chapterPageCount ${ReaderProgressLabels.pages}',
                                       style: Theme.of(context)
                                           .textTheme
                                           .labelSmall
@@ -196,7 +205,7 @@ class ReaderChrome extends StatelessWidget {
                                   const Spacer(),
                                   if (progressPercent != null)
                                     Text(
-                                      '鍏ㄤ功 ${(progressPercent! * 100).round()}%',
+                                      '${ReaderProgressLabels.wholeBook} ${(progressPercent! * 100).round()}%',
                                       style: Theme.of(context)
                                           .textTheme
                                           .labelSmall
@@ -206,20 +215,7 @@ class ReaderChrome extends StatelessWidget {
                                     ),
                                 ],
                               ),
-                            ] else if (mode == ReaderMode.vertical &&
-                                chapterPageNumber != null &&
-                                chapterPageCount != null &&
-                                (currentChapterTitle != null ||
-                                    progressPercent != null))
-                              Text(
-                                '${currentChapterTitle ?? '全文'} · ${progressPercent == null ? '--' : '${(progressPercent! * 100).round()}%'}',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: Theme.of(context).textTheme.labelSmall
-                                    ?.copyWith(
-                                      color: colorScheme.onSurfaceVariant,
-                                    ),
-                              ),
+                            ],
                           ],
                         ),
                       ),

@@ -690,3 +690,7 @@ dispose cannot publish stale `x / y` values. Chapter page metrics are transient
 display state only: they are not in Drift, `reading_progress`, history
 snapshots, or any restore anchor. No-chapter documents continue to show `全文`
 and whole-book Locator progress without a chapter page count. Schema remains 6.
+
+Progress labels are centralized in `ReaderProgressLabels` so Vertical, Paged,
+and no-chapter chrome share the same UTF-8 UI text. The label correction does
+not alter metrics, pagination, or position persistence.

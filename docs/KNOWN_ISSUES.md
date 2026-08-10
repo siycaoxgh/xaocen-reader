@@ -200,3 +200,6 @@
   large or no-chapter TXT.
 - Android real-device visual validation of the new page indicator remains
   deferred; Windows and automated four-file corpus validation passed.
+
+The initial paged label mojibake discovered during manual review is resolved;
+the remaining Android item is visual device validation only.

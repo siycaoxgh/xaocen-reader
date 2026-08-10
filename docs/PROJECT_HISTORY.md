@@ -632,3 +632,10 @@ work and stale metrics after relayout or mode changes. PageWindow remains the
 bounded interaction window, no page metric is persisted, and no-chapter TXT
 continues to show whole-book progress only. All four real TXT files passed the
 targeted metrics integration with logical error 0; schema remains 6.
+
+## M5.3.2 label correction (2026-08-10)
+
+Manual review found that only the newly added Paged progress labels contained
+mojibake literals. The labels were corrected and centralized; exact Vertical,
+Paged, and no-chapter widget assertions pass. No pagination, metrics, Locator,
+or persistence code changed.

@@ -677,3 +677,10 @@ Not a release; recorded for completeness.
 - Schema remains 6. Automated tests, all four real TXT files (logical error 0),
   Windows Release, and Android Debug passed. Android device validation is
   deferred.
+
+### M5.3.2 label correction
+
+- Fixed mojibake in the paged-only chapter progress labels and centralized the
+  shared `本章` / `全书` / `全文` / `页` UI text. Vertical, paged, and no-chapter
+  exact-string widget coverage now passes; pagination and Locator contracts are
+  unchanged.
