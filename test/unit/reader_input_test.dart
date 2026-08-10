@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter/services.dart';
 import 'package:xaocen_reader/reader/reader_input.dart';
 
 void main() {
@@ -31,4 +32,38 @@ void main() {
     );
     expect(binding.commandFor(PhysicalInput.pageDown), ReaderCommand.nextPage);
   });
+
+  test(
+    'Windows single-key registry maps stable IDs without runtime objects',
+    () {
+      expect(
+        physicalInputIdForKey(LogicalKeyboardKey.keyA),
+        PhysicalInputId.keyboardKeyA,
+      );
+      expect(
+        physicalInputIdForKey(LogicalKeyboardKey.space),
+        PhysicalInputId.keyboardSpace,
+      );
+      expect(
+        physicalInputIdForKey(LogicalKeyboardKey.enter),
+        PhysicalInputId.keyboardEnter,
+      );
+      expect(
+        physicalInputIdForKey(LogicalKeyboardKey.pageDown),
+        PhysicalInputId.keyboardPageDown,
+      );
+      expect(
+        PhysicalInputId.parse('keyboard.keyA'),
+        PhysicalInputId.keyboardKeyA,
+      );
+      expect(
+        PhysicalInputId.parse('keyboard.space'),
+        PhysicalInputId.keyboardSpace,
+      );
+      expect(
+        PhysicalInputId.windowsInputs,
+        contains(PhysicalInputId.keyboardDigit9),
+      );
+    },
+  );
 }

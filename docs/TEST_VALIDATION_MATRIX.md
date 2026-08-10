@@ -249,11 +249,24 @@ vertical A → paged → 不翻页 → 重开 = paged + A · vertical A → page
 | Capture consumes first input and does not dispatch | PASS |
 | Capture cancel / mode generation / dispose invalidation | PASS |
 | Android paged/capture host state bridge | PASS, Debug build |
-| Full unit/contract/widget | 396/396 PASS |
+| Full unit/contract/widget | 401/401 PASS |
 | Windows integration | 10 files / 13 scenarios PASS |
 | Windows Release / Android Debug | PASS / PASS |
 | Four real TXT logical error | PASS, 0 |
 | Android real device | NOT-RUN / deferred |
+
+## M5.3e.1 keyboard capture correction (2026-08-10)
+
+| Validation | Result |
+|---|---|
+| Windows capture FocusNode receives ArrowLeft/Right and PageUp/Down | PASS, routed through stable IDs |
+| Stable A–Z / 0–9 / arrows / paging / Home/End / Space / Enter registry | PASS |
+| Candidate held before persistence | PASS |
+| Retry and cancel discard candidate | PASS |
+| Explicit confirmation persists binding | PASS |
+| Conflict cancel / replacement contract | PASS |
+| Capture first input does not dispatch ReaderCommand | PASS |
+| Schema | 6, unchanged |
 
 ## M5.3a+b input binding contract (2026-08-09)
 
@@ -285,6 +298,6 @@ vertical A → paged → 不翻页 → 重开 = paged + A · vertical A → page
 | Reset defaults affects only active platform | PASS |
 | Dark/light/system readability contract | PASS, shared Material theme |
 | Locator / reading_progress / ReaderPreferences / session side effects | PASS, none |
-| Full unit/contract/widget | 396/396 PASS |
+| Full unit/contract/widget | 401/401 PASS |
 | Windows Release / Android Debug | PASS / PASS |
 | Android real device | NOT-RUN / deferred |

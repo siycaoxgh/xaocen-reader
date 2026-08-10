@@ -147,7 +147,14 @@
 
 - Reader input settings UI, supported-input capture, conflict confirmation,
   explicit null disable, and platform-scoped reset are complete. No new P1/P2
-  issue was found; 396 automated tests remain green.
+  issue was found; 401 automated tests remain green.
 - Android real-device validation for the settings page remains NOT-RUN /
   deferred to the unified device pass. Windows Release and Android Debug builds
   passed.
+
+## M5.3e.1 status update (2026-08-10)
+
+- The Windows keyboard-capture P1 is resolved. The cause was focus remaining on
+  the add button; capture now requests a dedicated FocusNode and visibly holds
+  a candidate until confirmation.
+- Android ADB validation is intentionally not part of this correction pass.

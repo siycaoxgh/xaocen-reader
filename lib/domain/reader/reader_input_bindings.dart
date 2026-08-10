@@ -23,18 +23,112 @@ final class PhysicalInputId {
 
   static const keyboardArrowLeft = PhysicalInputId('keyboard.arrowLeft');
   static const keyboardArrowRight = PhysicalInputId('keyboard.arrowRight');
+  static const keyboardArrowUp = PhysicalInputId('keyboard.arrowUp');
+  static const keyboardArrowDown = PhysicalInputId('keyboard.arrowDown');
   static const keyboardPageUp = PhysicalInputId('keyboard.pageUp');
   static const keyboardPageDown = PhysicalInputId('keyboard.pageDown');
+  static const keyboardHome = PhysicalInputId('keyboard.home');
+  static const keyboardEnd = PhysicalInputId('keyboard.end');
+  static const keyboardSpace = PhysicalInputId('keyboard.space');
+  static const keyboardEnter = PhysicalInputId('keyboard.enter');
   static const mouseWheelUp = PhysicalInputId('mouse.wheelUp');
   static const mouseWheelDown = PhysicalInputId('mouse.wheelDown');
   static const androidVolumeUp = PhysicalInputId('android.volumeUp');
   static const androidVolumeDown = PhysicalInputId('android.volumeDown');
 
+  static const keyboardKeyA = PhysicalInputId('keyboard.keyA');
+  static const keyboardKeyB = PhysicalInputId('keyboard.keyB');
+  static const keyboardKeyC = PhysicalInputId('keyboard.keyC');
+  static const keyboardKeyD = PhysicalInputId('keyboard.keyD');
+  static const keyboardKeyE = PhysicalInputId('keyboard.keyE');
+  static const keyboardKeyF = PhysicalInputId('keyboard.keyF');
+  static const keyboardKeyG = PhysicalInputId('keyboard.keyG');
+  static const keyboardKeyH = PhysicalInputId('keyboard.keyH');
+  static const keyboardKeyI = PhysicalInputId('keyboard.keyI');
+  static const keyboardKeyJ = PhysicalInputId('keyboard.keyJ');
+  static const keyboardKeyK = PhysicalInputId('keyboard.keyK');
+  static const keyboardKeyL = PhysicalInputId('keyboard.keyL');
+  static const keyboardKeyM = PhysicalInputId('keyboard.keyM');
+  static const keyboardKeyN = PhysicalInputId('keyboard.keyN');
+  static const keyboardKeyO = PhysicalInputId('keyboard.keyO');
+  static const keyboardKeyP = PhysicalInputId('keyboard.keyP');
+  static const keyboardKeyQ = PhysicalInputId('keyboard.keyQ');
+  static const keyboardKeyR = PhysicalInputId('keyboard.keyR');
+  static const keyboardKeyS = PhysicalInputId('keyboard.keyS');
+  static const keyboardKeyT = PhysicalInputId('keyboard.keyT');
+  static const keyboardKeyU = PhysicalInputId('keyboard.keyU');
+  static const keyboardKeyV = PhysicalInputId('keyboard.keyV');
+  static const keyboardKeyW = PhysicalInputId('keyboard.keyW');
+  static const keyboardKeyX = PhysicalInputId('keyboard.keyX');
+  static const keyboardKeyY = PhysicalInputId('keyboard.keyY');
+  static const keyboardKeyZ = PhysicalInputId('keyboard.keyZ');
+
+  static const keyboardDigit0 = PhysicalInputId('keyboard.digit0');
+  static const keyboardDigit1 = PhysicalInputId('keyboard.digit1');
+  static const keyboardDigit2 = PhysicalInputId('keyboard.digit2');
+  static const keyboardDigit3 = PhysicalInputId('keyboard.digit3');
+  static const keyboardDigit4 = PhysicalInputId('keyboard.digit4');
+  static const keyboardDigit5 = PhysicalInputId('keyboard.digit5');
+  static const keyboardDigit6 = PhysicalInputId('keyboard.digit6');
+  static const keyboardDigit7 = PhysicalInputId('keyboard.digit7');
+  static const keyboardDigit8 = PhysicalInputId('keyboard.digit8');
+  static const keyboardDigit9 = PhysicalInputId('keyboard.digit9');
+
+  static const keyboardLetters = <PhysicalInputId>[
+    keyboardKeyA,
+    keyboardKeyB,
+    keyboardKeyC,
+    keyboardKeyD,
+    keyboardKeyE,
+    keyboardKeyF,
+    keyboardKeyG,
+    keyboardKeyH,
+    keyboardKeyI,
+    keyboardKeyJ,
+    keyboardKeyK,
+    keyboardKeyL,
+    keyboardKeyM,
+    keyboardKeyN,
+    keyboardKeyO,
+    keyboardKeyP,
+    keyboardKeyQ,
+    keyboardKeyR,
+    keyboardKeyS,
+    keyboardKeyT,
+    keyboardKeyU,
+    keyboardKeyV,
+    keyboardKeyW,
+    keyboardKeyX,
+    keyboardKeyY,
+    keyboardKeyZ,
+  ];
+
+  static const keyboardDigits = <PhysicalInputId>[
+    keyboardDigit0,
+    keyboardDigit1,
+    keyboardDigit2,
+    keyboardDigit3,
+    keyboardDigit4,
+    keyboardDigit5,
+    keyboardDigit6,
+    keyboardDigit7,
+    keyboardDigit8,
+    keyboardDigit9,
+  ];
+
   static const windowsInputs = <PhysicalInputId>[
     keyboardArrowLeft,
     keyboardArrowRight,
+    keyboardArrowUp,
+    keyboardArrowDown,
     keyboardPageUp,
     keyboardPageDown,
+    keyboardHome,
+    keyboardEnd,
+    keyboardSpace,
+    keyboardEnter,
+    ...keyboardLetters,
+    ...keyboardDigits,
     mouseWheelUp,
     mouseWheelDown,
   ];

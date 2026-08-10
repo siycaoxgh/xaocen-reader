@@ -128,6 +128,14 @@ class _PagedReaderViewState extends State<PagedReaderView> {
   /// Windows 键盘翻页（§二十二）。
   KeyEventResult _onKeyEvent(FocusNode node, KeyEvent event) {
     if (event is! KeyDownEvent) return KeyEventResult.ignored;
+    final router = widget.inputRouter;
+    if (router != null) {
+      final input = physicalInputIdForKey(event.logicalKey);
+      if (input != null && router.handlePhysicalInput(input)) {
+        return KeyEventResult.handled;
+      }
+      return KeyEventResult.ignored;
+    }
     final key = event.logicalKey;
     final input = switch (key) {
       LogicalKeyboardKey.arrowRight => PhysicalInput.arrowRight,

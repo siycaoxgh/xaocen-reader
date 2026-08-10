@@ -5,6 +5,24 @@ Branch: `feat/m4-horizontal-reader`
 Drift schema: **6**
 Status: **COMPLETE**
 
+## M5.3e.1 correction
+
+- Root cause of Windows keyboard capture failure: the settings page's `Focus`
+  was autofocus-only. Tapping the add button left focus on the button, while
+  the capture overlay did not request the keyboard focus node. `KeyDownEvent`
+  therefore never reached the capture router. The page now owns a named
+  `FocusNode` and requests it on capture start and retry.
+- Added a stable Windows single-key registry: A–Z, 0–9, Arrow Up/Down/Left/Right,
+  PageUp/PageDown, Home, End, Space, and Enter. Persistence uses only stable
+  IDs such as `keyboard.keyA`, `keyboard.digit1`, `keyboard.space`; Flutter
+  runtime key objects are never stored. Escape remains reserved for cancel.
+- Capture now follows `idle → capturing → candidate → confirm → persist`.
+  Candidates show the detected input; retry and cancel discard them, and only
+  confirmation writes the repository. Conflicts show current and target
+  commands and require explicit confirmation. Success emits visible feedback.
+- The registry is used by vertical and paged Reader keyboard routing; wheel
+  behavior and Android bridge contracts remain unchanged.
+
 ## Delivered
 
 - Added `Library → 我的 → 阅读设置 → 按键与操作` as the V3 settings entry.
@@ -27,7 +45,8 @@ Status: **COMPLETE**
 ## Validation
 
 - `flutter analyze`: PASS, 0 issues.
-- Full unit/contract/widget suite: **396/396 PASS**.
+- Full unit/contract/widget suite: **401/401 PASS**.
+- Targeted registry/capture/workflow tests: **12/12 PASS**.
 - Existing M5.3a-d repository/router/capture coverage remains green; schema is
   unchanged at 6.
 - `git diff --check`: PASS.

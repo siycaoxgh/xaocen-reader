@@ -593,3 +593,12 @@ map entry, clear writes explicit null, and reset deletes only the active
 platform profile so defaults are reconstructed without affecting the other
 platform. Settings, capture, and conflict dialogs do not touch Locator,
 reading progress, ReaderPreferences, or ReadingSession.
+### M5.3e.1 capture correction
+
+Windows capture owns and requests a dedicated `FocusNode` after add/retry;
+button focus cannot consume the keyboard event. The stable registry now covers
+letters, digits, arrows, paging, Home/End, Space, and Enter. A capture is held
+as a typed candidate (`idle → capturing → candidate → confirm → persist`);
+repository writes occur only from explicit confirmation. Escape remains a
+cancel-only control, and the registry is shared by vertical and paged Reader
+keyboard routing.

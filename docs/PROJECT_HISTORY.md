@@ -557,5 +557,14 @@ only the current platform's physical inputs under all six Reader commands,
 supports first-input capture, conflict replacement/cancellation, explicit null
 disable, and platform-scoped reset defaults. It reuses the existing typed
 router/repository and leaves Locator, reading progress, ReaderPreferences, and
-ReadingSession untouched. Schema remains 6; analyze and the 396-test suite
+ReadingSession untouched. Schema remains 6; analyze and the 401-test suite
 remain green, with Windows Release and Android Debug builds passing.
+
+## M5.3e.1 — keyboard capture correction (2026-08-10)
+
+The Windows settings capture bug was traced to focus remaining on the add
+button: the capture overlay did not request a keyboard focus node. A dedicated
+focus node is now requested on capture and retry. Stable IDs cover A–Z, 0–9,
+arrows, PageUp/PageDown, Home/End, Space, and Enter. Capture uses an explicit
+candidate-confirm-persist workflow; cancel and retry never write, conflict
+replacement is explicit, and success is visible. Schema remains 6.

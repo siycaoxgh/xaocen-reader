@@ -14,6 +14,19 @@ Legend for validation columns:
 
 ## Unreleased
 
+### M5.3e.1 — keyboard capture correction (2026-08-10)
+- Fixed Windows capture focus by explicitly requesting a dedicated capture
+  `FocusNode` after add/retry.
+- Expanded stable Windows input IDs to A–Z, 0–9, arrows, PageUp/PageDown,
+  Home/End, Space, and Enter; Reader vertical/paged keyboard routing consumes
+  the same IDs.
+- Changed capture to candidate-confirm-persist: cancel/retry never write;
+  conflicts require explicit replacement confirmation and success is visible.
+- Added registry/workflow regression coverage. Validation: 401/401 automated
+  tests, 10 integration files / 13 scenarios, Windows Release and Android
+  Debug PASS. Schema remains 6; Android ADB validation is intentionally
+  deferred for this correction.
+
 ### M5.3e — Reader input settings UI (2026-08-10)
 - Added `我的 → 阅读设置 → 按键与操作` with responsive Windows/Android
   layouts and the six current `ReaderCommand` groups.

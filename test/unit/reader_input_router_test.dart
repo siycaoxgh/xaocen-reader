@@ -122,6 +122,21 @@ void main() {
     },
   );
 
+  test('Windows capture accepts wheel and extended keyboard IDs', () async {
+    final router = ReaderInputRouter(platform: ReaderInputPlatform.windows);
+    await router.start();
+    router.startCapture();
+    expect(router.handlePhysicalInput(PhysicalInputId.mouseWheelUp), isTrue);
+    expect(router.capture.captured, PhysicalInputId.mouseWheelUp);
+    router.startCapture();
+    expect(
+      router.handlePhysicalInput(PhysicalInputId.keyboardPageDown),
+      isTrue,
+    );
+    expect(router.capture.captured, PhysicalInputId.keyboardPageDown);
+    await router.dispose();
+  });
+
   test(
     'cancel capture clears input and dispose invalidates later events',
     () async {
