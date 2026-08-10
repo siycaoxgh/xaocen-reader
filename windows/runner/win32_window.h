@@ -12,6 +12,12 @@
 // rendering and input handling
 class Win32Window {
  public:
+  struct SavedWindowState {
+    RECT normal_bounds{};
+    bool maximized = false;
+    bool valid = false;
+  };
+
   struct Point {
     unsigned int x;
     unsigned int y;
@@ -48,6 +54,11 @@ class Win32Window {
   // Returns the backing Window handle to enable clients to set icon and other
   // window properties. Returns nullptr if the window has been destroyed.
   HWND GetHandle();
+
+  // Restores and persists Windows shell geometry outside of the Reader data
+  // store. Minimized state is intentionally never persisted.
+  void RestoreSavedState();
+  void SaveCurrentState();
 
   // If true, closing this window will quit the application.
   void SetQuitOnClose(bool quit_on_close);

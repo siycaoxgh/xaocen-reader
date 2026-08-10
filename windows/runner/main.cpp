@@ -30,6 +30,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   if (!window.Create(L"xaocen_reader", origin, size)) {
     return EXIT_FAILURE;
   }
+  window.RestoreSavedState();
   window.SetQuitOnClose(true);
 
   ::MSG msg;

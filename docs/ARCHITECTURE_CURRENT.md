@@ -783,6 +783,17 @@ to its existing page/disabled contract. `ReaderKeepAwake` is a best-effort
 platform abstraction (Android host flag implemented, desktop/test no-op), and
 schema remains 6.
 
+## Windows shell window state
+
+The Windows runner persists normal window bounds and maximized state in the
+user registry under `HKCU\\Software\\XAOCEN\\xaocen_reader\\WindowState`.
+Minimized state is never persisted. Startup restores validated normal bounds,
+clamps them to the nearest visible monitor work area, then applies maximized
+presentation if needed. The runner continues to use the OS per-monitor DPI
+message path; no Drift table or Reader data model is involved. There is no
+application-defined minimum window size: only the native Windows tracking
+minimum and the existing 1280x720 first-run default apply.
+
 ## M5.4e — AutoRead final regression
 
 The complete AutoRead regression passed: vertical Ticker behavior and custom

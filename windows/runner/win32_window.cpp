@@ -3,6 +3,8 @@
 #include <dwmapi.h>
 #include <flutter_windows.h>
 
+#include <algorithm>
+
 #include "resource.h"
 
 namespace {
@@ -26,6 +28,14 @@ constexpr const wchar_t kGetPreferredBrightnessRegKey[] =
   L"Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize";
 constexpr const wchar_t kGetPreferredBrightnessRegValue[] = L"AppsUseLightTheme";
 
+constexpr const wchar_t kWindowStateRegKey[] =
+    L"Software\\XAOCEN\\xaocen_reader\\WindowState";
+constexpr const wchar_t kNormalXValue[] = L"normalX";
+constexpr const wchar_t kNormalYValue[] = L"normalY";
+constexpr const wchar_t kNormalWidthValue[] = L"normalWidth";
+constexpr const wchar_t kNormalHeightValue[] = L"normalHeight";
+constexpr const wchar_t kMaximizedValue[] = L"maximized";
+
 // The number of Win32Window objects that currently exist.
 static int g_active_window_count = 0;
 
@@ -35,6 +45,114 @@ using EnableNonClientDpiScaling = BOOL __stdcall(HWND hwnd);
 // scale factor
 int Scale(int source, double scale_factor) {
   return static_cast<int>(source * scale_factor);
+}
+
+bool ReadDword(HKEY key, const wchar_t* name, DWORD* value) {
+  DWORD type = 0;
+  DWORD size = sizeof(*value);
+  return RegQueryValueExW(key, name, nullptr, &type,
+                          reinterpret_cast<LPBYTE>(value), &size) ==
+             ERROR_SUCCESS &&
+         type == REG_DWORD;
+}
+
+bool ReadInt32(HKEY key, const wchar_t* name, LONG* value) {
+  DWORD raw = 0;
+  if (!ReadDword(key, name, &raw)) return false;
+  *value = static_cast<LONG>(raw);
+  return true;
+}
+
+bool IsUsableRect(const RECT& rect) {
+  return rect.right > rect.left && rect.bottom > rect.top &&
+         (rect.right - rect.left) >= GetSystemMetrics(SM_CXMINTRACK) &&
+         (rect.bottom - rect.top) >= GetSystemMetrics(SM_CYMINTRACK);
+}
+
+RECT ClampToVisibleWorkArea(const RECT& requested) {
+  RECT result = requested;
+  HMONITOR monitor = MonitorFromRect(&result, MONITOR_DEFAULTTONEAREST);
+  MONITORINFO info{sizeof(info)};
+  if (monitor == nullptr || !GetMonitorInfoW(monitor, &info)) return result;
+
+  const RECT work = info.rcWork;
+  LONG width = std::min(result.right - result.left, work.right - work.left);
+  LONG height = std::min(result.bottom - result.top, work.bottom - work.top);
+  width = std::max<LONG>(width, GetSystemMetrics(SM_CXMINTRACK));
+  height = std::max<LONG>(height, GetSystemMetrics(SM_CYMINTRACK));
+
+  result.right = result.left + width;
+  result.bottom = result.top + height;
+
+  // Keep a visible strip on the selected monitor if the old monitor vanished.
+  constexpr LONG kVisibleStrip = 64;
+  if (result.right < work.left + kVisibleStrip) {
+    OffsetRect(&result, work.left + kVisibleStrip - result.right, 0);
+  }
+  if (result.left > work.right - kVisibleStrip) {
+    OffsetRect(&result, work.right - kVisibleStrip - result.left, 0);
+  }
+  if (result.bottom < work.top + kVisibleStrip) {
+    OffsetRect(&result, 0, work.top + kVisibleStrip - result.bottom);
+  }
+  if (result.top > work.bottom - kVisibleStrip) {
+    OffsetRect(&result, 0, work.bottom - kVisibleStrip - result.top);
+  }
+  return result;
+}
+
+bool LoadSavedWindowState(Win32Window::SavedWindowState* state) {
+  HKEY key = nullptr;
+  if (RegOpenKeyExW(HKEY_CURRENT_USER, kWindowStateRegKey, 0, KEY_READ,
+                    &key) != ERROR_SUCCESS) {
+    return false;
+  }
+
+  RECT bounds{};
+  DWORD maximized = 0;
+  const bool valid = ReadInt32(key, kNormalXValue, &bounds.left) &&
+                     ReadInt32(key, kNormalYValue, &bounds.top) &&
+                     ReadInt32(key, kNormalWidthValue, &bounds.right) &&
+                     ReadInt32(key, kNormalHeightValue, &bounds.bottom) &&
+                     ReadDword(key, kMaximizedValue, &maximized);
+  RegCloseKey(key);
+  if (!valid) return false;
+
+  bounds.right += bounds.left;
+  bounds.bottom += bounds.top;
+  if (!IsUsableRect(bounds)) return false;
+  state->normal_bounds = ClampToVisibleWorkArea(bounds);
+  state->maximized = maximized != 0;
+  state->valid = true;
+  return true;
+}
+
+void SaveWindowStateToRegistry(const Win32Window::SavedWindowState& state) {
+  HKEY key = nullptr;
+  DWORD disposition = 0;
+  if (RegCreateKeyExW(HKEY_CURRENT_USER, kWindowStateRegKey, 0, nullptr, 0,
+                      KEY_WRITE, nullptr, &key, &disposition) !=
+      ERROR_SUCCESS) {
+    return;
+  }
+
+  const RECT& rect = state.normal_bounds;
+  const DWORD x = static_cast<DWORD>(rect.left);
+  const DWORD y = static_cast<DWORD>(rect.top);
+  const DWORD width = static_cast<DWORD>(rect.right - rect.left);
+  const DWORD height = static_cast<DWORD>(rect.bottom - rect.top);
+  const DWORD maximized = state.maximized ? 1u : 0u;
+  RegSetValueExW(key, kNormalXValue, 0, REG_DWORD,
+                 reinterpret_cast<const BYTE*>(&x), sizeof(x));
+  RegSetValueExW(key, kNormalYValue, 0, REG_DWORD,
+                 reinterpret_cast<const BYTE*>(&y), sizeof(y));
+  RegSetValueExW(key, kNormalWidthValue, 0, REG_DWORD,
+                 reinterpret_cast<const BYTE*>(&width), sizeof(width));
+  RegSetValueExW(key, kNormalHeightValue, 0, REG_DWORD,
+                 reinterpret_cast<const BYTE*>(&height), sizeof(height));
+  RegSetValueExW(key, kMaximizedValue, 0, REG_DWORD,
+                 reinterpret_cast<const BYTE*>(&maximized), sizeof(maximized));
+  RegCloseKey(key);
 }
 
 // Dynamically loads the |EnableNonClientDpiScaling| from the User32 module.
@@ -187,6 +305,10 @@ Win32Window::MessageHandler(HWND hwnd,
       }
       return 0;
 
+    case WM_CLOSE:
+      SaveCurrentState();
+      return DefWindowProc(hwnd, message, wparam, lparam);
+
     case WM_DPICHANGED: {
       auto newRectSize = reinterpret_cast<RECT*>(lparam);
       LONG newWidth = newRectSize->right - newRectSize->left;
@@ -257,6 +379,37 @@ RECT Win32Window::GetClientArea() {
 
 HWND Win32Window::GetHandle() {
   return window_handle_;
+}
+
+void Win32Window::RestoreSavedState() {
+  if (window_handle_ == nullptr) return;
+  SavedWindowState state;
+  if (!LoadSavedWindowState(&state)) return;
+
+  // Restore normal bounds first. This keeps maximized startup deterministic
+  // across monitor/DPI changes; only then apply the maximized presentation.
+  WINDOWPLACEMENT placement{sizeof(placement)};
+  placement.showCmd = SW_SHOWNORMAL;
+  placement.rcNormalPosition = state.normal_bounds;
+  SetWindowPlacement(window_handle_, &placement);
+  if (state.maximized) ShowWindow(window_handle_, SW_MAXIMIZE);
+}
+
+void Win32Window::SaveCurrentState() {
+  if (window_handle_ == nullptr) return;
+  WINDOWPLACEMENT placement{sizeof(placement)};
+  if (!GetWindowPlacement(window_handle_, &placement)) return;
+  // Do not overwrite the last useful state when the user closes while
+  // minimized. rcNormalPosition is still retained by Windows in that case.
+  if (placement.showCmd == SW_SHOWMINIMIZED) return;
+
+  SavedWindowState state;
+  state.normal_bounds = placement.rcNormalPosition;
+  state.maximized = placement.showCmd == SW_SHOWMAXIMIZED;
+  if (!IsUsableRect(state.normal_bounds)) return;
+  state.normal_bounds = ClampToVisibleWorkArea(state.normal_bounds);
+  state.valid = true;
+  SaveWindowStateToRegistry(state);
 }
 
 void Win32Window::SetQuitOnClose(bool quit_on_close) {

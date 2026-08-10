@@ -743,3 +743,10 @@ deferred.
   lifecycle、mode switch、stale generation 与 ReadingSession 合同。
 - 4 个真实 TXT logical error = 0；M5.4 标记 COMPLETE。
 - Android targeted ADB 因当前设备 offline deferred，Android Debug 构建通过。
+
+## Desktop shell follow-up
+
+- Windows runner now restores/persists normal x/y/width/height and maximized
+  state through the native user registry; minimized state is excluded.
+- Restored geometry is clamped to a visible monitor work area and remains
+  independent of Drift/Reader data. No product-defined minimum size was added.
