@@ -50,6 +50,8 @@ class ReaderChrome extends StatelessWidget {
     this.currentChapterTitle,
     this.currentChapterNumber,
     this.chapterProgressPercent,
+    this.chapterPageNumber,
+    this.chapterPageCount,
     this.progressPercent,
   });
 
@@ -66,6 +68,8 @@ class ReaderChrome extends StatelessWidget {
   final String? currentChapterTitle;
   final int? currentChapterNumber;
   final double? chapterProgressPercent;
+  final int? chapterPageNumber;
+  final int? chapterPageCount;
   final double? progressPercent;
 
   @override
@@ -88,7 +92,7 @@ class ReaderChrome extends StatelessWidget {
                   // Vertical mode shows a second line for chapter and book
                   // progress, so reserve enough room for the extra row while
                   // keeping the paged chrome at its existing height.
-                  height: mode == ReaderMode.vertical ? 78 : 60,
+                  height: 78,
                   padding: EdgeInsets.symmetric(horizontal: isDesktop ? 20 : 8),
                   decoration: BoxDecoration(
                     color: colorScheme.surface.withValues(alpha: 0.96),
@@ -161,6 +165,50 @@ class ReaderChrome extends StatelessWidget {
                                 ],
                               ),
                             ] else if (mode == ReaderMode.paged &&
+                                (chapterPageNumber != null ||
+                                    currentChapterTitle != null ||
+                                    progressPercent != null)) ...[
+                              Text(
+                                currentChapterNumber == null
+                                    ? (currentChapterTitle ?? '鍏ㄦ枃')
+                                    : '绗?currentChapterNumber绔? ${currentChapterTitle ?? ''}',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context).textTheme.labelSmall
+                                    ?.copyWith(
+                                      color: colorScheme.onSurfaceVariant,
+                                    ),
+                              ),
+                              const SizedBox(height: 2),
+                              Row(
+                                children: [
+                                  if (chapterPageNumber != null &&
+                                      chapterPageCount != null)
+                                    Text(
+                                      '鏈珷 $chapterPageNumber / $chapterPageCount 页',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .labelSmall
+                                          ?.copyWith(
+                                            color: colorScheme.onSurfaceVariant,
+                                          ),
+                                    ),
+                                  const Spacer(),
+                                  if (progressPercent != null)
+                                    Text(
+                                      '鍏ㄤ功 ${(progressPercent! * 100).round()}%',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .labelSmall
+                                          ?.copyWith(
+                                            color: colorScheme.onSurfaceVariant,
+                                          ),
+                                    ),
+                                ],
+                              ),
+                            ] else if (mode == ReaderMode.vertical &&
+                                chapterPageNumber != null &&
+                                chapterPageCount != null &&
                                 (currentChapterTitle != null ||
                                     progressPercent != null))
                               Text(

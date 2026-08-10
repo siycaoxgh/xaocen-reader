@@ -824,3 +824,16 @@ page settles and prevents progress persistence. Keep generation, window
 identity, bounds, and explicit programmatic-target checks as the safety gates;
 use drag metadata only as an optimization for edge fallback, not as proof that
 the callback is user-invalid.
+
+## M5.3.2 lesson (2026-08-10)
+
+### Page totals need their own transient generation
+
+The bounded `PageWindow` is optimized for interaction and cannot answer a
+chapter's total page count by itself. Chapter metrics must paginate a separate,
+chapter-scoped range using the existing `PagedLayoutSignature`. Because
+TextPainter layout remains UI-isolate work, the calculation is deferred until
+after the first frame and yields in small batches. A controller layout
+generation check is required in addition to the UI request generation: a
+silent relayout can replace the engine without notifying the parent, and an
+old metrics task must be discarded before it publishes a value.

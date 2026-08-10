@@ -38,6 +38,7 @@ import '../domain/reader/reader_visible_range.dart';
 import 'normalized_document_loader.dart';
 import 'paged_reader_controller.dart';
 import 'paged_reader_view.dart';
+import 'chapter_page_metrics.dart';
 import 'reader_appearance.dart';
 import 'reader_chrome.dart';
 import 'reader_controller.dart';
@@ -186,6 +187,11 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
 
   /// 分页模式控制器（首次切换到分页时创建）。
   PagedReaderController? _pagedController;
+  final ChapterPageMetricsResolver _chapterPageMetricsResolver =
+      ChapterPageMetricsResolver();
+  ChapterPageMetrics? _chapterPageMetrics;
+  int _chapterPageMetricsGeneration = 0;
+  String? _chapterPageMetricsRequestKey;
 
   /// 模式切换代数：切换时递增，过期异步结果被拒绝（§二十一）。
   int _modeGeneration = 0;
@@ -481,6 +487,7 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
     _modeRestoreAnchor = null;
     _modeRestoreGeneration = null;
     _metricsGeneration++;
+    _invalidateChapterPageMetrics();
     _preferencesSubscription?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     _controller.removeListener(_onControllerChanged);
@@ -691,8 +698,79 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
 
   /// 分页控制器变化（窗口重建/翻页后）→ setState。
   void _onPagedControllerChanged() {
+    _scheduleChapterPageMetrics();
     if (mounted) setState(() {});
     unawaited(_recordHistorySnapshot());
+  }
+
+  void _invalidateChapterPageMetrics() {
+    _chapterPageMetricsGeneration++;
+    _chapterPageMetricsRequestKey = null;
+    _chapterPageMetrics = null;
+  }
+
+  void _scheduleChapterPageMetrics() {
+    final paged = _pagedController;
+    final locator = paged?.confirmedLocator;
+    if (!mounted ||
+        _mode != ReaderMode.paged ||
+        paged == null ||
+        locator == null) {
+      _invalidateChapterPageMetrics();
+      return;
+    }
+    final boundary = _currentChapterBoundaryForOffset(
+      locator.absoluteCharacterOffset,
+    );
+    if (boundary == null || boundary.endOffset <= boundary.startOffset) {
+      _invalidateChapterPageMetrics();
+      return;
+    }
+    final key =
+        '${locator.absoluteCharacterOffset}|'
+        '${boundary.startOffset}:${boundary.endOffset}|'
+        '${paged.lastSignature.cacheKey}';
+    if (key == _chapterPageMetricsRequestKey) return;
+    _chapterPageMetricsRequestKey = key;
+    final generation = ++_chapterPageMetricsGeneration;
+    final layoutGeneration = paged.layoutGeneration;
+    _chapterPageMetrics = null;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || generation != _chapterPageMetricsGeneration) return;
+      unawaited(
+        _resolveChapterPageMetrics(
+          paged,
+          locator,
+          generation,
+          layoutGeneration,
+        ),
+      );
+    });
+  }
+
+  Future<void> _resolveChapterPageMetrics(
+    PagedReaderController paged,
+    ReaderLocator locator,
+    int generation,
+    int layoutGeneration,
+  ) async {
+    final result = await _chapterPageMetricsResolver.resolve(
+      engine: paged.engine,
+      locator: locator,
+      toc: widget.launch.toc,
+      normalizedLength: widget.launch.normalizedCharacterLength,
+      collectionId: widget.launch.collection.id,
+      normalizedHash: _controller.document?.normalizedHash,
+      isCurrent: () =>
+          mounted &&
+          generation == _chapterPageMetricsGeneration &&
+          _mode == ReaderMode.paged &&
+          identical(_pagedController, paged) &&
+          paged.layoutGeneration == layoutGeneration,
+    );
+    if (!mounted || generation != _chapterPageMetricsGeneration) return;
+    if (result == null) return;
+    setState(() => _chapterPageMetrics = result);
   }
 
   // ---- M4：模式切换（§十七~§二十一）----
@@ -759,6 +837,7 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
     assert(page.contains(anchorOffset), '切换锚点必须在页面范围内');
     _pagedController = paged;
     _mode = ReaderMode.paged;
+    _scheduleChapterPageMetrics();
     _inputRouter.setPagedActive(true);
     _transition = ReaderModeTransitionState.idle;
     _controller.unfreezeWrites();
@@ -781,6 +860,7 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
     if (locator == null) return;
 
     final gen = ++_modeGeneration;
+    _invalidateChapterPageMetrics();
     _transition = ReaderModeTransitionState.pagedToVertical;
     _controller.freezeWrites();
     // Activate the target subtree before scheduling its two-stage restore.
@@ -1481,6 +1561,8 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
             currentChapterTitle: _currentChapterTitle,
             currentChapterNumber: _currentChapterBoundary?.chapterNumber,
             chapterProgressPercent: _chapterProgressPercent,
+            chapterPageNumber: _chapterPageMetrics?.currentPageNumber,
+            chapterPageCount: _chapterPageMetrics?.totalPageCount,
             progressPercent: _progressPercent,
             onBack: () => Navigator.of(context).pop(),
             onToc: () {
@@ -1606,6 +1688,11 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
     return LayoutBuilder(
       builder: (context, constraints) {
         _pagedViewportSize = Size(constraints.maxWidth, constraints.maxHeight);
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && _mode == ReaderMode.paged) {
+            _scheduleChapterPageMetrics();
+          }
+        });
         return PagedReaderView(
           controller: paged,
           appearance: _appearance,

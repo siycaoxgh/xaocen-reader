@@ -622,3 +622,13 @@ fallback. Layout and window generations reject stale callbacks after relayout,
 resize, mode/locator jumps, and dispose. The ReaderLocator and schema 6
 contracts are unchanged. Automated gesture-tail coverage, Windows integration,
 and all four real TXT logical-error checks passed.
+
+## M5.3.2 — paged chapter page progress (2026-08-10)
+
+The paged Reader now derives `本章 x / y 页` from the confirmed UTF-16
+Locator, shared chapter boundaries, and the active layout. Only the current
+chapter is paginated; a bounded cache and generation guards prevent full-book
+work and stale metrics after relayout or mode changes. PageWindow remains the
+bounded interaction window, no page metric is persisted, and no-chapter TXT
+continues to show whole-book progress only. All four real TXT files passed the
+targeted metrics integration with logical error 0; schema remains 6.

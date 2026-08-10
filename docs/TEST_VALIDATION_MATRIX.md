@@ -292,6 +292,22 @@ vertical A → paged → 不翻页 → 重开 = paged + A · vertical A → page
 | Four real TXT logical error | PASS, 0 |
 | Android real device | NOT-RUN / deferred |
 
+## M5.3.2 paged chapter page progress (2026-08-10)
+
+| Gate | Result |
+|---|---|
+| Chapter first/middle/final page derivation | PASS |
+| Chapter-first-page and next-chapter boundary | PASS |
+| Shared boundary / volume exclusion / malformed offsets | PASS |
+| No-chapter TXT avoids chapter page calculation | PASS |
+| Cache hit/miss and bounded cache | PASS |
+| Stale generation after layout change | PASS |
+| Paged chrome `本章 x / y 页` + `全书 z%` | PASS |
+| Four real TXT corpus | PASS; logical error 0 |
+| Windows Release / Android Debug | PASS / PASS |
+| Android real device | NOT-RUN / deferred |
+| Drift schema | 6, unchanged |
+
 ## M5.3e.2 correction (2026-08-10)
 
 | Gate | Result |

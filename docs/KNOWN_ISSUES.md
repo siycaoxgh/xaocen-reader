@@ -190,6 +190,13 @@
   legacy Android values are normalized back to platform defaults.
 - Android targeted ADB was not run in this sealing pass because no device was
   connected. Windows and automated Android Debug build validation passed.
-- Chapter percentage and paged chapter page totals remain deferred to a later
-  milestone; current Reader UI continues to show chapter title and whole-book
-  derived percentage only.
+- At the M5.3 final-contract checkpoint, paged chapter page totals were still
+  deferred; M5.3.2 now supplies them transiently for the active chapter only.
+
+## M5.3.2 status update (2026-08-10)
+
+- Paged chapter page totals are now available transiently for the active
+  chapter only. No full-book page total is intentionally shown, especially for
+  large or no-chapter TXT.
+- Android real-device visual validation of the new page indicator remains
+  deferred; Windows and automated four-file corpus validation passed.

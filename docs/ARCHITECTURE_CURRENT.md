@@ -672,3 +672,21 @@ scroll indices remain transient; `ReaderLocator.absoluteCharacterOffset` is
 still the only persisted position source. Chapter-first-page policy and
 `previous.endOffset == next.startOffset` continuity are unchanged. Schema stays
 6. Paged chapter page metrics and automatic reading remain deferred.
+
+## M5.3.2 paged chapter page progress
+
+`ChapterPageMetricsResolver` derives the current chapter's 1-based page number
+and total page count from the confirmed UTF-16 `ReaderLocator`, the shared
+`ChapterBoundaryResolver`, and the active `PagedLayoutEngine`. It paginates
+only `[chapter.startOffset, chapter.endOffset)` and never mutates the bounded
+`PageWindow`. A three-entry LRU cache is keyed by collection/hash, chapter
+interval, and the existing `PagedLayoutSignature`; theme-only paint changes do
+not invalidate it.
+
+The computation is deferred after the first frame and yields every eight pages.
+Reader and controller layout generations are checked before, during, and after
+the calculation, so resize, metrics relayout, mode/book/chapter changes, or
+dispose cannot publish stale `x / y` values. Chapter page metrics are transient
+display state only: they are not in Drift, `reading_progress`, history
+snapshots, or any restore anchor. No-chapter documents continue to show `全文`
+and whole-book Locator progress without a chapter page count. Schema remains 6.

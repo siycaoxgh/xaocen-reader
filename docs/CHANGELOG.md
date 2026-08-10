@@ -664,3 +664,16 @@ Not a release; recorded for completeness.
 - Recorded Windows user human validation as PASS and Android user initial human
   validation separately from Codex's unavailable final device session.
 - Rebuilt final Windows Release and normal-entry Android Debug APK.
+
+## M5.3.2 — paged chapter page progress (2026-08-10)
+
+- Added transient, chapter-scoped page metrics derived from the confirmed
+  UTF-16 Locator and the shared chapter boundary resolver.
+- Paginates only the current chapter, with a bounded three-entry cache and
+  generation cancellation; `PageWindow` remains bounded and no full-book page
+  count is computed.
+- Paged Reader now labels `本章 x / y 页` alongside derived whole-book progress;
+  no-chapter TXT remains `全文` plus whole-book progress.
+- Schema remains 6. Automated tests, all four real TXT files (logical error 0),
+  Windows Release, and Android Debug passed. Android device validation is
+  deferred.
