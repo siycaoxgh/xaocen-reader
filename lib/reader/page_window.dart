@@ -43,6 +43,17 @@ class PageWindow {
   /// 窗口页数。
   int get pageCount => _pages.length;
 
+  /// 当前页之前已经生成的页数。
+  int get behindCount => _currentIndex;
+
+  /// 当前页之后已经生成的页数。
+  int get aheadCount =>
+      _pages.isEmpty ? 0 : math.max(0, _pages.length - 1 - _currentIndex);
+
+  /// 窗口尾部是否仍可能有文档内容（不等同于当前页 EOF）。
+  bool get tailHasPotentialNext =>
+      _pages.isNotEmpty && _pages.last.endCharacterOffset < _documentLength;
+
   /// 历史最大窗口页数（§九：M4_RESULT 记录用）。
   int get maxObserved => _maxObserved;
 

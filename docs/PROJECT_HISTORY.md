@@ -610,3 +610,15 @@ No-chapter TXT keeps the `全文` presentation. Paged chapter page metrics and
 automatic reading remain deferred. Schema remains 6. Validation passed 415
 automated tests, 10 integration files / 13 scenarios, all four real TXT files
 with logical error 0, Windows Release, and Android Debug.
+## M5.3.1.1 — Paged Reader gesture window-tail fix (2026-08-10)
+
+Manual Android investigation identified a reproducible case where PageView
+could reach the bounded page-window tail and stop accepting forward swipes,
+while Volume Down still advanced through the Controller. The cause was the
+PageView `itemCount` boundary, not document EOF. Pagination expansion is now
+owned by `PagedReaderController`; touch, volume, and keyboard use the same
+ensure/settle path, with bounded prev2/current/next3 prefetch and a pointer-edge
+fallback. Layout and window generations reject stale callbacks after relayout,
+resize, mode/locator jumps, and dispose. The ReaderLocator and schema 6
+contracts are unchanged. Automated gesture-tail coverage, Windows integration,
+and all four real TXT logical-error checks passed.

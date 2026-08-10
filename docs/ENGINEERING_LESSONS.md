@@ -813,3 +813,14 @@ application APK build can fail even though the app sources compile. The
 project-level Gradle resolution rule pins that known test-only dependency to
 the cached 1.3.0 artifact; this does not alter the production app dependency
 graph or Reader runtime contracts.
+## M5.3.1.1 lesson (2026-08-10)
+
+### Do not equate missing drag metadata with a stale PageView callback
+
+Desktop/integration PageView callbacks can arrive without
+`ScrollStartNotification.dragDetails`, even when they represent a real test
+gesture. A callback guard that requires an active drag therefore drops valid
+page settles and prevents progress persistence. Keep generation, window
+identity, bounds, and explicit programmatic-target checks as the safety gates;
+use drag metadata only as an optimization for edge fallback, not as proof that
+the callback is user-invalid.

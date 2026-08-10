@@ -62,7 +62,10 @@ void main() {
     await db.close();
   });
 
-  PagedReaderController makeController() {
+  PagedReaderController makeController({
+    int previousWindowPages = 2,
+    int nextWindowPages = 3,
+  }) {
     final doc = NormalizedDocument(
       text: _text,
       normalizedHash: '',
@@ -80,6 +83,8 @@ void main() {
       style: _style,
       width: 400,
       height: 600,
+      previousWindowPages: previousWindowPages,
+      nextWindowPages: nextWindowPages,
     );
   }
 
@@ -136,6 +141,104 @@ void main() {
       c.currentPage!.startCharacterOffset,
       reason: '用户翻页后 confirmed = 新页 start',
     );
+    c.dispose();
+  });
+
+  testWidgets('2a. gesture 连续跨越 window tail 不会停住', (tester) async {
+    final c = makeController();
+    c.open(const ReaderLocator(collectionId: 'c1', absoluteCharacterOffset: 0));
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SizedBox(
+          width: 400,
+          height: 600,
+          child: PagedReaderView(controller: c, appearance: appearance()),
+        ),
+      ),
+    );
+
+    var previousStart = c.currentPage!.startCharacterOffset;
+    var turns = 0;
+    while (!c.window.atDocumentEnd && turns < 30) {
+      await tester.fling(find.byType(PageView), const Offset(-500, 0), 1200);
+      await tester.pumpAndSettle();
+      final currentStart = c.currentPage!.startCharacterOffset;
+      expect(
+        currentStart,
+        greaterThan(previousStart),
+        reason: '每次真实 PageView swipe 都必须向后推进',
+      );
+      expect(c.window.pageCount, lessThanOrEqualTo(6));
+      previousStart = currentStart;
+      turns++;
+    }
+    expect(turns, greaterThan(8));
+    expect(c.window.atDocumentEnd, isTrue);
+    c.dispose();
+  });
+
+  testWidgets('2b. tail edge fallback generates the missing next item', (
+    tester,
+  ) async {
+    final doc = NormalizedDocument(
+      text: _text,
+      normalizedHash: '',
+      normalizationVersion: 'v1',
+      parserVersion: '1',
+      indexFormatVersion: '1',
+      sourceFileName: 't.txt',
+    );
+    final c = PagedReaderController(
+      collectionId: 'c1',
+      document: doc,
+      progressRepository: progressRepo,
+      blockIndex: ReaderBlockIndex.build(text: _text, targetBlockSize: 6144),
+      style: _style,
+      width: 400,
+      height: 600,
+      previousWindowPages: 0,
+      nextWindowPages: 0,
+    );
+    c.open(const ReaderLocator(collectionId: 'c1', absoluteCharacterOffset: 0));
+    expect(c.window.pageCount, 1);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SizedBox(
+          width: 400,
+          height: 600,
+          child: PagedReaderView(controller: c, appearance: appearance()),
+        ),
+      ),
+    );
+    await tester.fling(find.byType(PageView), const Offset(-500, 0), 1200);
+    await tester.pumpAndSettle();
+    expect(c.currentPage!.startCharacterOffset, greaterThan(0));
+    expect(c.confirmedLocator!.absoluteCharacterOffset, greaterThan(0));
+    expect(c.window.pageCount, lessThanOrEqualTo(1));
+    c.dispose();
+  });
+
+  testWidgets('2c. head edge fallback generates the missing previous item', (
+    tester,
+  ) async {
+    final c = makeController(previousWindowPages: 0, nextWindowPages: 0);
+    c.open(
+      const ReaderLocator(collectionId: 'c1', absoluteCharacterOffset: 5000),
+    );
+    final start = c.currentPage!.startCharacterOffset;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SizedBox(
+          width: 400,
+          height: 600,
+          child: PagedReaderView(controller: c, appearance: appearance()),
+        ),
+      ),
+    );
+    await tester.fling(find.byType(PageView), const Offset(500, 0), 1200);
+    await tester.pumpAndSettle();
+    expect(c.currentPage!.startCharacterOffset, lessThan(start));
+    expect(c.confirmedLocator!.absoluteCharacterOffset, lessThan(start));
     c.dispose();
   });
 

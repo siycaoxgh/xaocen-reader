@@ -49,6 +49,11 @@ class _PagedReaderViewState extends State<PagedReaderView> {
   final FocusNode _focusNode = FocusNode();
   final InputBinding _inputBinding = InputBinding.defaults;
   DateTime? _lastWheelTurn;
+  bool _userGestureActive = false;
+  int? _gestureWindowGeneration;
+  int? _programmaticTargetIndex;
+  int? _edgeFallbackGeneration;
+  Offset? _pointerDownPosition;
 
   static const _wheelThrottle = Duration(milliseconds: 140);
 
@@ -79,6 +84,7 @@ class _PagedReaderViewState extends State<PagedReaderView> {
     final shown = _pageController.page?.round();
     final target = win.currentIndex;
     if (shown != null && shown != target) {
+      _programmaticTargetIndex = target;
       _pageController.jumpToPage(target);
     }
   }
@@ -92,37 +98,98 @@ class _PagedReaderViewState extends State<PagedReaderView> {
   /// PageView 完成一页切换（用户滑动 settle）。
   void _onPageChanged(int rawIndex) {
     final win = widget.controller.window;
-    // attach/重建的 initialPage 回调 rawIndex == currentIndex：当前页未变，忽略。
-    // 用户滑动后 rawIndex != currentIndex → 真实翻页，处理。
-    if (rawIndex == win.currentIndex) return;
-    final page = win.pageAt(rawIndex);
-    if (page == null) return;
-
-    // 边界扩展：当前页在窗口边界且仍有内容时，同步生成相邻页。
-    var index = rawIndex;
-    if (rawIndex == win.pageCount - 1 &&
-        !widget.controller.engine.isDocumentEnd(page.endCharacterOffset)) {
-      final next = widget.controller.engine.layoutForwardPage(
-        page.endCharacterOffset,
-      );
-      if (next != null) win.extendTail(next);
-    } else if (rawIndex == 0 && page.startCharacterOffset > 0) {
-      final prev = widget.controller.engine.layoutPreviousPage(
-        page.startCharacterOffset,
-      );
-      if (prev != null) {
-        win.extendHead(prev);
-        index = rawIndex + 1; // 头部加页后，原页索引后移
-      }
+    if (_programmaticTargetIndex == rawIndex) {
+      _programmaticTargetIndex = null;
+      return;
     }
-
-    win.select(index);
-    // §十九：settle 后更新 confirmed + 防抖保存（只拖动一半不保存）。
-    widget.controller.onPageSettled(win.current!);
-    // select 可能触发窗口收缩（trim 删头部页、currentIndex 变化）：
-    // 跟随窗口 currentIndex，保持显示页 = 用户所在页（防 itemCount 缩水越界）。
+    if (!_userGestureActive && _programmaticTargetIndex != null) return;
+    final gestureWindowGeneration = _gestureWindowGeneration;
+    if (gestureWindowGeneration != null &&
+        gestureWindowGeneration != win.windowGeneration) {
+      return;
+    }
+    if (rawIndex == win.currentIndex) return;
+    final generation = widget.controller.layoutGeneration;
+    if (!widget.controller.settleGestureAtWindowIndex(
+      rawIndex,
+      generation: generation,
+    )) {
+      return;
+    }
     _followWindow();
     if (mounted) setState(() {});
+  }
+
+  bool _onScrollNotification(ScrollNotification notification) {
+    if (notification is ScrollStartNotification &&
+        notification.dragDetails != null) {
+      _userGestureActive = true;
+      _programmaticTargetIndex = null;
+      _gestureWindowGeneration = widget.controller.window.windowGeneration;
+      _edgeFallbackGeneration = null;
+    } else if (notification is OverscrollNotification && _userGestureActive) {
+      final metrics = notification.metrics;
+      final atEnd = metrics.pixels >= metrics.maxScrollExtent;
+      final atStart = metrics.pixels <= metrics.minScrollExtent;
+      if (atEnd) {
+        _fallbackAtEdge(forward: true);
+      } else if (atStart) {
+        _fallbackAtEdge(forward: false);
+      }
+    } else if (notification is ScrollEndNotification) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _userGestureActive = false;
+        _gestureWindowGeneration = null;
+      });
+    }
+    return false;
+  }
+
+  void _fallbackAtEdge({required bool forward}) {
+    final generation = widget.controller.layoutGeneration;
+    if (_edgeFallbackGeneration == generation) return;
+    final result = forward
+        ? widget.controller.nextPage()
+        : widget.controller.previousPage();
+    if (result != PageTurnResult.ok) return;
+    _edgeFallbackGeneration = generation;
+    _followWindow();
+    if (mounted) setState(() {});
+  }
+
+  void _onPointerDown(PointerDownEvent event) {
+    _pointerDownPosition = event.position;
+    _userGestureActive = true;
+    _gestureWindowGeneration = widget.controller.window.windowGeneration;
+    _edgeFallbackGeneration = null;
+  }
+
+  void _onPointerUp(PointerUpEvent event) {
+    final start = _pointerDownPosition;
+    if (start != null && _userGestureActive) {
+      final deltaX = event.position.dx - start.dx;
+      if (deltaX.abs() >= 24) {
+        final win = widget.controller.window;
+        if (deltaX < 0 &&
+            win.currentIndex >= win.pageCount - 1 &&
+            win.tailHasPotentialNext) {
+          _fallbackAtEdge(forward: true);
+        } else if (deltaX > 0 &&
+            win.currentIndex <= 0 &&
+            !win.atDocumentStart) {
+          _fallbackAtEdge(forward: false);
+        }
+      }
+    }
+    _pointerDownPosition = null;
+    _userGestureActive = false;
+    _gestureWindowGeneration = null;
+  }
+
+  void _onPointerCancel(PointerCancelEvent event) {
+    _pointerDownPosition = null;
+    _userGestureActive = false;
+    _gestureWindowGeneration = null;
   }
 
   /// Windows 键盘翻页（§二十二）。
@@ -251,53 +318,59 @@ class _PagedReaderViewState extends State<PagedReaderView> {
     ReaderResolvedAppearance appearance,
   ) {
     return Listener(
+      onPointerDown: _onPointerDown,
+      onPointerUp: _onPointerUp,
+      onPointerCancel: _onPointerCancel,
       onPointerSignal: _onPointerSignal,
       child: Focus(
         focusNode: _focusNode,
         autofocus: true,
         onKeyEvent: _onKeyEvent,
-        child: PageView.builder(
-          controller: _pageController,
-          itemCount: win.pageCount,
-          onPageChanged: _onPageChanged,
-          itemBuilder: (context, i) {
-            final page = win.pageAt(i);
-            if (page == null) return const SizedBox.shrink();
-            final text = doc.text.substring(
-              page.startCharacterOffset,
-              page.endCharacterOffset,
-            );
-            return ColoredBox(
-              color: appearance.backgroundColor,
-              child: Padding(
-                padding: EdgeInsets.fromLTRB(
-                  widget.controller.paddingLeft,
-                  widget.controller.paddingTop,
-                  widget.controller.paddingRight,
-                  widget.controller.paddingBottom,
-                ),
-                child: Align(
-                  alignment: Alignment.topLeft,
-                  child: ReaderTextBlock(
-                    text: text,
-                    style: appearance.baseTextStyle,
-                    paragraphSpacing: widget.controller.paragraphSpacing,
-                    firstLineIndent: widget.controller.firstLineIndent,
-                    startsAtParagraphBoundary:
-                        page.startCharacterOffset == 0 ||
-                        widget.controller.document.text.codeUnitAt(
-                              page.startCharacterOffset - 1,
-                            ) ==
-                            0x0A,
-                    styleVersion: appearance.textColor.toARGB32(),
-                    textDirection: TextDirection.ltr,
-                    // §八：显示与测量同一宽度（引擎 contentWidth）。
-                    maxWidth: widget.controller.engine.contentWidth,
+        child: NotificationListener<ScrollNotification>(
+          onNotification: _onScrollNotification,
+          child: PageView.builder(
+            controller: _pageController,
+            itemCount: win.pageCount,
+            onPageChanged: _onPageChanged,
+            itemBuilder: (context, i) {
+              final page = win.pageAt(i);
+              if (page == null) return const SizedBox.shrink();
+              final text = doc.text.substring(
+                page.startCharacterOffset,
+                page.endCharacterOffset,
+              );
+              return ColoredBox(
+                color: appearance.backgroundColor,
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    widget.controller.paddingLeft,
+                    widget.controller.paddingTop,
+                    widget.controller.paddingRight,
+                    widget.controller.paddingBottom,
+                  ),
+                  child: Align(
+                    alignment: Alignment.topLeft,
+                    child: ReaderTextBlock(
+                      text: text,
+                      style: appearance.baseTextStyle,
+                      paragraphSpacing: widget.controller.paragraphSpacing,
+                      firstLineIndent: widget.controller.firstLineIndent,
+                      startsAtParagraphBoundary:
+                          page.startCharacterOffset == 0 ||
+                          widget.controller.document.text.codeUnitAt(
+                                page.startCharacterOffset - 1,
+                              ) ==
+                              0x0A,
+                      styleVersion: appearance.textColor.toARGB32(),
+                      textDirection: TextDirection.ltr,
+                      // §八：显示与测量同一宽度（引擎 contentWidth）。
+                      maxWidth: widget.controller.engine.contentWidth,
+                    ),
                   ),
                 ),
-              ),
-            );
-          },
+              );
+            },
+          ),
         ),
       ),
     );

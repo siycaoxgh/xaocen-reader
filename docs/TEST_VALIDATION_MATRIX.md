@@ -26,6 +26,25 @@
 | Drift schema | 6, unchanged |
 | Android real device | Not run in this coding pass |
 
+## M5.3.1.1 — Paged Reader gesture window-tail fix (2026-08-10)
+
+| Validation | Result |
+|---|---|
+| Controller-owned ensure/prefetch/settle path | PASS |
+| True PageView continuous swipe across window tail | PASS (widget: 30-page progression) |
+| One-item edge fallback generates the missing page | PASS |
+| Window boundedness | PASS (steady state <= 6 pages) |
+| No-chapter and chaptered pagination continuity | PASS |
+| EOF distinction (tail != document end) | PASS |
+| Generation/rebase/stale callback guards | PASS |
+| Gesture/volume/keyboard shared page-turn contract | PASS |
+| Full unit/contract/widget | 419/419 PASS |
+| Windows integration | 10 files / 13 scenarios PASS |
+| Four real TXT corpus / logical error | PASS / 0 |
+| Windows Release / Android Debug | PASS / PASS |
+| Drift schema | 6, unchanged |
+| Android targeted device test | NOT-RUN in this coding pass |
+
 ## A. 自动测试（当前全绿）
 
 **单元 + Widget：382 项**（`flutter test`，Windows VM）：

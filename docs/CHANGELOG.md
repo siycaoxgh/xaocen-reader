@@ -23,6 +23,18 @@ Legend for validation columns:
   13 scenarios, four real TXT logical-error-zero checks, Windows Release, and
   Android Debug PASS.
 
+## M5.3.1.1 — paged gesture window-tail fix (2026-08-10)
+
+- Centralized bounded page availability, prefetch, and settle in
+  `PagedReaderController`; `PagedReaderView` no longer calls the layout engine
+  directly.
+- Added non-EOF edge fallback for touch gestures, generation/window guards for
+  stale callbacks, and bounded prev2/current/next3 maintenance.
+- ReaderLocator, chapter-first-page policy, logical continuity, and Drift
+  schema 6 are unchanged. Validation: 419 automated tests, Windows integration
+  PASS, four real TXT logical-error checks PASS (0), Windows Release and
+  Android Debug build PASS. Android targeted ADB was not run in this pass.
+
 ## M5.3 final contract closure (2026-08-10)
 
 Android volume configuration is now physical-input-centric and limited to

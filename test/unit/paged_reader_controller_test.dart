@@ -214,6 +214,31 @@ void main() {
       c.dispose();
     });
 
+    test('ensureNextPageAvailable keeps tail separate from document EOF', () {
+      final c = makeController(text: 'a' * 5000);
+      c.open(
+        const ReaderLocator(collectionId: 'c1', absoluteCharacterOffset: 0),
+      );
+      final generation = c.layoutGeneration;
+      final initialWindow = c.window.pageCount;
+      expect(c.window.tailHasPotentialNext, isTrue);
+      expect(
+        c.ensureNextPageAvailable(minimumAhead: 1, generation: generation),
+        isTrue,
+      );
+      expect(c.window.pageCount, lessThanOrEqualTo(6));
+      expect(c.window.tailHasPotentialNext, isTrue);
+      expect(c.window.pageCount, greaterThanOrEqualTo(initialWindow));
+
+      c.relayout(width: 110, height: 100, style: _style);
+      expect(
+        c.ensureNextPageAvailable(minimumAhead: 1, generation: generation),
+        isFalse,
+        reason: '旧 pagination generation 不能向新窗口 append',
+      );
+      c.dispose();
+    });
+
     test('previousPage：窗口向前扩展', () {
       final c = makeController();
       c.open(

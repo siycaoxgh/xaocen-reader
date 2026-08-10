@@ -649,3 +649,26 @@ requires visible/page confirmation, and flushes only the current generation.
 Mode/metrics/lifecycle/dispose transitions invalidate pending chapter operations.
 No chapter index, page index, scroll pixel, percentage, or chapter ratio is
 persisted.
+
+## M5.3.1.1 bounded paged gesture window
+
+`PageWindow` tail is not document EOF. `PagedReaderController` is the single
+owner of page availability and settle operations for touch, keyboard, volume,
+and future automatic navigation. `ensureNextPageAvailable` and
+`ensurePreviousPageAvailable` maintain the bounded prev2/current/next3 window;
+they append only while the tail/head still has document content and trim after
+selection. `PagedReaderView` never calls the layout engine directly.
+
+PageView gesture callbacks are validated against the active layout generation,
+window generation, current bounds, and pending programmatic target. A real
+pointer attempt at a non-EOF edge uses the same Controller page-turn fallback,
+so a missing child cannot permanently disable forward/backward swipes. Open,
+locator jumps, metrics relayout, resize/orientation rebuilds, and dispose all
+invalidate the layout generation. Old callbacks cannot append to or overwrite a
+new window.
+
+The page window remains bounded at the normal six-page steady state. Page and
+scroll indices remain transient; `ReaderLocator.absoluteCharacterOffset` is
+still the only persisted position source. Chapter-first-page policy and
+`previous.endOffset == next.startOffset` continuity are unchanged. Schema stays
+6. Paged chapter page metrics and automatic reading remain deferred.

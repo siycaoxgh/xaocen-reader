@@ -17,6 +17,7 @@
 library;
 
 import 'dart:async';
+import 'dart:math' as math;
 
 import '../domain/reader/reader_progress_state.dart';
 import '../domain/reader/reading_mode.dart';
@@ -118,6 +119,11 @@ class PagedReaderController extends ChangeNotifier {
   NormalizedDocument get document => _document;
   ReaderBlockIndex get blockIndex => _blockIndex;
 
+  /// Identity of the active pagination layout. Stale view callbacks from a
+  /// previous reset/relayout/jump must be ignored.
+  int _layoutGeneration = 0;
+  int get layoutGeneration => _layoutGeneration;
+
   bool _disposed = false;
   int _writeFreezeDepth = 0;
 
@@ -149,12 +155,13 @@ class PagedReaderController extends ChangeNotifier {
   /// PageView 需要窗口内有可滑动页）。
   PagedTextRange open(ReaderLocator anchor) {
     _generation++;
+    _layoutGeneration++;
     final page = _engine.pageContaining(
       anchor.absoluteCharacterOffset,
       blockIndex: _blockIndex,
     )!;
     _window.reset(page, docLength: _document.text.length);
-    _prefillWindow();
+    _prefillWindow(generation: _layoutGeneration);
     // 程序化打开：confirmed = 精确 anchor（§十七，不覆盖为 page.start）。
     // 零写入：模式切换本身不改变阅读位置（§十八）。
     _confirmedLocator = anchor;
@@ -165,31 +172,79 @@ class PagedReaderController extends ChangeNotifier {
 
   /// 窗口预填：current 前后各预生成 previous/nextWindowPages 页，
   /// 使 PageView 有可滑动页（§九：有限前后页面，非全文预分页）。
-  void _prefillWindow() {
-    // 向后预生成 next 页。
-    var p = _window.current;
-    for (var i = 0; p != null && i < nextWindowPages; i++) {
-      if (_engine.isDocumentEnd(p.endCharacterOffset)) break;
-      final next = _engine.layoutForwardPage(p.endCharacterOffset);
-      if (next == null) break;
-      _window.extendTail(next);
-      p = next;
-    }
-    // 向前预生成 prev 页（extendHead 会移动 currentIndex，但 current 页不变）。
-    var q = _window.current;
-    for (var i = 0; q != null && i < previousWindowPages; i++) {
-      if (q.startCharacterOffset <= 0) break;
-      final prev = _engine.layoutPreviousPage(q.startCharacterOffset);
-      if (prev == null) break;
-      _window.extendHead(prev);
-      q = prev;
-    }
+  void _prefillWindow({required int generation}) {
+    ensureNextPageAvailable(
+      minimumAhead: nextWindowPages,
+      generation: generation,
+    );
+    ensurePreviousPageAvailable(
+      minimumBehind: previousWindowPages,
+      generation: generation,
+    );
   }
 
   /// 目录 / 卷跳转（§二十四/§二十五）：
   /// pageContaining(target) → 显示；confirmed = **精确 target**。
+  bool _isCurrentGeneration(int? generation) {
+    return !_disposed &&
+        (generation == null || generation == _layoutGeneration);
+  }
+
+  bool ensureNextPageAvailable({int minimumAhead = 1, int? generation}) {
+    if (!_isCurrentGeneration(generation)) return false;
+    final requiredAhead = math.max(0, minimumAhead);
+    var changed = false;
+    while (_window.aheadCount < requiredAhead && _window.tailHasPotentialNext) {
+      final tail = _window.pages.last;
+      final next = _engine.layoutForwardPage(tail.endCharacterOffset);
+      if (next == null) break;
+      _window.extendTail(next);
+      changed = true;
+    }
+    return changed || _window.aheadCount >= requiredAhead;
+  }
+
+  bool ensurePreviousPageAvailable({int minimumBehind = 1, int? generation}) {
+    if (!_isCurrentGeneration(generation)) return false;
+    final requiredBehind = math.max(0, minimumBehind);
+    var changed = false;
+    while (_window.behindCount < requiredBehind && !_window.atDocumentStart) {
+      final head = _window.pages.first;
+      final previous = _engine.layoutPreviousPage(head.startCharacterOffset);
+      if (previous == null) break;
+      _window.extendHead(previous);
+      changed = true;
+    }
+    return changed || _window.behindCount >= requiredBehind;
+  }
+
+  void _prefetchAround({required int generation}) {
+    ensureNextPageAvailable(
+      minimumAhead: nextWindowPages,
+      generation: generation,
+    );
+    ensurePreviousPageAvailable(
+      minimumBehind: previousWindowPages,
+      generation: generation,
+    );
+  }
+
+  bool settleGestureAtWindowIndex(int rawIndex, {int? generation}) {
+    if (!_isCurrentGeneration(generation)) return false;
+    if (rawIndex < 0 || rawIndex >= _window.pageCount) return false;
+    if (rawIndex == _window.currentIndex) return false;
+    _window.select(rawIndex);
+    final page = _window.current;
+    if (page == null) return false;
+    onPageSettled(page);
+    _prefetchAround(generation: _layoutGeneration);
+    notifyListeners();
+    return true;
+  }
+
   PagedTextRange jumpToOffset(int offset, {String? itemIdHint}) {
     _generation++;
+    _layoutGeneration++;
     _debounce?.cancel();
     final clamped = clampLocatorOffset(
       requested: offset,
@@ -206,7 +261,7 @@ class PagedReaderController extends ChangeNotifier {
       blockIndex: _blockIndex,
     )!;
     _window.reset(page, docLength: _document.text.length);
-    _prefillWindow();
+    _prefillWindow(generation: _layoutGeneration);
     // §二十四：目录明确跳转完成后 confirmed 保持精确 target，
     // 立即防抖保存（明确用户操作）；只有用户之后主动翻页才使用 page.start。
     _confirmedLocator = target;
@@ -221,32 +276,40 @@ class PagedReaderController extends ChangeNotifier {
   /// 下一页（用户操作）。窗口扩展 + settle 后 confirmed = 新页 page.start。
   PageTurnResult nextPage() {
     final c = _window.current;
-    if (c == null || _window.atDocumentEnd) {
+    if (c == null) {
       return PageTurnResult.endReached;
     }
-    final next = _engine.layoutForwardPage(c.endCharacterOffset);
-    if (next == null) {
+    if (!ensureNextPageAvailable(generation: _layoutGeneration)) {
       return PageTurnResult.endReached;
     }
-    _window.extendTail(next);
-    _window.select(_window.pageCount - 1); // 新页成为当前 + trim
+    final nextIndex = _window.currentIndex + 1;
+    if (nextIndex >= _window.pageCount) return PageTurnResult.endReached;
+    _window.select(nextIndex);
+    final next = _window.current;
+    if (next == null) return PageTurnResult.endReached;
     onPageSettled(next);
+    _prefetchAround(generation: _layoutGeneration);
+    notifyListeners();
     return PageTurnResult.ok;
   }
 
   /// 上一页（用户操作）。
   PageTurnResult previousPage() {
     final c = _window.current;
-    if (c == null || _window.atDocumentStart) {
+    if (c == null) {
       return PageTurnResult.startReached;
     }
-    final prev = _engine.layoutPreviousPage(c.startCharacterOffset);
-    if (prev == null) {
+    if (!ensurePreviousPageAvailable(generation: _layoutGeneration)) {
       return PageTurnResult.startReached;
     }
-    _window.extendHead(prev);
-    _window.select(0); // 新页成为当前 + trim
+    final previousIndex = _window.currentIndex - 1;
+    if (previousIndex < 0) return PageTurnResult.startReached;
+    _window.select(previousIndex);
+    final prev = _window.current;
+    if (prev == null) return PageTurnResult.startReached;
     onPageSettled(prev);
+    _prefetchAround(generation: _layoutGeneration);
+    notifyListeners();
     return PageTurnResult.ok;
   }
 
@@ -334,6 +397,7 @@ class PagedReaderController extends ChangeNotifier {
     if (locator == null) return false;
 
     _generation++;
+    _layoutGeneration++;
     _debounce?.cancel();
     _width = width;
     _height = height;
@@ -354,7 +418,7 @@ class PagedReaderController extends ChangeNotifier {
       blockIndex: _blockIndex,
     )!;
     _window.reset(page, docLength: _document.text.length);
-    _prefillWindow();
+    _prefillWindow(generation: _layoutGeneration);
     // §三十一：resize 是程序化重建，confirmed 保持 locator。
     _confirmedLocator = locator;
     notifyListeners();
@@ -418,6 +482,7 @@ class PagedReaderController extends ChangeNotifier {
     if (locator == null) return false;
 
     _generation++;
+    _layoutGeneration++;
     _debounce?.cancel();
     _width = width;
     _height = height;
@@ -438,7 +503,7 @@ class PagedReaderController extends ChangeNotifier {
       blockIndex: _blockIndex,
     )!;
     _window.reset(page, docLength: _document.text.length);
-    _prefillWindow();
+    _prefillWindow(generation: _layoutGeneration);
     _confirmedLocator = locator;
     return true;
   }
@@ -509,6 +574,7 @@ class PagedReaderController extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
+    _layoutGeneration++;
     _debounce?.cancel();
     _engine.dispose();
     super.dispose();

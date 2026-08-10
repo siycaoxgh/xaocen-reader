@@ -7,6 +7,14 @@
 
 ## Current open issues
 
+## M5.3.1.1 status (2026-08-10)
+
+- The reproducible Android paged-swipe stall at a bounded PageWindow tail is
+  resolved. PageWindow tail is no longer treated as document EOF; Controller
+  prefetch and pointer-edge fallback now share the volume/keyboard page-turn
+  path. Regression coverage passes with logical error 0.
+- Android targeted ADB verification was not repeated in this coding pass.
+
 ## M5.3.1 status (2026-08-10)
 
 - No new Reader P1/P2 issue was found. Vertical chapter percentage is now
