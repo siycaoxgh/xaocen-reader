@@ -802,3 +802,14 @@ fallback, so unsupported legacy commands must be normalized by the typed
 repository before reaching UI or host routing. This avoids presenting a binding
 that is persisted yet ineffective in vertical Reader, while keeping Windows'
 full command vocabulary intact.
+
+## M5.3.1 lesson (2026-08-10)
+
+### Keep dynamic Android test dependencies deterministic
+
+The Flutter `integration_test` Android plugin currently requests
+`androidx.test:runner:1.2+`. When Maven metadata cannot be reached, the normal
+application APK build can fail even though the app sources compile. The
+project-level Gradle resolution rule pins that known test-only dependency to
+the cached 1.3.0 artifact; this does not alter the production app dependency
+graph or Reader runtime contracts.

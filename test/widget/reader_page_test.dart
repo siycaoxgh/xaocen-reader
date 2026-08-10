@@ -590,7 +590,11 @@ void main() {
       tester,
     ) async {
       await pumpReader(tester);
-      expect(find.textContaining('0%'), findsOneWidget);
+      // The vertical chrome now labels chapter and whole-book progress
+      // separately; assert the existing whole-book contract explicitly.
+      expect(find.textContaining('第1章'), findsOneWidget);
+      expect(find.text('本章 0%'), findsOneWidget);
+      expect(find.text('全书 0%'), findsOneWidget);
       expect(await progressRepo.getProgress('local-txt:abc'), isNull);
     });
 

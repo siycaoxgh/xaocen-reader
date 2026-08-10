@@ -46,6 +46,7 @@ class ReaderSearchService {
               CurrentChapterResolver.resolve(
                     result.startOffset,
                     toc,
+                    normalizedLength: text.length,
                   )?.displayTitle ??
                   '全文',
             ),

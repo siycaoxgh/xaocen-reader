@@ -8,6 +8,24 @@
 
 ---
 
+## M5.3.1 — ChapterBoundaryResolver / vertical chapter progress (2026-08-10)
+
+| Validation | Result |
+|---|---|
+| Shared chapter-only boundary normalization | PASS |
+| Invalid offsets, duplicate starts, volumes, malformed TOC | PASS |
+| Chapter start/next start/last chapter/zero-length handling | PASS |
+| UTF-16 surrogate-pair offsets | PASS |
+| No-chapter `全文` behavior | PASS |
+| Vertical chapter + whole-book progress labels | PASS |
+| Locator/persistence side effects | PASS, none |
+| Unit/contract/widget | 415/415 PASS |
+| Windows integration | 10 files / 13 scenarios PASS |
+| Four real TXT corpus / logical error | PASS / 0 |
+| Windows Release / Android Debug | PASS / PASS |
+| Drift schema | 6, unchanged |
+| Android real device | Not run in this coding pass |
+
 ## A. 自动测试（当前全绿）
 
 **单元 + Widget：382 项**（`flutter test`，Windows VM）：

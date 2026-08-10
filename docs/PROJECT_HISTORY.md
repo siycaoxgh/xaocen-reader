@@ -594,3 +594,19 @@ position is persisted.
 Final validation passed 410 automated tests, 10 integration files / 13
 scenarios, all four real TXT logical-error-zero checks, Windows Release, and
 Android Debug. Targeted Android ADB was not run because no device was connected.
+
+## M5.3.1 — ChapterBoundaryResolver and vertical chapter progress (2026-08-10)
+
+The Reader now has one shared, defensive chapter-boundary normalizer. It uses
+only real chapter entries, normalizes valid UTF-16 offsets, ignores volumes and
+malformed rows, and deterministically keeps the first source-order entry when
+chapter starts collide. Current chapter and search resolution use this boundary
+contract.
+
+Vertical Reader chrome derives chapter percentage from the confirmed Locator
+and displays it alongside the existing whole-book percentage. The percentage
+is transient display state; ReaderLocator and reading progress remain unchanged.
+No-chapter TXT keeps the `全文` presentation. Paged chapter page metrics and
+automatic reading remain deferred. Schema remains 6. Validation passed 415
+automated tests, 10 integration files / 13 scenarios, all four real TXT files
+with logical error 0, Windows Release, and Android Debug.

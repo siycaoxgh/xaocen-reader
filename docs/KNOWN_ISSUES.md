@@ -7,6 +7,14 @@
 
 ## Current open issues
 
+## M5.3.1 status (2026-08-10)
+
+- No new Reader P1/P2 issue was found. Vertical chapter percentage is now
+  available as transient derived UI state; paged chapter page totals remain
+  intentionally deferred.
+- Android real-device validation was not repeated in this coding pass. The
+  Android Debug artifact builds successfully.
+
 ## M5.2a status (2026-08-09)
 
 - No new Reader P1/P2 issue was found in the M5.2a persistence foundation.

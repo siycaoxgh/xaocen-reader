@@ -6,6 +6,22 @@
 
 ---
 
+## M5.3.1 chapter boundary and vertical progress contract
+
+`ChapterBoundaryResolver` is the shared chapter interval source for Reader
+chapter display and current-chapter resolution. It accepts TOC entries plus
+the normalized document UTF-16 length, keeps only `kind == chapter`, filters
+invalid offsets, sorts by start offset, and keeps the first source-order entry
+for duplicates. A boundary ends at the next chapter start or document length;
+volumes never define a boundary.
+
+`CurrentChapterProgressResolver` derives a clamped transient fraction from the
+confirmed `ReaderLocator` and the active boundary. It is display-only and must
+not be persisted or used as a restore anchor. Vertical Reader chrome shows
+chapter title/number, chapter percentage, and the existing whole-book
+percentage. No-chapter documents show `全文`; paged layout and schema 6 are
+unchanged.
+
 ## 1. Runtime content chain
 
 ```

@@ -12,6 +12,17 @@ Legend for validation columns:
 
 ---
 
+## M5.3.1 — vertical chapter progress (2026-08-10)
+
+- Added a shared UTF-16 `ChapterBoundaryResolver` with deterministic
+  duplicate/malformed TOC handling and volume exclusion.
+- Added transient current-chapter percentage derivation and vertical Reader
+  chrome labels for chapter progress and whole-book progress.
+- No position persistence, pagination policy, or Drift schema changes; schema
+  remains 6. Validation: 415 automated tests, 10 Windows integration files /
+  13 scenarios, four real TXT logical-error-zero checks, Windows Release, and
+  Android Debug PASS.
+
 ## M5.3 final contract closure (2026-08-10)
 
 Android volume configuration is now physical-input-centric and limited to

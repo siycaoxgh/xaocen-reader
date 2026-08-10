@@ -574,7 +574,7 @@ void main() {
                   collectionId: 'local-txt:abc',
                   itemId: null,
                   parentId: null,
-                  kind: 'chapter',
+                  kind: 'whole',
                   level: 1,
                   title: '全文',
                   displayTitle: '全文',

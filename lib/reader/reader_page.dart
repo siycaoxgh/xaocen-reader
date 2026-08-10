@@ -24,7 +24,8 @@ import '../data/repositories/reader_preferences_repository.dart';
 import '../data/repositories/reader_input_bindings_repository.dart';
 import '../data/repositories/reading_history_repository.dart';
 import '../data/repositories/reading_session_repository.dart';
-import '../domain/library/current_chapter_resolver.dart';
+import '../domain/library/chapter_boundary_resolver.dart';
+import '../domain/library/current_chapter_progress_resolver.dart';
 import '../domain/library/library_entities.dart';
 import '../domain/library/toc_index.dart';
 import '../domain/reader/reader_bookmark.dart';
@@ -1478,6 +1479,8 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
             title: widget.launch.collection.title,
             mode: _mode,
             currentChapterTitle: _currentChapterTitle,
+            currentChapterNumber: _currentChapterBoundary?.chapterNumber,
+            chapterProgressPercent: _chapterProgressPercent,
             progressPercent: _progressPercent,
             onBack: () => Navigator.of(context).pop(),
             onToc: () {
@@ -1647,16 +1650,38 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
       ? _pagedController?.confirmedLocator
       : _controller.confirmedLocator;
 
+  CurrentChapterBoundary? _currentChapterBoundaryForOffset(int offset) =>
+      ChapterBoundaryResolver.resolve(
+        locatorOffset: offset,
+        toc: widget.launch.toc,
+        normalizedLength: widget.launch.normalizedCharacterLength,
+      );
+
+  CurrentChapterBoundary? get _currentChapterBoundary {
+    final offset = _activeConfirmedLocator?.absoluteCharacterOffset;
+    return offset == null ? null : _currentChapterBoundaryForOffset(offset);
+  }
+
   LibraryTocEntry? _currentChapterForOffset(int offset) =>
-      CurrentChapterResolver.resolve(offset, widget.launch.toc);
+      _currentChapterBoundaryForOffset(offset)?.chapter;
 
   List<LibraryTocEntry> get _readerChapters =>
       widget.launch.toc.where((entry) => entry.kind == 'chapter').toList();
 
   String? get _currentChapterTitle {
-    final offset = _activeConfirmedLocator?.absoluteCharacterOffset;
-    if (offset == null) return null;
-    return _currentChapterForOffset(offset)?.displayTitle ?? '全文';
+    if (_activeConfirmedLocator == null) return null;
+    final boundary = _currentChapterBoundary;
+    return boundary?.chapter.displayTitle ?? '全文';
+  }
+
+  double? get _chapterProgressPercent {
+    final locator = _activeConfirmedLocator;
+    if (locator == null || _mode != ReaderMode.vertical) return null;
+    return CurrentChapterProgressResolver.resolve(
+      locator: locator,
+      toc: widget.launch.toc,
+      normalizedLength: widget.launch.normalizedCharacterLength,
+    )?.progress;
   }
 
   double? get _progressPercent {

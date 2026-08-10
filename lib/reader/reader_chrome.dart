@@ -48,6 +48,8 @@ class ReaderChrome extends StatelessWidget {
     required this.onSearch,
     required this.onModeSelected,
     this.currentChapterTitle,
+    this.currentChapterNumber,
+    this.chapterProgressPercent,
     this.progressPercent,
   });
 
@@ -62,6 +64,8 @@ class ReaderChrome extends StatelessWidget {
   final VoidCallback onSearch;
   final ValueChanged<ReaderMode> onModeSelected;
   final String? currentChapterTitle;
+  final int? currentChapterNumber;
+  final double? chapterProgressPercent;
   final double? progressPercent;
 
   @override
@@ -81,7 +85,10 @@ class ReaderChrome extends StatelessWidget {
                 bottom: false,
                 child: Container(
                   key: readerTopChromeKey,
-                  height: 60,
+                  // Vertical mode shows a second line for chapter and book
+                  // progress, so reserve enough room for the extra row while
+                  // keeping the paged chrome at its existing height.
+                  height: mode == ReaderMode.vertical ? 78 : 60,
                   padding: EdgeInsets.symmetric(horizontal: isDesktop ? 20 : 8),
                   decoration: BoxDecoration(
                     color: colorScheme.surface.withValues(alpha: 0.96),
@@ -113,8 +120,49 @@ class ReaderChrome extends StatelessWidget {
                               style: Theme.of(context).textTheme.labelSmall
                                   ?.copyWith(color: colorScheme.primary),
                             ),
-                            if (currentChapterTitle != null ||
-                                progressPercent != null)
+                            if (mode == ReaderMode.vertical &&
+                                (currentChapterTitle != null ||
+                                    progressPercent != null)) ...[
+                              Text(
+                                currentChapterNumber == null
+                                    ? (currentChapterTitle ?? '全文')
+                                    : '第$currentChapterNumber章  ${currentChapterTitle ?? ''}',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context).textTheme.labelSmall
+                                    ?.copyWith(
+                                      color: colorScheme.onSurfaceVariant,
+                                    ),
+                              ),
+                              const SizedBox(height: 2),
+                              Row(
+                                children: [
+                                  if (chapterProgressPercent != null)
+                                    Text(
+                                      '本章 ${(chapterProgressPercent! * 100).round()}%',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .labelSmall
+                                          ?.copyWith(
+                                            color: colorScheme.onSurfaceVariant,
+                                          ),
+                                    ),
+                                  const Spacer(),
+                                  if (progressPercent != null)
+                                    Text(
+                                      '全书 ${(progressPercent! * 100).round()}%',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .labelSmall
+                                          ?.copyWith(
+                                            color: colorScheme.onSurfaceVariant,
+                                          ),
+                                    ),
+                                ],
+                              ),
+                            ] else if (mode == ReaderMode.paged &&
+                                (currentChapterTitle != null ||
+                                    progressPercent != null))
                               Text(
                                 '${currentChapterTitle ?? '全文'} · ${progressPercent == null ? '--' : '${(progressPercent! * 100).round()}%'}',
                                 maxLines: 1,
