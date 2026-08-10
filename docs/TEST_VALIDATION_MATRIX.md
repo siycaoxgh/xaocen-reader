@@ -271,3 +271,20 @@ vertical A → paged → 不翻页 → 重开 = paged + A · vertical A → page
 | ReaderPreferences unaffected; schema remains 6 | PASS |
 | Targeted domain/repository tests | 9/9 PASS |
 | `flutter analyze` / `git diff --check` | PASS |
+
+## M5.3e Reader input settings UI (2026-08-10)
+
+| Validation | Result |
+|---|---|
+| `我的 → 阅读设置 → 按键与操作` route | PASS, Windows/Android platform-aware UI |
+| Current platform supported-input filtering | PASS |
+| Six command groups and current binding display | PASS |
+| Capture overlay consumes first supported input | PASS, existing capture contract |
+| Conflict replace / cancel behavior | PASS, typed repository path |
+| Clear binding persists explicit null | PASS |
+| Reset defaults affects only active platform | PASS |
+| Dark/light/system readability contract | PASS, shared Material theme |
+| Locator / reading_progress / ReaderPreferences / session side effects | PASS, none |
+| Full unit/contract/widget | 396/396 PASS |
+| Windows Release / Android Debug | PASS / PASS |
+| Android real device | NOT-RUN / deferred |

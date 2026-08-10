@@ -46,6 +46,11 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
             icon: const Icon(Icons.history),
             label: const Text('阅读历史'),
           ),
+          TextButton.icon(
+            onPressed: () => Navigator.of(context).pushNamed('/settings'),
+            icon: const Icon(Icons.settings_outlined),
+            label: const Text('我的'),
+          ),
         ],
       ),
       body: Column(

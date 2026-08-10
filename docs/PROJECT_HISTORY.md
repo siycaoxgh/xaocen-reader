@@ -549,3 +549,13 @@ Android MainActivity reports stable volume IDs and gates interception on
 paged/capture state. The first-input capture domain was added without settings
 UI. Schema remains 6. Full automation reached 396 tests; Windows integration
 ran as 10 files / 13 scenarios.
+
+## M5.3e — Reader input settings UI (2026-08-10)
+
+Added the V3 settings route `我的 → 阅读设置 → 按键与操作`. The page renders
+only the current platform's physical inputs under all six Reader commands,
+supports first-input capture, conflict replacement/cancellation, explicit null
+disable, and platform-scoped reset defaults. It reuses the existing typed
+router/repository and leaves Locator, reading progress, ReaderPreferences, and
+ReadingSession untouched. Schema remains 6; analyze and the 396-test suite
+remain green, with Windows Release and Android Debug builds passing.

@@ -577,3 +577,19 @@ After the first confirmed visible/page restore it creates one
 `resume`, and route disposal calls `end`. Locator changes update only the
 display snapshots (`lastChapterTitleSnapshot` / `lastProgressSnapshot`); the
 canonical position remains `reading_progress`.
+
+## M5.3e Reader input settings UI
+
+`LibraryPage` exposes `我的 → 阅读设置 → 按键与操作`. The settings page selects
+the current platform profile and renders only supported `PhysicalInputId` values
+grouped by the six `ReaderCommand` semantics. It consumes the typed
+`ReaderInputBindingsRepository`; storage keys and JSON remain private to that
+repository.
+
+Capture uses the existing `ReaderInputRouter`/`ReaderInputCapture` boundary. The
+first supported keyboard, wheel, or Android volume input is consumed without
+dispatching a Reader action. Conflicts are confirmed before replacing the one
+map entry, clear writes explicit null, and reset deletes only the active
+platform profile so defaults are reconstructed without affecting the other
+platform. Settings, capture, and conflict dialogs do not touch Locator,
+reading progress, ReaderPreferences, or ReadingSession.

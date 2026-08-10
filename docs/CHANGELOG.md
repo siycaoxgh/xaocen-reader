@@ -14,6 +14,16 @@ Legend for validation columns:
 
 ## Unreleased
 
+### M5.3e — Reader input settings UI (2026-08-10)
+- Added `我的 → 阅读设置 → 按键与操作` with responsive Windows/Android
+  layouts and the six current `ReaderCommand` groups.
+- Added first-input capture overlay, supported-input filtering, conflict
+  replace/cancel confirmation, explicit null/clear state, and platform-only
+  reset defaults. All changes use typed `ReaderInputBindingsRepository` and
+  leave Locator/progress/preferences/session state untouched.
+- Validation: 396/396 automated tests, Windows Release PASS, Android Debug
+  PASS; Android real-device validation remains deferred.
+
 ### M5.3c+d — unified Reader input router and capture bridge (2026-08-10)
 - Added `ReaderInputRouter` for profile-driven Windows keyboard/wheel and
   Android volume dispatch to all six Reader commands.

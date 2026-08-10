@@ -142,3 +142,12 @@
   The user's initial human test found no obvious issue; the formal checklist remains
   recorded in `M5_1_FINAL_RESULT.md` for the next available device session.
 - Existing documented limitations outside M5.1 remain unchanged; no M5.2 work began.
+
+## M5.3e status update (2026-08-10)
+
+- Reader input settings UI, supported-input capture, conflict confirmation,
+  explicit null disable, and platform-scoped reset are complete. No new P1/P2
+  issue was found; 396 automated tests remain green.
+- Android real-device validation for the settings page remains NOT-RUN /
+  deferred to the unified device pass. Windows Release and Android Debug builds
+  passed.
