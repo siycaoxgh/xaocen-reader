@@ -693,3 +693,9 @@ not persisted; schema remains 6.
 `toggleAutoRead` 语义命令和 Android keep-awake 宿主能力。面板操作遵守自动
 暂停且不自动恢复合同；ReaderLocator、ReadingSession、Android Volume 合同及
 Drift schema 6 未改变。
+### M5.4e — AutoRead final regression
+
+完成 Vertical/Paged AutoRead 全量回归及全部 4 个真实 TXT 验证，451 个 Flutter
+测试与 11 个 integration 文件（14 场景）通过，logical error = 0。Windows
+Release 与 Android Debug 通过；Android targeted ADB 因设备 offline 延后。M5.4
+正式 COMPLETE。

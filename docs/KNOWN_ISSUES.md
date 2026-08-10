@@ -211,3 +211,9 @@ the remaining Android item is visual device validation only.
   Windows/test hosts currently degrade safely to no-op until a native desktop
   keep-awake adapter is justified.
 - No new ReaderLocator, progress, session, or Android Volume issue was found.
+## M5.4e status update (2026-08-11)
+
+- M5.4 AutoRead final regression is complete. The currently listed Android
+  target was offline, so targeted device actions remain deferred; this does
+  not affect the passing Android Debug build or the completed Windows/Flutter
+  validation.

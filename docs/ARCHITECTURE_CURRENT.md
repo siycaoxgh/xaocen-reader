@@ -782,3 +782,13 @@ chrome visibility alone does not pause. Windows has the semantic
 to its existing page/disabled contract. `ReaderKeepAwake` is a best-effort
 platform abstraction (Android host flag implemented, desktop/test no-op), and
 schema remains 6.
+
+## M5.4e — AutoRead final regression
+
+The complete AutoRead regression passed: vertical Ticker behavior and custom
+speed mapping, paged interval driving through the bounded controller, manual
+pause/lifecycle/mode/dispose invalidation, real EOF/no-chapter handling, and
+ReadingSession/Locator isolation. All four real TXT corpora report logical
+error 0. Android targeted ADB was deferred because the currently listed device
+was offline; the Android Debug APK build passed. M5.4 is COMPLETE and schema 6
+is unchanged.

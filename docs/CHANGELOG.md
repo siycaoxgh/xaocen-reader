@@ -737,3 +737,9 @@ deferred.
 - 增加 Windows `toggleAutoRead` 命令（无默认绑定）。
 - 增加 Android running 状态屏幕常亮抽象；未实现的平台安全降级。
 - 面板和生命周期暂停自动阅读但不影响 ReadingSession 计时合同；schema 维持 6。
+## M5.4e
+
+- 完成 AutoRead Vertical/Paged 最终回归，覆盖 EOF、no-chapter、手动暂停、
+  lifecycle、mode switch、stale generation 与 ReadingSession 合同。
+- 4 个真实 TXT logical error = 0；M5.4 标记 COMPLETE。
+- Android targeted ADB 因当前设备 offline deferred，Android Debug 构建通过。
