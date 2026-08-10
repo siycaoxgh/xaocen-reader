@@ -699,3 +699,6 @@ Drift schema 6 未改变。
 测试与 11 个 integration 文件（14 场景）通过，logical error = 0。Windows
 Release 与 Android Debug 通过；Android targeted ADB 因设备 offline 延后。M5.4
 正式 COMPLETE。
+## M5.5a — App Shell 与一级导航（2026-08-11）
+
+建立统一 App Shell：Android 使用首页/书架/我的底部导航，Windows 使用桌面侧栏和主内容区。现有书架 surface 以 embedded 方式复用，历史、阅读设置及 Reader 入口保持可达；导航切换不改变 ReaderLocator、reading_progress 或任何 Drift 合同。Windows 原生窗口状态恢复保持不变。

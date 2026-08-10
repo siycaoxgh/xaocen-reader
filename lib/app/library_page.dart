@@ -16,7 +16,10 @@ import 'reading_history_page.dart';
 
 /// M2 最小书架 —— 本地书库（功能性界面，非 V3 统一 UI）。
 class LibraryPage extends ConsumerStatefulWidget {
-  const LibraryPage({super.key});
+  const LibraryPage({super.key, this.embedded = false});
+
+  /// The shell owns navigation chrome when this page is embedded.
+  final bool embedded;
 
   @override
   ConsumerState<LibraryPage> createState() => _LibraryPageState();
@@ -29,30 +32,34 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
     final importState = ref.watch(importProgressProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('XAOCEN Reader v4'),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        actions: [
-          TextButton.icon(
-            onPressed: () async {
-              await Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const ReadingHistoryPage()),
-              );
-              if (mounted) {
-                ref.invalidate(collectionsProvider);
-                ref.invalidate(recentReadingProvider);
-              }
-            },
-            icon: const Icon(Icons.history),
-            label: const Text('阅读历史'),
-          ),
-          TextButton.icon(
-            onPressed: () => Navigator.of(context).pushNamed('/settings'),
-            icon: const Icon(Icons.settings_outlined),
-            label: const Text('我的'),
-          ),
-        ],
-      ),
+      appBar: widget.embedded
+          ? null
+          : AppBar(
+              title: const Text('XAOCEN Reader v4'),
+              backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+              actions: [
+                TextButton.icon(
+                  onPressed: () async {
+                    await Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const ReadingHistoryPage(),
+                      ),
+                    );
+                    if (mounted) {
+                      ref.invalidate(collectionsProvider);
+                      ref.invalidate(recentReadingProvider);
+                    }
+                  },
+                  icon: const Icon(Icons.history),
+                  label: const Text('阅读历史'),
+                ),
+                TextButton.icon(
+                  onPressed: () => Navigator.of(context).pushNamed('/settings'),
+                  icon: const Icon(Icons.settings_outlined),
+                  label: const Text('我的'),
+                ),
+              ],
+            ),
       body: Column(
         children: [
           Padding(
@@ -101,7 +108,8 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
             ),
           ),
           const Divider(),
-          _RecentReadingSection(onOpen: (entry) => _openHistoryEntry(entry)),
+          if (!widget.embedded)
+            RecentReadingSection(onOpen: (entry) => _openHistoryEntry(entry)),
           Expanded(
             child: collections.when(
               data: (list) => list.isEmpty
@@ -194,8 +202,8 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
   }
 }
 
-class _RecentReadingSection extends ConsumerWidget {
-  const _RecentReadingSection({required this.onOpen});
+class RecentReadingSection extends ConsumerWidget {
+  const RecentReadingSection({super.key, required this.onOpen});
   final ValueChanged<ReadingHistoryEntry> onOpen;
 
   @override

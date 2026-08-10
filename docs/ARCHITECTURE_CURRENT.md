@@ -803,3 +803,11 @@ ReadingSession/Locator isolation. All four real TXT corpora report logical
 error 0. Android targeted ADB was deferred because the currently listed device
 was offline; the Android Debug APK build passed. M5.4 is COMPLETE and schema 6
 is unchanged.
+## M5.5a App Shell
+
+The root route now enters `AppShellPage` with three primary surfaces: Home,
+Shelf, and Me. Android uses a responsive bottom `NavigationBar`; Windows uses
+a desktop sidebar when the window is at least 720 logical pixels wide. The
+existing `LibraryPage` remains available as a standalone widget and is embedded
+by the shell without changing repositories, ReaderLocator, reading progress, or
+Reader lifecycle contracts. Shell state is transient UI state only.

@@ -167,3 +167,10 @@ Windows 透明必须拆成两层，不能只在 Flutter widget 上设置颜色�
 
 这些规划项不改变当前 ReaderLocator、reading_progress、ReaderPreferences 现有
 字段合同，也不在本轮引入 schema 或第三方依赖。
+## M5.5a App Shell 实施记录（2026-08-11）
+
+- 根路由现在进入统一 `AppShellPage`，一级信息架构固定为“首页 / 书架 / 我的”。
+- Android 使用响应式 `NavigationBar`；Windows 在宽窗口使用限宽桌面侧栏和主内容区。
+- 书架继续复用现有 `LibraryPage`，通过 embedded surface 放入 Shell；Reader、历史、阅读设置等既有入口保持可达。
+- Shell 只负责导航状态和 surface 编排，不读取或写入 ReaderLocator、reading_progress 或其他阅读数据真源。
+- `LibraryPage()` 默认构造仍保留，兼容既有测试及直接调用方；窗口状态恢复仍由 Windows runner 原生层负责。

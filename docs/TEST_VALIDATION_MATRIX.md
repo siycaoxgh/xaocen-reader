@@ -476,3 +476,13 @@ vertical A → paged → 不翻页 → 重开 = paged + A · vertical A → page
 | Reader UI / keep-awake / shortcuts | Deferred |
 | M5.4d AutoRead UI | Vertical / Paged controls, status, interval/preset selection, pause rules, toggleAutoRead routing, keep-awake fallback | Targeted widget/router + full Flutter + integration + Windows Release + Android Debug | PASS |
 | M5.4e AutoRead final regression | Vertical/Paged lifecycle, EOF/no-chapter, manual pause, stale generation, ReadingSession/Locator contracts, all 4 TXT | 451 Flutter tests; 11 integration files / 14 scenarios; Windows Release; Android Debug | PASS; Android ADB deferred (device offline) |
+## M5.5a App Shell
+
+| Area | Result |
+|---|---|
+| Root route enters App Shell | PASS |
+| Android Home/Shelf/Me bottom navigation | PASS (widget) |
+| Windows Home/Shelf/Me desktop sidebar | PASS (widget) |
+| Shell navigation state and resize breakpoint | PASS |
+| Existing LibraryPage and Reader/data contracts | PASS (regression) |
+| Drift schema | 6, unchanged |

@@ -750,3 +750,8 @@ deferred.
   state through the native user registry; minimized state is excluded.
 - Restored geometry is clamped to a visible monitor work area and remains
   independent of Drift/Reader data. No product-defined minimum size was added.
+## M5.5a
+
+- Added the responsive App Shell with Home, Shelf, and Me primary navigation.
+- Android uses a bottom NavigationBar; Windows uses a desktop sidebar and main content area.
+- Preserved existing LibraryPage callers and Reader/data contracts; no schema change.

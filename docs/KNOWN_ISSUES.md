@@ -217,3 +217,8 @@ the remaining Android item is visual device validation only.
   target was offline, so targeted device actions remain deferred; this does
   not affect the passing Android Debug build or the completed Windows/Flutter
   validation.
+## M5.5a status
+
+The responsive App Shell and first-level navigation are complete. Remaining UI
+audit items (wide layouts for history/settings and Reader action hierarchy) are
+planned follow-ups; no new P0/P1 data or Reader issue was introduced.
