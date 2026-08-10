@@ -639,3 +639,13 @@ Manual review found that only the newly added Paged progress labels contained
 mojibake literals. The labels were corrected and centralized; exact Vertical,
 Paged, and no-chapter widget assertions pass. No pagination, metrics, Locator,
 or persistence code changed.
+
+## M5.4a — AutoRead domain contract (2026-08-10)
+
+Added the transient AutoRead state machine and typed global AutoReadPreferences
+repository. States, pause reasons, domain events, and generation invalidation
+are defined without driving any Reader controller. Vertical speed is persisted
+as one of five presets and paged pacing as one canonical interval; velocity is
+runtime-derived. Corrupt/unknown values safely fall back and older preference
+versions normalize without touching ReaderPreferences, input profiles, or
+reading progress. Schema remains 6; drivers and UI are deferred to M5.4b.

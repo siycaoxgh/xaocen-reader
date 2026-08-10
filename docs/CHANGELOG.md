@@ -684,3 +684,13 @@ Not a release; recorded for completeness.
   shared `本章` / `全书` / `全文` / `页` UI text. Vertical, paged, and no-chapter
   exact-string widget coverage now passes; pagination and Locator contracts are
   unchanged.
+
+### M5.4a — AutoRead contract
+
+- Added the domain-only AutoRead state machine with typed pause reasons,
+  generation invalidation, and no Reader-controller side effects.
+- Added global typed AutoReadPreferences persistence for vertical speed presets
+  and canonical paged intervals, with defaults, validation, corruption
+  fallback, version normalization, watch, update, and reset.
+- Drift schema remains 6. AutoRead drivers, UI, keep-awake, and shortcuts are
+  deferred.

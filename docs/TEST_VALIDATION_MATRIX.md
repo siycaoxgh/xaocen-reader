@@ -396,3 +396,19 @@ vertical A → paged → 不翻页 → 重开 = paged + A · vertical A → page
 | Full unit/contract/widget | 401/401 PASS |
 | Windows Release / Android Debug | PASS / PASS |
 | Android real device | NOT-RUN / deferred |
+
+## M5.4a AutoRead domain contract (2026-08-10)
+
+| Validation | Result |
+|---|---|
+| Idle/running/paused/stoppedAtEnd transitions | PASS |
+| Idempotent start/pause/resume/stop and EOF handling | PASS |
+| Pause reasons and typed domain events | PASS |
+| Generation invalidation and dispose safety | PASS |
+| Default speed/interval and velocity mapping | PASS |
+| Valid update, watch, reset, and app-restart persistence | PASS |
+| Corrupt JSON, invalid values, and version fallback | PASS |
+| AutoRead vs ReaderPreferences/InputProfile isolation | PASS |
+| Full Flutter test suite | 435/435 PASS |
+| Drift schema | 6, unchanged |
+| Reader drivers/UI/keep-awake/shortcuts | Deferred to M5.4b |

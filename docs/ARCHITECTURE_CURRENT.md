@@ -694,3 +694,24 @@ and whole-book Locator progress without a chapter page count. Schema remains 6.
 Progress labels are centralized in `ReaderProgressLabels` so Vertical, Paged,
 and no-chapter chrome share the same UTF-8 UI text. The label correction does
 not alter metrics, pagination, or position persistence.
+
+## M5.4a — AutoRead domain contract
+
+AutoRead is currently a domain-only capability. `AutoReadController` owns the
+transient `idle/running/paused/stoppedAtEnd` state, typed pause reasons, domain
+events, and an operation generation for invalidating future stale ticks. It
+does not know about Reader controllers and does not affect `ReadingSession`:
+foreground Reader activity remains the session timing source regardless of
+AutoRead state.
+
+`invalidate(reason)` can advance that generation without changing state, which
+lets future drivers reject work from mode/lifecycle/route interruptions even
+when AutoRead is already paused or idle.
+
+`AutoReadPreferences` is app-global and contains only the canonical vertical
+speed preset and paged interval (plus version/timestamp). Runtime vertical
+velocity is derived from the preset. `AutoReadPreferencesRepository` is the
+typed boundary around its private `app_settings` JSON key, with per-profile
+fallback and version normalization. No running state, timer remainder,
+page/scroll index, Locator, or chapter progress is persisted. Drift schema
+remains 6.
