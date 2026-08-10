@@ -94,3 +94,76 @@ ReaderPreferences、Bookmark、Search、ReadingHistory 和 AutoRead 的数据/�
      状态；补充 light/dark/system 与 resize 截图回归。
 
 任何后续实现都应先锁定 V3 信息架构，不应在 P2 视觉调整前重新设计 Reader 核心引擎。
+
+## Reader 外观能力规划（本轮只审计，不实现）
+
+### 作用域建议
+
+| 能力 | 建议作用域 | 原因 |
+|---|---|---|
+| 正文字体颜色 | per-book `ReaderPreferences` | 不同书籍可使用不同阅读主题，且属于正文排版/绘制外观 |
+| 阅读背景颜色 | per-book `ReaderPreferences` | 与当前书的阅读舒适度直接相关 |
+| 本地图片阅读背景引用 | per-book `ReaderPreferences` | 背景是当前书的阅读呈现选择，不应污染其它书 |
+| 图片背景遮罩/透明度 | per-book `ReaderPreferences` | 与图片背景及当前正文对比度绑定 |
+| 自定义阅读主题（文字/背景/遮罩组合） | per-book 选择的主题快照或主题 ID | 书籍可独立保留主题；主题定义本身可由共享目录复用 |
+| App shell system/light/dark、品牌色、导航表面 | 全局 App appearance | 影响首页、书架、我的、设置等非 Reader 页面 |
+| Windows Reader/窗口背景透明度 | 全局 Windows shell appearance；Reader 内容透明另有独立开关 | 原生窗口属性属于桌面壳层，不能让每本书改变整个 App 窗口行为 |
+
+`themeMode` 当前已经属于每书 ReaderPreferences；后续扩展文字色、阅读背景、
+图片引用和遮罩时，应继续保持 Reader 外观与 App shell 外观分离。不要把
+Windows 原生窗口透明度写入每书偏好，也不要让全局 App appearance 覆盖每书
+正文主题的明确选择。
+
+### 图片引用与存储
+
+图片背景不应写入 Drift BLOB。推荐保存强类型引用元数据，例如：
+
+- `assetId`（稳定 ID）
+- `sourceUri` 或 app-managed 相对路径
+- `contentHash`
+- `mimeType`
+- `updatedAt`
+
+实际图片文件放在 app-managed assets 目录；如果来源是 Windows 文件或 Android
+`content://` URI，应在导入/授权阶段复制或持久化授权后再使用稳定引用。加载时
+校验 hash/文件存在性，失效时显示安全 fallback 背景，不让 Reader crash。数据库
+只保存引用和必要元数据，不保存图片二进制。
+
+### Windows 真透明的两层能力
+
+Windows 透明必须拆成两层，不能只在 Flutter widget 上设置颜色：
+
+1. **Flutter 内容透明**：Reader 根背景、surface 和绘制层使用可配置 alpha，
+   不能由 Material 默认不透明背景重新填满。
+2. **Windows 原生窗口透明**：runner 需要原生窗口样式/合成支持（例如 layered
+   window、DWM/alpha surface、透明背景的 Flutter host surface），并提供受控
+   的 opacity 通道。需要验证 resize、DPI、截图、GPU 合成和性能。
+
+最低目标可以是 opacity = 0，完全看到桌面；但窗口仍保持正常命中测试和键盘焦点。
+本项目不默认做鼠标穿透：不要添加 click-through hit-test、`HTTRANSPARENT` 或
+其它会让用户失去控制的行为。透明状态必须有可恢复入口/快捷方式，避免正文和
+控制区同时不可见。
+
+### V3 入口建议
+
+- **Reader Aa → 阅读外观**：文字颜色、阅读背景、图片背景、遮罩/透明度和自定义
+  阅读主题。它们按当前书保存，并复用现有 metrics/paint 分类：文字/背景颜色
+  与遮罩通常 paint-only；影响布局的字体或间距仍走 metrics relayout。
+- **我的 → 应用外观**：App shell 的 system/light/dark、品牌色和全局 surface。
+- **我的 → Windows 桌面窗口（仅 Windows）**：窗口 opacity、透明模式说明、恢复
+  默认；不把 native window opacity 放入 ReaderPreferences。
+- Windows Reader 内可提供一个轻量“窗口透明度”快捷入口，但最终设置页仍应归属
+  应用/桌面壳层，避免与每书正文背景混淆。
+
+### 后续 M5.5 拆分建议补充
+
+1. **M5.5e：Reader 外观数据合同**：先确定 per-book 字体色/背景色/图片引用/遮罩
+   与全局 App appearance、Windows shell opacity 的强类型边界；评估 schema/asset
+   存储，不实现透明 runner。
+2. **M5.5f：Reader 外观 UI**：在 Aa 中加入外观分组、预览、恢复默认和失效图片
+   fallback；保持 paint-only 不触发 Locator restore。
+3. **M5.5g：Windows 原生透明能力评估**：单独验证 Flutter 内容 alpha、native
+   window alpha、DPI/resize/GPU/无穿透交互，再决定是否实现 runner channel。
+
+这些规划项不改变当前 ReaderLocator、reading_progress、ReaderPreferences 现有
+字段合同，也不在本轮引入 schema 或第三方依赖。
