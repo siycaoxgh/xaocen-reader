@@ -12,6 +12,7 @@ import '../data/repositories/reader_preferences_repository.dart';
 import '../data/repositories/reader_input_bindings_repository.dart';
 import '../data/repositories/reading_history_repository.dart';
 import '../data/repositories/reading_session_repository.dart';
+import '../data/repositories/auto_read_preferences_repository.dart';
 import '../domain/library/library_entities.dart';
 import '../domain/library/library_import_models.dart';
 import '../domain/reader/reading_history.dart';
@@ -85,6 +86,11 @@ final readerPreferencesRepositoryProvider =
 final readerInputBindingsRepositoryProvider =
     Provider<ReaderInputBindingsRepository>((ref) {
       return ReaderInputBindingsRepository(db: ref.watch(databaseProvider));
+    });
+
+final autoReadPreferencesRepositoryProvider =
+    Provider<AutoReadPreferencesRepository>((ref) {
+      return AutoReadPreferencesRepository(db: ref.watch(databaseProvider));
     });
 
 final readingHistoryRepositoryProvider = Provider<ReadingHistoryRepository>((

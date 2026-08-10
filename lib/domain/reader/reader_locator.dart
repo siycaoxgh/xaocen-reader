@@ -24,6 +24,9 @@ enum ReaderPositionEventSource {
   /// 用户拖动滚动条。
   userScrollbar,
 
+  /// Vertical AutoRead ticker 驱动的临时滚动。
+  autoRead,
+
   /// 生命周期 flush（route pop / inactive / paused / detached / 窗口关闭）。
   lifecycleFlush,
 }

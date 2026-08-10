@@ -649,3 +649,14 @@ as one of five presets and paged pacing as one canonical interval; velocity is
 runtime-derived. Corrupt/unknown values safely fall back and older preference
 versions normalize without touching ReaderPreferences, input profiles, or
 reading progress. Schema remains 6; drivers and UI are deferred to M5.4b.
+
+## M5.4b — Vertical AutoRead (2026-08-10)
+
+Added a bounded Ticker adapter for smooth vertical scrolling. Runtime speed
+uses the five persisted AutoRead presets; each guarded frame reports through
+the existing visible-range confirmation and progress debounce. Manual drag or
+wheel pauses, while automatic frames are not mistaken for manual input.
+Pause/stop/EOF confirm the final Locator, EOF becomes `stoppedAtEnd`, and
+relayout/mode/lifecycle/dispose invalidate stale generations. ReadingSession,
+ReaderLocator, schema 6, and no-chapter behavior remain unchanged. Paged
+AutoRead and UI are deferred.

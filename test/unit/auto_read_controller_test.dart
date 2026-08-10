@@ -110,4 +110,16 @@ void main() {
     expect(restarted.preferences.pagedIntervalSeconds, 10);
     restarted.dispose();
   });
+
+  test('metadata timestamp does not invalidate effective preferences', () {
+    final controller = AutoReadController();
+    final generation = controller.generation;
+    controller.updatePreferences(
+      AutoReadPreferences(
+        updatedAt: DateTime.now().add(const Duration(days: 1)),
+      ),
+    );
+    expect(controller.generation, generation);
+    controller.dispose();
+  });
 }

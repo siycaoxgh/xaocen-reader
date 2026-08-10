@@ -412,3 +412,21 @@ vertical A → paged → 不翻页 → 重开 = paged + A · vertical A → page
 | Full Flutter test suite | 435/435 PASS |
 | Drift schema | 6, unchanged |
 | Reader drivers/UI/keep-awake/shortcuts | Deferred to M5.4b |
+
+## M5.4b Vertical AutoRead (2026-08-10)
+
+| Validation | Result |
+|---|---|
+| Ticker smooth movement and five preset velocity contract | PASS |
+| Automatic frame does not self-pause | PASS |
+| Manual pause, stop, interruption, and final confirmation | PASS |
+| Generation invalidation for stale ticks | PASS |
+| Real EOF → stoppedAtEnd, no looping | PASS |
+| No-chapter scroll path | PASS |
+| ReaderLocator / existing progress writer contract | PASS |
+| ReadingSession lifecycle isolation | PASS |
+| Full Flutter tests | 440/440 PASS |
+| Windows integration | 11 files / 14 scenarios PASS |
+| Windows Release / Android Debug | PASS / PASS |
+| Drift schema | 6, unchanged |
+| Paged AutoRead / UI / keep-awake | Deferred |

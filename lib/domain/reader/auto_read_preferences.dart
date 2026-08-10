@@ -83,14 +83,9 @@ final class AutoReadPreferences {
       other is AutoReadPreferences &&
       other.verticalSpeedPreset == verticalSpeedPreset &&
       other.pagedIntervalSeconds == pagedIntervalSeconds &&
-      other.version == version &&
-      other.updatedAt == updatedAt;
+      other.version == version;
 
   @override
-  int get hashCode => Object.hash(
-    verticalSpeedPreset,
-    pagedIntervalSeconds,
-    version,
-    updatedAt,
-  );
+  int get hashCode =>
+      Object.hash(verticalSpeedPreset, pagedIntervalSeconds, version);
 }

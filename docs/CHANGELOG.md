@@ -694,3 +694,14 @@ Not a release; recorded for completeness.
   fallback, version normalization, watch, update, and reset.
 - Drift schema remains 6. AutoRead drivers, UI, keep-awake, and shortcuts are
   deferred.
+
+### M5.4b — Vertical AutoRead
+
+- Added smooth Ticker-driven vertical scrolling using the five AutoRead speed
+  presets.
+- Reused visible-range confirmation and the existing Reader progress debounce;
+  scrollPixels remain transient and ReaderLocator remains the only position
+  truth.
+- Manual touch/wheel pauses, automatic frames do not self-pause, and pause,
+  stop, relayout, lifecycle, dispose, and real EOF are generation-safe.
+- Schema remains 6; Paged AutoRead and AutoRead UI are deferred.

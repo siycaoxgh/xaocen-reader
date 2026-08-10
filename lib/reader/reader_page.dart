@@ -24,11 +24,14 @@ import '../data/repositories/reader_preferences_repository.dart';
 import '../data/repositories/reader_input_bindings_repository.dart';
 import '../data/repositories/reading_history_repository.dart';
 import '../data/repositories/reading_session_repository.dart';
+import '../data/repositories/auto_read_preferences_repository.dart';
 import '../domain/library/chapter_boundary_resolver.dart';
 import '../domain/library/current_chapter_progress_resolver.dart';
 import '../domain/library/library_entities.dart';
 import '../domain/library/toc_index.dart';
 import '../domain/reader/reader_bookmark.dart';
+import '../domain/reader/auto_read_controller.dart';
+import '../domain/reader/auto_read_preferences.dart';
 import '../domain/reader/reader_locator.dart';
 import '../domain/reader/paged_text_range.dart';
 import '../domain/reader/reader_block.dart';
@@ -49,6 +52,7 @@ import 'reader_metrics_signature.dart';
 import 'reader_search.dart';
 import '../domain/reader/reader_progress_state.dart';
 import 'reader_text_block.dart';
+import 'vertical_auto_read_driver.dart';
 
 /// 打开 Reader 所需上下文（由书架页组装）。
 class ReaderLaunchContext {
@@ -64,6 +68,7 @@ class ReaderLaunchContext {
     this.inputBindingsRepository,
     this.readingHistoryRepository,
     this.readingSessionRepository,
+    this.autoReadPreferencesRepository,
     this.repair,
   });
 
@@ -81,6 +86,7 @@ class ReaderLaunchContext {
   final ReaderInputBindingsRepository? inputBindingsRepository;
   final ReadingHistoryRepository? readingHistoryRepository;
   final ReadingSessionRepository? readingSessionRepository;
+  final AutoReadPreferencesRepository? autoReadPreferencesRepository;
 
   /// 修复回调（由书架页注入）：返回 null 表示成功，否则返回错误信息。
   final Future<String?> Function()? repair;
@@ -141,7 +147,8 @@ class ReaderPage extends StatefulWidget {
   State<ReaderPage> createState() => _ReaderPageState();
 }
 
-class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
+class _ReaderPageState extends State<ReaderPage>
+    with WidgetsBindingObserver, TickerProviderStateMixin {
   late final ReaderController _controller;
   final ScrollController _scroll = ScrollController();
   final ListController _listController = ListController();
@@ -162,6 +169,10 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
   bool _pendingPreferencesReset = false;
   bool _preferencesWriteInFlight = false;
   late final ReaderInputRouter _inputRouter;
+  late final AutoReadController _autoReadController;
+  late final VerticalAutoReadDriver _verticalAutoReadDriver;
+  StreamSubscription<AutoReadEvent>? _autoReadEvents;
+  StreamSubscription<AutoReadPreferences>? _autoReadPreferencesSubscription;
 
   /// Reader 视觉合同（P1：从 Theme 解析，禁止正文硬编码颜色）。
   late ReaderResolvedAppearance _appearance;
@@ -210,6 +221,50 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
 
   void _toggleChrome() {
     setState(() => _chromeVisible = !_chromeVisible);
+  }
+
+  /// M5.4b vertical AutoRead is intentionally exposed as a driver contract;
+  /// the user-facing controls are deferred to the later Reader UI slice.
+  AutoReadState get autoReadState => _autoReadController.state;
+
+  void startVerticalAutoRead() => _verticalAutoReadDriver.start();
+
+  void pauseVerticalAutoRead() =>
+      _verticalAutoReadDriver.pause(AutoReadPauseReason.manualNavigation);
+
+  void resumeVerticalAutoRead() => _verticalAutoReadDriver.resume();
+
+  void stopVerticalAutoRead() => _verticalAutoReadDriver.stop();
+
+  Future<void> _confirmVerticalAutoReadPosition() async {
+    if (!mounted || _mode != ReaderMode.vertical || !_scroll.hasClients) {
+      return;
+    }
+    final topOffset = _topVisibleCharacterOffset();
+    _controller.reportUserScroll(
+      topVisibleCharacterOffset: topOffset,
+      source: ReaderPositionEventSource.autoRead,
+    );
+    await _controller.flush(source: ReaderPositionEventSource.lifecycleFlush);
+    unawaited(_recordHistorySnapshot());
+    if (mounted) setState(() {});
+  }
+
+  void _onVerticalAutoReadFrame() {
+    if (!mounted || _mode != ReaderMode.vertical || !_scroll.hasClients) {
+      return;
+    }
+    _controller.reportUserScroll(
+      topVisibleCharacterOffset: _topVisibleCharacterOffset(),
+      source: ReaderPositionEventSource.autoRead,
+    );
+    setState(() {});
+  }
+
+  void _pauseAutoReadForManualScroll() {
+    if (_autoReadController.state == AutoReadState.running) {
+      _verticalAutoReadDriver.pause(AutoReadPauseReason.manualNavigation);
+    }
   }
 
   void _onInputHostStateChanged({
@@ -307,6 +362,22 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
+    _autoReadController = AutoReadController();
+    _verticalAutoReadDriver = VerticalAutoReadDriver(
+      vsync: this,
+      scrollController: _scroll,
+      controller: _autoReadController,
+      confirmPosition: _confirmVerticalAutoReadPosition,
+      onFrame: _onVerticalAutoReadFrame,
+      canDrive: () =>
+          mounted &&
+          _mode == ReaderMode.vertical &&
+          _transition == ReaderModeTransitionState.idle &&
+          _restoreFinished,
+    );
+    _autoReadEvents = _autoReadController.events.listen((_) {
+      if (mounted) setState(() {});
+    });
     _searchService = ReaderSearchService();
     _inputRouter = ReaderInputRouter(
       platform: defaultTargetPlatform == TargetPlatform.android
@@ -374,6 +445,15 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
       _preferencesSubscription = repository
           .watch(collectionId)
           .listen(_onPreferencesChanged);
+    }
+    if (!mounted) return;
+    final autoReadRepository = widget.launch.autoReadPreferencesRepository;
+    if (autoReadRepository != null) {
+      _autoReadController.updatePreferences(await autoReadRepository.load());
+      if (!mounted) return;
+      _autoReadPreferencesSubscription = autoReadRepository.watch().listen(
+        _autoReadController.updatePreferences,
+      );
     }
     if (!mounted) return;
     _preferencesReady = true;
@@ -480,6 +560,11 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    _autoReadEvents?.cancel();
+    _autoReadPreferencesSubscription?.cancel();
+    _verticalAutoReadDriver.interrupt(AutoReadPauseReason.lifecycle);
+    _verticalAutoReadDriver.dispose();
+    _autoReadController.dispose();
     _modeGeneration++;
     _invalidateChapterNavigation();
     _searchService.cancel();
@@ -517,6 +602,7 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
     if (state == AppLifecycleState.inactive ||
         state == AppLifecycleState.paused ||
         state == AppLifecycleState.detached) {
+      _verticalAutoReadDriver.pause(AutoReadPauseReason.lifecycle);
       _inputRouter.invalidatePendingInput();
       _invalidateChapterNavigation();
       if (_modeRestoreAnchor != null) {
@@ -550,6 +636,7 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
       return;
     }
     _metricsSignature = nextSignature;
+    _verticalAutoReadDriver.pause(AutoReadPauseReason.relayout);
     _inputRouter.invalidatePendingInput();
     _invalidateChapterNavigation();
     _beginMetricsRelayout(next);
@@ -917,6 +1004,7 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
   /// 模式切换入口（AppBar 菜单）。
   void _selectMode(ReaderMode mode) {
     if (mode == _mode && _transition == ReaderModeTransitionState.idle) return;
+    _verticalAutoReadDriver.pause(AutoReadPauseReason.modeSwitch);
     _inputRouter.invalidatePendingInput();
     _invalidateChapterNavigation();
     _cancelModeRestore();
@@ -1706,13 +1794,23 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
 
   void _onUserScroll(ScrollNotification notification) {
     if (_suppressProgrammaticScrollNotifications) return;
+    if (!_verticalAutoReadDriver.isApplyingAutoScroll &&
+        _mode == ReaderMode.vertical &&
+        _autoReadController.state == AutoReadState.running) {
+      // A notification not emitted by the driver's guarded jumpTo is a
+      // manual drag/wheel signal. Manual navigation pauses and never
+      // auto-resumes.
+      _pauseAutoReadForManualScroll();
+    }
     if (notification is ScrollUpdateNotification ||
         notification is ScrollEndNotification ||
         notification is OverscrollNotification) {
       final topOffset = _topVisibleCharacterOffset();
       _controller.reportUserScroll(
         topVisibleCharacterOffset: topOffset,
-        source: _userSource(notification),
+        source: _verticalAutoReadDriver.isApplyingAutoScroll
+            ? ReaderPositionEventSource.autoRead
+            : _userSource(notification),
       );
       unawaited(_recordHistorySnapshot());
       if (notification is ScrollEndNotification) {

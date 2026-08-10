@@ -56,8 +56,8 @@ Key components by layer (all paths under `lib/`):
 |---|---|
 | domain | `domain/local_txt/` (TextEncoding, TocEntry, TxtIndex, PipelineProgress, LargeFilePolicy), `domain/reader/` (ReaderLocator, ReaderBlock, ReaderVisibleRange, ReaderPreferences), `domain/library/` (entities, import models, NormalizedArtifact, TocIndexLogic) |
 | sources | `sources/local_txt/` (gb18030 decoder/index loader/data, encoding detector, normalizer, toc scanner, import service/request/result, index cache, content identity, cancellation) |
-| data | `data/database/` (tables, app_database + generated), `data/repositories/` (local_library_repository, library_file_manager, managed_collection_health, collection_repair_service, reading_progress_repository, reader_preferences_repository, reader_bookmark_repository, reading_history_repository, reading_session_repository, encoding_index_provider) |
-| reader | `reader/` (normalized_document_loader, reader_controller, reader_page, reader_chrome, reader_text_block, reader_appearance) |
+| data | `data/database/` (tables, app_database + generated), `data/repositories/` (local_library_repository, library_file_manager, managed_collection_health, collection_repair_service, reading_progress_repository, reader_preferences_repository, reader_bookmark_repository, reading_history_repository, reading_session_repository, auto_read_preferences_repository, encoding_index_provider) |
+| reader | `reader/` (normalized_document_loader, reader_controller, vertical_auto_read_driver, reader_page, reader_chrome, reader_text_block, reader_appearance) |
 | app/design | `app/` (bootstrap, app, router, constants, library_page, providers, placeholder_page), `design/` (tokens, theme) |
 
 Layering rules (enforced by structure, not by tooling):
@@ -715,3 +715,21 @@ typed boundary around its private `app_settings` JSON key, with per-profile
 fallback and version normalization. No running state, timer remainder,
 page/scroll index, Locator, or chapter progress is persisted. Drift schema
 remains 6.
+
+## M5.4b — Vertical AutoRead
+
+`VerticalAutoReadDriver` is the first Reader adapter for the M5.4 domain
+contract. A Flutter `Ticker` advances the existing vertical `ScrollController`
+at the selected runtime-derived velocity. It reports every guarded frame via
+the existing visible-range/`ReaderController.reportUserScroll` path; no
+scroll-pixel or second progress writer is introduced. A manual drag or wheel
+notification pauses running AutoRead, while guarded ticker notifications do
+not pause it. Pause/stop/EOF confirm and flush the final Locator.
+
+The driver uses the AutoRead generation as its stale-tick token and invalidates
+it for interruption, relayout, mode switch, lifecycle, and dispose. Real scroll
+extent transitions to `stoppedAtEnd` without looping. No-chapter documents use
+the same Locator path. ReadingSession remains governed solely by Reader
+foreground lifecycle. Global AutoReadPreferences are loaded/watched through
+the typed app-settings repository; schema remains 6. Paged AutoRead and UI are
+deferred.
