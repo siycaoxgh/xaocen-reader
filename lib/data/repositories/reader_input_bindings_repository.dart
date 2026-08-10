@@ -31,6 +31,7 @@ final class ReaderInputBindingsRepository {
   ) async {
     final gesture = _gestureOf(input);
     if (gesture == null || gesture.primaryInput.platform != platform) return;
+    if (!ReaderInputProfile.supportsCommand(platform, command)) return;
     final current = await load(platform);
     await update(
       platform,
@@ -119,7 +120,10 @@ final class ReaderInputBindingsRepository {
           final input = PhysicalInputId.parse(entry.key as String);
           if (input == null || input.platform != platform) continue;
           final command = _parseNullableCommand(entry.value);
-          if (entry.value == null || command != null) {
+          if (entry.value == null) {
+            merged[ReaderInputGesture.single(input)] = command;
+          } else if (command != null &&
+              ReaderInputProfile.supportsCommand(platform, command)) {
             merged[ReaderInputGesture.single(input)] = command;
           }
         }
@@ -131,7 +135,10 @@ final class ReaderInputBindingsRepository {
             continue;
           }
           final command = _parseNullableCommand(rawEntry['command']);
-          if (rawEntry['command'] == null || command != null) {
+          if (rawEntry['command'] == null) {
+            merged[gesture] = command;
+          } else if (command != null &&
+              ReaderInputProfile.supportsCommand(platform, command)) {
             merged[gesture] = command;
           }
         }
@@ -160,7 +167,9 @@ final class ReaderInputBindingsRepository {
     final defaults = ReaderInputProfile.defaults(platform);
     final bindings = <ReaderInputGesture, ReaderCommand?>{...defaults.bindings};
     for (final entry in profile.bindings.entries) {
-      if (entry.key.primaryInput.platform == platform) {
+      if (entry.key.primaryInput.platform == platform &&
+          (entry.value == null ||
+              ReaderInputProfile.supportsCommand(platform, entry.value!))) {
         bindings[entry.key] = entry.value;
       }
     }

@@ -166,3 +166,14 @@
   Ctrl/Alt/Shift gestures. Candidate input is never persisted before confirm.
 - No new Reader P1/P2 issue was found. Android ADB was explicitly excluded;
   Android Debug build passed.
+
+## M5.3 final contract closure (2026-08-10)
+
+- Android Volume bindings are intentionally limited to previous page, next
+  page, or disabled. Chapter/control/TOC bindings remain Windows/domain-only;
+  legacy Android values are normalized back to platform defaults.
+- Android targeted ADB was not run in this sealing pass because no device was
+  connected. Windows and automated Android Debug build validation passed.
+- Chapter percentage and paged chapter page totals remain deferred to a later
+  milestone; current Reader UI continues to show chapter title and whole-book
+  derived percentage only.

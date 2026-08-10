@@ -94,3 +94,19 @@ Status: **COMPLETE**
 
 No automatic reading, TTS, EPUB, RSS, or binding-customization persistence
 outside the existing platform-scoped `app_settings` profile was added.
+
+## M5.3 final contract closure (2026-08-10)
+
+- Android volume settings are now physical-input-centric: Volume Up/Down can
+  only select Previous page, Next page, or Disabled. Chapter/control/TOC
+  commands remain available to Windows and the shared domain router but are not
+  exposed as Android volume actions.
+- Legacy Android profiles containing unsupported commands deterministically
+  restore the affected key to its platform default; explicit null remains
+  disabled. Windows profiles are unaffected. Drift schema remains 6.
+- Windows chapter navigation now has an independent operation generation with
+  active-mode write freeze, visible confirmation, stale-operation cancellation,
+  and post-confirm flush. Locator remains the only position source of truth.
+- Final regression: 410 automated tests, 10 integration files / 13 scenarios,
+  all four real TXT checks logical-error 0, Windows Release and Android Debug
+  PASS. Targeted Android ADB was NOT-RUN because no device was connected.

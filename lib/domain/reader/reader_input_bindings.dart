@@ -223,6 +223,21 @@ final class ReaderInputProfile {
 
   static const currentVersion = 2;
 
+  /// Commands exposed by the first Android input contract. Android devices
+  /// have only the two volume keys as stable physical inputs; chapter and UI
+  /// actions remain available to Windows and to the domain router.
+  static const androidSupportedCommands = <ReaderCommand>{
+    ReaderCommand.previousPage,
+    ReaderCommand.nextPage,
+  };
+
+  static bool supportsCommand(
+    ReaderInputPlatform platform,
+    ReaderCommand command,
+  ) =>
+      platform == ReaderInputPlatform.windows ||
+      androidSupportedCommands.contains(command);
+
   final ReaderInputPlatform platform;
   final int version;
   final Map<ReaderInputGesture, ReaderCommand?> bindings;

@@ -84,7 +84,7 @@ void main() {
       final windows = await recreated.load(ReaderInputPlatform.windows);
       expect(
         android.commandFor(PhysicalInputId.androidVolumeUp),
-        ReaderCommand.nextChapter,
+        ReaderCommand.previousPage,
       );
       expect(android.commandFor(PhysicalInputId.androidVolumeDown), isNull);
       expect(
@@ -133,7 +133,7 @@ void main() {
     );
     expect(
       android.commandFor(PhysicalInputId.androidVolumeUp),
-      ReaderCommand.openToc,
+      ReaderCommand.previousPage,
     );
   });
 
@@ -234,6 +234,49 @@ void main() {
     expect(
       profile.commandFor(PhysicalInputId.keyboardKeyA),
       ReaderCommand.openToc,
+    );
+  });
+
+  test('unsupported Android commands migrate to platform defaults', () async {
+    await _putRaw(
+      db,
+      'reader.inputBindings.android.v1',
+      jsonEncode({
+        'version': 2,
+        'platform': 'android',
+        'bindings': [
+          {
+            'primary': 'android.volumeUp',
+            'modifiers': <String>[],
+            'command': 'nextChapter',
+          },
+          {
+            'primary': 'android.volumeDown',
+            'modifiers': <String>[],
+            'command': null,
+          },
+        ],
+      }),
+    );
+    final profile = await repository.load(ReaderInputPlatform.android);
+    expect(
+      profile.commandFor(PhysicalInputId.androidVolumeUp),
+      ReaderCommand.previousPage,
+    );
+    expect(profile.hasBinding(PhysicalInputId.androidVolumeDown), isTrue);
+    expect(profile.commandFor(PhysicalInputId.androidVolumeDown), isNull);
+  });
+
+  test('Android repository rejects unsupported command writes', () async {
+    await repository.bind(
+      ReaderInputPlatform.android,
+      PhysicalInputId.androidVolumeUp,
+      ReaderCommand.nextChapter,
+    );
+    final profile = await repository.load(ReaderInputPlatform.android);
+    expect(
+      profile.commandFor(PhysicalInputId.androidVolumeUp),
+      ReaderCommand.previousPage,
     );
   });
 }

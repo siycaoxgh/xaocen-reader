@@ -577,3 +577,20 @@ were upgraded to canonical Ctrl/Alt/Shift gestures with lossless migration of
 old single-key profiles. Capture now keeps keyboard focus across the complete
 overlay and requires candidate confirmation before persistence. Validation:
 408 automated tests, 10 integration files / 13 scenarios, both builds PASS.
+
+## M5.3 final contract closure (2026-08-10)
+
+Android volume settings are now physical-input-centric and limited to previous
+page, next page, or disabled. Unsupported legacy Android commands restore the
+affected key to its platform default without touching Windows profiles. The
+shared profile format remains v2 and Drift schema remains 6.
+
+Windows keeps all six ReaderCommands and command-centric single-key, modifier,
+and wheel bindings. Chapter navigation now uses an independent operation
+generation with active-mode write freeze, visible confirmation, cancellation of
+stale operations, and post-confirm flush. No page/chapter index or pixel
+position is persisted.
+
+Final validation passed 410 automated tests, 10 integration files / 13
+scenarios, all four real TXT logical-error-zero checks, Windows Release, and
+Android Debug. Targeted Android ADB was not run because no device was connected.

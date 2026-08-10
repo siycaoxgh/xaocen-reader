@@ -188,6 +188,9 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
 
   /// 模式切换代数：切换时递增，过期异步结果被拒绝（§二十一）。
   int _modeGeneration = 0;
+  int _chapterNavigationGeneration = 0;
+  int? _pendingChapterNavigationGeneration;
+  ReaderMode? _chapterWritesFrozenMode;
   ReaderLocator? _modeRestoreAnchor;
   int? _modeRestoreGeneration;
   bool _suppressProgrammaticScrollNotifications = false;
@@ -241,7 +244,32 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
         : chapters.indexWhere((entry) => entry.id == current.id);
     final targetIndex = currentIndex + (forward ? 1 : -1);
     if (targetIndex < 0 || targetIndex >= chapters.length) return;
-    await _restoreToChapter(chapters[targetIndex]);
+    await _startChapterNavigation(chapters[targetIndex]);
+  }
+
+  void _releaseChapterWrites() {
+    final frozenMode = _chapterWritesFrozenMode;
+    _chapterWritesFrozenMode = null;
+    if (frozenMode == ReaderMode.paged) {
+      _pagedController?.unfreezeWrites();
+    } else if (frozenMode == ReaderMode.vertical) {
+      _controller.unfreezeWrites();
+    }
+  }
+
+  void _invalidateChapterNavigation() {
+    if (_pendingChapterNavigationGeneration != null) {
+      _tocJumpPending = false;
+    }
+    _chapterNavigationGeneration++;
+    _pendingChapterNavigationGeneration = null;
+    _releaseChapterWrites();
+  }
+
+  Future<void> _startChapterNavigation(LibraryTocEntry entry) async {
+    _invalidateChapterNavigation();
+    final generation = _chapterNavigationGeneration;
+    await _restoreToChapter(entry, navigationGeneration: generation);
   }
 
   void _showChrome() {
@@ -446,6 +474,7 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
   @override
   void dispose() {
     _modeGeneration++;
+    _invalidateChapterNavigation();
     _searchService.cancel();
     unawaited(_readingSession?.end() ?? Future<void>.value());
     _modeRestoreAnchor = null;
@@ -481,6 +510,7 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
         state == AppLifecycleState.paused ||
         state == AppLifecycleState.detached) {
       _inputRouter.invalidatePendingInput();
+      _invalidateChapterNavigation();
       if (_modeRestoreAnchor != null) {
         _cancelModeRestore(revertToPaged: true);
         unawaited(_readingSession?.pause() ?? Future<void>.value());
@@ -513,6 +543,7 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
     }
     _metricsSignature = nextSignature;
     _inputRouter.invalidatePendingInput();
+    _invalidateChapterNavigation();
     _beginMetricsRelayout(next);
   }
 
@@ -806,6 +837,7 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
   void _selectMode(ReaderMode mode) {
     if (mode == _mode && _transition == ReaderModeTransitionState.idle) return;
     _inputRouter.invalidatePendingInput();
+    _invalidateChapterNavigation();
     _cancelModeRestore();
     if (mode == _mode) return;
     _cancelMetricsRelayout();
@@ -939,7 +971,12 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
   /// 阶段2：用 RenderReaderTextBlock 实际 TextPainter 求目标字符所在行 Rect，
   ///        再次 jumpToItem(rect) 把标题行对齐 viewport 顶部 + inset；
   /// 阶段3：测量真实可见范围，确认标题行与 viewport 相交，才完成恢复/保存。
-  void _scheduleJumpToPendingTarget() {
+  void _scheduleJumpToPendingTarget({int? navigationGeneration}) {
+    if (navigationGeneration != null &&
+        (navigationGeneration != _chapterNavigationGeneration ||
+            _pendingChapterNavigationGeneration != navigationGeneration)) {
+      return;
+    }
     // M4 P1：分页模式下纵向跳转/对齐跳过（纵向已让位给 paged）。
     if (_mode == ReaderMode.paged) {
       _restoreFinished = true;
@@ -959,11 +996,16 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
     // post-frame：等目标块布局完成后做块内字符对齐
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      _scheduleSecondStageAlign();
+      _scheduleSecondStageAlign(navigationGeneration: navigationGeneration);
     });
   }
 
-  void _scheduleSecondStageAlign() {
+  void _scheduleSecondStageAlign({int? navigationGeneration}) {
+    if (navigationGeneration != null &&
+        (navigationGeneration != _chapterNavigationGeneration ||
+            _pendingChapterNavigationGeneration != navigationGeneration)) {
+      return;
+    }
     final block = _controller.pendingTargetBlock;
     final target = _controller.requestedLocator?.absoluteCharacterOffset;
     if (block == null || target == null || !_listController.isAttached) {
@@ -979,7 +1021,7 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
       }
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
-        _scheduleSecondStageAlign();
+        _scheduleSecondStageAlign(navigationGeneration: navigationGeneration);
       });
       return;
     }
@@ -1011,12 +1053,17 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
       }
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
-        _verifyTargetVisible();
+        _verifyTargetVisible(navigationGeneration: navigationGeneration);
       });
     });
   }
 
-  void _verifyTargetVisible() {
+  void _verifyTargetVisible({int? navigationGeneration}) {
+    if (navigationGeneration != null &&
+        (navigationGeneration != _chapterNavigationGeneration ||
+            _pendingChapterNavigationGeneration != navigationGeneration)) {
+      return;
+    }
     final block = _controller.pendingTargetBlock;
     final target = _controller.requestedLocator?.absoluteCharacterOffset;
     if (block == null || target == null) {
@@ -1036,7 +1083,7 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
       }
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
-        _verifyTargetVisible();
+        _verifyTargetVisible(navigationGeneration: navigationGeneration);
       });
       return;
     }
@@ -1059,7 +1106,7 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
       }
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
-        _verifyTargetVisible();
+        _verifyTargetVisible(navigationGeneration: navigationGeneration);
       });
       return;
     }
@@ -1068,8 +1115,18 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
     _controller.visibleRangeProvider = () => visible;
     if (_tocJumpPending) {
       _tocJumpPending = false;
-      _controller.finishTocJump().then((_) {
+      final isChapterNavigation = navigationGeneration != null;
+      _controller.finishTocJump(persist: !isChapterNavigation).then((_) {
         if (!mounted) return;
+        if (isChapterNavigation &&
+            navigationGeneration != _chapterNavigationGeneration) {
+          return;
+        }
+        if (isChapterNavigation) {
+          _pendingChapterNavigationGeneration = null;
+          _releaseChapterWrites();
+          unawaited(_controller.flush());
+        }
         setState(() {});
       });
     } else {
@@ -1098,6 +1155,10 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
     if (_tocJumpPending) {
       // 目录跳转失败：不保存，保持原状态，给出明确失败
       _tocJumpPending = false;
+    }
+    if (_pendingChapterNavigationGeneration != null) {
+      _pendingChapterNavigationGeneration = null;
+      _releaseChapterWrites();
     }
     if (!_restoreFinished) {
       _controller.markRestoreFailed('跳转失败: $reason');
@@ -1802,17 +1863,41 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
 
   Future<void> _jumpToChapter(LibraryTocEntry entry) async {
     Navigator.of(context).pop(); // close sheet
-    await _restoreToChapter(entry);
+    await _startChapterNavigation(entry);
   }
 
-  Future<void> _restoreToChapter(LibraryTocEntry entry) async {
+  Future<void> _restoreToChapter(
+    LibraryTocEntry entry, {
+    int? navigationGeneration,
+  }) async {
+    if (navigationGeneration != null &&
+        navigationGeneration != _chapterNavigationGeneration) {
+      return;
+    }
+    if (navigationGeneration != null) {
+      _pendingChapterNavigationGeneration = navigationGeneration;
+    }
     // M4：分页模式目录跳转（§二十四：confirmed = 精确 target offset）。
     if (_mode == ReaderMode.paged) {
       final paged = _pagedController;
       if (paged == null) return;
+      if (navigationGeneration != null) {
+        paged.freezeWrites();
+        _chapterWritesFrozenMode = ReaderMode.paged;
+      }
       paged.jumpToOffset(entry.startCharacterOffset, itemIdHint: entry.itemId);
+      if (navigationGeneration != null &&
+          navigationGeneration == _chapterNavigationGeneration) {
+        _pendingChapterNavigationGeneration = null;
+        _releaseChapterWrites();
+        await paged.flush();
+      }
       if (mounted) setState(() {});
       return;
+    }
+    if (navigationGeneration != null) {
+      _controller.freezeWrites();
+      _chapterWritesFrozenMode = ReaderMode.vertical;
     }
     _tocJumpPending = true;
     _alignRetries = 0;
@@ -1820,9 +1905,13 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
       entry.startCharacterOffset,
       itemIdHint: entry.itemId,
     );
-    if (!mounted) return;
+    if (!mounted ||
+        (navigationGeneration != null &&
+            navigationGeneration != _chapterNavigationGeneration)) {
+      return;
+    }
     setState(() {});
-    _scheduleJumpToPendingTarget();
+    _scheduleJumpToPendingTarget(navigationGeneration: navigationGeneration);
   }
 }
 

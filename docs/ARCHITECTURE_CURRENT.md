@@ -612,3 +612,24 @@ structured gesture list and migrates format-1 single-key maps to gestures with
 no modifiers. The app_settings key remains platform scoped and Drift schema
 remains 6. Reader routing consumes gestures; Android volume and mouse wheel are
 plain gestures through the same contract.
+
+### M5.3 final input contract closure
+
+Android is intentionally narrower than Windows. Its settings page is
+physical-input-centric and exposes only Volume Up and Volume Down with the
+choices previous page, next page, or disabled. The Android profile repository
+filters legacy chapter/control/TOC commands back to platform defaults while
+preserving explicit null disables. Windows retains all six ReaderCommands,
+keyboard modifiers, and wheel bindings. The profile format remains v2 and
+Drift schema remains 6.
+
+Android host interception is active only for paged Reader or capture. Vertical
+Reader and non-Reader routes leave volume handling to Android. Capture consumes
+volume input without dispatching a Reader command.
+
+Chapter navigation has its own operation generation. It freezes active-mode
+progress writes, restores the real chapter start from the confirmed Locator,
+requires visible/page confirmation, and flushes only the current generation.
+Mode/metrics/lifecycle/dispose transitions invalidate pending chapter operations.
+No chapter index, page index, scroll pixel, percentage, or chapter ratio is
+persisted.

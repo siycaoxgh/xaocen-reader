@@ -282,6 +282,22 @@ vertical A → paged → 不翻页 → 重开 = paged + A · vertical A → page
 | Capture first input does not dispatch ReaderCommand | PASS |
 | Schema | 6, unchanged |
 
+## M5.3 final contract closure (2026-08-10)
+
+| Validation | Result |
+|---|---|
+| Android physical-input UI | PASS by code/test inspection; Volume Up/Down only |
+| Android supported actions | PASS; previous page / next page / disabled |
+| Unsupported Android profile migration | PASS; legacy command falls back to platform default |
+| Windows six-command regression | PASS; single-key, modifier, wheel, chapter routing |
+| Chapter navigation generation / cancellation | PASS; stale operations cannot commit |
+| Locator / progress persistence contract | PASS; no page/chapter index or pixel source added |
+| Full unit/contract/widget | **410/410 PASS** |
+| Windows integration | **10 files / 13 scenarios PASS** |
+| Four real TXT corpus | PASS; logical error 0 |
+| Windows Release / Android Debug | PASS / PASS |
+| Android targeted ADB | NOT-RUN; no device connected |
+
 ## M5.3a+b input binding contract (2026-08-09)
 
 | Validation | Result |

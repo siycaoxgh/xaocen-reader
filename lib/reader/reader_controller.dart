@@ -311,7 +311,7 @@ class ReaderController extends ChangeNotifier {
   }
 
   /// 目录跳转完成确认：可见范围确认后立即保存（明确用户操作）。
-  Future<void> finishTocJump() async {
+  Future<void> finishTocJump({bool persist = true}) async {
     final visible = visibleRangeProvider?.call();
     if (visible == null || _requestedLocator == null) return;
     final requestedOffset = _requestedLocator!.absoluteCharacterOffset;
@@ -325,14 +325,16 @@ class ReaderController extends ChangeNotifier {
     );
     _restorePhase = ReaderRestorePhase.completed;
     notifyListeners();
-    await _progressRepository.saveProgress(
-      ReaderProgressState(
-        collectionId: collectionId,
-        absoluteCharacterOffset: _confirmedLocator!.absoluteCharacterOffset,
-        readingMode: ReadingMode.vertical,
-        itemIdHint: _confirmedLocator!.itemIdHint,
-      ),
-    );
+    if (persist) {
+      await _progressRepository.saveProgress(
+        ReaderProgressState(
+          collectionId: collectionId,
+          absoluteCharacterOffset: _confirmedLocator!.absoluteCharacterOffset,
+          readingMode: ReadingMode.vertical,
+          itemIdHint: _confirmedLocator!.itemIdHint,
+        ),
+      );
+    }
   }
 
   /// 用户滚动上报（userDrag / userWheel / userScrollbar）。

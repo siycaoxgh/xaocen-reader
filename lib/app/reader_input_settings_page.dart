@@ -75,15 +75,9 @@ class _ReaderInputSettingsPageState
   void initState() {
     super.initState();
     unawaited(_router.start());
-    if (Platform.isAndroid) {
-      unawaited(
-        ReaderInputBridge.activate(
-          pagedActive: false,
-          inputCaptureActive: false,
-          onInput: _router.handlePhysicalInput,
-        ),
-      );
-    }
+    // Android volume keys use the physical-input selector below. Capture is
+    // intentionally a Windows-only interaction; the Reader route owns the
+    // Android bridge lifecycle.
   }
 
   @override
@@ -122,6 +116,7 @@ class _ReaderInputSettingsPageState
   }
 
   void _startCapture(ReaderCommand command) {
+    if (_platform != ReaderInputPlatform.windows) return;
     setState(() {
       _captureCommand = command;
       _candidate = null;
@@ -213,6 +208,24 @@ class _ReaderInputSettingsPageState
     if (mounted) setState(() => _profile = latest);
   }
 
+  Future<void> _selectAndroidBinding(
+    PhysicalInputId input,
+    ReaderCommand? command,
+  ) async {
+    if (_platform != ReaderInputPlatform.android) return;
+    if (command == null) {
+      await _repository.unbind(_platform, ReaderInputGesture.single(input));
+    } else {
+      await _repository.bind(
+        _platform,
+        ReaderInputGesture.single(input),
+        command,
+      );
+    }
+    final latest = await _repository.load(_platform);
+    if (mounted) setState(() => _profile = latest);
+  }
+
   Future<void> _resetDefaults() async {
     final confirmed =
         await showDialog<bool>(
@@ -277,22 +290,32 @@ class _ReaderInputSettingsPageState
                       children: [
                         _PlatformHeader(platform: _platform),
                         const SizedBox(height: 12),
-                        for (final command in ReaderCommand.values)
-                          _CommandSection(
-                            command: command,
+                        if (_platform == ReaderInputPlatform.android)
+                          for (final input in PhysicalInputId.androidInputs)
+                            _AndroidInputSection(
+                              input: input,
+                              command: profile.commandFor(input),
+                              onChanged: (command) =>
+                                  _selectAndroidBinding(input, command),
+                            )
+                        else ...[
+                          for (final command in ReaderCommand.values)
+                            _CommandSection(
+                              command: command,
+                              inputs: profile.bindings.entries
+                                  .where((entry) => entry.value == command)
+                                  .map((entry) => entry.key)
+                                  .toList(),
+                              onAdd: () => _startCapture(command),
+                              onClear: _clearBinding,
+                            ),
+                          _DisabledSection(
                             inputs: profile.bindings.entries
-                                .where((entry) => entry.value == command)
+                                .where((entry) => entry.value == null)
                                 .map((entry) => entry.key)
                                 .toList(),
-                            onAdd: () => _startCapture(command),
-                            onClear: _clearBinding,
                           ),
-                        _DisabledSection(
-                          inputs: profile.bindings.entries
-                              .where((entry) => entry.value == null)
-                              .map((entry) => entry.key)
-                              .toList(),
-                        ),
+                        ],
                         const SizedBox(height: 12),
                         OutlinedButton.icon(
                           key: const ValueKey('reader-input-reset'),
@@ -339,6 +362,50 @@ class _PlatformHeader extends StatelessWidget {
       ),
       title: Text(platformLabel(platform)),
       subtitle: const Text('仅显示当前平台支持的物理输入'),
+    ),
+  );
+}
+
+class _AndroidInputSection extends StatelessWidget {
+  const _AndroidInputSection({
+    required this.input,
+    required this.command,
+    required this.onChanged,
+  });
+
+  final PhysicalInputId input;
+  final ReaderCommand? command;
+  final ValueChanged<ReaderCommand?> onChanged;
+
+  @override
+  Widget build(BuildContext context) => Card(
+    key: ValueKey('reader-input-android-${input.value}'),
+    margin: const EdgeInsets.only(bottom: 10),
+    child: ListTile(
+      leading: const Icon(Icons.volume_up_outlined),
+      title: Text(inputLabel(input)),
+      subtitle: Text(
+        '当前操作：${command == null ? '不使用' : commandLabel(command!)}',
+      ),
+      trailing: DropdownButtonHideUnderline(
+        child: DropdownButton<ReaderCommand?>(
+          key: ValueKey('reader-input-android-select-${input.value}'),
+          value: command,
+          hint: const Text('选择操作'),
+          onChanged: onChanged,
+          items: const [
+            DropdownMenuItem<ReaderCommand?>(
+              value: ReaderCommand.previousPage,
+              child: Text('上一页'),
+            ),
+            DropdownMenuItem<ReaderCommand?>(
+              value: ReaderCommand.nextPage,
+              child: Text('下一页'),
+            ),
+            DropdownMenuItem<ReaderCommand?>(value: null, child: Text('不使用')),
+          ],
+        ),
+      ),
     ),
   );
 }

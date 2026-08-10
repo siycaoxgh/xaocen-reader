@@ -791,3 +791,14 @@ Requesting a FocusNode is insufficient if the modal overlay and its controls
 are outside that Focus widget's subtree. The capture Focus now encloses the
 entire page stack, so key events continue to bubble through the capture handler
 while the visible overlay is active.
+
+## M5.3 final contract lesson (2026-08-10)
+
+### Platform capability belongs at the typed profile boundary
+
+A shared command enum does not mean every platform can safely expose every
+command. Android volume interception is mode-sensitive and has a system-level
+fallback, so unsupported legacy commands must be normalized by the typed
+repository before reaching UI or host routing. This avoids presenting a binding
+that is persisted yet ineffective in vertical Reader, while keeping Windows'
+full command vocabulary intact.

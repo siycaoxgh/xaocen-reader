@@ -12,6 +12,19 @@ Legend for validation columns:
 
 ---
 
+## M5.3 final contract closure (2026-08-10)
+
+Android volume configuration is now physical-input-centric and limited to
+previous page, next page, or explicit disabled. Unsupported legacy Android
+commands fall back to platform defaults without affecting Windows profiles;
+Drift schema remains 6. Windows retains all six ReaderCommands and its
+single-key, modifier, and wheel bindings. Chapter navigation now uses an
+independent operation generation with active-mode write freeze, visible
+confirmation, stale-operation cancellation, and post-confirm flush. Final
+validation passed 410 automated tests, 10 integration files / 13 scenarios,
+all four real TXT logical-error-zero checks, Windows Release, and Android
+Debug. Android targeted ADB was not run because no device was connected.
+
 ## Unreleased
 
 ### M5.3e.2 — Reading History display and shortcut gestures (2026-08-10)
