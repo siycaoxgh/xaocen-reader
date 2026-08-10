@@ -14,6 +14,15 @@ Legend for validation columns:
 
 ## Unreleased
 
+### M5.3e.2 — Reading History display and shortcut gestures (2026-08-10)
+- Fixed Reading History object interpolation and omitted empty snapshots.
+- Added canonical Ctrl/Alt/Shift Windows gestures while preserving and
+  migrating version-1 single-key profiles; Drift schema remains 6.
+- Added a focus-visible capture box and explicit candidate/confirm/conflict/
+  success flow. Candidate, retry, and cancel do not persist changes.
+- Validation: 408/408 automated tests, 10 integration files / 13 scenarios,
+  Windows Release and Android Debug PASS. Android ADB was not run.
+
 ### M5.3e.1 — keyboard capture correction (2026-08-10)
 - Fixed Windows capture focus by explicitly requesting a dedicated capture
   `FocusNode` after add/retry.

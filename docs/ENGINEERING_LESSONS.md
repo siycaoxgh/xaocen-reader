@@ -776,3 +776,18 @@ Dart unit runner accepts it. Search workers therefore return lists of primitive
 `Map<String, Object>` rows and reconstruct the strong `ReaderSearchResult` on
 the receiving side. This keeps the cross-isolate boundary explicit and makes
 stale-generation/cancellation behavior deterministic.
+
+## M5.3e.2 lessons (2026-08-10)
+
+### Interpolate properties, not the owning Dart object
+
+`'$object.property'` interpolates `$object` and appends `.property` as literal
+text. UI strings must use `'${object.property}'`; nullable display snapshots
+should be trimmed and omitted before composing the final text.
+
+### Keyboard capture focus must enclose the overlay
+
+Requesting a FocusNode is insufficient if the modal overlay and its controls
+are outside that Focus widget's subtree. The capture Focus now encloses the
+entire page stack, so key events continue to bubble through the capture handler
+while the visible overlay is active.

@@ -6,19 +6,24 @@ enum ReaderInputCaptureStage { idle, capturing, candidate }
 /// this class: a candidate is only committed after the user confirms it.
 final class ReaderInputCaptureWorkflow {
   ReaderInputCaptureStage _stage = ReaderInputCaptureStage.idle;
-  PhysicalInputId? _candidate;
+  ReaderInputGesture? _candidate;
 
   ReaderInputCaptureStage get stage => _stage;
-  PhysicalInputId? get candidate => _candidate;
+  ReaderInputGesture? get candidate => _candidate;
 
   void start() {
     _candidate = null;
     _stage = ReaderInputCaptureStage.capturing;
   }
 
-  bool capture(PhysicalInputId input) {
+  bool capture(Object input) {
     if (_stage != ReaderInputCaptureStage.capturing) return false;
-    _candidate = input;
+    _candidate = switch (input) {
+      ReaderInputGesture gesture => gesture,
+      PhysicalInputId id => ReaderInputGesture.single(id),
+      _ => null,
+    };
+    if (_candidate == null) return false;
     _stage = ReaderInputCaptureStage.candidate;
     return true;
   }
@@ -28,7 +33,7 @@ final class ReaderInputCaptureWorkflow {
     _stage = ReaderInputCaptureStage.capturing;
   }
 
-  PhysicalInputId? confirm() {
+  ReaderInputGesture? confirm() {
     if (_stage != ReaderInputCaptureStage.candidate) return null;
     final value = _candidate;
     _candidate = null;

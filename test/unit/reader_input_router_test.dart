@@ -53,8 +53,10 @@ void main() {
         platform: ReaderInputPlatform.windows,
         version: ReaderInputProfile.currentVersion,
         bindings: {
-          PhysicalInputId.keyboardArrowLeft: ReaderCommand.openToc,
-          PhysicalInputId.keyboardArrowRight: ReaderCommand.nextChapter,
+          ReaderInputGesture.single(PhysicalInputId.keyboardArrowLeft):
+              ReaderCommand.openToc,
+          ReaderInputGesture.single(PhysicalInputId.keyboardArrowRight):
+              ReaderCommand.nextChapter,
         },
         updatedAt: DateTime(2030, 8, 9, 1),
       ),
@@ -82,7 +84,9 @@ void main() {
       ReaderInputProfile(
         platform: ReaderInputPlatform.windows,
         version: ReaderInputProfile.currentVersion,
-        bindings: {PhysicalInputId.keyboardArrowLeft: null},
+        bindings: {
+          ReaderInputGesture.single(PhysicalInputId.keyboardArrowLeft): null,
+        },
         updatedAt: DateTime(2030, 8, 9, 1),
       ),
     );

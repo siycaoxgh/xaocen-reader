@@ -568,3 +568,12 @@ focus node is now requested on capture and retry. Stable IDs cover A–Z, 0–9,
 arrows, PageUp/PageDown, Home/End, Space, and Enter. Capture uses an explicit
 candidate-confirm-persist workflow; cancel and retry never write, conflict
 replacement is explicit, and success is visible. Schema remains 6.
+
+## M5.3e.2 — Reading History display and Windows shortcut gestures (2026-08-10)
+
+Corrected Reading History interpolation so aggregate/session and snapshot
+values render as text and empty snapshots are omitted. Windows binding profiles
+were upgraded to canonical Ctrl/Alt/Shift gestures with lossless migration of
+old single-key profiles. Capture now keeps keyboard focus across the complete
+overlay and requires candidate confirmation before persistence. Validation:
+408 automated tests, 10 integration files / 13 scenarios, both builds PASS.

@@ -5,6 +5,42 @@ Branch: `feat/m4-horizontal-reader`
 Drift schema: **6**
 Status: **COMPLETE**
 
+## M5.3e.2 correction
+
+- Fixed the Reading History presentation bug that rendered Dart objects as
+  `Instance of ...`. Detail rows now interpolate complete expressions, display
+  the real session count, and omit null/blank chapter and progress snapshots.
+- Upgraded Windows bindings from a plain physical-input ID to the strong
+  `ReaderInputGesture(primaryInput, modifiers)` contract. Supported modifiers
+  are Ctrl, Alt, and Shift; supported primary keys are A-Z, 0-9, four arrows,
+  Page Up/Down, Home/End, Space, and Enter. Escape remains capture cancel;
+  modifier-only and repeated/key-up events do not create a candidate.
+- Profile format version is now 2. Gestures persist as canonical structured
+  JSON (`primary`, ordered `modifiers`, nullable `command`). Existing version-1
+  single-key maps migrate losslessly to modifier-free gestures. Drift schema
+  remains 6 and Windows/Android profiles remain isolated.
+- Capture now has an explicit focus-bordered input region and the state flow
+  `idle -> capturing -> candidateCaptured -> confirm -> persisted`. A candidate
+  never writes storage. Retry/cancel/page close preserve the old profile;
+  conflicts show both commands and replace only after confirmation; success
+  displays `✓ 已保存` and the command list immediately reflects the gesture.
+- The capture `Focus` now owns the complete page stack, including the overlay,
+  and is explicitly requested on capture start/retry. This prevents overlay
+  controls from removing keyboard events from the capture path. Wheel and
+  Android volume inputs continue through the same router without modifiers.
+
+### M5.3e.2 validation
+
+- `flutter analyze`: PASS, 0 issues.
+- Full unit/contract/widget suite: **408/408 PASS**.
+- Windows integration: **10 files / 13 scenarios PASS**, run individually to
+  avoid the documented Windows debug-connection race.
+- All four real TXT metrics corpus checks: PASS, `logical error = 0`.
+- Windows Release: PASS — `build\windows\x64\runner\Release\xaocen_reader.exe`.
+- Android Debug: PASS — `build\app\outputs\flutter-apk\app-debug.apk`.
+- `git diff --check`: PASS.
+- Android ADB: **NOT-RUN**, as required for this correction.
+
 ## M5.3e.1 correction
 
 - Root cause of Windows keyboard capture failure: the settings page's `Focus`

@@ -4,24 +4,29 @@ import 'reader_input_bindings.dart';
 /// caller and never interpreted as a ReaderCommand.
 final class ReaderInputCapture {
   bool _active = false;
-  PhysicalInputId? _captured;
+  ReaderInputGesture? _capturedGesture;
 
   bool get isActive => _active;
-  PhysicalInputId? get captured => _captured;
+  PhysicalInputId? get captured => _capturedGesture?.primaryInput;
+  ReaderInputGesture? get capturedGesture => _capturedGesture;
 
   void startCapture() {
-    _captured = null;
+    _capturedGesture = null;
     _active = true;
   }
 
   void cancelCapture() {
     _active = false;
-    _captured = null;
+    _capturedGesture = null;
   }
 
   bool handle(PhysicalInputId input) {
+    return handleGesture(ReaderInputGesture.single(input));
+  }
+
+  bool handleGesture(ReaderInputGesture gesture) {
     if (!_active) return false;
-    _captured = input;
+    _capturedGesture = gesture;
     _active = false;
     return true;
   }

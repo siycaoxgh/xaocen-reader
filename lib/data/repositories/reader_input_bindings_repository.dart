@@ -26,28 +26,29 @@ final class ReaderInputBindingsRepository {
 
   Future<void> bind(
     ReaderInputPlatform platform,
-    PhysicalInputId input,
+    Object input,
     ReaderCommand command,
   ) async {
+    final gesture = _gestureOf(input);
+    if (gesture == null || gesture.primaryInput.platform != platform) return;
     final current = await load(platform);
     await update(
       platform,
       current.copyWith(
-        bindings: {...current.bindings, input: command},
+        bindings: {...current.bindings, gesture: command},
         updatedAt: DateTime.now(),
       ),
     );
   }
 
-  Future<void> unbind(
-    ReaderInputPlatform platform,
-    PhysicalInputId input,
-  ) async {
+  Future<void> unbind(ReaderInputPlatform platform, Object input) async {
+    final gesture = _gestureOf(input);
+    if (gesture == null || gesture.primaryInput.platform != platform) return;
     final current = await load(platform);
     await update(
       platform,
       current.copyWith(
-        bindings: {...current.bindings, input: null},
+        bindings: {...current.bindings, gesture: null},
         updatedAt: DateTime.now(),
       ),
     );
@@ -85,10 +86,14 @@ final class ReaderInputBindingsRepository {
     'version': profile.version,
     'platform': profile.platform.name,
     'updatedAt': profile.updatedAt.toUtc().toIso8601String(),
-    'bindings': {
+    'bindings': [
       for (final entry in profile.bindings.entries)
-        entry.key.value: entry.value?.name,
-    },
+        {
+          'primary': entry.key.primaryInput.value,
+          'modifiers': entry.key.modifiers.map((item) => item.name).toList(),
+          'command': entry.value?.name,
+        },
+    ],
   };
 
   ReaderInputProfile _decode(String? raw, ReaderInputPlatform platform) {
@@ -103,23 +108,35 @@ final class ReaderInputBindingsRepository {
       final version = decoded['version'];
       final storedPlatform = decoded['platform'];
       final rawBindings = decoded['bindings'];
-      if (version is! int ||
-          storedPlatform != platform.name ||
-          rawBindings is! Map) {
+      if (version is! int || storedPlatform != platform.name) {
         return defaults;
       }
-      final merged = <PhysicalInputId, ReaderCommand?>{...defaults.bindings};
-      for (final entry in rawBindings.entries) {
-        if (entry.key is! String) continue;
-        final input = PhysicalInputId.parse(entry.key as String);
-        if (input == null || input.platform != platform) continue;
-        final value = entry.value;
-        if (value == null) {
-          merged[input] = null;
-        } else if (value is String) {
-          final command = _parseCommand(value);
-          if (command != null) merged[input] = command;
+      final merged = <ReaderInputGesture, ReaderCommand?>{...defaults.bindings};
+      if (rawBindings is Map) {
+        // Version 1 stored a map keyed by the plain PhysicalInputId string.
+        for (final entry in rawBindings.entries) {
+          if (entry.key is! String) continue;
+          final input = PhysicalInputId.parse(entry.key as String);
+          if (input == null || input.platform != platform) continue;
+          final command = _parseNullableCommand(entry.value);
+          if (entry.value == null || command != null) {
+            merged[ReaderInputGesture.single(input)] = command;
+          }
         }
+      } else if (rawBindings is List) {
+        for (final rawEntry in rawBindings) {
+          if (rawEntry is! Map) continue;
+          final gesture = ReaderInputGesture.parse(rawEntry);
+          if (gesture == null || gesture.primaryInput.platform != platform) {
+            continue;
+          }
+          final command = _parseNullableCommand(rawEntry['command']);
+          if (rawEntry['command'] == null || command != null) {
+            merged[gesture] = command;
+          }
+        }
+      } else {
+        return defaults;
       }
       final migrated = version < ReaderInputProfile.currentVersion
           ? ReaderInputProfile.currentVersion
@@ -141,9 +158,11 @@ final class ReaderInputBindingsRepository {
     ReaderInputPlatform platform,
   ) {
     final defaults = ReaderInputProfile.defaults(platform);
-    final bindings = <PhysicalInputId, ReaderCommand?>{...defaults.bindings};
+    final bindings = <ReaderInputGesture, ReaderCommand?>{...defaults.bindings};
     for (final entry in profile.bindings.entries) {
-      if (entry.key.platform == platform) bindings[entry.key] = entry.value;
+      if (entry.key.primaryInput.platform == platform) {
+        bindings[entry.key] = entry.value;
+      }
     }
     return ReaderInputProfile(
       platform: platform,
@@ -153,7 +172,8 @@ final class ReaderInputBindingsRepository {
     );
   }
 
-  ReaderCommand? _parseCommand(String value) {
+  ReaderCommand? _parseNullableCommand(Object? value) {
+    if (value is! String) return null;
     for (final command in ReaderCommand.values) {
       if (command.name == value) return command;
     }
@@ -162,6 +182,12 @@ final class ReaderInputBindingsRepository {
 
   DateTime? _parseDate(Object? value) => switch (value) {
     String value => DateTime.tryParse(value),
+    _ => null,
+  };
+
+  ReaderInputGesture? _gestureOf(Object input) => switch (input) {
+    ReaderInputGesture gesture => gesture,
+    PhysicalInputId id => ReaderInputGesture.single(id),
     _ => null,
   };
 }

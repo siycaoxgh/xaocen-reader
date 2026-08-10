@@ -88,6 +88,24 @@ PhysicalInputId? physicalInputIdForKey(LogicalKeyboardKey key) => switch (key) {
   _ => null,
 };
 
+ReaderInputGesture? readerInputGestureForKey(
+  LogicalKeyboardKey key, {
+  bool control = false,
+  bool alt = false,
+  bool shift = false,
+}) {
+  final primary = physicalInputIdForKey(key);
+  if (primary == null) return null;
+  return ReaderInputGesture(
+    primaryInput: primary,
+    modifiers: [
+      if (control) ReaderInputModifier.ctrl,
+      if (alt) ReaderInputModifier.alt,
+      if (shift) ReaderInputModifier.shift,
+    ],
+  );
+}
+
 /// Minimal Android host bridge. The host only reports physical volume input;
 /// the binding above decides which ReaderCommand it means.
 final class ReaderInputBridge {

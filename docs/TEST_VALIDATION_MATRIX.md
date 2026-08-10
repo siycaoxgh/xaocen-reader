@@ -255,6 +255,20 @@ vertical A → paged → 不翻页 → 重开 = paged + A · vertical A → page
 | Four real TXT logical error | PASS, 0 |
 | Android real device | NOT-RUN / deferred |
 
+## M5.3e.2 correction (2026-08-10)
+
+| Gate | Result |
+|---|---|
+| ReadingHistory values/null handling | PASS |
+| Plain keys + Ctrl/Alt/Shift canonical gestures | PASS |
+| candidate/retry/cancel/confirm/conflict contracts | PASS |
+| old single-key profile migration | PASS; schema 6 |
+| Full unit/contract/widget | 408/408 PASS |
+| Windows integration | 10 files / 13 scenarios PASS |
+| Real four-TXT corpus | PASS; logical error 0 |
+| Windows Release / Android Debug | PASS / PASS |
+| Android ADB | NOT-RUN (explicit scope boundary) |
+
 ## M5.3e.1 keyboard capture correction (2026-08-10)
 
 | Validation | Result |

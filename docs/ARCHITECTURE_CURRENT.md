@@ -602,3 +602,13 @@ as a typed candidate (`idle → capturing → candidate → confirm → persist`
 repository writes occur only from explicit confirmation. Escape remains a
 cancel-only control, and the registry is shared by vertical and paged Reader
 keyboard routing.
+
+### M5.3e.2 shortcut gesture contract
+
+Windows bindings now use `ReaderInputGesture(primaryInput, modifiers)` rather
+than a plain input ID. Ctrl/Alt/Shift are canonical ordered modifiers; the
+primary remains a stable XAOCEN `PhysicalInputId`. Profile format 2 stores a
+structured gesture list and migrates format-1 single-key maps to gestures with
+no modifiers. The app_settings key remains platform scoped and Drift schema
+remains 6. Reader routing consumes gestures; Android volume and mouse wheel are
+plain gestures through the same contract.

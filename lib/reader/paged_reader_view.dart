@@ -130,8 +130,13 @@ class _PagedReaderViewState extends State<PagedReaderView> {
     if (event is! KeyDownEvent) return KeyEventResult.ignored;
     final router = widget.inputRouter;
     if (router != null) {
-      final input = physicalInputIdForKey(event.logicalKey);
-      if (input != null && router.handlePhysicalInput(input)) {
+      final input = readerInputGestureForKey(
+        event.logicalKey,
+        control: HardwareKeyboard.instance.isControlPressed,
+        alt: HardwareKeyboard.instance.isAltPressed,
+        shift: HardwareKeyboard.instance.isShiftPressed,
+      );
+      if (input != null && router.handlePhysicalGesture(input)) {
         return KeyEventResult.handled;
       }
       return KeyEventResult.ignored;

@@ -72,8 +72,9 @@ void main() {
         platform: ReaderInputPlatform.android,
         version: ReaderInputProfile.currentVersion,
         bindings: {
-          PhysicalInputId.androidVolumeUp: ReaderCommand.nextChapter,
-          PhysicalInputId.androidVolumeDown: null,
+          ReaderInputGesture.single(PhysicalInputId.androidVolumeUp):
+              ReaderCommand.nextChapter,
+          ReaderInputGesture.single(PhysicalInputId.androidVolumeDown): null,
         },
         updatedAt: DateTime(2026, 8, 9),
       );
@@ -198,6 +199,41 @@ void main() {
     expect(
       values.last.commandFor(PhysicalInputId.mouseWheelUp),
       ReaderCommand.toggleReaderControls,
+    );
+  });
+
+  test('combination gesture persists canonically across restart', () async {
+    final gesture = ReaderInputGesture(
+      primaryInput: PhysicalInputId.keyboardPageDown,
+      modifiers: [ReaderInputModifier.ctrl, ReaderInputModifier.shift],
+    );
+    await repository.bind(
+      ReaderInputPlatform.windows,
+      gesture,
+      ReaderCommand.nextChapter,
+    );
+    final recreated = ReaderInputBindingsRepository(db: db);
+    expect(
+      (await recreated.load(ReaderInputPlatform.windows)).commandFor(gesture),
+      ReaderCommand.nextChapter,
+    );
+  });
+
+  test('version 1 plain-key JSON migrates without clearing bindings', () async {
+    await _putRaw(
+      db,
+      'reader.inputBindings.windows.v1',
+      jsonEncode({
+        'version': 1,
+        'platform': 'windows',
+        'bindings': {'keyboard.keyA': 'openToc'},
+      }),
+    );
+    final profile = await repository.load(ReaderInputPlatform.windows);
+    expect(profile.version, ReaderInputProfile.currentVersion);
+    expect(
+      profile.commandFor(PhysicalInputId.keyboardKeyA),
+      ReaderCommand.openToc,
     );
   });
 }

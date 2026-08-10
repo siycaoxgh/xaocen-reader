@@ -89,12 +89,16 @@ final class ReaderInputRouter {
   /// Returns true when the input was consumed either by capture or by a
   /// command binding. During capture, no Reader action is dispatched.
   bool handlePhysicalInput(PhysicalInputId input) {
+    return handlePhysicalGesture(ReaderInputGesture.single(input));
+  }
+
+  bool handlePhysicalGesture(ReaderInputGesture gesture) {
     if (_disposed) return false;
-    if (capture.handle(input)) {
+    if (capture.handleGesture(gesture)) {
       _notifyHostState();
       return true;
     }
-    final command = _profile.commandFor(input);
+    final command = _profile.commandFor(gesture);
     if (command == null) return false;
     final action = switch (command) {
       ReaderCommand.previousPage => onPreviousPage,

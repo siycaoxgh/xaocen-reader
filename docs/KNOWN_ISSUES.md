@@ -158,3 +158,11 @@
   the add button; capture now requests a dedicated FocusNode and visibly holds
   a candidate until confirmation.
 - Android ADB validation is intentionally not part of this correction pass.
+
+## M5.3e.2 status update (2026-08-10)
+
+- Reading History `Instance of ...` output is resolved and regression-covered.
+- Windows keyboard capture now supports the documented single-key range plus
+  Ctrl/Alt/Shift gestures. Candidate input is never persisted before confirm.
+- No new Reader P1/P2 issue was found. Android ADB was explicitly excluded;
+  Android Debug build passed.

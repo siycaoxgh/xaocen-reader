@@ -9,7 +9,10 @@ void main() {
     expect(workflow.stage, ReaderInputCaptureStage.capturing);
     expect(workflow.capture(PhysicalInputId.keyboardKeyA), isTrue);
     expect(workflow.stage, ReaderInputCaptureStage.candidate);
-    expect(workflow.confirm(), PhysicalInputId.keyboardKeyA);
+    expect(
+      workflow.confirm(),
+      ReaderInputGesture.single(PhysicalInputId.keyboardKeyA),
+    );
     expect(workflow.stage, ReaderInputCaptureStage.idle);
   });
 
@@ -32,6 +35,9 @@ void main() {
     workflow.start();
     expect(workflow.capture(PhysicalInputId.mouseWheelUp), isTrue);
     expect(workflow.capture(PhysicalInputId.mouseWheelDown), isFalse);
-    expect(workflow.candidate, PhysicalInputId.mouseWheelUp);
+    expect(
+      workflow.candidate,
+      ReaderInputGesture.single(PhysicalInputId.mouseWheelUp),
+    );
   });
 }

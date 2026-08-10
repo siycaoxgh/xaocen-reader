@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../domain/library/library_entities.dart';
 import '../domain/reader/reading_history.dart';
 import '../domain/reader/reading_session.dart';
-import '../domain/library/library_entities.dart';
 import '../reader/reader_page.dart';
 import 'providers.dart';
 
@@ -27,14 +27,17 @@ class _ReadingHistoryPageState extends ConsumerState<ReadingHistoryPage> {
     final history = ref.read(readingHistoryRepositoryProvider);
     final library = ref.read(libraryRepositoryProvider);
     final sessions = ref.read(readingSessionRepositoryProvider);
-    final entries = await history.loadAll();
     final rows = <_HistoryRow>[];
-    for (final entry in entries) {
-      final aggregate = await sessions.aggregate(entry.id);
-      final collection = entry.collectionId == null
-          ? null
-          : await library.getCollection(entry.collectionId!);
-      rows.add(_HistoryRow(entry, aggregate, collection));
+    for (final entry in await history.loadAll()) {
+      rows.add(
+        _HistoryRow(
+          entry,
+          await sessions.aggregate(entry.id),
+          entry.collectionId == null
+              ? null
+              : await library.getCollection(entry.collectionId!),
+        ),
+      );
     }
     return rows;
   }
@@ -42,41 +45,39 @@ class _ReadingHistoryPageState extends ConsumerState<ReadingHistoryPage> {
   void _refresh() => setState(() => _future = _load());
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('阅读历史')),
-      body: FutureBuilder<List<_HistoryRow>>(
-        future: _future,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return Center(child: Text('加载失败: ${snapshot.error}'));
-          }
-          final rows = snapshot.data ?? const <_HistoryRow>[];
-          if (rows.isEmpty) return const Center(child: Text('还没有阅读历史'));
-          return ListView.separated(
-            padding: const EdgeInsets.all(16),
-            itemCount: rows.length,
-            separatorBuilder: (_, _) => const SizedBox(height: 10),
-            itemBuilder: (context, index) => _HistoryCard(
-              row: rows[index],
-              onContinue: rows[index].collection == null
-                  ? null
-                  : () => _openReader(rows[index].collection!),
-              onDelete: () async {
-                await ref
-                    .read(readingHistoryRepositoryProvider)
-                    .delete(rows[index].entry.id);
-                _refresh();
-              },
-            ),
-          );
-        },
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('阅读历史')),
+    body: FutureBuilder<List<_HistoryRow>>(
+      future: _future,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return Center(child: Text('加载失败：${snapshot.error}'));
+        }
+        final rows = snapshot.data ?? const <_HistoryRow>[];
+        if (rows.isEmpty) return const Center(child: Text('还没有阅读历史'));
+        return ListView.separated(
+          padding: const EdgeInsets.all(16),
+          itemCount: rows.length,
+          separatorBuilder: (_, _) => const SizedBox(height: 10),
+          itemBuilder: (context, index) => _HistoryCard(
+            row: rows[index],
+            onContinue: rows[index].collection == null
+                ? null
+                : () => _openReader(rows[index].collection!),
+            onDelete: () async {
+              await ref
+                  .read(readingHistoryRepositoryProvider)
+                  .delete(rows[index].entry.id);
+              _refresh();
+            },
+          ),
+        );
+      },
+    ),
+  );
 
   Future<void> _openReader(LibraryCollection collection) async {
     final repo = ref.read(libraryRepositoryProvider);
@@ -123,35 +124,46 @@ class _HistoryCard extends StatelessWidget {
   final VoidCallback onDelete;
 
   @override
-  Widget build(BuildContext context) {
-    final e = row.entry;
-    final minutes = row.aggregate.totalReadingSeconds ~/ 60;
-    return Card(
-      child: ListTile(
-        title: Text(e.bookTitleSnapshot),
-        subtitle: Text(
-          [
-            '首次 ${_date(e.firstReadAt)}',
-            '最后 ${_date(e.lastReadAt)}',
-            '阅读 $minutes 分钟 · $row.aggregate.sessionCount 次会话',
-            if (e.lastChapterTitleSnapshot != null)
-              '最后章节：$e.lastChapterTitleSnapshot',
-            if (e.lastProgressSnapshot != null) '进度快照：$e.lastProgressSnapshot',
-            if (row.collection == null) '已移出书架',
-          ].join('\n'),
-        ),
-        isThreeLine: true,
-        trailing: PopupMenuButton<String>(
-          onSelected: (_) => onDelete(),
-          itemBuilder: (_) => const [
-            PopupMenuItem(value: 'delete', child: Text('删除历史')),
-          ],
-        ),
-        onTap: onContinue,
+  Widget build(BuildContext context) => Card(
+    child: ListTile(
+      title: Text(row.entry.bookTitleSnapshot),
+      subtitle: Text(
+        readingHistoryDetailLines(
+          row.entry,
+          row.aggregate,
+          isInLibrary: row.collection != null,
+        ).join('\n'),
       ),
-    );
-  }
-
-  String _date(DateTime value) =>
-      '${value.year}-${value.month.toString().padLeft(2, '0')}-${value.day.toString().padLeft(2, '0')}';
+      isThreeLine: true,
+      trailing: PopupMenuButton<String>(
+        onSelected: (_) => onDelete(),
+        itemBuilder: (_) => const [
+          PopupMenuItem(value: 'delete', child: Text('删除历史')),
+        ],
+      ),
+      onTap: onContinue,
+    ),
+  );
 }
+
+@visibleForTesting
+List<String> readingHistoryDetailLines(
+  ReadingHistoryEntry entry,
+  ReadingSessionAggregate aggregate, {
+  required bool isInLibrary,
+}) {
+  final minutes = aggregate.totalReadingSeconds ~/ 60;
+  return [
+    '首次 ${_historyDate(entry.firstReadAt)}',
+    '最后 ${_historyDate(entry.lastReadAt)}',
+    '阅读 $minutes 分钟 · ${aggregate.sessionCount} 次会话',
+    if (entry.lastChapterTitleSnapshot?.trim().isNotEmpty == true)
+      '最后章节：${entry.lastChapterTitleSnapshot!.trim()}',
+    if (entry.lastProgressSnapshot?.trim().isNotEmpty == true)
+      '进度快照：${entry.lastProgressSnapshot!.trim()}',
+    if (!isInLibrary) '已移出书架',
+  ];
+}
+
+String _historyDate(DateTime value) =>
+    '${value.year}-${value.month.toString().padLeft(2, '0')}-${value.day.toString().padLeft(2, '0')}';

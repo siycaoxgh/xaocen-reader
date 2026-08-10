@@ -1520,8 +1520,13 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
 
   KeyEventResult _onVerticalKeyEvent(FocusNode node, KeyEvent event) {
     if (event is! KeyDownEvent) return KeyEventResult.ignored;
-    final input = physicalInputIdForKey(event.logicalKey);
-    if (input != null && _inputRouter.handlePhysicalInput(input)) {
+    final input = readerInputGestureForKey(
+      event.logicalKey,
+      control: HardwareKeyboard.instance.isControlPressed,
+      alt: HardwareKeyboard.instance.isAltPressed,
+      shift: HardwareKeyboard.instance.isShiftPressed,
+    );
+    if (input != null && _inputRouter.handlePhysicalGesture(input)) {
       return KeyEventResult.handled;
     }
     return KeyEventResult.ignored;

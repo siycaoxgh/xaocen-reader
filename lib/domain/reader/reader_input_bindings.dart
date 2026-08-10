@@ -164,39 +164,96 @@ final class PhysicalInputId {
   String toString() => value;
 }
 
+enum ReaderInputModifier { ctrl, alt, shift }
+
+/// Canonical physical gesture. Modifiers are ordered and deduplicated so the
+/// persisted representation is stable across platforms and reloads.
+final class ReaderInputGesture {
+  ReaderInputGesture({
+    required this.primaryInput,
+    Iterable<ReaderInputModifier> modifiers = const [],
+  }) : modifiers = Set.unmodifiable(
+         ReaderInputModifier.values.where(modifiers.toSet().contains),
+       );
+
+  ReaderInputGesture.single(PhysicalInputId input) : this(primaryInput: input);
+
+  final PhysicalInputId primaryInput;
+  final Set<ReaderInputModifier> modifiers;
+
+  String get canonicalKey =>
+      '${modifiers.map((modifier) => modifier.name).join('+')}'
+      '${modifiers.isEmpty ? '' : '+'}${primaryInput.value}';
+
+  bool get isPlain => modifiers.isEmpty;
+
+  static ReaderInputGesture? parse(Object? raw) {
+    if (raw is! Map) return null;
+    final primary = PhysicalInputId.parse(raw['primary'] as String? ?? '');
+    final rawModifiers = raw['modifiers'];
+    if (primary == null || rawModifiers is! List) return null;
+    final modifiers = <ReaderInputModifier>[];
+    for (final value in rawModifiers) {
+      if (value is! String) return null;
+      ReaderInputModifier? modifier;
+      for (final item in ReaderInputModifier.values) {
+        if (item.name == value) modifier = item;
+      }
+      if (modifier == null) return null;
+      modifiers.add(modifier);
+    }
+    return ReaderInputGesture(primaryInput: primary, modifiers: modifiers);
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      other is ReaderInputGesture && canonicalKey == other.canonicalKey;
+
+  @override
+  int get hashCode => canonicalKey.hashCode;
+}
+
 final class ReaderInputProfile {
-  const ReaderInputProfile({
+  ReaderInputProfile({
     required this.platform,
     required this.version,
-    required this.bindings,
+    required Map<ReaderInputGesture, ReaderCommand?> bindings,
     required this.updatedAt,
-  });
+  }) : bindings = Map.unmodifiable(bindings);
 
-  static const currentVersion = 1;
+  static const currentVersion = 2;
 
   final ReaderInputPlatform platform;
   final int version;
-  final Map<PhysicalInputId, ReaderCommand?> bindings;
+  final Map<ReaderInputGesture, ReaderCommand?> bindings;
   final DateTime updatedAt;
 
   factory ReaderInputProfile.defaults(
     ReaderInputPlatform platform, {
     DateTime? updatedAt,
   }) {
-    final map = <PhysicalInputId, ReaderCommand?>{};
+    final map = <ReaderInputGesture, ReaderCommand?>{};
     if (platform == ReaderInputPlatform.windows) {
       map.addAll({
-        PhysicalInputId.keyboardArrowLeft: ReaderCommand.previousPage,
-        PhysicalInputId.keyboardArrowRight: ReaderCommand.nextPage,
-        PhysicalInputId.keyboardPageUp: ReaderCommand.previousPage,
-        PhysicalInputId.keyboardPageDown: ReaderCommand.nextPage,
-        PhysicalInputId.mouseWheelUp: ReaderCommand.previousPage,
-        PhysicalInputId.mouseWheelDown: ReaderCommand.nextPage,
+        ReaderInputGesture.single(PhysicalInputId.keyboardArrowLeft):
+            ReaderCommand.previousPage,
+        ReaderInputGesture.single(PhysicalInputId.keyboardArrowRight):
+            ReaderCommand.nextPage,
+        ReaderInputGesture.single(PhysicalInputId.keyboardPageUp):
+            ReaderCommand.previousPage,
+        ReaderInputGesture.single(PhysicalInputId.keyboardPageDown):
+            ReaderCommand.nextPage,
+        ReaderInputGesture.single(PhysicalInputId.mouseWheelUp):
+            ReaderCommand.previousPage,
+        ReaderInputGesture.single(PhysicalInputId.mouseWheelDown):
+            ReaderCommand.nextPage,
       });
     } else {
       map.addAll({
-        PhysicalInputId.androidVolumeUp: ReaderCommand.previousPage,
-        PhysicalInputId.androidVolumeDown: ReaderCommand.nextPage,
+        ReaderInputGesture.single(PhysicalInputId.androidVolumeUp):
+            ReaderCommand.previousPage,
+        ReaderInputGesture.single(PhysicalInputId.androidVolumeDown):
+            ReaderCommand.nextPage,
       });
     }
     return ReaderInputProfile(
@@ -207,13 +264,19 @@ final class ReaderInputProfile {
     );
   }
 
-  ReaderCommand? commandFor(PhysicalInputId input) => bindings[input];
+  ReaderCommand? commandFor(Object input) {
+    final gesture = _asGesture(input);
+    return gesture == null ? null : bindings[gesture];
+  }
 
-  bool hasBinding(PhysicalInputId input) => bindings.containsKey(input);
+  bool hasBinding(Object input) {
+    final gesture = _asGesture(input);
+    return gesture != null && bindings.containsKey(gesture);
+  }
 
   ReaderInputProfile copyWith({
     int? version,
-    Map<PhysicalInputId, ReaderCommand?>? bindings,
+    Map<ReaderInputGesture, ReaderCommand?>? bindings,
     DateTime? updatedAt,
   }) => ReaderInputProfile(
     platform: platform,
@@ -221,4 +284,10 @@ final class ReaderInputProfile {
     bindings: Map.unmodifiable(bindings ?? this.bindings),
     updatedAt: updatedAt ?? this.updatedAt,
   );
+
+  static ReaderInputGesture? _asGesture(Object? input) => switch (input) {
+    ReaderInputGesture gesture => gesture,
+    PhysicalInputId id => ReaderInputGesture.single(id),
+    _ => null,
+  };
 }

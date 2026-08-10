@@ -17,26 +17,24 @@ class ReaderSettingsPage extends StatelessWidget {
   const ReaderSettingsPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('阅读设置')),
-      body: ListView(
-        children: [
-          ListTile(
-            leading: const Icon(Icons.keyboard_alt_outlined),
-            title: const Text('按键与操作'),
-            subtitle: const Text('自定义翻页、章节、控制区和目录输入'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => const ReaderInputSettingsPage(),
-              ),
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('阅读设置')),
+    body: ListView(
+      children: [
+        ListTile(
+          leading: const Icon(Icons.keyboard_alt_outlined),
+          title: const Text('按键与操作'),
+          subtitle: const Text('自定义翻页、章节、阅读控制和目录输入'),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => const ReaderInputSettingsPage(),
             ),
           ),
-        ],
-      ),
-    );
-  }
+        ),
+      ],
+    ),
+  );
 }
 
 class ReaderInputSettingsPage extends ConsumerStatefulWidget {
@@ -70,7 +68,7 @@ class _ReaderInputSettingsPageState
 
   ReaderInputProfile? _profile;
   ReaderCommand? _captureCommand;
-  PhysicalInputId? _candidate;
+  ReaderInputGesture? _candidate;
   bool _resetting = false;
 
   @override
@@ -112,12 +110,12 @@ class _ReaderInputSettingsPageState
         ),
       );
     }
-    final captured = _router.capture.captured;
+    final captured = _router.capture.capturedGesture;
     if (!captureActive &&
         captured != null &&
         _captureCommand != null &&
         _captureWorkflow.capture(captured)) {
-      setState(() => _candidate = _captureWorkflow.candidate);
+      if (mounted) setState(() => _candidate = captured);
     } else if (mounted) {
       setState(() {});
     }
@@ -151,52 +149,66 @@ class _ReaderInputSettingsPageState
   }
 
   Future<void> _confirmCandidate() async {
-    final input = _candidate;
+    final gesture = _candidate;
     final command = _captureCommand;
-    if (input == null || command == null) return;
-    await _repository.bind(_platform, input, command);
+    if (gesture == null || command == null) return;
+    await _repository.bind(_platform, gesture, command);
     final latest = await _repository.load(_platform);
     if (!mounted) return;
+    _captureWorkflow.confirm();
     setState(() {
       _profile = latest;
       _captureCommand = null;
       _candidate = null;
     });
-    _captureWorkflow.confirm();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('✓ 已绑定  ${inputLabel(input)} → ${commandLabel(command)}'),
+        content: Text(
+          '✓ 已保存\n${gestureLabel(gesture)} → ${commandLabel(command)}',
+        ),
       ),
     );
   }
 
   KeyEventResult _onKeyEvent(FocusNode node, KeyEvent event) {
-    if (_platform != ReaderInputPlatform.windows ||
-        !_router.capture.isActive ||
-        event is! KeyDownEvent) {
+    if (_platform != ReaderInputPlatform.windows || !_router.capture.isActive) {
       return KeyEventResult.ignored;
     }
-    final input = physicalInputIdForKey(event.logicalKey);
-    if (input == null) return KeyEventResult.ignored;
-    _router.handlePhysicalInput(input);
+    if (event is! KeyDownEvent) return KeyEventResult.handled;
+    if (event.logicalKey == LogicalKeyboardKey.escape) {
+      _cancelCapture();
+      return KeyEventResult.handled;
+    }
+    final gesture = readerInputGestureForKey(
+      event.logicalKey,
+      control: HardwareKeyboard.instance.isControlPressed,
+      alt: HardwareKeyboard.instance.isAltPressed,
+      shift: HardwareKeyboard.instance.isShiftPressed,
+    );
+    // A modifier on its own is deliberately not a complete gesture.
+    if (gesture == null) return KeyEventResult.handled;
+    _router.handlePhysicalGesture(gesture);
     return KeyEventResult.handled;
   }
 
   void _onPointerSignal(PointerSignalEvent event) {
     if (_platform != ReaderInputPlatform.windows ||
         !_router.capture.isActive ||
-        event is! PointerScrollEvent) {
+        event is! PointerScrollEvent ||
+        event.scrollDelta.dy == 0) {
       return;
     }
-    final dy = event.scrollDelta.dy;
-    if (dy == 0) return;
-    _router.handlePhysicalInput(
-      dy < 0 ? PhysicalInputId.mouseWheelUp : PhysicalInputId.mouseWheelDown,
+    _router.handlePhysicalGesture(
+      ReaderInputGesture.single(
+        event.scrollDelta.dy < 0
+            ? PhysicalInputId.mouseWheelUp
+            : PhysicalInputId.mouseWheelDown,
+      ),
     );
   }
 
-  Future<void> _clearBinding(PhysicalInputId input) async {
-    await _repository.unbind(_platform, input);
+  Future<void> _clearBinding(ReaderInputGesture gesture) async {
+    await _repository.unbind(_platform, gesture);
     final latest = await _repository.load(_platform);
     if (mounted) setState(() => _profile = latest);
   }
@@ -240,14 +252,14 @@ class _ReaderInputSettingsPageState
     final desktop = MediaQuery.sizeOf(context).width >= 720;
     return Scaffold(
       appBar: AppBar(title: const Text('按键与操作')),
-      body: Stack(
-        fit: StackFit.expand,
-        children: [
-          Focus(
-            focusNode: _captureFocusNode,
-            autofocus: true,
-            onKeyEvent: _onKeyEvent,
-            child: Listener(
+      body: Focus(
+        focusNode: _captureFocusNode,
+        autofocus: true,
+        onKeyEvent: _onKeyEvent,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Listener(
               onPointerSignal: _onPointerSignal,
               child: SafeArea(
                 child: Center(
@@ -294,20 +306,20 @@ class _ReaderInputSettingsPageState
                 ),
               ),
             ),
-          ),
-          if (_captureCommand != null)
-            _CaptureOverlay(
-              candidate: _candidate,
-              existing: _candidate == null
-                  ? null
-                  : (_profile ?? _router.profile).commandFor(_candidate!),
-              target: _captureCommand!,
-              onConfirm: _confirmCandidate,
-              onRetry: _retryCapture,
-              onCancel: _cancelCapture,
-              onPointerSignal: _onPointerSignal,
-            ),
-        ],
+            if (_captureCommand != null)
+              _CaptureOverlay(
+                candidate: _candidate,
+                existing: _candidate == null
+                    ? null
+                    : profile.commandFor(_candidate!),
+                target: _captureCommand!,
+                onConfirm: _confirmCandidate,
+                onRetry: _retryCapture,
+                onCancel: _cancelCapture,
+                onPointerSignal: _onPointerSignal,
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -340,9 +352,9 @@ class _CommandSection extends StatelessWidget {
   });
 
   final ReaderCommand command;
-  final List<PhysicalInputId> inputs;
+  final List<ReaderInputGesture> inputs;
   final VoidCallback onAdd;
-  final Future<void> Function(PhysicalInputId input) onClear;
+  final Future<void> Function(ReaderInputGesture gesture) onClear;
 
   @override
   Widget build(BuildContext context) => Card(
@@ -370,25 +382,30 @@ class _CommandSection extends StatelessWidget {
               spacing: 8,
               runSpacing: 4,
               children: [
-                for (final input in inputs)
+                for (final gesture in inputs)
                   InputChip(
-                    key: ValueKey('reader-input-binding-${input.value}'),
-                    label: Text(inputLabel(input)),
+                    key: ValueKey(
+                      'reader-input-binding-${gesture.canonicalKey}',
+                    ),
+                    label: Text(gestureLabel(gesture)),
                     deleteIcon: Icon(
                       Icons.clear,
-                      key: ValueKey('reader-input-delete-${input.value}'),
+                      key: ValueKey(
+                        'reader-input-delete-${gesture.canonicalKey}',
+                      ),
                     ),
-                    onDeleted: () => unawaited(onClear(input)),
+                    onDeleted: () => unawaited(onClear(gesture)),
                   ),
               ],
             ),
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton.icon(
+          const SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
               key: ValueKey('reader-input-add-${command.name}'),
               onPressed: onAdd,
-              icon: const Icon(Icons.add),
-              label: const Text('添加按键'),
+              icon: const Icon(Icons.keyboard),
+              label: const Text('点击这里，然后按下快捷键'),
             ),
           ),
         ],
@@ -399,7 +416,7 @@ class _CommandSection extends StatelessWidget {
 
 class _DisabledSection extends StatelessWidget {
   const _DisabledSection({required this.inputs});
-  final List<PhysicalInputId> inputs;
+  final List<ReaderInputGesture> inputs;
 
   @override
   Widget build(BuildContext context) {
@@ -407,7 +424,7 @@ class _DisabledSection extends StatelessWidget {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
-        child: Text('已禁用输入：${inputs.map(inputLabel).join('、')}'),
+        child: Text('已禁用输入：${inputs.map(gestureLabel).join('、')}'),
       ),
     );
   }
@@ -424,7 +441,7 @@ class _CaptureOverlay extends StatelessWidget {
     required this.onPointerSignal,
   });
 
-  final PhysicalInputId? candidate;
+  final ReaderInputGesture? candidate;
   final ReaderCommand? existing;
   final ReaderCommand target;
   final VoidCallback onConfirm;
@@ -437,63 +454,92 @@ class _CaptureOverlay extends StatelessWidget {
     final waiting = candidate == null;
     final conflict = !waiting && existing != null && existing != target;
     return Material(
-      color: Colors.transparent,
-      child: Listener(
-        onPointerSignal: onPointerSignal,
-        child: SafeArea(
-          child: Card(
-            key: const ValueKey('reader-input-capture'),
-            margin: const EdgeInsets.all(12),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    waiting ? '正在等待输入……' : '检测到：${inputLabel(candidate!)}',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    waiting
-                        ? '请按下一个键或滚动鼠标'
-                        : conflict
-                        ? '当前：${inputLabel(candidate!)} → ${commandLabel(existing!)}\n准备修改为：${inputLabel(candidate!)} → ${commandLabel(target)}'
-                        : '准备绑定：${inputLabel(candidate!)} → ${commandLabel(target)}',
-                  ),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 8,
-                    children: [
-                      if (!waiting)
-                        FilledButton(
-                          key: ValueKey(
-                            conflict
-                                ? 'reader-input-conflict-replace'
-                                : 'reader-input-confirm',
-                          ),
-                          onPressed: onConfirm,
-                          child: Text(conflict ? '确认替换' : '确认绑定'),
-                        ),
-                      if (!waiting)
-                        OutlinedButton(
-                          key: const ValueKey('reader-input-retry'),
-                          onPressed: onRetry,
-                          child: const Text('重新输入'),
-                        ),
-                      TextButton(
-                        key: const ValueKey('reader-input-cancel'),
-                        onPressed: onCancel,
-                        child: const Text('取消'),
+      color: Colors.black45,
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: onCancel,
+            ),
+          ),
+          SafeArea(
+            child: Center(
+              child: Listener(
+                onPointerSignal: onPointerSignal,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 560),
+                  child: AnimatedContainer(
+                    key: const ValueKey('reader-input-capture'),
+                    duration: const Duration(milliseconds: 120),
+                    margin: const EdgeInsets.all(20),
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.surface,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: Theme.of(context).colorScheme.primary,
+                        width: 2,
                       ),
-                    ],
+                      boxShadow: const [
+                        BoxShadow(blurRadius: 16, color: Colors.black38),
+                      ],
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          waiting
+                              ? '● 正在等待输入……'
+                              : '检测到：${gestureLabel(candidate!)}',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          waiting
+                              ? '请按快捷键或滚动鼠标\nEsc 可取消'
+                              : conflict
+                              ? '当前：${gestureLabel(candidate!)} → ${commandLabel(existing!)}\n'
+                                    '准备修改为：${gestureLabel(candidate!)} → ${commandLabel(target)}'
+                              : '准备绑定到：${commandLabel(target)}',
+                        ),
+                        const SizedBox(height: 16),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            if (!waiting)
+                              FilledButton(
+                                key: ValueKey(
+                                  conflict
+                                      ? 'reader-input-conflict-replace'
+                                      : 'reader-input-confirm',
+                                ),
+                                onPressed: onConfirm,
+                                child: Text(conflict ? '确认替换' : '确认绑定'),
+                              ),
+                            if (!waiting)
+                              OutlinedButton(
+                                key: const ValueKey('reader-input-retry'),
+                                onPressed: onRetry,
+                                child: const Text('重新输入'),
+                              ),
+                            TextButton(
+                              key: const ValueKey('reader-input-cancel'),
+                              onPressed: onCancel,
+                              child: const Text('取消'),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
-                ],
+                ),
               ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -511,6 +557,16 @@ String commandLabel(ReaderCommand command) => switch (command) {
   ReaderCommand.openToc => '打开目录',
 };
 
+String gestureLabel(ReaderInputGesture gesture) {
+  final parts = <String>[
+    if (gesture.modifiers.contains(ReaderInputModifier.ctrl)) 'Ctrl',
+    if (gesture.modifiers.contains(ReaderInputModifier.alt)) 'Alt',
+    if (gesture.modifiers.contains(ReaderInputModifier.shift)) 'Shift',
+    inputLabel(gesture.primaryInput),
+  ];
+  return parts.join(' + ');
+}
+
 String inputLabel(PhysicalInputId input) {
   final value = input.value;
   if (value.startsWith('keyboard.key')) {
@@ -520,12 +576,12 @@ String inputLabel(PhysicalInputId input) {
     return value.substring('keyboard.digit'.length);
   }
   return switch (input) {
-    PhysicalInputId.keyboardArrowLeft => 'ArrowLeft',
-    PhysicalInputId.keyboardArrowRight => 'ArrowRight',
-    PhysicalInputId.keyboardArrowUp => 'ArrowUp',
-    PhysicalInputId.keyboardArrowDown => 'ArrowDown',
-    PhysicalInputId.keyboardPageUp => 'PageUp',
-    PhysicalInputId.keyboardPageDown => 'PageDown',
+    PhysicalInputId.keyboardArrowLeft => 'Arrow Left',
+    PhysicalInputId.keyboardArrowRight => 'Arrow Right',
+    PhysicalInputId.keyboardArrowUp => 'Arrow Up',
+    PhysicalInputId.keyboardArrowDown => 'Arrow Down',
+    PhysicalInputId.keyboardPageUp => 'Page Up',
+    PhysicalInputId.keyboardPageDown => 'Page Down',
     PhysicalInputId.keyboardHome => 'Home',
     PhysicalInputId.keyboardEnd => 'End',
     PhysicalInputId.keyboardSpace => 'Space',
@@ -534,6 +590,6 @@ String inputLabel(PhysicalInputId input) {
     PhysicalInputId.mouseWheelDown => 'Wheel Down',
     PhysicalInputId.androidVolumeUp => 'Volume Up',
     PhysicalInputId.androidVolumeDown => 'Volume Down',
-    _ => value,
+    _ => input.value,
   };
 }
