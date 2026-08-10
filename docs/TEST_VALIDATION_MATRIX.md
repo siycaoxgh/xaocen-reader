@@ -429,4 +429,16 @@ vertical A → paged → 不翻页 → 重开 = paged + A · vertical A → page
 | Windows integration | 11 files / 14 scenarios PASS |
 | Windows Release / Android Debug | PASS / PASS |
 | Drift schema | 6, unchanged |
-| Paged AutoRead / UI / keep-awake | Deferred |
+| Paged AutoRead / keep-awake / shortcuts | Deferred |
+
+## M5.4b.1 Vertical AutoRead UI (2026-08-11)
+
+| Area | Result |
+|---|---|
+| Reader bottom AutoRead entry | PASS |
+| Vertical start / pause / resume / stop controls | PASS |
+| Five speed presets and live controller update | PASS |
+| Running and paused status labels | PASS |
+| Paged mode does not start automatic paging | PASS |
+| Locator / progress / ReadingSession contracts | PASS (unchanged) |
+| UI widget coverage | PASS |

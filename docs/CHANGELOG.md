@@ -704,4 +704,12 @@ Not a release; recorded for completeness.
   truth.
 - Manual touch/wheel pauses, automatic frames do not self-pause, and pause,
   stop, relayout, lifecycle, dispose, and real EOF are generation-safe.
-- Schema remains 6; Paged AutoRead and AutoRead UI are deferred.
+- Schema remains 6; Paged AutoRead remains deferred.
+
+### M5.4b.1 — Vertical AutoRead UI
+
+- Added a compact AutoRead entry to the existing Reader bottom chrome.
+- Added vertical start, pause/resume, stop, and five live speed presets backed
+  by the existing AutoReadController/VerticalAutoReadDriver.
+- Paged automatic paging, keep-awake, shortcuts, and schema changes remain
+  deferred.

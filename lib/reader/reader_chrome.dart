@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../domain/reader/reader_bookmark.dart';
+import '../domain/reader/auto_read_controller.dart';
+import '../domain/reader/auto_read_preferences.dart';
 import '../domain/reader/reader_preferences.dart';
 import '../domain/reader/reader_search.dart';
 import 'reader_mode.dart';
@@ -15,6 +17,8 @@ const readerAppearanceActionKey = Key('reader-appearance-action');
 const readerMoreActionKey = Key('reader-more-action');
 const readerBookmarksActionKey = Key('reader-bookmarks-action');
 const readerSearchActionKey = Key('reader-search-action');
+const readerAutoReadActionKey = Key('reader-auto-read-action');
+const readerAutoReadSheetKey = Key('reader-auto-read-sheet');
 const readerBookmarkCreateKey = Key('reader-bookmark-create');
 const readerBookmarkListKey = Key('reader-bookmark-list');
 const readerModeActionKey = Key('reader-mode-action');
@@ -54,6 +58,9 @@ class ReaderChrome extends StatelessWidget {
     required this.onBookmarks,
     required this.onSearch,
     required this.onModeSelected,
+    this.onAutoRead,
+    this.autoReadState = AutoReadState.idle,
+    this.autoReadSpeedPreset = VerticalSpeedPreset.standard,
     this.currentChapterTitle,
     this.currentChapterNumber,
     this.chapterProgressPercent,
@@ -72,6 +79,9 @@ class ReaderChrome extends StatelessWidget {
   final VoidCallback onBookmarks;
   final VoidCallback onSearch;
   final ValueChanged<ReaderMode> onModeSelected;
+  final VoidCallback? onAutoRead;
+  final AutoReadState autoReadState;
+  final VerticalSpeedPreset autoReadSpeedPreset;
   final String? currentChapterTitle;
   final int? currentChapterNumber;
   final double? chapterProgressPercent;
@@ -294,6 +304,18 @@ class ReaderChrome extends StatelessWidget {
                           label: '搜索',
                           onPressed: onSearch,
                         ),
+                        if (onAutoRead != null)
+                          _ChromeAction(
+                            key: readerAutoReadActionKey,
+                            icon: autoReadState == AutoReadState.running
+                                ? Icons.pause_circle_outline
+                                : Icons.auto_stories_outlined,
+                            label: autoReadState == AutoReadState.running
+                                ? '\u81ea\u52a8\u9605\u8bfb\u4e2d \u00b7 ${_autoReadSpeedLabel(autoReadSpeedPreset)}'
+                                : '\u81ea\u52a8\u9605\u8bfb',
+                            selected: autoReadState == AutoReadState.running,
+                            onPressed: onAutoRead!,
+                          ),
                         _ChromeAction(
                           key: readerAppearanceActionKey,
                           icon: Icons.text_fields_rounded,
@@ -311,6 +333,172 @@ class ReaderChrome extends StatelessWidget {
                   ),
                 ),
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+String _autoReadSpeedLabel(VerticalSpeedPreset preset) => switch (preset) {
+  VerticalSpeedPreset.slow => '\u6162',
+  VerticalSpeedPreset.slower => '\u8f83\u6162',
+  VerticalSpeedPreset.standard => '\u6807\u51c6',
+  VerticalSpeedPreset.faster => '\u8f83\u5feb',
+  VerticalSpeedPreset.fast => '\u5feb',
+};
+
+Future<void> showReaderAutoReadControls(
+  BuildContext context, {
+  required ReaderMode mode,
+  required AutoReadState Function() stateOf,
+  required VerticalSpeedPreset Function() speedOf,
+  required Stream<AutoReadEvent> events,
+  required VoidCallback onStart,
+  required VoidCallback onPause,
+  required VoidCallback onResume,
+  required VoidCallback onStop,
+  required ValueChanged<VerticalSpeedPreset> onSpeedSelected,
+}) {
+  final isDesktop = MediaQuery.sizeOf(context).width >= 720;
+  return showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: true,
+    constraints: BoxConstraints(maxWidth: isDesktop ? 560 : double.infinity),
+    builder: (context) => StreamBuilder<AutoReadEvent>(
+      stream: events,
+      builder: (context, _) => ReaderAutoReadSheet(
+        key: readerAutoReadSheetKey,
+        mode: mode,
+        state: stateOf(),
+        speedPreset: speedOf(),
+        onStart: onStart,
+        onPause: onPause,
+        onResume: onResume,
+        onStop: onStop,
+        onSpeedSelected: onSpeedSelected,
+      ),
+    ),
+  );
+}
+
+class ReaderAutoReadSheet extends StatelessWidget {
+  const ReaderAutoReadSheet({
+    super.key,
+    required this.mode,
+    required this.state,
+    required this.speedPreset,
+    required this.onStart,
+    required this.onPause,
+    required this.onResume,
+    required this.onStop,
+    required this.onSpeedSelected,
+  });
+
+  final ReaderMode mode;
+  final AutoReadState state;
+  final VerticalSpeedPreset speedPreset;
+  final VoidCallback onStart;
+  final VoidCallback onPause;
+  final VoidCallback onResume;
+  final VoidCallback onStop;
+  final ValueChanged<VerticalSpeedPreset> onSpeedSelected;
+
+  String get _status => switch (state) {
+    AutoReadState.running =>
+      '\u81ea\u52a8\u9605\u8bfb\u4e2d \u00b7 ${_autoReadSpeedLabel(speedPreset)}',
+    AutoReadState.paused => '\u81ea\u52a8\u9605\u8bfb\u5df2\u6682\u505c',
+    AutoReadState.stoppedAtEnd => '\u5df2\u8bfb\u5230\u672c\u4e66\u672b\u5c3e',
+    AutoReadState.idle => '\u81ea\u52a8\u9605\u8bfb',
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final vertical = mode == ReaderMode.vertical;
+    final running = state == AutoReadState.running;
+    final paused = state == AutoReadState.paused;
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '\u81ea\u52a8\u9605\u8bfb',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _status,
+              key: const Key('reader-auto-read-status'),
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: running ? colorScheme.primary : colorScheme.onSurface,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            if (!vertical) ...[
+              const SizedBox(height: 8),
+              Text(
+                '\u81ea\u52a8\u7ffb\u9875\u5c06\u5728\u540e\u7eed\u7248\u672c\u652f\u6301',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
+            const SizedBox(height: 16),
+            if (vertical)
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  if (!running && !paused)
+                    FilledButton.icon(
+                      key: const Key('reader-auto-read-start'),
+                      onPressed: onStart,
+                      icon: const Icon(Icons.play_arrow),
+                      label: const Text('\u5f00\u59cb'),
+                    ),
+                  if (running)
+                    FilledButton.icon(
+                      key: const Key('reader-auto-read-pause'),
+                      onPressed: onPause,
+                      icon: const Icon(Icons.pause),
+                      label: const Text('\u6682\u505c'),
+                    ),
+                  if (paused)
+                    FilledButton.icon(
+                      key: const Key('reader-auto-read-resume'),
+                      onPressed: onResume,
+                      icon: const Icon(Icons.play_arrow),
+                      label: const Text('\u7ee7\u7eed'),
+                    ),
+                  if (running || paused || state == AutoReadState.stoppedAtEnd)
+                    OutlinedButton.icon(
+                      key: const Key('reader-auto-read-stop'),
+                      onPressed: onStop,
+                      icon: const Icon(Icons.stop),
+                      label: const Text('\u505c\u6b62'),
+                    ),
+                ],
+              ),
+            const SizedBox(height: 18),
+            Text('\u901f\u5ea6', style: Theme.of(context).textTheme.labelLarge),
+            const SizedBox(height: 8),
+            SegmentedButton<VerticalSpeedPreset>(
+              key: const Key('reader-auto-read-speed'),
+              segments: [
+                for (final preset in VerticalSpeedPreset.values)
+                  ButtonSegment(
+                    value: preset,
+                    label: Text(_autoReadSpeedLabel(preset)),
+                  ),
+              ],
+              selected: {speedPreset},
+              onSelectionChanged: vertical
+                  ? (selection) => onSpeedSelected(selection.first)
+                  : null,
             ),
           ],
         ),

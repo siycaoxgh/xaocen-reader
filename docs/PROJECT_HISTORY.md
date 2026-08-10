@@ -659,4 +659,12 @@ wheel pauses, while automatic frames are not mistaken for manual input.
 Pause/stop/EOF confirm the final Locator, EOF becomes `stoppedAtEnd`, and
 relayout/mode/lifecycle/dispose invalidate stale generations. ReadingSession,
 ReaderLocator, schema 6, and no-chapter behavior remain unchanged. Paged
-AutoRead and UI are deferred.
+Paged AutoRead and UI were deferred at this point.
+
+## M5.4b.1 — Vertical AutoRead UI
+
+Added the minimal Reader bottom-chrome AutoRead surface on top of the existing
+vertical driver. Users can start, pause/resume, stop, and change the five
+vertical speed presets with immediate controller effect and typed preference
+persistence. Paged automatic paging, keep-awake, shortcuts, and schema changes
+remain out of scope.

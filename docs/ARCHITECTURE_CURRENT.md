@@ -731,5 +731,15 @@ it for interruption, relayout, mode switch, lifecycle, and dispose. Real scroll
 extent transitions to `stoppedAtEnd` without looping. No-chapter documents use
 the same Locator path. ReadingSession remains governed solely by Reader
 foreground lifecycle. Global AutoReadPreferences are loaded/watched through
-the typed app-settings repository; schema remains 6. Paged AutoRead and UI are
+the typed app-settings repository; schema remains 6. Paged AutoRead remains
 deferred.
+
+### M5.4b.1 — Vertical AutoRead UI
+
+The Reader bottom chrome exposes a compact vertical AutoRead sheet backed only
+by the existing `AutoReadController` and `VerticalAutoReadDriver`. It provides
+start, pause/resume, stop, and the five vertical speed presets. State labels
+are derived from the controller, and speed changes update the active driver
+immediately and persist through `AutoReadPreferencesRepository`. Paged mode
+does not start an automatic paging driver. No position, progress, session, or
+schema contract changed.

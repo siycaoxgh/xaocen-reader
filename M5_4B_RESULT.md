@@ -41,4 +41,20 @@ Drift schema remains 6.
 - Full Flutter tests: 440/440 PASS.
 - Windows integration: PASS, 11 files / 14 scenarios.
 - Windows Release and Android Debug builds: PASS.
-- The AutoRead UI and Paged AutoRead remain deferred.
+- The Paged AutoRead remains deferred.
+
+## M5.4b.1 — Vertical AutoRead UI
+
+The existing bottom Reader chrome now exposes an AutoRead action. Its compact
+sheet offers start, pause/resume, stop, and the five persisted vertical speed
+presets. Running and paused states are explicit, and changing a preset updates
+the existing controller immediately while persisting through the typed
+AutoReadPreferencesRepository when available.
+
+The UI is vertical-only; Paged mode explains that automatic paging is not yet
+available. No second scroll driver, progress writer, keep-awake behavior,
+shortcut, or schema change was added. ReaderLocator and ReadingSession
+contracts remain unchanged.
+
+Widget coverage was added for the bottom action, state transitions, and live
+speed selection.

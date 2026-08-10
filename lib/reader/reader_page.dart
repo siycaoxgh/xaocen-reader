@@ -226,6 +226,8 @@ class _ReaderPageState extends State<ReaderPage>
   /// M5.4b vertical AutoRead is intentionally exposed as a driver contract;
   /// the user-facing controls are deferred to the later Reader UI slice.
   AutoReadState get autoReadState => _autoReadController.state;
+  VerticalSpeedPreset get autoReadSpeedPreset =>
+      _autoReadController.preferences.verticalSpeedPreset;
 
   void startVerticalAutoRead() => _verticalAutoReadDriver.start();
 
@@ -235,6 +237,40 @@ class _ReaderPageState extends State<ReaderPage>
   void resumeVerticalAutoRead() => _verticalAutoReadDriver.resume();
 
   void stopVerticalAutoRead() => _verticalAutoReadDriver.stop();
+
+  void _openAutoReadControls() {
+    _showChrome();
+    // Opening an operation panel is an explicit user interaction. Pause a
+    // running driver, but leave the ReaderSession lifecycle untouched.
+    if (_autoReadController.state == AutoReadState.running) {
+      _verticalAutoReadDriver.pause(AutoReadPauseReason.settingsPanel);
+    }
+    unawaited(
+      showReaderAutoReadControls(
+        context,
+        mode: _mode,
+        stateOf: () => _autoReadController.state,
+        speedOf: () => _autoReadController.preferences.verticalSpeedPreset,
+        events: _autoReadController.events,
+        onStart: startVerticalAutoRead,
+        onPause: () =>
+            _verticalAutoReadDriver.pause(AutoReadPauseReason.manualNavigation),
+        onResume: resumeVerticalAutoRead,
+        onStop: stopVerticalAutoRead,
+        onSpeedSelected: _setAutoReadSpeed,
+      ),
+    );
+  }
+
+  void _setAutoReadSpeed(VerticalSpeedPreset preset) {
+    final next = _autoReadController.preferences.copyWith(
+      verticalSpeedPreset: preset,
+      updatedAt: DateTime.now().toUtc(),
+    );
+    _autoReadController.updatePreferences(next);
+    final repository = widget.launch.autoReadPreferencesRepository;
+    if (repository != null) unawaited(repository.update(next));
+  }
 
   Future<void> _confirmVerticalAutoReadPosition() async {
     if (!mounted || _mode != ReaderMode.vertical || !_scroll.hasClients) {
@@ -1652,6 +1688,9 @@ class _ReaderPageState extends State<ReaderPage>
             chapterPageNumber: _chapterPageMetrics?.currentPageNumber,
             chapterPageCount: _chapterPageMetrics?.totalPageCount,
             progressPercent: _progressPercent,
+            autoReadState: _autoReadController.state,
+            autoReadSpeedPreset:
+                _autoReadController.preferences.verticalSpeedPreset,
             onBack: () => Navigator.of(context).pop(),
             onToc: () {
               _showChrome();
@@ -1674,6 +1713,7 @@ class _ReaderPageState extends State<ReaderPage>
             },
             onBookmarks: _openBookmarks,
             onSearch: _openSearch,
+            onAutoRead: _openAutoReadControls,
             onModeSelected: (mode) {
               _showChrome();
               _selectMode(mode);
