@@ -222,3 +222,8 @@ the remaining Android item is visual device validation only.
 The responsive App Shell and first-level navigation are complete. Remaining UI
 audit items (wide layouts for history/settings and Reader action hierarchy) are
 planned follow-ups; no new P0/P1 data or Reader issue was introduced.
+## M5.5b status
+
+Home and Shelf responsibilities are now separated. Remaining audit work is
+limited to later Reader/Me/settings visual refinement; no new P0/P1 data or
+navigation issue was introduced.

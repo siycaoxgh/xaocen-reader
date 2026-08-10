@@ -755,3 +755,8 @@ deferred.
 - Added the responsive App Shell with Home, Shelf, and Me primary navigation.
 - Android uses a bottom NavigationBar; Windows uses a desktop sidebar and main content area.
 - Preserved existing LibraryPage callers and Reader/data contracts; no schema change.
+## M5.5b
+
+- Home now contains only derived recent-reading/continue-reading entries (up to two).
+- Shelf owns complete collection import, browse, open, and delete behavior.
+- Added responsive mobile list and bounded desktop shelf grid without changing Reader or schema contracts.

@@ -135,28 +135,42 @@ class _HomeSurface extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
-      children: [
-        Text(
-          '\u7ee7\u7eed\u9605\u8bfb',
-          style: Theme.of(context).textTheme.headlineSmall,
+    final isDesktop = MediaQuery.sizeOf(context).width >= 720;
+    return Align(
+      alignment: Alignment.topCenter,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: isDesktop ? 1000 : double.infinity,
         ),
-        const SizedBox(height: 8),
-        RecentReadingSection(onOpen: onOpen),
-        const SizedBox(height: 24),
-        Card(
-          child: ListTile(
-            leading: const Icon(Icons.menu_book_outlined),
-            title: const Text('\u672c\u5730\u4e66\u5e93'),
-            subtitle: const Text(
-              '\u7ba1\u7406\u5df2\u5bfc\u5165\u7684 TXT \u4e66\u7c4d',
-            ),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: onOpenShelf,
+        child: ListView(
+          padding: EdgeInsets.fromLTRB(
+            isDesktop ? 32 : 20,
+            20,
+            isDesktop ? 32 : 20,
+            32,
           ),
+          children: [
+            Text(
+              '\u7ee7\u7eed\u9605\u8bfb',
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
+            const SizedBox(height: 8),
+            RecentReadingSection(onOpen: onOpen, showEmpty: true),
+            const SizedBox(height: 24),
+            Card(
+              child: ListTile(
+                leading: const Icon(Icons.menu_book_outlined),
+                title: const Text('\u672c\u5730\u4e66\u5e93'),
+                subtitle: const Text(
+                  '\u7ba1\u7406\u5df2\u5bfc\u5165\u7684 TXT \u4e66\u7c4d',
+                ),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: onOpenShelf,
+              ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 }

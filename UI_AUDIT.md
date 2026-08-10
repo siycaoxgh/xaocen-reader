@@ -174,3 +174,8 @@ Windows 透明必须拆成两层，不能只在 Flutter widget 上设置颜色�
 - 书架继续复用现有 `LibraryPage`，通过 embedded surface 放入 Shell；Reader、历史、阅读设置等既有入口保持可达。
 - Shell 只负责导航状态和 surface 编排，不读取或写入 ReaderLocator、reading_progress 或其他阅读数据真源。
 - `LibraryPage()` 默认构造仍保留，兼容既有测试及直接调用方；窗口状态恢复仍由 Windows runner 原生层负责。
+## M5.5b：首页 / 书架实施记录（2026-08-11）
+
+- 首页现在只显示 reading history 派生的最多两条最近阅读，并提供继续阅读与空状态入口。
+- 书架独立承担完整 collection 的导入、浏览、打开和删除；Shell embedded 模式关闭重复的最近阅读区。
+- Windows 宽窗口书架采用有界卡片网格，Android 保持移动列表；Reader、历史、数据和位置合同未改。

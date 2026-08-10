@@ -486,3 +486,15 @@ vertical A → paged → 不翻页 → 重开 = paged + A · vertical A → page
 | Shell navigation state and resize breakpoint | PASS |
 | Existing LibraryPage and Reader/data contracts | PASS (regression) |
 | Drift schema | 6, unchanged |
+## M5.5b Home / Shelf
+
+| Area | Result |
+|---|---|
+| Empty Home recent-reading state | PASS |
+| One/two derived recent entries | PASS (widget) |
+| Home does not duplicate Shelf collection list | PASS |
+| Shelf empty/import/manage states | PASS |
+| Android responsive surface | PASS (widget) |
+| Windows bounded shelf layout | PASS (widget/integration) |
+| History/Locator/Session isolation | PASS (regression) |
+| Drift schema | 6, unchanged |

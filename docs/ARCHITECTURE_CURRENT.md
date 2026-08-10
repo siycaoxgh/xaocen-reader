@@ -811,3 +811,12 @@ a desktop sidebar when the window is at least 720 logical pixels wide. The
 existing `LibraryPage` remains available as a standalone widget and is embedded
 by the shell without changing repositories, ReaderLocator, reading progress, or
 Reader lifecycle contracts. Shell state is transient UI state only.
+## M5.5b Home / Shelf surfaces
+
+Home is a derived, lightweight continuation surface backed by
+`recentReadingProvider` (at most two entries). Shelf remains the complete
+collection management surface for import, browse, open, and delete. The shell
+embeds the existing LibraryPage with recent-reading chrome disabled so the two
+surfaces do not duplicate content. Deleting a collection still leaves history
+rows intact; only the derived Home list changes. Schema and Reader contracts
+remain unchanged.

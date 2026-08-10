@@ -702,3 +702,6 @@ Release 与 Android Debug 通过；Android targeted ADB 因设备 offline 延后
 ## M5.5a — App Shell 与一级导航（2026-08-11）
 
 建立统一 App Shell：Android 使用首页/书架/我的底部导航，Windows 使用桌面侧栏和主内容区。现有书架 surface 以 embedded 方式复用，历史、阅读设置及 Reader 入口保持可达；导航切换不改变 ReaderLocator、reading_progress 或任何 Drift 合同。Windows 原生窗口状态恢复保持不变。
+## M5.5b — 首页 / 书架 V3 对齐（2026-08-11）
+
+首页收敛为最多两条派生最近阅读和继续阅读入口；书架独立承担全部已导入书籍的导入、浏览、打开和删除。Windows 宽窗口使用有界网格，Android 保持移动列表。阅读历史、ReaderLocator、Session 和 Drift schema 6 均保持原合同。

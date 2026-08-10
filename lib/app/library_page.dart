@@ -114,17 +114,46 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
             child: collections.when(
               data: (list) => list.isEmpty
                   ? const Center(child: Text('书库为空，点击“导入 TXT”开始'))
-                  : ListView.separated(
-                      itemCount: list.length,
-                      separatorBuilder: (_, _) => const Divider(height: 1),
-                      itemBuilder: (context, i) =>
-                          _CollectionTile(collection: list[i]),
-                    ),
+                  : _buildCollectionSurface(context, list),
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (e, _) => Center(child: Text('加载失败: $e')),
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildCollectionSurface(
+    BuildContext context,
+    List<LibraryCollection> collections,
+  ) {
+    final desktop = widget.embedded && MediaQuery.sizeOf(context).width >= 720;
+    if (!desktop) {
+      return ListView.separated(
+        itemCount: collections.length,
+        separatorBuilder: (_, _) => const Divider(height: 1),
+        itemBuilder: (context, i) =>
+            _CollectionTile(collection: collections[i]),
+      );
+    }
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 1120),
+        child: GridView.builder(
+          padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
+          gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+            maxCrossAxisExtent: 440,
+            mainAxisExtent: 92,
+            crossAxisSpacing: 14,
+            mainAxisSpacing: 14,
+          ),
+          itemCount: collections.length,
+          itemBuilder: (context, index) => Card(
+            clipBehavior: Clip.antiAlias,
+            child: _CollectionTile(collection: collections[index]),
+          ),
+        ),
       ),
     );
   }
@@ -203,8 +232,13 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
 }
 
 class RecentReadingSection extends ConsumerWidget {
-  const RecentReadingSection({super.key, required this.onOpen});
+  const RecentReadingSection({
+    super.key,
+    required this.onOpen,
+    this.showEmpty = false,
+  });
   final ValueChanged<ReadingHistoryEntry> onOpen;
+  final bool showEmpty;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -213,7 +247,16 @@ class RecentReadingSection extends ConsumerWidget {
       loading: () => const SizedBox.shrink(),
       error: (_, _) => const SizedBox.shrink(),
       data: (entries) {
-        if (entries.isEmpty) return const SizedBox.shrink();
+        if (entries.isEmpty) {
+          if (!showEmpty) return const SizedBox.shrink();
+          return Card(
+            child: ListTile(
+              leading: const Icon(Icons.history_outlined),
+              title: const Text('暂无最近阅读'),
+              subtitle: const Text('打开一本书后，会在这里显示继续阅读入口'),
+            ),
+          );
+        }
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
