@@ -705,3 +705,6 @@ Release 与 Android Debug 通过；Android targeted ADB 因设备 offline 延后
 ## M5.5b — 首页 / 书架 V3 对齐（2026-08-11）
 
 首页收敛为最多两条派生最近阅读和继续阅读入口；书架独立承担全部已导入书籍的导入、浏览、打开和删除。Windows 宽窗口使用有界网格，Android 保持移动列表。阅读历史、ReaderLocator、Session 和 Drift schema 6 均保持原合同。
+## M5.5c — Reader 操作层级（2026-08-11）
+
+Reader chrome 按 V3 分层：移动端底栏保留目录、模式、书签、Aa、更多；搜索和自动阅读进入更多面板，Windows 保持限宽桌面控制区并保留高频动作。Chrome/面板行为继续遵守 AutoRead pause 合同，Reader 引擎、位置、Session 和 schema 6 未改。

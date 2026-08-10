@@ -820,3 +820,12 @@ embeds the existing LibraryPage with recent-reading chrome disabled so the two
 surfaces do not duplicate content. Deleting a collection still leaves history
 rows intact; only the derived Home list changes. Schema and Reader contracts
 remain unchanged.
+## M5.5c Reader operation hierarchy
+
+Reader chrome now separates high-frequency actions from low-frequency panels.
+Mobile keeps TOC, mode, bookmarks, Aa, and More in the compact bottom bar;
+Search and AutoRead are stable actions in the More sheet. Desktop keeps the
+same semantic controls in a wider but bounded bar. Existing callbacks are
+unchanged, so opening Aa/TOC/Bookmark/Search/AutoRead retains the existing
+AutoRead pause contract while chrome visibility alone does not pause. No engine,
+Locator, session, or schema behavior changes.

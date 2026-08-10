@@ -1849,7 +1849,11 @@ class _ReaderPageState extends State<ReaderPage>
             onMore: () {
               _showChrome();
               _pauseAutoRead(AutoReadPauseReason.settingsPanel);
-              showReaderMorePreview(context);
+              showReaderMorePreview(
+                context,
+                onSearch: _openSearch,
+                onAutoRead: _openAutoReadControls,
+              );
             },
             onBookmarks: _openBookmarks,
             onSearch: _openSearch,

@@ -227,3 +227,8 @@ planned follow-ups; no new P0/P1 data or Reader issue was introduced.
 Home and Shelf responsibilities are now separated. Remaining audit work is
 limited to later Reader/Me/settings visual refinement; no new P0/P1 data or
 navigation issue was introduced.
+## M5.5c status
+
+Reader operation hierarchy is aligned and responsive. Remaining UI audit items
+are appearance and later Me/settings refinements; no new Reader contract issue
+was introduced.

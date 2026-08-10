@@ -760,3 +760,8 @@ deferred.
 - Home now contains only derived recent-reading/continue-reading entries (up to two).
 - Shelf owns complete collection import, browse, open, and delete behavior.
 - Added responsive mobile list and bounded desktop shelf grid without changing Reader or schema contracts.
+## M5.5c
+
+- Aligned Reader chrome hierarchy with V3: compact mobile primary actions and a stable More panel for low-frequency actions.
+- Kept desktop controls bounded while preserving Search and AutoRead access.
+- Preserved Locator, progress, session, pagination, and AutoRead pause contracts.

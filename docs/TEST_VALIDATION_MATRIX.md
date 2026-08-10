@@ -498,3 +498,14 @@ vertical A → paged → 不翻页 → 重开 = paged + A · vertical A → page
 | Windows bounded shelf layout | PASS (widget/integration) |
 | History/Locator/Session isolation | PASS (regression) |
 | Drift schema | 6, unchanged |
+## M5.5c Reader chrome
+
+| Area | Result |
+|---|---|
+| Mobile compact primary bar | PASS |
+| Mobile More panel Search/AutoRead actions | PASS |
+| Desktop bounded Reader bar | PASS |
+| Aa/TOC/Bookmark/Search/AutoRead pause behavior | PASS (regression) |
+| Chrome visibility without AutoRead pause | PASS (regression) |
+| Progress labels and ReaderLocator contracts | PASS (regression) |
+| Drift schema | 6, unchanged |

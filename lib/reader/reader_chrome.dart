@@ -302,13 +302,14 @@ class ReaderChrome extends StatelessWidget {
                           label: '书签',
                           onPressed: onBookmarks,
                         ),
-                        _ChromeAction(
-                          key: readerSearchActionKey,
-                          icon: Icons.search,
-                          label: '搜索',
-                          onPressed: onSearch,
-                        ),
-                        if (onAutoRead != null)
+                        if (isDesktop)
+                          _ChromeAction(
+                            key: readerSearchActionKey,
+                            icon: Icons.search,
+                            label: '搜索',
+                            onPressed: onSearch,
+                          ),
+                        if (isDesktop && onAutoRead != null)
                           _ChromeAction(
                             key: readerAutoReadActionKey,
                             icon: autoReadState == AutoReadState.running
@@ -1283,16 +1284,56 @@ String _orphanReasonLabel(ReaderBookmarkOrphanReason reason) =>
       ReaderBookmarkOrphanReason.offsetOutOfBounds => '位置超出正文范围',
     };
 
-Future<void> showReaderMorePreview(BuildContext context) {
+Future<void> showReaderMorePreview(
+  BuildContext context, {
+  VoidCallback? onSearch,
+  VoidCallback? onAutoRead,
+}) {
   return showModalBottomSheet<void>(
     context: context,
     showDragHandle: true,
     builder: (context) => SafeArea(
-      child: ListTile(
-        contentPadding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-        leading: const Icon(Icons.settings_outlined),
-        title: const Text('更多阅读设置'),
-        subtitle: const Text('更多功能将在后续阶段逐步开放；朗读当前未实现。'),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 560),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const ListTile(
+                leading: Icon(Icons.more_horiz_rounded),
+                title: Text('更多阅读操作'),
+                subtitle: Text('低频操作集中在这里，避免底部控制区过密。'),
+              ),
+              if (onSearch != null)
+                ListTile(
+                  key: readerSearchActionKey,
+                  leading: const Icon(Icons.search),
+                  title: const Text('搜索本书'),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    onSearch();
+                  },
+                ),
+              if (onAutoRead != null)
+                ListTile(
+                  key: readerAutoReadActionKey,
+                  leading: const Icon(Icons.auto_stories_outlined),
+                  title: const Text('自动阅读'),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    onAutoRead();
+                  },
+                ),
+              const ListTile(
+                leading: Icon(Icons.record_voice_over_outlined),
+                title: Text('朗读'),
+                subtitle: Text('朗读当前未实现'),
+                enabled: false,
+              ),
+            ],
+          ),
+        ),
       ),
     ),
   );
