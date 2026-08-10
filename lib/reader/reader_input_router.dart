@@ -18,6 +18,7 @@ final class ReaderInputRouter {
     this.onNextChapter,
     this.onToggleReaderControls,
     this.onOpenToc,
+    this.onToggleAutoRead,
     this.onProfileChanged,
     this.onHostStateChanged,
   }) : _profile = ReaderInputProfile.defaults(platform);
@@ -30,6 +31,7 @@ final class ReaderInputRouter {
   final ReaderInputAction? onNextChapter;
   final ReaderInputAction? onToggleReaderControls;
   final ReaderInputAction? onOpenToc;
+  final ReaderInputAction? onToggleAutoRead;
   final void Function(ReaderInputProfile profile)? onProfileChanged;
   final void Function({required bool pagedActive, required bool captureActive})?
   onHostStateChanged;
@@ -107,6 +109,7 @@ final class ReaderInputRouter {
       ReaderCommand.nextChapter => onNextChapter,
       ReaderCommand.toggleReaderControls => onToggleReaderControls,
       ReaderCommand.openToc => onOpenToc,
+      ReaderCommand.toggleAutoRead => onToggleAutoRead,
     };
     if (action == null) return false;
     final eventGeneration = _generation;

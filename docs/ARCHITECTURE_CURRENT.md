@@ -770,3 +770,15 @@ reject stale work after preference, manual-navigation, mode/lifecycle, or
 dispose interruptions. Manual input pauses without auto-resume; a real
 `endReached` result becomes `stoppedAtEnd` without looping. No persistence or
 schema change is introduced.
+
+## M5.4d — AutoRead UI
+
+Vertical and Paged AutoRead now share one Reader control sheet backed by the
+existing AutoReadController and drivers. Vertical exposes the five presets and
+the canonical 12–120 px/s slider; Paged exposes the canonical 3/5/8/10/15 second
+intervals. Opening Aa/TOC/Bookmark/Search pauses without auto-resume, while
+chrome visibility alone does not pause. Windows has the semantic
+`toggleAutoRead` command with no default binding; Android Volume remains limited
+to its existing page/disabled contract. `ReaderKeepAwake` is a best-effort
+platform abstraction (Android host flag implemented, desktop/test no-op), and
+schema remains 6.

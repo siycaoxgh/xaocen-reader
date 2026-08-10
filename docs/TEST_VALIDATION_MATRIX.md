@@ -474,3 +474,4 @@ vertical A → paged → 不翻页 → 重开 = paged + A · vertical A → page
 | Windows Release / Android Debug | PASS / PASS |
 | Drift schema | 6, unchanged |
 | Reader UI / keep-awake / shortcuts | Deferred |
+| M5.4d AutoRead UI | Vertical / Paged controls, status, interval/preset selection, pause rules, toggleAutoRead routing, keep-awake fallback | Targeted widget/router + full Flutter + integration + Windows Release + Android Debug | PASS |

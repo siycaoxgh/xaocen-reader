@@ -171,4 +171,34 @@ void main() {
     expect(count, 0);
     await router.dispose();
   });
+
+  test(
+    'toggleAutoRead is routed as a Windows command without a default binding',
+    () async {
+      var toggles = 0;
+      final router = ReaderInputRouter(
+        platform: ReaderInputPlatform.windows,
+        repository: repository,
+        onToggleAutoRead: () => toggles++,
+      );
+      await router.start();
+      expect(
+        router.handlePhysicalInput(PhysicalInputId.keyboardArrowLeft),
+        isFalse,
+      );
+      await Future<void>.delayed(Duration.zero);
+      expect(toggles, 0);
+
+      await repository.bind(
+        ReaderInputPlatform.windows,
+        ReaderInputGesture.single(PhysicalInputId.keyboardKeyA),
+        ReaderCommand.toggleAutoRead,
+      );
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      expect(router.handlePhysicalInput(PhysicalInputId.keyboardKeyA), isTrue);
+      await Future<void>.delayed(Duration.zero);
+      expect(toggles, 1);
+      await router.dispose();
+    },
+  );
 }

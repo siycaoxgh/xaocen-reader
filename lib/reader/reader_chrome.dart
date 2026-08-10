@@ -62,6 +62,8 @@ class ReaderChrome extends StatelessWidget {
     this.autoReadState = AutoReadState.idle,
     this.autoReadSpeedPixelsPerSecond =
         AutoReadPreferences.defaultVerticalVelocityPixelsPerSecond,
+    this.autoReadPagedIntervalSeconds =
+        AutoReadPreferences.defaultPagedIntervalSeconds,
     this.currentChapterTitle,
     this.currentChapterNumber,
     this.chapterProgressPercent,
@@ -83,6 +85,7 @@ class ReaderChrome extends StatelessWidget {
   final VoidCallback? onAutoRead;
   final AutoReadState autoReadState;
   final int autoReadSpeedPixelsPerSecond;
+  final int autoReadPagedIntervalSeconds;
   final String? currentChapterTitle;
   final int? currentChapterNumber;
   final double? chapterProgressPercent;
@@ -311,9 +314,14 @@ class ReaderChrome extends StatelessWidget {
                             icon: autoReadState == AutoReadState.running
                                 ? Icons.pause_circle_outline
                                 : Icons.auto_stories_outlined,
-                            label: autoReadState == AutoReadState.running
-                                ? '\u81ea\u52a8\u9605\u8bfb\u4e2d \u00b7 ${_autoReadSpeedLabel(autoReadSpeedPixelsPerSecond)}'
-                                : '\u81ea\u52a8\u9605\u8bfb',
+                            label: autoReadState == AutoReadState.idle
+                                ? '\u81ea\u52a8\u9605\u8bfb'
+                                : _autoReadStatusLabel(
+                                    mode,
+                                    autoReadState,
+                                    autoReadSpeedPixelsPerSecond,
+                                    autoReadPagedIntervalSeconds,
+                                  ),
                             selected: autoReadState == AutoReadState.running,
                             onPressed: onAutoRead!,
                           ),
@@ -357,6 +365,21 @@ String _autoReadSpeedLabel(int velocity) {
       : _autoReadPresetLabel(preset);
 }
 
+String _autoReadStatusLabel(
+  ReaderMode mode,
+  AutoReadState state,
+  int speedPixelsPerSecond,
+  int pagedIntervalSeconds,
+) => switch (state) {
+  AutoReadState.running =>
+    mode == ReaderMode.vertical
+        ? '\u81ea\u52a8\u9605\u8bfb\u4e2d \u00b7 ${_autoReadSpeedLabel(speedPixelsPerSecond)}'
+        : '\u81ea\u52a8\u9605\u8bfb\u4e2d \u00b7 \u6bcf $pagedIntervalSeconds \u79d2\u7ffb\u9875',
+  AutoReadState.paused => '\u81ea\u52a8\u9605\u8bfb\u5df2\u6682\u505c',
+  AutoReadState.stoppedAtEnd => '\u5df2\u8bfb\u5230\u672c\u4e66\u672b\u5c3e',
+  AutoReadState.idle => '\u81ea\u52a8\u9605\u8bfb',
+};
+
 Future<void> showReaderAutoReadControls(
   BuildContext context, {
   required ReaderMode mode,
@@ -368,6 +391,8 @@ Future<void> showReaderAutoReadControls(
   required VoidCallback onResume,
   required VoidCallback onStop,
   required ValueChanged<int> onSpeedChanged,
+  ValueGetter<int>? pagedIntervalOf,
+  ValueChanged<int>? onPagedIntervalChanged,
 }) {
   final isDesktop = MediaQuery.sizeOf(context).width >= 720;
   return showModalBottomSheet<void>(
@@ -382,11 +407,15 @@ Future<void> showReaderAutoReadControls(
         mode: mode,
         state: stateOf(),
         speedPixelsPerSecond: speedOf(),
+        pagedIntervalSeconds:
+            pagedIntervalOf?.call() ??
+            AutoReadPreferences.defaultPagedIntervalSeconds,
         onStart: onStart,
         onPause: onPause,
         onResume: onResume,
         onStop: onStop,
         onSpeedChanged: onSpeedChanged,
+        onPagedIntervalChanged: onPagedIntervalChanged,
       ),
     ),
   );
@@ -403,6 +432,8 @@ class ReaderAutoReadSheet extends StatelessWidget {
     required this.onResume,
     required this.onStop,
     required this.onSpeedChanged,
+    this.pagedIntervalSeconds = AutoReadPreferences.defaultPagedIntervalSeconds,
+    this.onPagedIntervalChanged,
   });
 
   final ReaderMode mode;
@@ -413,14 +444,15 @@ class ReaderAutoReadSheet extends StatelessWidget {
   final VoidCallback onResume;
   final VoidCallback onStop;
   final ValueChanged<int> onSpeedChanged;
+  final int pagedIntervalSeconds;
+  final ValueChanged<int>? onPagedIntervalChanged;
 
-  String get _status => switch (state) {
-    AutoReadState.running =>
-      '\u81ea\u52a8\u9605\u8bfb\u4e2d \u00b7 ${_autoReadSpeedLabel(speedPixelsPerSecond)}',
-    AutoReadState.paused => '\u81ea\u52a8\u9605\u8bfb\u5df2\u6682\u505c',
-    AutoReadState.stoppedAtEnd => '\u5df2\u8bfb\u5230\u672c\u4e66\u672b\u5c3e',
-    AutoReadState.idle => '\u81ea\u52a8\u9605\u8bfb',
-  };
+  String get _status => _autoReadStatusLabel(
+    mode,
+    state,
+    speedPixelsPerSecond,
+    pagedIntervalSeconds,
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -448,99 +480,116 @@ class ReaderAutoReadSheet extends StatelessWidget {
                 fontWeight: FontWeight.w600,
               ),
             ),
-            if (!vertical) ...[
-              const SizedBox(height: 8),
-              Text(
-                '\u81ea\u52a8\u7ffb\u9875\u5c06\u5728\u540e\u7eed\u7248\u672c\u652f\u6301',
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-            ],
             const SizedBox(height: 16),
-            if (vertical)
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  if (!running && !paused)
-                    FilledButton.icon(
-                      key: const Key('reader-auto-read-start'),
-                      onPressed: onStart,
-                      icon: const Icon(Icons.play_arrow),
-                      label: const Text('\u5f00\u59cb'),
-                    ),
-                  if (running)
-                    FilledButton.icon(
-                      key: const Key('reader-auto-read-pause'),
-                      onPressed: onPause,
-                      icon: const Icon(Icons.pause),
-                      label: const Text('\u6682\u505c'),
-                    ),
-                  if (paused)
-                    FilledButton.icon(
-                      key: const Key('reader-auto-read-resume'),
-                      onPressed: onResume,
-                      icon: const Icon(Icons.play_arrow),
-                      label: const Text('\u7ee7\u7eed'),
-                    ),
-                  if (running || paused || state == AutoReadState.stoppedAtEnd)
-                    OutlinedButton.icon(
-                      key: const Key('reader-auto-read-stop'),
-                      onPressed: onStop,
-                      icon: const Icon(Icons.stop),
-                      label: const Text('\u505c\u6b62'),
-                    ),
-                ],
-              ),
-            const SizedBox(height: 18),
-            Text('\u901f\u5ea6', style: Theme.of(context).textTheme.labelLarge),
-            const SizedBox(height: 8),
             Wrap(
-              key: const Key('reader-auto-read-speed-presets'),
               spacing: 8,
               runSpacing: 8,
               children: [
-                for (final preset in VerticalSpeedPreset.values)
-                  ChoiceChip(
-                    label: Text(_autoReadPresetLabel(preset)),
-                    selected:
-                        speedPixelsPerSecond == preset.velocityPixelsPerSecond,
-                    onSelected: vertical
-                        ? (_) => onSpeedChanged(preset.velocityPixelsPerSecond)
-                        : null,
+                if (!running && !paused)
+                  FilledButton.icon(
+                    key: const Key('reader-auto-read-start'),
+                    onPressed: onStart,
+                    icon: const Icon(Icons.play_arrow),
+                    label: const Text('\u5f00\u59cb'),
+                  ),
+                if (running)
+                  FilledButton.icon(
+                    key: const Key('reader-auto-read-pause'),
+                    onPressed: onPause,
+                    icon: const Icon(Icons.pause),
+                    label: const Text('\u6682\u505c'),
+                  ),
+                if (paused)
+                  FilledButton.icon(
+                    key: const Key('reader-auto-read-resume'),
+                    onPressed: onResume,
+                    icon: const Icon(Icons.play_arrow),
+                    label: const Text('\u7ee7\u7eed'),
+                  ),
+                if (running || paused || state == AutoReadState.stoppedAtEnd)
+                  OutlinedButton.icon(
+                    key: const Key('reader-auto-read-stop'),
+                    onPressed: onStop,
+                    icon: const Icon(Icons.stop),
+                    label: const Text('\u505c\u6b62'),
                   ),
               ],
             ),
-            const SizedBox(height: 8),
-            Slider(
-              key: const Key('reader-auto-read-speed-slider'),
-              min: AutoReadPreferences.minVerticalVelocityPixelsPerSecond
-                  .toDouble(),
-              max: AutoReadPreferences.maxVerticalVelocityPixelsPerSecond
-                  .toDouble(),
-              divisions:
-                  AutoReadPreferences.maxVerticalVelocityPixelsPerSecond -
-                  AutoReadPreferences.minVerticalVelocityPixelsPerSecond,
-              value: speedPixelsPerSecond
-                  .toDouble()
-                  .clamp(
-                    AutoReadPreferences.minVerticalVelocityPixelsPerSecond
-                        .toDouble(),
-                    AutoReadPreferences.maxVerticalVelocityPixelsPerSecond
-                        .toDouble(),
-                  )
-                  .toDouble(),
-              label: _autoReadSpeedLabel(speedPixelsPerSecond),
-              onChanged: vertical
-                  ? (value) => onSpeedChanged(value.round())
-                  : null,
-            ),
-            Align(
-              alignment: Alignment.center,
-              child: Text(
-                _autoReadSpeedLabel(speedPixelsPerSecond),
-                key: const Key('reader-auto-read-speed-value'),
+            const SizedBox(height: 18),
+            if (vertical) ...[
+              Text(
+                '\u901f\u5ea6',
+                style: Theme.of(context).textTheme.labelLarge,
               ),
-            ),
+              const SizedBox(height: 8),
+              Wrap(
+                key: const Key('reader-auto-read-speed-presets'),
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final preset in VerticalSpeedPreset.values)
+                    ChoiceChip(
+                      label: Text(_autoReadPresetLabel(preset)),
+                      selected:
+                          speedPixelsPerSecond ==
+                          preset.velocityPixelsPerSecond,
+                      onSelected: (_) =>
+                          onSpeedChanged(preset.velocityPixelsPerSecond),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Slider(
+                key: const Key('reader-auto-read-speed-slider'),
+                min: AutoReadPreferences.minVerticalVelocityPixelsPerSecond
+                    .toDouble(),
+                max: AutoReadPreferences.maxVerticalVelocityPixelsPerSecond
+                    .toDouble(),
+                divisions:
+                    AutoReadPreferences.maxVerticalVelocityPixelsPerSecond -
+                    AutoReadPreferences.minVerticalVelocityPixelsPerSecond,
+                value: speedPixelsPerSecond
+                    .toDouble()
+                    .clamp(
+                      AutoReadPreferences.minVerticalVelocityPixelsPerSecond
+                          .toDouble(),
+                      AutoReadPreferences.maxVerticalVelocityPixelsPerSecond
+                          .toDouble(),
+                    )
+                    .toDouble(),
+                label: _autoReadSpeedLabel(speedPixelsPerSecond),
+                onChanged: (value) => onSpeedChanged(value.round()),
+              ),
+              Align(
+                alignment: Alignment.center,
+                child: Text(
+                  _autoReadSpeedLabel(speedPixelsPerSecond),
+                  key: const Key('reader-auto-read-speed-value'),
+                ),
+              ),
+            ] else ...[
+              Text(
+                '\u7ffb\u9875\u95f4\u9694',
+                style: Theme.of(context).textTheme.labelLarge,
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                key: const Key('reader-auto-read-intervals'),
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final seconds
+                      in AutoReadPreferences.supportedPagedIntervals)
+                    ChoiceChip(
+                      label: Text('\u6bcf $seconds \u79d2'),
+                      selected: pagedIntervalSeconds == seconds,
+                      onSelected: onPagedIntervalChanged == null
+                          ? null
+                          : (_) => onPagedIntervalChanged!(seconds),
+                    ),
+                ],
+              ),
+            ],
           ],
         ),
       ),

@@ -53,6 +53,8 @@ import 'reader_search.dart';
 import '../domain/reader/reader_progress_state.dart';
 import 'reader_text_block.dart';
 import 'vertical_auto_read_driver.dart';
+import 'paged_auto_read_driver.dart';
+import 'reader_keep_awake.dart';
 
 /// 打开 Reader 所需上下文（由书架页组装）。
 class ReaderLaunchContext {
@@ -171,6 +173,7 @@ class _ReaderPageState extends State<ReaderPage>
   late final ReaderInputRouter _inputRouter;
   late final AutoReadController _autoReadController;
   late final VerticalAutoReadDriver _verticalAutoReadDriver;
+  PagedAutoReadDriver? _pagedAutoReadDriver;
   StreamSubscription<AutoReadEvent>? _autoReadEvents;
   StreamSubscription<AutoReadPreferences>? _autoReadPreferencesSubscription;
   Timer? _autoReadSpeedWriteTimer;
@@ -230,8 +233,12 @@ class _ReaderPageState extends State<ReaderPage>
   AutoReadState get autoReadState => _autoReadController.state;
   int get autoReadSpeedPixelsPerSecond =>
       _autoReadController.preferences.verticalVelocityPixelsPerSecond;
+  int get autoReadPagedIntervalSeconds =>
+      _autoReadController.preferences.pagedIntervalSeconds;
 
   void startVerticalAutoRead() => _verticalAutoReadDriver.start();
+
+  void startPagedAutoRead() => _pagedAutoReadDriver?.start();
 
   void pauseVerticalAutoRead() =>
       _verticalAutoReadDriver.pause(AutoReadPauseReason.manualNavigation);
@@ -240,13 +247,64 @@ class _ReaderPageState extends State<ReaderPage>
 
   void stopVerticalAutoRead() => _verticalAutoReadDriver.stop();
 
+  void stopPagedAutoRead() => _pagedAutoReadDriver?.stop();
+
+  void _startAutoRead() {
+    if (_mode == ReaderMode.vertical) {
+      startVerticalAutoRead();
+    } else {
+      startPagedAutoRead();
+    }
+  }
+
+  void _pauseAutoRead(AutoReadPauseReason reason) {
+    if (_autoReadController.state != AutoReadState.running) return;
+    if (_mode == ReaderMode.vertical) {
+      _verticalAutoReadDriver.pause(reason);
+    } else if (_pagedAutoReadDriver != null) {
+      _pagedAutoReadDriver!.pause(reason);
+    } else {
+      _autoReadController.pause(reason);
+    }
+  }
+
+  void _resumeAutoRead() {
+    if (_mode == ReaderMode.vertical) {
+      resumeVerticalAutoRead();
+    } else {
+      _pagedAutoReadDriver?.resume();
+    }
+  }
+
+  void _stopAutoRead() {
+    if (_mode == ReaderMode.vertical) {
+      stopVerticalAutoRead();
+    } else {
+      stopPagedAutoRead();
+    }
+  }
+
+  void _toggleAutoRead() {
+    _showChrome();
+    switch (_autoReadController.state) {
+      case AutoReadState.running:
+        _pauseAutoRead(AutoReadPauseReason.manualNavigation);
+      case AutoReadState.paused:
+        _resumeAutoRead();
+      case AutoReadState.idle || AutoReadState.stoppedAtEnd:
+        _startAutoRead();
+    }
+  }
+
+  void _pauseAutoReadForManualNavigation() {
+    _pauseAutoRead(AutoReadPauseReason.manualNavigation);
+  }
+
   void _openAutoReadControls() {
     _showChrome();
-    // Opening an operation panel is an explicit user interaction. Pause a
-    // running driver, but leave the ReaderSession lifecycle untouched.
-    if (_autoReadController.state == AutoReadState.running) {
-      _verticalAutoReadDriver.pause(AutoReadPauseReason.settingsPanel);
-    }
+    // Opening an operation panel pauses a running driver and never resumes it
+    // when the panel closes. ReadingSession remains lifecycle-owned.
+    _pauseAutoRead(AutoReadPauseReason.settingsPanel);
     unawaited(
       showReaderAutoReadControls(
         context,
@@ -255,12 +313,14 @@ class _ReaderPageState extends State<ReaderPage>
         speedOf: () =>
             _autoReadController.preferences.verticalVelocityPixelsPerSecond,
         events: _autoReadController.events,
-        onStart: startVerticalAutoRead,
-        onPause: () =>
-            _verticalAutoReadDriver.pause(AutoReadPauseReason.manualNavigation),
-        onResume: resumeVerticalAutoRead,
-        onStop: stopVerticalAutoRead,
+        pagedIntervalOf: () =>
+            _autoReadController.preferences.pagedIntervalSeconds,
+        onStart: _startAutoRead,
+        onPause: _pauseAutoReadForManualNavigation,
+        onResume: _resumeAutoRead,
+        onStop: _stopAutoRead,
         onSpeedChanged: _setAutoReadSpeed,
+        onPagedIntervalChanged: _setAutoReadInterval,
       ),
     );
   }
@@ -292,6 +352,16 @@ class _ReaderPageState extends State<ReaderPage>
     }
   }
 
+  void _setAutoReadInterval(int seconds) {
+    final next = _autoReadController.preferences.copyWith(
+      pagedIntervalSeconds: seconds,
+      updatedAt: DateTime.now().toUtc(),
+    );
+    _autoReadController.updatePreferences(next);
+    final repository = widget.launch.autoReadPreferencesRepository;
+    if (repository != null) unawaited(repository.update(next));
+  }
+
   Future<void> _confirmVerticalAutoReadPosition() async {
     if (!mounted || _mode != ReaderMode.vertical || !_scroll.hasClients) {
       return;
@@ -306,6 +376,12 @@ class _ReaderPageState extends State<ReaderPage>
     if (mounted) setState(() {});
   }
 
+  Future<void> _confirmPagedAutoReadPosition() async {
+    if (!mounted || _mode != ReaderMode.paged) return;
+    if (_pagedController?.confirmedLocator == null) return;
+    unawaited(_recordHistorySnapshot());
+  }
+
   void _onVerticalAutoReadFrame() {
     if (!mounted || _mode != ReaderMode.vertical || !_scroll.hasClients) {
       return;
@@ -318,9 +394,7 @@ class _ReaderPageState extends State<ReaderPage>
   }
 
   void _pauseAutoReadForManualScroll() {
-    if (_autoReadController.state == AutoReadState.running) {
-      _verticalAutoReadDriver.pause(AutoReadPauseReason.manualNavigation);
-    }
+    _pauseAutoReadForManualNavigation();
   }
 
   void _onInputHostStateChanged({
@@ -337,12 +411,14 @@ class _ReaderPageState extends State<ReaderPage>
 
   void _routerPreviousPage() {
     if (_mode != ReaderMode.paged) return;
+    _pauseAutoReadForManualNavigation();
     _pagedController?.previousPage();
     if (mounted) setState(() {});
   }
 
   void _routerNextPage() {
     if (_mode != ReaderMode.paged) return;
+    _pauseAutoReadForManualNavigation();
     _pagedController?.nextPage();
     if (mounted) setState(() {});
   }
@@ -385,6 +461,7 @@ class _ReaderPageState extends State<ReaderPage>
   }
 
   Future<void> _startChapterNavigation(LibraryTocEntry entry) async {
+    _pauseAutoReadForManualNavigation();
     _invalidateChapterNavigation();
     final generation = _chapterNavigationGeneration;
     await _restoreToChapter(entry, navigationGeneration: generation);
@@ -432,6 +509,11 @@ class _ReaderPageState extends State<ReaderPage>
           _restoreFinished,
     );
     _autoReadEvents = _autoReadController.events.listen((_) {
+      unawaited(
+        ReaderKeepAwake.setEnabled(
+          _autoReadController.state == AutoReadState.running,
+        ),
+      );
       if (mounted) setState(() {});
     });
     _searchService = ReaderSearchService();
@@ -446,6 +528,7 @@ class _ReaderPageState extends State<ReaderPage>
       onNextChapter: _routerNextChapter,
       onToggleReaderControls: _toggleChrome,
       onOpenToc: _openToc,
+      onToggleAutoRead: _toggleAutoRead,
       onHostStateChanged: _onInputHostStateChanged,
     );
     unawaited(_inputRouter.start());
@@ -633,8 +716,12 @@ class _ReaderPageState extends State<ReaderPage>
     _autoReadEvents?.cancel();
     _autoReadPreferencesSubscription?.cancel();
     _verticalAutoReadDriver.interrupt(AutoReadPauseReason.lifecycle);
+    _pagedAutoReadDriver?.interrupt(AutoReadPauseReason.lifecycle);
     _verticalAutoReadDriver.dispose();
+    _pagedAutoReadDriver?.dispose();
+    _pagedAutoReadDriver = null;
     _autoReadController.dispose();
+    unawaited(ReaderKeepAwake.release());
     _modeGeneration++;
     _invalidateChapterNavigation();
     _searchService.cancel();
@@ -672,7 +759,7 @@ class _ReaderPageState extends State<ReaderPage>
     if (state == AppLifecycleState.inactive ||
         state == AppLifecycleState.paused ||
         state == AppLifecycleState.detached) {
-      _verticalAutoReadDriver.pause(AutoReadPauseReason.lifecycle);
+      _pauseAutoRead(AutoReadPauseReason.lifecycle);
       _inputRouter.invalidatePendingInput();
       _invalidateChapterNavigation();
       if (_modeRestoreAnchor != null) {
@@ -706,7 +793,7 @@ class _ReaderPageState extends State<ReaderPage>
       return;
     }
     _metricsSignature = nextSignature;
-    _verticalAutoReadDriver.pause(AutoReadPauseReason.relayout);
+    _pauseAutoRead(AutoReadPauseReason.relayout);
     _inputRouter.invalidatePendingInput();
     _invalidateChapterNavigation();
     _beginMetricsRelayout(next);
@@ -993,6 +1080,17 @@ class _ReaderPageState extends State<ReaderPage>
     // 验证 anchor 在页内（§十七：switchAnchor inside page）。
     assert(page.contains(anchorOffset), '切换锚点必须在页面范围内');
     _pagedController = paged;
+    _pagedAutoReadDriver?.dispose();
+    _pagedAutoReadDriver = PagedAutoReadDriver(
+      readerController: paged,
+      controller: _autoReadController,
+      confirmPosition: _confirmPagedAutoReadPosition,
+      canDrive: () =>
+          mounted &&
+          _mode == ReaderMode.paged &&
+          _transition == ReaderModeTransitionState.idle &&
+          _restoreFinished,
+    );
     _mode = ReaderMode.paged;
     _scheduleChapterPageMetrics();
     _inputRouter.setPagedActive(true);
@@ -1017,6 +1115,9 @@ class _ReaderPageState extends State<ReaderPage>
     if (locator == null) return;
 
     final gen = ++_modeGeneration;
+    _pagedAutoReadDriver?.interrupt(AutoReadPauseReason.modeSwitch);
+    _pagedAutoReadDriver?.dispose();
+    _pagedAutoReadDriver = null;
     _invalidateChapterPageMetrics();
     _transition = ReaderModeTransitionState.pagedToVertical;
     _controller.freezeWrites();
@@ -1074,7 +1175,7 @@ class _ReaderPageState extends State<ReaderPage>
   /// 模式切换入口（AppBar 菜单）。
   void _selectMode(ReaderMode mode) {
     if (mode == _mode && _transition == ReaderModeTransitionState.idle) return;
-    _verticalAutoReadDriver.pause(AutoReadPauseReason.modeSwitch);
+    _pauseAutoRead(AutoReadPauseReason.modeSwitch);
     _inputRouter.invalidatePendingInput();
     _invalidateChapterNavigation();
     _cancelModeRestore();
@@ -1725,13 +1826,17 @@ class _ReaderPageState extends State<ReaderPage>
             autoReadState: _autoReadController.state,
             autoReadSpeedPixelsPerSecond:
                 _autoReadController.preferences.verticalVelocityPixelsPerSecond,
+            autoReadPagedIntervalSeconds:
+                _autoReadController.preferences.pagedIntervalSeconds,
             onBack: () => Navigator.of(context).pop(),
             onToc: () {
               _showChrome();
+              _pauseAutoRead(AutoReadPauseReason.toc);
               _openToc();
             },
             onAppearance: () {
               _showChrome();
+              _pauseAutoRead(AutoReadPauseReason.settingsPanel);
               showReaderSettings(
                 context,
                 preferences: _preferences,
@@ -1743,6 +1848,7 @@ class _ReaderPageState extends State<ReaderPage>
             },
             onMore: () {
               _showChrome();
+              _pauseAutoRead(AutoReadPauseReason.settingsPanel);
               showReaderMorePreview(context);
             },
             onBookmarks: _openBookmarks,
@@ -1859,6 +1965,7 @@ class _ReaderPageState extends State<ReaderPage>
           controller: paged,
           appearance: _appearance,
           inputRouter: _inputRouter,
+          onUserNavigation: _pauseAutoReadForManualNavigation,
         );
       },
     );
@@ -1980,6 +2087,7 @@ class _ReaderPageState extends State<ReaderPage>
 
   void _openSearch() {
     _showChrome();
+    _pauseAutoRead(AutoReadPauseReason.search);
     unawaited(
       showReaderSearch(
         context,
@@ -2034,6 +2142,7 @@ class _ReaderPageState extends State<ReaderPage>
 
   void _openBookmarks() {
     _showChrome();
+    _pauseAutoRead(AutoReadPauseReason.bookmark);
     unawaited(_loadAndOpenBookmarks());
   }
 
@@ -2103,6 +2212,7 @@ class _ReaderPageState extends State<ReaderPage>
   }
 
   Future<void> _jumpToBookmark(ReaderBookmark bookmark) async {
+    _pauseAutoReadForManualNavigation();
     final document = _controller.document;
     final status = deriveReaderBookmarkStatus(
       bookmark,
@@ -2127,6 +2237,7 @@ class _ReaderPageState extends State<ReaderPage>
   }
 
   void _openToc() {
+    _pauseAutoRead(AutoReadPauseReason.toc);
     // 当前章节高亮基于真实可见范围顶部（§十一），非上次点击/恢复位置。
     // M4：分页模式基于 confirmed locator（精确 anchor / 翻页后 page.start）。
     final currentTop = _mode == ReaderMode.paged

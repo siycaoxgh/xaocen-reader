@@ -622,6 +622,7 @@ String commandLabel(ReaderCommand command) => switch (command) {
   ReaderCommand.nextChapter => '下一章',
   ReaderCommand.toggleReaderControls => '显示/隐藏阅读控制',
   ReaderCommand.openToc => '打开目录',
+  ReaderCommand.toggleAutoRead => '切换自动阅读',
 };
 
 String gestureLabel(ReaderInputGesture gesture) {

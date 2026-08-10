@@ -731,3 +731,9 @@ deferred.
   stale generations, lifecycle interruptions, and manual navigation are safe.
 - Real EOF stops at `stoppedAtEnd`; no page index, timer remainder, or second
   Locator/progress source was added. Drift schema remains 6.
+## M5.4d
+
+- 统一 Vertical / Paged 自动阅读控制面板、状态和参数选择。
+- 增加 Windows `toggleAutoRead` 命令（无默认绑定）。
+- 增加 Android running 状态屏幕常亮抽象；未实现的平台安全降级。
+- 面板和生命周期暂停自动阅读但不影响 ReadingSession 计时合同；schema 维持 6。

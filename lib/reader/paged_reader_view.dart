@@ -33,11 +33,13 @@ class PagedReaderView extends StatefulWidget {
     required this.controller,
     required this.appearance,
     this.inputRouter,
+    this.onUserNavigation,
   });
 
   final PagedReaderController controller;
   final ReaderResolvedAppearance appearance;
   final ReaderInputRouter? inputRouter;
+  final VoidCallback? onUserNavigation;
 
   @override
   State<PagedReaderView> createState() => _PagedReaderViewState();
@@ -123,6 +125,7 @@ class _PagedReaderViewState extends State<PagedReaderView> {
   bool _onScrollNotification(ScrollNotification notification) {
     if (notification is ScrollStartNotification &&
         notification.dragDetails != null) {
+      widget.onUserNavigation?.call();
       _userGestureActive = true;
       _programmaticTargetIndex = null;
       _gestureWindowGeneration = widget.controller.window.windowGeneration;
@@ -158,6 +161,7 @@ class _PagedReaderViewState extends State<PagedReaderView> {
   }
 
   void _onPointerDown(PointerDownEvent event) {
+    widget.onUserNavigation?.call();
     _pointerDownPosition = event.position;
     _userGestureActive = true;
     _gestureWindowGeneration = widget.controller.window.windowGeneration;
@@ -248,6 +252,7 @@ class _PagedReaderViewState extends State<PagedReaderView> {
       case ReaderCommand.nextChapter:
       case ReaderCommand.toggleReaderControls:
       case ReaderCommand.openToc:
+      case ReaderCommand.toggleAutoRead:
         // M5.3a/b defines these commands but deliberately does not route
         // them into Reader actions yet.
         break;
@@ -259,6 +264,7 @@ class _PagedReaderViewState extends State<PagedReaderView> {
     if (event is! PointerScrollEvent) return;
     final dy = event.scrollDelta.dy;
     if (dy == 0) return;
+    widget.onUserNavigation?.call();
     final now = DateTime.now();
     if (_lastWheelTurn != null &&
         now.difference(_lastWheelTurn!) < _wheelThrottle) {

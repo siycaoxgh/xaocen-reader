@@ -203,3 +203,11 @@
 
 The initial paged label mojibake discovered during manual review is resolved;
 the remaining Android item is visual device validation only.
+
+## M5.4d status update (2026-08-11)
+
+- AutoRead UI sealing passed automated, Windows Release, and Android Debug
+  validation. Android keep-awake is implemented through the host Activity;
+  Windows/test hosts currently degrade safely to no-op until a native desktop
+  keep-awake adapter is justified.
+- No new ReaderLocator, progress, session, or Android Volume issue was found.

@@ -687,3 +687,9 @@ preference, mode, lifecycle, manual-navigation, or dispose interruptions.
 Manual navigation pauses without auto-resume; a real controller EOF becomes
 `stoppedAtEnd`. Page indices, window indices, timer state, and scroll pixels are
 not persisted; schema remains 6.
+### M5.4d — AutoRead UI 收口
+
+统一 Vertical / Paged 自动阅读面板与状态显示，接入 Paged 间隔选择、Windows
+`toggleAutoRead` 语义命令和 Android keep-awake 宿主能力。面板操作遵守自动
+暂停且不自动恢复合同；ReaderLocator、ReadingSession、Android Volume 合同及
+Drift schema 6 未改变。

@@ -10,6 +10,7 @@ enum ReaderCommand {
   nextChapter,
   toggleReaderControls,
   openToc,
+  toggleAutoRead,
 }
 
 /// Stable persisted physical-input identifier.
