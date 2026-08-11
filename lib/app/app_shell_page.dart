@@ -7,6 +7,30 @@ import 'library_page.dart';
 import 'providers.dart';
 import 'reading_history_page.dart';
 
+class _BrandMark extends StatelessWidget {
+  const _BrandMark({this.size = 32});
+
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: scheme.primaryContainer,
+        borderRadius: BorderRadius.circular(size * .28),
+      ),
+      child: Icon(
+        Icons.menu_book_rounded,
+        size: size * .58,
+        color: scheme.onPrimaryContainer,
+      ),
+    );
+  }
+}
+
 /// The V3 primary information architecture shared by desktop and mobile.
 /// This widget owns only top-level navigation and responsive chrome.
 class AppShellPage extends ConsumerStatefulWidget {
@@ -292,7 +316,13 @@ class _ShellHeader extends StatelessWidget {
           padding: EdgeInsets.symmetric(horizontal: isDesktop ? 28 : 20),
           child: Align(
             alignment: Alignment.centerLeft,
-            child: Text(title, style: Theme.of(context).textTheme.titleLarge),
+            child: Row(
+              children: [
+                const _BrandMark(),
+                const SizedBox(width: 10),
+                Text(title, style: Theme.of(context).textTheme.titleLarge),
+              ],
+            ),
           ),
         ),
       ),
@@ -318,9 +348,18 @@ class _DesktopSidebar extends StatelessWidget {
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 26, 20, 28),
-              child: Text(
-                'XAOCEN Reader',
-                style: Theme.of(context).textTheme.titleMedium,
+              child: Row(
+                children: [
+                  const _BrandMark(size: 40),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'XAOCEN Reader',
+                      style: Theme.of(context).textTheme.titleMedium,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
               ),
             ),
             for (
@@ -370,6 +409,8 @@ class _DesktopNavItem extends StatelessWidget {
         selected: selected,
         selectedTileColor: scheme.secondaryContainer,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        hoverColor: scheme.primary.withValues(alpha: .08),
+        focusColor: scheme.primary.withValues(alpha: .12),
         leading: Icon(selected ? destination.selectedIcon : destination.icon),
         title: Text(destination.label),
         onTap: onTap,

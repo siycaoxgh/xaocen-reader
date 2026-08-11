@@ -986,6 +986,11 @@ class _ChromeAction extends StatelessWidget {
     return Expanded(
       child: InkWell(
         onTap: onPressed,
+        mouseCursor: SystemMouseCursors.click,
+        borderRadius: BorderRadius.circular(12),
+        hoverColor: colorScheme.primary.withValues(alpha: .08),
+        focusColor: colorScheme.primary.withValues(alpha: .12),
+        splashColor: colorScheme.primary.withValues(alpha: .16),
         child: Semantics(
           button: true,
           selected: selected,

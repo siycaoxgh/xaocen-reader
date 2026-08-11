@@ -21,6 +21,56 @@ abstract final class AppTheme {
       colorScheme: scheme,
       scaffoldBackgroundColor: AppTokens.background,
       fontFamilyFallback: AppTypography.fontFamilyFallback,
+      cardTheme: CardThemeData(
+        margin: EdgeInsets.zero,
+        elevation: 0,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppTokens.radiusMedium),
+          side: BorderSide(color: scheme.outlineVariant.withValues(alpha: .55)),
+        ),
+      ),
+      dividerTheme: DividerThemeData(
+        color: scheme.outlineVariant.withValues(alpha: .7),
+        thickness: 1,
+        space: 1,
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          minimumSize: const Size(0, AppTokens.controlHeight),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppTokens.radiusSmall),
+          ),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          minimumSize: const Size(0, AppTokens.controlHeight),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppTokens.radiusSmall),
+          ),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          minimumSize: const Size(
+            AppTokens.minTouchTarget,
+            AppTokens.minTouchTarget,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppTokens.radiusSmall),
+          ),
+        ),
+      ),
+      navigationBarTheme: NavigationBarThemeData(
+        height: 72,
+        indicatorShape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppTokens.radiusSmall),
+        ),
+        iconTheme: const WidgetStatePropertyAll(
+          IconThemeData(size: AppTokens.iconSize),
+        ),
+      ),
     );
     return theme.copyWith(textTheme: AppTypography.textTheme(theme.textTheme));
   }
@@ -39,6 +89,56 @@ abstract final class AppTheme {
       colorScheme: scheme,
       scaffoldBackgroundColor: AppTokens.lightBackground,
       fontFamilyFallback: AppTypography.fontFamilyFallback,
+      cardTheme: CardThemeData(
+        margin: EdgeInsets.zero,
+        elevation: 0,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppTokens.radiusMedium),
+          side: BorderSide(color: scheme.outlineVariant.withValues(alpha: .55)),
+        ),
+      ),
+      dividerTheme: DividerThemeData(
+        color: scheme.outlineVariant.withValues(alpha: .7),
+        thickness: 1,
+        space: 1,
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          minimumSize: const Size(0, AppTokens.controlHeight),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppTokens.radiusSmall),
+          ),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          minimumSize: const Size(0, AppTokens.controlHeight),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppTokens.radiusSmall),
+          ),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          minimumSize: const Size(
+            AppTokens.minTouchTarget,
+            AppTokens.minTouchTarget,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppTokens.radiusSmall),
+          ),
+        ),
+      ),
+      navigationBarTheme: NavigationBarThemeData(
+        height: 72,
+        indicatorShape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppTokens.radiusSmall),
+        ),
+        iconTheme: const WidgetStatePropertyAll(
+          IconThemeData(size: AppTokens.iconSize),
+        ),
+      ),
     );
     return theme.copyWith(textTheme: AppTypography.textTheme(theme.textTheme));
   }

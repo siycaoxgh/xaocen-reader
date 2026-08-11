@@ -4,6 +4,15 @@ import 'package:flutter/material.dart';
 ///
 /// M0 仅建立令牌入口，不实现完整视觉系统。
 abstract final class AppTokens {
+  // Shared geometry: keep cards, controls, and touch targets visually related
+  // across Android and Windows without changing page/layout contracts.
+  static const double radiusSmall = 10;
+  static const double radiusMedium = 14;
+  static const double radiusLarge = 18;
+  static const double controlHeight = 44;
+  static const double iconSize = 22;
+  static const double minTouchTarget = 44;
+
   // 品牌主色
   static const Color primary = Color(0xFF44D9E6); // 青靛
   static const Color accent = Color(0xFFFFBD4A); // 橙黄

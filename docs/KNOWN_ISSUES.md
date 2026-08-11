@@ -7,6 +7,16 @@
 
 ## Current open issues
 
+## M5.5h status (2026-08-11)
+
+- Visual polish and final UI audit passed with no new P0/P1 issue. The Android Volume Down
+  settings icon, shell brand mark, empty shelf state, shared surface geometry, and desktop/Reader
+  interaction feedback are corrected.
+- Android physical-device visual validation (cutout, gesture/three-button navigation, image
+  background, and palette screenshots) remains deferred; Android Debug build passed.
+- Windows native transparency, imported fonts, and optional docked desktop panels remain deferred
+  product/engineering items and are not regressions.
+
 ## M5.5g status (2026-08-11)
 
 - Android edge-to-edge and the Reader minimal information layer passed static, widget,

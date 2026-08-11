@@ -23,6 +23,23 @@
 | Windows Release / Android Debug | PASS / PASS |
 | Android real device | NOT-RUN in this coding pass |
 
+## M5.5h — Visual polish + final UI audit
+
+| Validation | Result |
+|---|---|
+| Shared radius/spacing/control/icon tokens | PASS |
+| Card, divider, button, navigation indicator surfaces | PASS |
+| Shell brand mark and desktop hover/focus states | PASS |
+| Reader action pressed/hover feedback | PASS |
+| Android Volume Down icon semantics | PASS |
+| Library empty state and responsive layout | PASS |
+| ReaderLocator/pagination/AutoRead/ReadingSession contracts | PASS, unchanged |
+| Full Flutter unit/contract/widget | 477/477 PASS |
+| Integration | 11 files / 14 scenarios PASS |
+| Four real TXT / logical error | PASS / 0 |
+| Windows Release / Android Debug | PASS / PASS |
+| Android real device | NOT-RUN in this coding pass |
+
 ---
 
 ## M5.5e.6 — typography consistency

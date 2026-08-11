@@ -1,21 +1,41 @@
 # M5.5 UI Audit（只读审计）
 
-日期：2026-08-11  
+日期：2026-08-11（M5.5h final audit）
 范围：当前实现对照 `AAA/产品定义.txt`、`AAA/V3 XAOCEN Reader-统一原型.html`
 和 `AAA/xaocen-v3-design-constraints.html`。本文件只记录差异和拆分建议，
 不代表本轮开始大规模 UI 重构。
 
 ## 总体结论
 
-当前 Reader 核心壳层已经具备 V3 的主要行为：正文为主体、顶部/底部控制区、
-Android 与 Windows 响应式宽度、Flat TOC、Aa/Bookmark/Search/AutoRead 面板。
-主要差异集中在 App shell 信息架构：当前 `LibraryPage` 同时承担首页和书架，
-没有 V3 原型中的移动端底部导航与桌面端侧栏；桌面端若干面板仍采用受限宽度的
-bottom sheet，而不是更适合宽屏的侧栏/居中面板。
+当前 Reader/App Shell 已具备 V3 的主要行为：正文为主体、顶部/底部控制区、
+Android 与 Windows 响应式导航、Flat TOC、Aa/Bookmark/Search/AutoRead 面板。
+M5.5a-g 已完成一级导航、首页/书架分工、Reader 操作层级、历史/设置分组、阅读外观、
+字体体系和 Android edge-to-edge。本轮剩余差异主要是 Windows 面板容器的进一步宽屏化、
+原生透明窗口和系统字体导入等明确延后能力。
 
-本轮没有发现必须阻断日常阅读的 P0 UI 问题。ReaderLocator、readingMode、
+本轮没有发现必须阻断日常阅读的 P0/P1 UI 问题。ReaderLocator、readingMode、
 ReaderPreferences、Bookmark、Search、ReadingHistory 和 AutoRead 的数据/位置
 合同不应因 UI 审计而改变。
+
+## M5.5h 状态台账
+
+### 已完成
+
+- App Shell：Android 一级底部导航与 Windows 桌面侧栏（M5.5a）。
+- 首页/书架职责分离、最近阅读派生与响应式书架布局（M5.5b）。
+- Reader 操作层级、AutoRead 状态条、TOC/Aa/Bookmark/Search 入口与 Chrome 显隐（M5.5c、M5.5e.3）。
+- 我的/阅读历史/阅读设置/按键与操作的分组和双端布局（M5.5d）。
+- Aa 四分类、Reader Palette、字体体系、Android edge-to-edge 与极简信息栏（M5.5e、M5.5g）。
+- M5.5h 视觉收口：统一 geometry/theme tokens、Card/Divider/Button 表面、品牌标记、
+  Android 音量上下图标语义、书架空状态、桌面导航和 Reader action 的 hover/focus/pressed 反馈。
+
+### 尚未完成 / 延后
+
+- Windows 原生透明窗口、鼠标穿透、DPI 透明合成仍是独立高风险专项，未纳入本轮。
+- 系统字体枚举与 TTF/OTF/TTC 导入未实现；Reader 继续使用系统默认字体与 fallback。
+- TOC/Bookmark/Search 在 Windows 的停靠侧栏形态、完整截图级跨设备视觉验收仍可作为后续 polish，
+  不影响当前功能合同。
+- TTS、EPUB、RSS、网络书源仍不在 M5.5 范围。
 
 ## 逐页对照
 
@@ -38,17 +58,15 @@ ReaderPreferences、Bookmark、Search、ReadingHistory 和 AutoRead 的数据/�
 
 ### Android
 
-- 需要优先建立 V3 移动端底部一级导航；当前使用 AppBar actions，不是原型中的
-  轻量 tab bar。
-- Reader 底部动作在窄屏容易拥挤，建议后续保留高频入口（TOC、Aa、更多/AutoRead）
-  并把低频动作放入更多面板；不得改变现有功能合同。
-- Bottom sheet 是合适的首选交互，但应统一拖拽句柄、最大高度、空状态和关闭行为。
+- V3 移动端底部一级导航已完成；Reader 保留高频入口并将低频操作集中在更多面板。
+- Bottom sheet、拖拽句柄、最大高度、空状态和关闭行为已统一到当前 Material 主题令牌。
+- 极简信息层使用真实 system inset；实体设备 cutout/导航模式截图级验收仍列为 deferred。
 
 ### Windows
 
-- 需要 V3 桌面侧栏/主内容区；当前首页、历史、设置使用标准 AppBar + 单列内容。
-- TOC、Aa、Bookmark、Search、AutoRead 当前虽有限宽，但仍是 bottom sheet；后续可
-  按面板类型改为居中对话框或右侧栏，避免机械放大手机布局。
+- V3 桌面侧栏、主内容区、书架网格和设置限宽布局已完成；视觉 token 已统一。
+- TOC、Aa、Bookmark、Search、AutoRead 仍以稳定的限宽 sheet/面板为主；进一步停靠侧栏
+  属于后续可选 polish，不改变当前操作层级。
 - 当前 runner 默认启动尺寸来自 `windows/runner/main.cpp` 的 `1280×720`。
   本次新增的窗口状态保存在 Windows shell 注册表，不进入 Drift：保存 normal
   bounds 与 maximized，忽略 minimized，启动时做 monitor 可见性校验。

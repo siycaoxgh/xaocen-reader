@@ -113,7 +113,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
           Expanded(
             child: collections.when(
               data: (list) => list.isEmpty
-                  ? const Center(child: Text('书库为空，点击“导入 TXT”开始'))
+                  ? const _LibraryEmptyState()
                   : _buildCollectionSurface(context, list),
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (e, _) => Center(child: Text('加载失败: $e')),
@@ -231,6 +231,36 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
       ),
     );
     ref.invalidate(recentReadingProvider);
+  }
+}
+
+class _LibraryEmptyState extends StatelessWidget {
+  const _LibraryEmptyState();
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.library_books_outlined, size: 42, color: scheme.primary),
+            const SizedBox(height: 12),
+            Text('书架还是空的', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 4),
+            Text(
+              '书库为空，点击“导入 TXT”开始',
+              textAlign: TextAlign.center,
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

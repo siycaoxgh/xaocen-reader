@@ -437,7 +437,11 @@ class _AndroidInputSection extends StatelessWidget {
     key: ValueKey('reader-input-android-${input.value}'),
     margin: const EdgeInsets.only(bottom: 10),
     child: ListTile(
-      leading: const Icon(Icons.volume_up_outlined),
+      leading: Icon(
+        input == PhysicalInputId.androidVolumeUp
+            ? Icons.volume_up_outlined
+            : Icons.volume_down_outlined,
+      ),
       title: Text(inputLabel(input)),
       subtitle: Text(
         '当前操作：${command == null ? '不使用' : commandLabel(command!)}',

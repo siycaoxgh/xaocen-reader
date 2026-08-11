@@ -27,6 +27,15 @@ Drift schema 8→9 adds these five per-book columns with explicit defaults and p
 existing books, palettes, typography, managed image references, reading progress, readingMode,
 and ReaderLocator values.
 
+## M5.5h visual polish contract
+
+Visual-only consistency is centralized in `AppTokens` and the light/dark `AppTheme` component
+themes: radius, control height, icon size, touch target, Card/Divider surfaces, button shapes,
+and mobile navigation indicator geometry. Shell branding uses a small vector Material book mark;
+there is no new binary logo asset. Desktop navigation and Reader actions expose explicit
+hover/focus/pressed feedback, while Android retains touch-sized targets. These changes do not
+alter navigation semantics, Reader layout metrics, or any persistence contract.
+
 ## M5.5e.6 typography contract
 
 `AppTypography` is the single app-shell type-scale and fallback policy. `ReaderTypography` keeps

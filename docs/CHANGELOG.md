@@ -50,6 +50,15 @@ Debug. Android targeted ADB was not run because no device was connected.
 
 ## Unreleased
 
+### M5.5h — Visual polish + final UI audit (2026-08-11)
+- Added shared visual geometry tokens and Material component defaults for cards, dividers,
+  buttons, navigation indicators, radius, control height, and touch targets.
+- Added a consistent XAOCEN brand mark in the shell, improved desktop hover/focus feedback,
+  Reader action pressed feedback, and a structured empty shelf state.
+- Corrected the Android Volume Down settings icon; no navigation, Reader engine, Locator,
+  pagination, AutoRead, or persistence contract changed.
+- UI_AUDIT now records completed M5.5 work and explicit deferred items.
+
 ### M5.5g — Android edge-to-edge and Reader information layer (2026-08-11)
 - Reader now uses Android edge-to-edge system UI modes with transparent system bars and
   brightness-aware icon styling; Reader content and managed background images extend to the
