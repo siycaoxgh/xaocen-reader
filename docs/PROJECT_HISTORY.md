@@ -804,3 +804,13 @@ Aa 阅读外观补充当前编辑亮度、实际生效来源（预设/自定义�
 新增显示项目字段并保留旧 showProgressInfo 语义；书籍、ReaderLocator、reading_progress、readingMode、
 排版、Palette 与托管背景引用均保留。482 项 Flutter 测试、11 个 integration 文件 / 14 个场景、4 个真实
 TXT logical error 0、Windows Release 与 Android Debug 全部通过，Android 真机本阶段 deferred。
+
+## M5.6c.1 — Windows Shell 可见性与 Boss Key（2026-08-12）
+
+Windows shell 设置现在通过强类型 `WindowsShellPreferences` 管理任务栏入口和托盘入口，
+并在 repository 层拒绝同时关闭两个恢复入口；损坏值启动时回退为任务栏入口。原生 runner
+新增托盘菜单（显示/隐藏窗口、退出应用）、托盘重建恢复和启用托盘后的关闭转隐藏行为。
+Boss Key 采用 Flutter 窗口内的左右键同时按下，不安装全局鼠标 hook，释放/取消/失焦后重置，
+且无托盘恢复入口时拒绝隐藏。Drift schema 仍为 10，ReaderLocator、Reader 引擎、AutoRead
+和 ReadingSession 不变。488 项 Flutter 测试、11 个 Windows integration 文件、Windows Release
+和 Android Debug regression build 全部通过。

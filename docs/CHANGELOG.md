@@ -78,6 +78,19 @@ Debug. Android targeted ADB was not run because no device was connected.
 - Restored a Reader-owned paged focus after pointer entry and Aa/TOC modal
   completion so PageUp/PageDown/Arrow bindings consistently reach
   `ReaderInputRouter` after controls take focus.
+
+### M5.6c.1 — Windows shell visibility and Boss Key (2026-08-12)
+
+- Added typed Windows taskbar/tray visibility settings backed by `app_settings`.
+  At least one recovery entry is always enabled; invalid/corrupt values fall
+  back to taskbar enabled without changing Drift schema 10.
+- Added the native Windows tray icon with show/hide and explicit exit actions.
+  When tray is enabled, normal close hides to tray instead of terminating.
+  Explorer restart re-adds the icon and falls back to the taskbar if needed.
+- Added an app-local left+right mouse Boss Key with release/focus reset and a
+  safe tray-only hide guard. No global hook or Reader engine change was added.
+- Validation: 488 Flutter tests, 11 Windows integration files, Windows Release,
+  Android Debug regression build, and `git diff --check` PASS.
 - Validation: 480 Flutter tests, 14 Windows integration scenarios across the
   four real TXT corpus (logical error 0), Windows Release, Android Debug, and
   `git diff --check` all PASS. Drift schema remains 9.

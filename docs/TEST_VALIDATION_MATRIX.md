@@ -696,6 +696,22 @@ vertical A → paged → 不翻页 → 重开 = paged + A · vertical A → page
 | Android real device | NOT-RUN (not requested in this coding pass) |
 | Drift schema | 8, unchanged |
 
+## M5.6c.1 Windows shell visibility and Boss Key
+
+| Area | Result |
+|---|---|
+| Typed taskbar/tray preferences and app_settings persistence | PASS |
+| Reject both taskbar=false and tray=false | PASS |
+| Corrupt/unsafe value fallback to taskbar recovery | PASS |
+| Native tray show/hide and explicit exit contract | PASS (Release build) |
+| Close-to-tray behavior and Explorer tray recovery path | PASS (runner build) |
+| App-local left+right Boss Key edge/reset contract | PASS (unit) |
+| Full Flutter unit/contract/widget | 488/488 PASS |
+| Windows integration | 11 files / all scenarios PASS |
+| Windows Release | PASS |
+| Android Debug regression build | PASS |
+| Drift schema | 10, unchanged |
+
 ## M5.5e.4.2 Palette visual contrast correction
 
 | Area | Result |

@@ -1,3 +1,7 @@
+import 'dart:async';
+import 'dart:io';
+
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -6,6 +10,8 @@ import '../reader/reader_page.dart';
 import 'library_page.dart';
 import 'providers.dart';
 import 'reading_history_page.dart';
+import 'windows_shell.dart';
+import '../domain/windows_shell_preferences.dart';
 
 class _BrandMark extends StatelessWidget {
   const _BrandMark({this.size = 32});
@@ -42,6 +48,8 @@ class AppShellPage extends ConsumerStatefulWidget {
 
 class _AppShellPageState extends ConsumerState<AppShellPage> {
   int _selectedIndex = 0;
+  WindowsShellPreferences? _shellPreferences;
+  final BossKeyTracker _bossKeyTracker = BossKeyTracker();
 
   static const _destinations = <_ShellDestination>[
     _ShellDestination('\u9996\u9875', Icons.home_outlined, Icons.home),
@@ -52,6 +60,63 @@ class _AppShellPageState extends ConsumerState<AppShellPage> {
     ),
     _ShellDestination('\u6211\u7684', Icons.person_outline, Icons.person),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    if (Platform.isWindows) {
+      unawaited(_loadShellPreferences());
+    }
+  }
+
+  Future<void> _loadShellPreferences() async {
+    final value = await ref
+        .read(windowsShellPreferencesRepositoryProvider)
+        .load();
+    if (!mounted) return;
+    setState(() => _shellPreferences = value);
+    unawaited(WindowsShellBridge.apply(value));
+  }
+
+  @override
+  void dispose() {
+    _bossKeyTracker.clear();
+    super.dispose();
+  }
+
+  void _onShellPointer(PointerEvent event) {
+    if (!Platform.isWindows) return;
+    final buttons = event.buttons;
+    final left = buttons & kPrimaryMouseButton != 0;
+    final right = buttons & kSecondaryMouseButton != 0;
+    if (_bossKeyTracker.update(left: left, right: right)) {
+      final preferences =
+          WindowsShellBridge.currentPreferences ?? _shellPreferences;
+      if (preferences?.showTrayIcon == true) {
+        unawaited(WindowsShellBridge.hideWindow());
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('请先启用托盘图标，Boss Key 才能安全隐藏窗口')),
+        );
+      }
+    }
+  }
+
+  Widget _wrapWindowsShell(Widget child) {
+    if (!Platform.isWindows) return child;
+    return Focus(
+      canRequestFocus: false,
+      onFocusChange: (focused) {
+        if (!focused) _bossKeyTracker.clear();
+      },
+      child: Listener(
+        onPointerDown: _onShellPointer,
+        onPointerUp: _onShellPointer,
+        onPointerCancel: _onShellPointer,
+        child: child,
+      ),
+    );
+  }
 
   void _select(int index) {
     if (index == _selectedIndex) return;
@@ -83,32 +148,34 @@ class _AppShellPageState extends ConsumerState<AppShellPage> {
       ],
     );
 
-    return Scaffold(
-      body: isDesktop
-          ? Row(
-              children: [
-                _DesktopSidebar(
-                  selectedIndex: _selectedIndex,
-                  onSelect: _select,
-                ),
-                Expanded(child: body),
-              ],
-            )
-          : body,
-      bottomNavigationBar: isDesktop
-          ? null
-          : NavigationBar(
-              selectedIndex: _selectedIndex,
-              onDestinationSelected: _select,
-              destinations: [
-                for (final destination in _destinations)
-                  NavigationDestination(
-                    icon: Icon(destination.icon),
-                    selectedIcon: Icon(destination.selectedIcon),
-                    label: destination.label,
+    return _wrapWindowsShell(
+      Scaffold(
+        body: isDesktop
+            ? Row(
+                children: [
+                  _DesktopSidebar(
+                    selectedIndex: _selectedIndex,
+                    onSelect: _select,
                   ),
-              ],
-            ),
+                  Expanded(child: body),
+                ],
+              )
+            : body,
+        bottomNavigationBar: isDesktop
+            ? null
+            : NavigationBar(
+                selectedIndex: _selectedIndex,
+                onDestinationSelected: _select,
+                destinations: [
+                  for (final destination in _destinations)
+                    NavigationDestination(
+                      icon: Icon(destination.icon),
+                      selectedIcon: Icon(destination.selectedIcon),
+                      label: destination.label,
+                    ),
+                ],
+              ),
+      ),
     );
   }
 

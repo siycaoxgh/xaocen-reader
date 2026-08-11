@@ -2,6 +2,7 @@
 
 #include <dwmapi.h>
 #include <flutter_windows.h>
+#include <shellapi.h>
 
 #include <algorithm>
 
@@ -19,6 +20,11 @@ namespace {
 #endif
 
 constexpr const wchar_t kWindowClassName[] = L"FLUTTER_RUNNER_WIN32_WINDOW";
+
+UINT TaskbarCreatedMessage() {
+  static const UINT message = RegisterWindowMessageW(L"TaskbarCreated");
+  return message;
+}
 
 /// Registry key for app theme preference.
 ///
@@ -296,8 +302,19 @@ Win32Window::MessageHandler(HWND hwnd,
                             UINT const message,
                             WPARAM const wparam,
                             LPARAM const lparam) noexcept {
+  if (message == TaskbarCreatedMessage()) {
+    // Explorer can restart and discard tray icons. Re-add the tray entry or
+    // force the taskbar entry back as the safe recovery path.
+    tray_icon_added_ = false;
+    if (tray_enabled_ && !AddTrayIcon()) {
+      tray_enabled_ = false;
+      SetShellVisibility(true, false);
+    }
+    return 0;
+  }
   switch (message) {
     case WM_DESTROY:
+      RemoveTrayIcon();
       window_handle_ = nullptr;
       Destroy();
       if (quit_on_close_) {
@@ -306,8 +323,43 @@ Win32Window::MessageHandler(HWND hwnd,
       return 0;
 
     case WM_CLOSE:
+      if (!quit_requested_ && tray_enabled_) {
+        HideToTray();
+        return 0;
+      }
       SaveCurrentState();
       return DefWindowProc(hwnd, message, wparam, lparam);
+
+    case kTrayCallbackMessage:
+      if (static_cast<UINT>(lparam) == WM_LBUTTONUP ||
+          static_cast<UINT>(lparam) == WM_LBUTTONDBLCLK) {
+        if (IsWindowVisible(hwnd)) {
+          HideToTray();
+        } else {
+          ShowFromTray();
+        }
+        return 0;
+      }
+      if (static_cast<UINT>(lparam) == WM_RBUTTONUP) {
+        ShowTrayMenu();
+        return 0;
+      }
+      break;
+
+    case WM_COMMAND:
+      if (LOWORD(wparam) == kTrayShowHideCommand) {
+        if (IsWindowVisible(hwnd)) {
+          HideToTray();
+        } else {
+          ShowFromTray();
+        }
+        return 0;
+      }
+      if (LOWORD(wparam) == kTrayExitCommand) {
+        QuitApplication();
+        return 0;
+      }
+      break;
 
     case WM_DPICHANGED: {
       auto newRectSize = reinterpret_cast<RECT*>(lparam);
@@ -345,6 +397,8 @@ Win32Window::MessageHandler(HWND hwnd,
 
 void Win32Window::Destroy() {
   OnDestroy();
+
+  RemoveTrayIcon();
 
   if (window_handle_) {
     DestroyWindow(window_handle_);
@@ -414,6 +468,110 @@ void Win32Window::SaveCurrentState() {
 
 void Win32Window::SetQuitOnClose(bool quit_on_close) {
   quit_on_close_ = quit_on_close;
+}
+
+bool Win32Window::SetShellVisibility(bool show_taskbar, bool show_tray) {
+  if (window_handle_ == nullptr || (!show_taskbar && !show_tray)) {
+    // A hidden window without a tray/recovery entry would strand the user.
+    return false;
+  }
+
+  taskbar_enabled_ = show_taskbar;
+  tray_enabled_ = show_tray;
+  if (tray_enabled_) {
+    if (!AddTrayIcon()) {
+      tray_enabled_ = false;
+      taskbar_enabled_ = true;
+      return false;
+    }
+  } else {
+    RemoveTrayIcon();
+  }
+
+  const bool was_visible = IsWindowVisible(window_handle_) != FALSE;
+  if (was_visible) ShowWindow(window_handle_, SW_HIDE);
+  LONG_PTR style = GetWindowLongPtr(window_handle_, GWL_EXSTYLE);
+  if (taskbar_enabled_) {
+    style &= ~static_cast<LONG_PTR>(WS_EX_TOOLWINDOW);
+    style |= static_cast<LONG_PTR>(WS_EX_APPWINDOW);
+  } else {
+    style &= ~static_cast<LONG_PTR>(WS_EX_APPWINDOW);
+    style |= static_cast<LONG_PTR>(WS_EX_TOOLWINDOW);
+  }
+  SetWindowLongPtr(window_handle_, GWL_EXSTYLE, style);
+  SetWindowPos(window_handle_, nullptr, 0, 0, 0, 0,
+               SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE |
+                   SWP_FRAMECHANGED);
+  if (was_visible) ShowWindow(window_handle_, SW_SHOW);
+  return true;
+}
+
+bool Win32Window::HideToTray() {
+  if (window_handle_ == nullptr || !tray_enabled_) return false;
+  ShowWindow(window_handle_, SW_HIDE);
+  return true;
+}
+
+bool Win32Window::ShowFromTray() {
+  if (window_handle_ == nullptr) return false;
+  ShowWindow(window_handle_, IsIconic(window_handle_) ? SW_RESTORE : SW_SHOW);
+  SetForegroundWindow(window_handle_);
+  if (child_content_ != nullptr) SetFocus(child_content_);
+  return true;
+}
+
+bool Win32Window::QuitApplication() {
+  if (window_handle_ == nullptr) return false;
+  quit_requested_ = true;
+  RemoveTrayIcon();
+  SaveCurrentState();
+  PostMessage(window_handle_, WM_CLOSE, 0, 0);
+  return true;
+}
+
+bool Win32Window::AddTrayIcon() {
+  if (window_handle_ == nullptr) return false;
+  if (tray_icon_added_) return true;
+  NOTIFYICONDATAW data{};
+  data.cbSize = sizeof(data);
+  data.hWnd = window_handle_;
+  data.uID = kTrayIconId;
+  data.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP;
+  data.uCallbackMessage = kTrayCallbackMessage;
+  data.hIcon = LoadIcon(GetModuleHandle(nullptr), MAKEINTRESOURCE(IDI_APP_ICON));
+  wcscpy_s(data.szTip, L"XAOCEN Reader");
+  if (Shell_NotifyIconW(NIM_ADD, &data) == FALSE) return false;
+  data.uVersion = NOTIFYICON_VERSION_4;
+  Shell_NotifyIconW(NIM_SETVERSION, &data);
+  tray_icon_added_ = true;
+  return true;
+}
+
+void Win32Window::RemoveTrayIcon() {
+  if (!tray_icon_added_ || window_handle_ == nullptr) return;
+  NOTIFYICONDATAW data{};
+  data.cbSize = sizeof(data);
+  data.hWnd = window_handle_;
+  data.uID = kTrayIconId;
+  Shell_NotifyIconW(NIM_DELETE, &data);
+  tray_icon_added_ = false;
+}
+
+void Win32Window::ShowTrayMenu() {
+  if (window_handle_ == nullptr || !tray_enabled_) return;
+  POINT point{};
+  GetCursorPos(&point);
+  HMENU menu = CreatePopupMenu();
+  if (menu == nullptr) return;
+  AppendMenuW(menu, MF_STRING, kTrayShowHideCommand,
+              IsWindowVisible(window_handle_) ? L"Hide window" : L"Show window");
+  AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
+  AppendMenuW(menu, MF_STRING, kTrayExitCommand, L"Exit application");
+  SetForegroundWindow(window_handle_);
+  TrackPopupMenu(menu, TPM_RIGHTBUTTON, point.x, point.y, 0, window_handle_,
+                 nullptr);
+  DestroyMenu(menu);
+  PostMessage(window_handle_, WM_NULL, 0, 0);
 }
 
 bool Win32Window::OnCreate() {

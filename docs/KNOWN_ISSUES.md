@@ -335,3 +335,12 @@ The minimal Reader information layer and schema 9→10 migration passed the full
 automated, Windows integration, four-real-TXT, Windows Release, and Android
 Debug validation. Android physical-device validation was not run in this coding
 pass and remains deferred; no new P0/P1/P2 issue was found.
+
+## M5.6c.1 status
+
+Windows taskbar/tray visibility and the app-local Boss Key are implemented.
+The native tray behavior is covered by the Release runner build and typed
+contract tests; interactive tray clicks and the two-button chord still benefit
+from a short Windows desktop manual pass. No new Reader, Locator, persistence,
+or Android issue was found. Android device validation was not required for this
+Windows-only change.

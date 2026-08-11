@@ -8,9 +8,12 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/repositories/reader_input_bindings_repository.dart';
+import '../data/repositories/windows_shell_preferences_repository.dart';
 import '../domain/reader/reader_input_capture_workflow.dart';
+import '../domain/windows_shell_preferences.dart';
 import '../reader/reader_input.dart';
 import '../reader/reader_input_router.dart';
+import 'windows_shell.dart';
 import 'providers.dart';
 
 class ReaderSettingsPage extends StatelessWidget {
@@ -66,6 +69,167 @@ class ReaderSettingsPage extends StatelessWidget {
                   subtitle: const Text('请在打开的书籍中点击 Aa，设置字号、间距、边距和主题'),
                   trailing: const Icon(Icons.info_outline),
                 ),
+              ),
+              if (Platform.isWindows) ...[
+                const SizedBox(height: 20),
+                _SettingsSectionLabel(label: 'Windows 专属设置'),
+                Card(
+                  child: ListTile(
+                    leading: const Icon(Icons.desktop_windows_outlined),
+                    title: const Text('窗口与托盘'),
+                    subtitle: const Text('任务栏、托盘和关闭窗口行为'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const WindowsShellSettingsPage(),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class WindowsShellSettingsPage extends ConsumerStatefulWidget {
+  const WindowsShellSettingsPage({super.key});
+
+  @override
+  ConsumerState<WindowsShellSettingsPage> createState() =>
+      _WindowsShellSettingsPageState();
+}
+
+class _WindowsShellSettingsPageState
+    extends ConsumerState<WindowsShellSettingsPage> {
+  late final WindowsShellPreferencesRepository _repository = ref.read(
+    windowsShellPreferencesRepositoryProvider,
+  );
+  WindowsShellPreferences _preferences = WindowsShellPreferences.defaults;
+  StreamSubscription<WindowsShellPreferences>? _subscription;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_load());
+    _subscription = _repository.watch().listen((value) {
+      if (mounted) setState(() => _preferences = value);
+      unawaited(WindowsShellBridge.apply(value));
+    });
+  }
+
+  Future<void> _load() async {
+    final value = await _repository.load();
+    if (!mounted) return;
+    setState(() => _preferences = value);
+    unawaited(WindowsShellBridge.apply(value));
+  }
+
+  @override
+  void dispose() {
+    final subscription = _subscription;
+    if (subscription != null) unawaited(subscription.cancel());
+    super.dispose();
+  }
+
+  Future<void> _set({bool? taskbar, bool? tray}) async {
+    final nextTaskbar = taskbar ?? _preferences.showTaskbarIcon;
+    final nextTray = tray ?? _preferences.showTrayIcon;
+    try {
+      final value = await _repository.update(
+        showTaskbarIcon: nextTaskbar,
+        showTrayIcon: nextTray,
+      );
+      if (mounted) setState(() => _preferences = value);
+      await WindowsShellBridge.apply(value);
+    } on WindowsShellVisibilityException {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('任务栏图标和托盘图标至少保留一个')));
+    }
+  }
+
+  Future<void> _reset() async {
+    final value = await _repository.resetToDefaults();
+    if (!mounted) return;
+    setState(() => _preferences = value);
+    await WindowsShellBridge.apply(value);
+    if (!mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('已恢复 Windows 默认窗口入口')));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final desktop = MediaQuery.sizeOf(context).width >= 720;
+    return Scaffold(
+      appBar: AppBar(title: const Text('窗口与托盘')),
+      body: Center(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: desktop ? 720 : double.infinity,
+          ),
+          child: ListView(
+            padding: EdgeInsets.fromLTRB(
+              desktop ? 32 : 16,
+              20,
+              desktop ? 32 : 16,
+              32,
+            ),
+            children: [
+              Text(
+                'Windows 窗口入口',
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '至少保留一个入口，避免隐藏窗口后无法找回。启用托盘后，关闭窗口会隐藏到托盘。',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Card(
+                child: Column(
+                  children: [
+                    SwitchListTile.adaptive(
+                      title: const Text('显示任务栏图标'),
+                      subtitle: const Text('在 Windows 任务栏中显示应用入口'),
+                      value: _preferences.showTaskbarIcon,
+                      onChanged: (value) => unawaited(_set(taskbar: value)),
+                    ),
+                    const Divider(height: 1),
+                    SwitchListTile.adaptive(
+                      title: const Text('显示托盘图标'),
+                      subtitle: const Text('从系统托盘显示/隐藏窗口或退出应用'),
+                      value: _preferences.showTrayIcon,
+                      onChanged: (value) => unawaited(_set(tray: value)),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              Card(
+                child: ListTile(
+                  leading: const Icon(Icons.keyboard_double_arrow_left),
+                  title: const Text('Boss Key'),
+                  subtitle: Text(
+                    _preferences.showTrayIcon
+                        ? '鼠标左键 + 右键同时按下即可隐藏窗口，再从托盘恢复'
+                        : '需要先启用托盘图标，才能安全隐藏窗口',
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              OutlinedButton.icon(
+                onPressed: () => unawaited(_reset()),
+                icon: const Icon(Icons.restore),
+                label: const Text('恢复 Windows 默认'),
               ),
             ],
           ),

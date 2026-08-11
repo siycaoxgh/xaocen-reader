@@ -63,6 +63,15 @@ class Win32Window {
   // If true, closing this window will quit the application.
   void SetQuitOnClose(bool quit_on_close);
 
+  // Windows shell visibility and tray operations. These are native shell
+  // concerns; Reader state remains in Flutter.
+  bool SetShellVisibility(bool show_taskbar, bool show_tray);
+  bool HideToTray();
+  bool ShowFromTray();
+  bool QuitApplication();
+  bool IsTrayEnabled() const { return tray_enabled_; }
+  bool IsQuitRequested() const { return quit_requested_; }
+
   // Return a RECT representing the bounds of the current client area.
   RECT GetClientArea();
 
@@ -102,12 +111,25 @@ class Win32Window {
   static void UpdateTheme(HWND const window);
 
   bool quit_on_close_ = false;
+  bool quit_requested_ = false;
+  bool taskbar_enabled_ = true;
+  bool tray_enabled_ = false;
+  bool tray_icon_added_ = false;
 
   // window handle for top level window.
   HWND window_handle_ = nullptr;
 
   // window handle for hosted content.
   HWND child_content_ = nullptr;
+
+  static constexpr UINT kTrayCallbackMessage = WM_APP + 42;
+  static constexpr UINT kTrayIconId = 1;
+  static constexpr UINT kTrayShowHideCommand = 0x5001;
+  static constexpr UINT kTrayExitCommand = 0x5002;
+
+  bool AddTrayIcon();
+  void RemoveTrayIcon();
+  void ShowTrayMenu();
 };
 
 #endif  // RUNNER_WIN32_WINDOW_H_

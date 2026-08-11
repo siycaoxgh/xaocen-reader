@@ -1004,3 +1004,21 @@ entry. This is a presentation-layer change only: Locator, PageWindow,
 pagination, AutoRead drivers, ReadingSession, and Locator behavior are
 unchanged; the only persistence change is the formal schema 7→8 appearance
 migration described above.
+
+## M5.6c.1 Windows shell visibility and Boss Key
+
+`WindowsShellPreferences` is an app-level typed contract stored through
+`WindowsShellPreferencesRepository` in `app_settings`; it is not a book
+ReaderPreference and does not affect schema 10. `showTaskbarIcon` and
+`showTrayIcon` are validated as a pair: at least one must remain enabled.
+Missing, corrupt, future, or unsafe values resolve to the safe taskbar-enabled
+default.
+
+The native Windows runner owns the tray icon and shell behavior through the
+`xaocen/windows_shell` MethodChannel. It implements show/hide, explicit exit,
+close-to-tray, taskbar window style updates, and `TaskbarCreated` recovery after
+Explorer restarts. Flutter owns only the typed settings and an app-local
+left+right mouse `WindowsShellGesture`; no global mouse hook is installed.
+Boss Key can hide only when a tray recovery entry is active. ReaderLocator,
+PageWindow, AutoRead, ReadingSession, and all Reader persistence contracts are
+unchanged.

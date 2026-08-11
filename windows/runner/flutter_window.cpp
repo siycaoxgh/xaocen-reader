@@ -3,6 +3,7 @@
 #include <optional>
 
 #include "flutter/generated_plugin_registrant.h"
+#include <flutter/standard_method_codec.h>
 
 FlutterWindow::FlutterWindow(const flutter::DartProject& project)
     : project_(project) {}
@@ -25,6 +26,55 @@ bool FlutterWindow::OnCreate() {
     return false;
   }
   RegisterPlugins(flutter_controller_->engine());
+  shell_channel_ = std::make_unique<
+      flutter::MethodChannel<flutter::EncodableValue>>(
+      flutter_controller_->engine()->messenger(), "xaocen/windows_shell",
+      &flutter::StandardMethodCodec::GetInstance());
+  shell_channel_->SetMethodCallHandler(
+      [this](const flutter::MethodCall<flutter::EncodableValue>& call,
+             std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>>
+                 result) {
+        if (call.method_name() == "setShellVisibility") {
+          bool taskbar = true;
+          bool tray = false;
+          const auto* args = call.arguments();
+          if (args != nullptr) {
+            const auto* map = std::get_if<flutter::EncodableMap>(args);
+            if (map != nullptr) {
+              const auto taskbar_it =
+                  map->find(flutter::EncodableValue("taskbar"));
+              const auto tray_it = map->find(flutter::EncodableValue("tray"));
+              if (taskbar_it != map->end()) {
+                if (const auto* value =
+                        std::get_if<bool>(&taskbar_it->second)) {
+                  taskbar = *value;
+                }
+              }
+              if (tray_it != map->end()) {
+                if (const auto* value = std::get_if<bool>(&tray_it->second)) {
+                  tray = *value;
+                }
+              }
+            }
+          }
+          result->Success(flutter::EncodableValue(
+              SetShellVisibility(taskbar, tray)));
+          return;
+        }
+        if (call.method_name() == "hideWindow") {
+          result->Success(flutter::EncodableValue(HideToTray()));
+          return;
+        }
+        if (call.method_name() == "showWindow") {
+          result->Success(flutter::EncodableValue(ShowFromTray()));
+          return;
+        }
+        if (call.method_name() == "quitApplication") {
+          result->Success(flutter::EncodableValue(QuitApplication()));
+          return;
+        }
+        result->NotImplemented();
+      });
   SetChildContent(flutter_controller_->view()->GetNativeWindow());
 
   flutter_controller_->engine()->SetNextFrameCallback([&]() {
@@ -40,6 +90,10 @@ bool FlutterWindow::OnCreate() {
 }
 
 void FlutterWindow::OnDestroy() {
+  if (shell_channel_) {
+    shell_channel_->SetMethodCallHandler(nullptr);
+    shell_channel_.reset();
+  }
   if (flutter_controller_) {
     flutter_controller_ = nullptr;
   }
@@ -54,6 +108,10 @@ FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
   // Persist shell geometry before Flutter/plugin close handling can consume
   // WM_CLOSE. Minimized state is filtered inside SaveCurrentState().
   if (message == WM_CLOSE) {
+    if (IsTrayEnabled() && !IsQuitRequested()) {
+      HideToTray();
+      return 0;
+    }
     SaveCurrentState();
   }
   // Give Flutter, including plugins, an opportunity to handle window messages.
