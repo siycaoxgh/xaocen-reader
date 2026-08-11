@@ -36,7 +36,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting() : super(NativeDatabase.memory());
 
   @override
-  int get schemaVersion => 9;
+  int get schemaVersion => 10;
 
   /// 打开应用数据库（support 目录下）。
   static Future<AppDatabase> open() async {
@@ -195,6 +195,56 @@ class AppDatabase extends _$AppDatabase {
           readerPreferencesRows,
           readerPreferencesRows.timeDisplayMode,
         );
+      }
+      // schema 9 → 10: fixed-slot minimal Reader information preferences.
+      // Existing showProgressInfo is copied to both progress item toggles so
+      // an explicit legacy hide choice is preserved during migration.
+      if (from >= 5 && from < 10) {
+        await m.addColumn(
+          readerPreferencesRows,
+          readerPreferencesRows.showChapterInfo,
+        );
+        await m.addColumn(
+          readerPreferencesRows,
+          readerPreferencesRows.showChapterProgressInfo,
+        );
+        await m.addColumn(
+          readerPreferencesRows,
+          readerPreferencesRows.showClockInfo,
+        );
+        await m.addColumn(
+          readerPreferencesRows,
+          readerPreferencesRows.showWholeBookProgressInfo,
+        );
+        await m.addColumn(
+          readerPreferencesRows,
+          readerPreferencesRows.showInfoDivider,
+        );
+        await m.addColumn(
+          readerPreferencesRows,
+          readerPreferencesRows.chapterInfoSlot,
+        );
+        await m.addColumn(
+          readerPreferencesRows,
+          readerPreferencesRows.chapterProgressInfoSlot,
+        );
+        await m.addColumn(
+          readerPreferencesRows,
+          readerPreferencesRows.clockInfoSlot,
+        );
+        await m.addColumn(
+          readerPreferencesRows,
+          readerPreferencesRows.wholeBookProgressInfoSlot,
+        );
+        await m.addColumn(
+          readerPreferencesRows,
+          readerPreferencesRows.infoDividerSlot,
+        );
+        await customStatement('''
+          UPDATE reader_preferences
+          SET show_chapter_progress_info = show_progress_info,
+              show_whole_book_progress_info = show_progress_info
+        ''');
       }
     },
     beforeOpen: (details) async {

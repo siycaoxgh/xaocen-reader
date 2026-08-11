@@ -99,8 +99,20 @@ class ReaderChrome extends StatelessWidget {
     this.showTopInfoBar = true,
     this.showBottomInfoBar = true,
     this.showProgressInfo = true,
+    this.showChapterInfo = true,
+    this.showChapterProgressInfo = true,
+    this.showClockInfo = true,
+    this.showWholeBookProgressInfo = true,
+    this.showInfoDivider = false,
+    this.chapterInfoSlot = ReaderInfoSlot.topLeft,
+    this.chapterProgressInfoSlot = ReaderInfoSlot.topRight,
+    this.clockInfoSlot = ReaderInfoSlot.bottomLeft,
+    this.wholeBookProgressInfoSlot = ReaderInfoSlot.bottomRight,
+    this.infoDividerSlot = ReaderInfoSlot.topCenter,
     this.statusBarMode = ReaderStatusBarMode.system,
     this.timeDisplayMode = ReaderTimeDisplayMode.twentyFourHour,
+    this.readerTextColor,
+    this.readerBackgroundColor,
   });
 
   final bool visible;
@@ -129,8 +141,20 @@ class ReaderChrome extends StatelessWidget {
   final bool showTopInfoBar;
   final bool showBottomInfoBar;
   final bool showProgressInfo;
+  final bool showChapterInfo;
+  final bool showChapterProgressInfo;
+  final bool showClockInfo;
+  final bool showWholeBookProgressInfo;
+  final bool showInfoDivider;
+  final ReaderInfoSlot chapterInfoSlot;
+  final ReaderInfoSlot chapterProgressInfoSlot;
+  final ReaderInfoSlot clockInfoSlot;
+  final ReaderInfoSlot wholeBookProgressInfoSlot;
+  final ReaderInfoSlot infoDividerSlot;
   final ReaderStatusBarMode statusBarMode;
   final ReaderTimeDisplayMode timeDisplayMode;
+  final Color? readerTextColor;
+  final Color? readerBackgroundColor;
 
   @override
   Widget build(BuildContext context) {
@@ -371,8 +395,20 @@ class ReaderChrome extends StatelessWidget {
             showTopInfoBar: showTopInfoBar,
             showBottomInfoBar: showBottomInfoBar,
             showProgressInfo: showProgressInfo,
+            showChapterInfo: showChapterInfo,
+            showChapterProgressInfo: showChapterProgressInfo,
+            showClockInfo: showClockInfo,
+            showWholeBookProgressInfo: showWholeBookProgressInfo,
+            showInfoDivider: showInfoDivider,
+            chapterInfoSlot: chapterInfoSlot,
+            chapterProgressInfoSlot: chapterProgressInfoSlot,
+            clockInfoSlot: clockInfoSlot,
+            wholeBookProgressInfoSlot: wholeBookProgressInfoSlot,
+            infoDividerSlot: infoDividerSlot,
             statusBarMode: statusBarMode,
             timeDisplayMode: timeDisplayMode,
+            readerTextColor: readerTextColor,
+            readerBackgroundColor: readerBackgroundColor,
           ),
         chrome,
         if (visible && autoReadState != AutoReadState.idle)
@@ -406,8 +442,20 @@ class ReaderMinimalInfoLayer extends StatefulWidget {
     required this.showTopInfoBar,
     required this.showBottomInfoBar,
     required this.showProgressInfo,
+    this.showChapterInfo = true,
+    this.showChapterProgressInfo = true,
+    this.showClockInfo = true,
+    this.showWholeBookProgressInfo = true,
+    this.showInfoDivider = false,
+    this.chapterInfoSlot = ReaderInfoSlot.topLeft,
+    this.chapterProgressInfoSlot = ReaderInfoSlot.topRight,
+    this.clockInfoSlot = ReaderInfoSlot.bottomLeft,
+    this.wholeBookProgressInfoSlot = ReaderInfoSlot.bottomRight,
+    this.infoDividerSlot = ReaderInfoSlot.topCenter,
     required this.statusBarMode,
     required this.timeDisplayMode,
+    this.readerTextColor,
+    this.readerBackgroundColor,
   });
 
   final ReaderMode mode;
@@ -420,8 +468,20 @@ class ReaderMinimalInfoLayer extends StatefulWidget {
   final bool showTopInfoBar;
   final bool showBottomInfoBar;
   final bool showProgressInfo;
+  final bool showChapterInfo;
+  final bool showChapterProgressInfo;
+  final bool showClockInfo;
+  final bool showWholeBookProgressInfo;
+  final bool showInfoDivider;
+  final ReaderInfoSlot chapterInfoSlot;
+  final ReaderInfoSlot chapterProgressInfoSlot;
+  final ReaderInfoSlot clockInfoSlot;
+  final ReaderInfoSlot wholeBookProgressInfoSlot;
+  final ReaderInfoSlot infoDividerSlot;
   final ReaderStatusBarMode statusBarMode;
   final ReaderTimeDisplayMode timeDisplayMode;
+  final Color? readerTextColor;
+  final Color? readerBackgroundColor;
 
   @override
   State<ReaderMinimalInfoLayer> createState() => _ReaderMinimalInfoLayerState();
@@ -448,92 +508,136 @@ class _ReaderMinimalInfoLayerState extends State<ReaderMinimalInfoLayer> {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final viewPadding = MediaQuery.viewPaddingOf(context);
-    final horizontal = math.max(12.0, viewPadding.left + 12.0);
-    final right = math.max(12.0, viewPadding.right + 12.0);
-    final top = math.max(8.0, viewPadding.top + 8.0);
-    final bottom = math.max(10.0, viewPadding.bottom + 10.0);
-    final textColor = scheme.onSurface;
-    final background = scheme.surface.withValues(alpha: .72);
+    final textColor = widget.readerTextColor ?? scheme.onSurface;
+    final style = Theme.of(context).textTheme.labelSmall?.copyWith(
+      color: textColor,
+      shadows: [
+        Shadow(
+          color: widget.readerBackgroundColor ?? scheme.surface,
+          blurRadius: 4,
+        ),
+      ],
+    );
 
     return IgnorePointer(
-      child: Stack(
-        fit: StackFit.expand,
+      child: SafeArea(
+        minimum: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            if (widget.showTopInfoBar)
+              _buildRow(context, top: true, style: style),
+            if (widget.showBottomInfoBar)
+              _buildRow(context, top: false, style: style),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRow(
+    BuildContext context, {
+    required bool top,
+    required TextStyle? style,
+  }) {
+    final slots = [
+      top ? ReaderInfoSlot.topLeft : ReaderInfoSlot.bottomLeft,
+      top ? ReaderInfoSlot.topCenter : ReaderInfoSlot.bottomCenter,
+      top ? ReaderInfoSlot.topRight : ReaderInfoSlot.bottomRight,
+    ];
+    return SizedBox(
+      width: double.infinity,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          if (widget.showTopInfoBar)
-            Align(
-              alignment: Alignment.topCenter,
-              child: Padding(
-                padding: EdgeInsets.fromLTRB(horizontal, top, right, 0),
-                child: _MinimalInfoCard(
-                  color: background,
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          _chapterTitle(),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(
-                            context,
-                          ).textTheme.labelMedium?.copyWith(color: textColor),
-                        ),
-                      ),
-                      if (widget.showProgressInfo) ...[
-                        const SizedBox(width: 12),
-                        Text(
-                          _chapterProgressLabel(),
-                          style: Theme.of(context).textTheme.labelSmall
-                              ?.copyWith(
-                                color: textColor.withValues(alpha: .8),
-                              ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          if (widget.showBottomInfoBar)
-            Align(
-              alignment: Alignment.bottomCenter,
-              child: Padding(
-                padding: EdgeInsets.fromLTRB(horizontal, 0, right, bottom),
-                child: _MinimalInfoCard(
-                  color: background,
-                  child: Row(
-                    children: [
-                      if (_showReaderClock) ...[
-                        Text(
-                          _formatClock(_now, widget.timeDisplayMode),
-                          style: Theme.of(context).textTheme.labelSmall
-                              ?.copyWith(
-                                color: textColor.withValues(alpha: .8),
-                              ),
-                        ),
-                        const Spacer(),
-                      ],
-                      if (widget.showProgressInfo)
-                        Text(
-                          _wholeBookProgressLabel(),
-                          style: Theme.of(context).textTheme.labelSmall
-                              ?.copyWith(
-                                color: textColor.withValues(alpha: .8),
-                              ),
-                        ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
+          for (final slot in slots) Expanded(child: _slotContent(slot, style)),
         ],
       ),
     );
   }
 
-  bool get _showReaderClock =>
-      widget.statusBarMode == ReaderStatusBarMode.readerInfo &&
-      widget.timeDisplayMode != ReaderTimeDisplayMode.hidden;
+  Widget _slotContent(ReaderInfoSlot slot, TextStyle? style) {
+    final children = <Widget>[];
+    if (widget.showChapterInfo && widget.chapterInfoSlot == slot) {
+      children.add(
+        Text(
+          _chapterTitle(),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          textAlign: _textAlign(slot),
+          style: style,
+        ),
+      );
+    }
+    if (widget.showChapterProgressInfo &&
+        widget.chapterProgressInfoSlot == slot) {
+      final label = _chapterProgressLabel();
+      if (label.isNotEmpty) {
+        children.add(Text(label, textAlign: _textAlign(slot), style: style));
+      }
+    }
+    if (widget.showClockInfo &&
+        widget.clockInfoSlot == slot &&
+        widget.timeDisplayMode != ReaderTimeDisplayMode.hidden) {
+      children.add(
+        Text(
+          _formatClock(_now, widget.timeDisplayMode),
+          textAlign: _textAlign(slot),
+          style: style,
+        ),
+      );
+    }
+    if (widget.showWholeBookProgressInfo &&
+        widget.wholeBookProgressInfoSlot == slot) {
+      children.add(
+        Text(
+          _wholeBookProgressLabel(),
+          textAlign: _textAlign(slot),
+          style: style,
+        ),
+      );
+    }
+    if (widget.showInfoDivider && widget.infoDividerSlot == slot) {
+      children.add(
+        Container(
+          height: 1,
+          margin: const EdgeInsets.symmetric(vertical: 3),
+          color: style?.color?.withValues(alpha: .45),
+        ),
+      );
+    }
+    if (children.isEmpty) return const SizedBox(height: 22);
+    return Align(
+      alignment: _alignment(slot),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: _crossAxisAlignment(slot),
+        children: children,
+      ),
+    );
+  }
+
+  TextAlign _textAlign(ReaderInfoSlot slot) => switch (slot) {
+    ReaderInfoSlot.topLeft || ReaderInfoSlot.bottomLeft => TextAlign.left,
+    ReaderInfoSlot.topCenter || ReaderInfoSlot.bottomCenter => TextAlign.center,
+    ReaderInfoSlot.topRight || ReaderInfoSlot.bottomRight => TextAlign.right,
+  };
+
+  Alignment _alignment(ReaderInfoSlot slot) => switch (slot) {
+    ReaderInfoSlot.topLeft || ReaderInfoSlot.bottomLeft => Alignment.centerLeft,
+    ReaderInfoSlot.topCenter || ReaderInfoSlot.bottomCenter => Alignment.center,
+    ReaderInfoSlot.topRight ||
+    ReaderInfoSlot.bottomRight => Alignment.centerRight,
+  };
+
+  CrossAxisAlignment _crossAxisAlignment(ReaderInfoSlot slot) => switch (slot) {
+    ReaderInfoSlot.topLeft ||
+    ReaderInfoSlot.bottomLeft => CrossAxisAlignment.start,
+    ReaderInfoSlot.topCenter ||
+    ReaderInfoSlot.bottomCenter => CrossAxisAlignment.center,
+    ReaderInfoSlot.topRight ||
+    ReaderInfoSlot.bottomRight => CrossAxisAlignment.end,
+  };
 
   String _chapterTitle() {
     final title = widget.currentChapterTitle;
@@ -569,24 +673,6 @@ class _ReaderMinimalInfoLayerState extends State<ReaderMinimalInfoLayer> {
     if (percent == null) return ReaderProgressLabels.wholeBook;
     return '${ReaderProgressLabels.wholeBook} ${(percent * 100).round()}%';
   }
-}
-
-class _MinimalInfoCard extends StatelessWidget {
-  const _MinimalInfoCard({required this.color, required this.child});
-
-  final Color color;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) => Material(
-    color: color,
-    elevation: 1,
-    borderRadius: BorderRadius.circular(12),
-    child: Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-      child: child,
-    ),
-  );
 }
 
 String _formatClock(DateTime value, ReaderTimeDisplayMode mode) {
@@ -1390,15 +1476,26 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
 
   Widget _buildAppearancePanel(BuildContext context) {
     final activeBrightness = _effectiveBrightness(context, _draft.themeMode);
+    final resolvedPalette = ReaderPaletteResolver.resolve(
+      paletteId: _draft.paletteId,
+      dark: activeBrightness == Brightness.dark,
+      lightTextArgb: _draft.lightTextColorArgb,
+      lightBackgroundArgb: _draft.lightBackgroundColorArgb,
+      darkTextArgb: _draft.darkTextColorArgb,
+      darkBackgroundArgb: _draft.darkBackgroundColorArgb,
+    );
+    final resolvedTextColor = Color(resolvedPalette.textArgb);
+    final resolvedBackgroundColor = Color(resolvedPalette.backgroundArgb);
     final textColor = _textColorFor(_editingBrightness) == null
         ? null
         : Color(_textColorFor(_editingBrightness)!);
     final backgroundColor = _backgroundColorFor(_editingBrightness) == null
         ? null
         : Color(_backgroundColorFor(_editingBrightness)!);
-    final contrastWarning = textColor != null && backgroundColor != null
-        ? !isReadable(textColor, backgroundColor)
-        : false;
+    final contrastWarning = !isReadable(
+      resolvedTextColor,
+      resolvedBackgroundColor,
+    );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1440,6 +1537,15 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
             style: Theme.of(context).textTheme.labelMedium,
           ),
         ],
+        const SizedBox(height: 4),
+        Text(
+          '当前编辑：${_editingBrightness == Brightness.dark ? '深色' : '浅色'}方案',
+          style: Theme.of(context).textTheme.labelMedium,
+        ),
+        Text(
+          '当前实际生效：${_draft.paletteId == ReaderPaletteId.custom ? '自定义' : '预设'} · ${activeBrightness == Brightness.dark ? '深色' : '浅色'}亮度',
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
         const SizedBox(height: 18),
         _ReaderPalettePresetGrid(
           key: readerPaletteControlKey,
@@ -1733,10 +1839,76 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
         SwitchListTile.adaptive(
           key: readerShowProgressInfoKey,
           contentPadding: EdgeInsets.zero,
-          title: const Text('显示阅读进度'),
+          title: const Text('显示章节与全书进度'),
           value: _draft.showProgressInfo,
-          onChanged: (value) =>
-              _commit(_draft.copyWith(showProgressInfo: value)),
+          onChanged: (value) => _commit(
+            _draft.copyWith(
+              showProgressInfo: value,
+              showChapterProgressInfo: value,
+              showWholeBookProgressInfo: value,
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text('信息项目与槽位', style: Theme.of(context).textTheme.labelLarge),
+        const SizedBox(height: 4),
+        _buildInfoItemRow(
+          context,
+          label: '章节',
+          value: _draft.showChapterInfo,
+          slot: _draft.chapterInfoSlot,
+          onValueChanged: (value) =>
+              _commit(_draft.copyWith(showChapterInfo: value)),
+          onSlotChanged: (slot) =>
+              _commit(_draft.copyWith(chapterInfoSlot: slot)),
+        ),
+        _buildInfoItemRow(
+          context,
+          label: '本章进度',
+          value: _draft.showChapterProgressInfo,
+          slot: _draft.chapterProgressInfoSlot,
+          onValueChanged: (value) => _commit(
+            _draft.copyWith(
+              showChapterProgressInfo: value,
+              showProgressInfo: value && _draft.showWholeBookProgressInfo,
+            ),
+          ),
+          onSlotChanged: (slot) =>
+              _commit(_draft.copyWith(chapterProgressInfoSlot: slot)),
+        ),
+        _buildInfoItemRow(
+          context,
+          label: '时间',
+          value: _draft.showClockInfo,
+          slot: _draft.clockInfoSlot,
+          onValueChanged: (value) =>
+              _commit(_draft.copyWith(showClockInfo: value)),
+          onSlotChanged: (slot) =>
+              _commit(_draft.copyWith(clockInfoSlot: slot)),
+        ),
+        _buildInfoItemRow(
+          context,
+          label: '全书进度',
+          value: _draft.showWholeBookProgressInfo,
+          slot: _draft.wholeBookProgressInfoSlot,
+          onValueChanged: (value) => _commit(
+            _draft.copyWith(
+              showWholeBookProgressInfo: value,
+              showProgressInfo: value && _draft.showChapterProgressInfo,
+            ),
+          ),
+          onSlotChanged: (slot) =>
+              _commit(_draft.copyWith(wholeBookProgressInfoSlot: slot)),
+        ),
+        _buildInfoItemRow(
+          context,
+          label: '分隔线',
+          value: _draft.showInfoDivider,
+          slot: _draft.infoDividerSlot,
+          onValueChanged: (value) =>
+              _commit(_draft.copyWith(showInfoDivider: value)),
+          onSlotChanged: (slot) =>
+              _commit(_draft.copyWith(infoDividerSlot: slot)),
         ),
         if (defaultTargetPlatform == TargetPlatform.android) ...[
           const SizedBox(height: 8),
@@ -1788,21 +1960,49 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
         ),
         const SizedBox(height: 6),
         Text(
-          '时间仅在“阅读器信息栏”模式且底部阅读信息开启时显示。',
+          '时间会按所选 12/24 小时格式显示在固定槽位；关闭“时间”即可隐藏。',
           style: Theme.of(context).textTheme.bodySmall,
         ),
-        if (_draft.timeDisplayMode != ReaderTimeDisplayMode.hidden &&
-            (_draft.statusBarMode != ReaderStatusBarMode.readerInfo ||
-                !_draft.showBottomInfoBar))
-          Text(
-            '当前设置不会显示应用内时间。',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: Theme.of(context).colorScheme.error,
-            ),
-          ),
       ],
     );
   }
+
+  Widget _buildInfoItemRow(
+    BuildContext context, {
+    required String label,
+    required bool value,
+    required ReaderInfoSlot slot,
+    required ValueChanged<bool> onValueChanged,
+    required ValueChanged<ReaderInfoSlot> onSlotChanged,
+  }) {
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      dense: true,
+      title: Text(label),
+      leading: Switch.adaptive(value: value, onChanged: onValueChanged),
+      trailing: DropdownButton<ReaderInfoSlot>(
+        value: slot,
+        isDense: true,
+        underline: const SizedBox.shrink(),
+        onChanged: (next) {
+          if (next != null) onSlotChanged(next);
+        },
+        items: [
+          for (final item in ReaderInfoSlot.values)
+            DropdownMenuItem(value: item, child: Text(_slotLabel(item))),
+        ],
+      ),
+    );
+  }
+
+  String _slotLabel(ReaderInfoSlot slot) => switch (slot) {
+    ReaderInfoSlot.topLeft => '顶部左',
+    ReaderInfoSlot.topCenter => '顶部中',
+    ReaderInfoSlot.topRight => '顶部右',
+    ReaderInfoSlot.bottomLeft => '底部左',
+    ReaderInfoSlot.bottomCenter => '底部中',
+    ReaderInfoSlot.bottomRight => '底部右',
+  };
 
   Widget _buildAdvancedPanel(BuildContext context) {
     return Column(

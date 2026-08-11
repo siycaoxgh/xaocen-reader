@@ -1,6 +1,6 @@
 # TEST_VALIDATION_MATRIX.md — XAOCEN Reader v4 验证矩阵
 
-> 状态：M5.6a P1 fixes COMPLETE（`feat/m4-horizontal-reader`，Drift schema 9）；Android 真机按阶段策略另行复核。
+> 状态：M5.6b COMPLETE（`feat/m4-horizontal-reader`，Drift schema 10）；Android 真机按阶段策略另行复核。
 > 自动测试与真人测试分开记录。**Android Debug 构建 PASS ≠ Android 真机 PASS**，两者分别列出。
 > 真人环境：Windows（本机，用户 + 自动化集成测试）；Android 真机 Redmi K60（23013RK75C / mondrian，Android 15 / API 35，无线 adb）。
 
@@ -19,6 +19,25 @@
 | Windows Release / Android Debug | PASS / PASS |
 | Android real device | NOT-RUN in this coding pass |
 | Drift schema | 9 (unchanged) |
+
+## M5.6b — Reader minimal information layer
+
+| Validation | Result |
+|---|---|
+| Fixed six-slot model and per-item visibility | PASS |
+| Default chapter/chapter-progress/clock/whole-book placement | PASS |
+| Transparent text layer replaces floating/glass card | PASS |
+| 12-hour and 24-hour rendered clock + refresh contract | PASS |
+| Android SafeArea/view inset cutout and navigation handling | PASS |
+| Windows shared semantic slots | PASS |
+| Palette source/brightness/low-contrast hints in Aa | PASS |
+| Schema 9→10 migration and legacy progress switch preservation | PASS |
+| Full Flutter unit/contract/widget | 482/482 PASS |
+| Integration | 11 files / 14 scenarios PASS |
+| Four real TXT / logical error | PASS / 0 |
+| Windows Release / Android Debug | PASS / PASS |
+| Android real device | NOT-RUN in this coding pass |
+| Drift schema | 10 |
 
 ## M5.5g — Android edge-to-edge + Reader information layer
 

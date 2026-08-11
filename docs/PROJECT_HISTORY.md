@@ -791,3 +791,16 @@ Material 3 type scale、语义权重和跨平台 fallback。Reader 正文仍使�
 ReaderTextBlock metrics 比较，未来字体变化必须经过既有精确保位流程。未改变 schema、分页算法或
 ReaderLocator。472 项 Flutter 测试、11 个 integration 文件 / 14 个场景、4 个真实 TXT logical error 0、
 Windows Release 与 Android Debug 全部通过。
+
+## M5.6b — Reader 极简信息层（2026-08-11）
+
+Chrome 隐藏时，Reader 信息层改为直接融入正文的透明文字/分隔线，不再使用浮窗或玻璃卡片。章节、
+本章进度、时间、全书进度和分隔线均为强类型显示项目，使用 top-left、top-center、top-right、
+bottom-left、bottom-center、bottom-right 六个固定槽位；每本书可独立控制显示与槽位，默认章节在顶部左侧、
+本章进度在顶部右侧、时间在底部左侧、全书进度在底部右侧。Android 使用真实 SafeArea/inset 适配挖孔、
+横屏与导航模式，Windows 复用同一语义布局；12/24 小时文字在信息层存活期间刷新。
+
+Aa 阅读外观补充当前编辑亮度、实际生效来源（预设/自定义）、当前亮度与低对比警告。Drift schema 9→10
+新增显示项目字段并保留旧 showProgressInfo 语义；书籍、ReaderLocator、reading_progress、readingMode、
+排版、Palette 与托管背景引用均保留。482 项 Flutter 测试、11 个 integration 文件 / 14 个场景、4 个真实
+TXT logical error 0、Windows Release 与 Android Debug 全部通过，Android 真机本阶段 deferred。

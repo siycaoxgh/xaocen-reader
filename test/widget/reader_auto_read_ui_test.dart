@@ -228,6 +228,46 @@ void main() {
     );
   });
 
+  testWidgets(
+    'minimal info layer uses typed fixed slots without a card surface',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: ReaderMinimalInfoLayer(
+              mode: ReaderMode.vertical,
+              currentChapterTitle: '城市边缘',
+              currentChapterNumber: 53,
+              chapterProgressPercent: .68,
+              chapterPageNumber: null,
+              chapterPageCount: null,
+              progressPercent: .37,
+              showTopInfoBar: true,
+              showBottomInfoBar: true,
+              showProgressInfo: true,
+              showChapterInfo: true,
+              showChapterProgressInfo: true,
+              showClockInfo: false,
+              showWholeBookProgressInfo: true,
+              showInfoDivider: true,
+              chapterInfoSlot: ReaderInfoSlot.topLeft,
+              chapterProgressInfoSlot: ReaderInfoSlot.topRight,
+              wholeBookProgressInfoSlot: ReaderInfoSlot.bottomRight,
+              infoDividerSlot: ReaderInfoSlot.topCenter,
+              statusBarMode: ReaderStatusBarMode.system,
+              timeDisplayMode: ReaderTimeDisplayMode.hidden,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('第 53 章  城市边缘'), findsOneWidget);
+      expect(find.text('本章 68%'), findsOneWidget);
+      expect(find.text('全书 37%'), findsOneWidget);
+      expect(find.byType(Card), findsNothing);
+    },
+  );
+
   testWidgets('paged AutoRead sheet exposes interval controls and status', (
     tester,
   ) async {

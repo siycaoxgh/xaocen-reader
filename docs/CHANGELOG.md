@@ -50,6 +50,24 @@ Debug. Android targeted ADB was not run because no device was connected.
 
 ## Unreleased
 
+### M5.6b — Reader minimal information layer (2026-08-11)
+
+- Replaced the hidden-Chrome floating information cards with a transparent,
+  non-interactive Reader information layer using six fixed semantic slots.
+- Added per-item chapter, chapter-progress, clock, whole-book-progress, and
+  divider visibility/slot preferences; defaults are chapter top-left, chapter
+  progress top-right, clock bottom-left, and whole-book progress bottom-right.
+- Added real SafeArea/view-inset handling for Android cutouts, landscape, and
+  navigation modes; Windows reuses the same semantic slot model.
+- Kept 12/24-hour clock rendering visible and refreshable when selected, and
+  added Aa hints for the active palette source, brightness, and low contrast.
+- Migrated Drift schema 9→10 with explicit defaults and legacy progress-toggle
+  preservation. ReaderLocator, pagination, AutoRead, ReadingSession, and
+  reading-progress contracts are unchanged.
+- Validation: 482 Flutter tests, 11 integration files / 14 scenarios, all four
+  real TXT logical-error-zero checks, Windows Release, Android Debug, and
+  `git diff --check` PASS. Android device validation deferred.
+
 ### M5.6a — P1 regression fixes (2026-08-11)
 
 - AutoRead status actions now follow Reader Chrome visibility; hiding Chrome

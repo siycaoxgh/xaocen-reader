@@ -55,6 +55,16 @@ final class ReaderPreferencesRepository {
       showProgressInfo: preferences.showProgressInfo,
       statusBarMode: preferences.statusBarMode,
       timeDisplayMode: preferences.timeDisplayMode,
+      showChapterInfo: preferences.showChapterInfo,
+      showChapterProgressInfo: preferences.showChapterProgressInfo,
+      showClockInfo: preferences.showClockInfo,
+      showWholeBookProgressInfo: preferences.showWholeBookProgressInfo,
+      showInfoDivider: preferences.showInfoDivider,
+      chapterInfoSlot: preferences.chapterInfoSlot,
+      chapterProgressInfoSlot: preferences.chapterProgressInfoSlot,
+      clockInfoSlot: preferences.clockInfoSlot,
+      wholeBookProgressInfoSlot: preferences.wholeBookProgressInfoSlot,
+      infoDividerSlot: preferences.infoDividerSlot,
     );
     await _db
         .into(_db.readerPreferencesRows)
@@ -88,6 +98,18 @@ final class ReaderPreferencesRepository {
             showProgressInfo: Value(safe.showProgressInfo),
             statusBarMode: Value(safe.statusBarMode.name),
             timeDisplayMode: Value(safe.timeDisplayMode.name),
+            showChapterInfo: Value(safe.showChapterInfo),
+            showChapterProgressInfo: Value(safe.showChapterProgressInfo),
+            showClockInfo: Value(safe.showClockInfo),
+            showWholeBookProgressInfo: Value(safe.showWholeBookProgressInfo),
+            showInfoDivider: Value(safe.showInfoDivider),
+            chapterInfoSlot: Value(safe.chapterInfoSlot.name),
+            chapterProgressInfoSlot: Value(safe.chapterProgressInfoSlot.name),
+            clockInfoSlot: Value(safe.clockInfoSlot.name),
+            wholeBookProgressInfoSlot: Value(
+              safe.wholeBookProgressInfoSlot.name,
+            ),
+            infoDividerSlot: Value(safe.infoDividerSlot.name),
             updatedAt: Value(DateTime.now()),
           ),
         );
@@ -143,6 +165,37 @@ final class ReaderPreferencesRepository {
               .where((value) => value.name == row.timeDisplayMode)
               .firstOrNull ??
           ReaderPreferences.defaultTimeDisplayMode,
+      showChapterInfo: row.showChapterInfo,
+      showChapterProgressInfo: row.showChapterProgressInfo,
+      showClockInfo: row.showClockInfo,
+      showWholeBookProgressInfo: row.showWholeBookProgressInfo,
+      showInfoDivider: row.showInfoDivider,
+      chapterInfoSlot: _decodeSlot(
+        row.chapterInfoSlot,
+        ReaderPreferences.defaultChapterInfoSlot,
+      ),
+      chapterProgressInfoSlot: _decodeSlot(
+        row.chapterProgressInfoSlot,
+        ReaderPreferences.defaultChapterProgressInfoSlot,
+      ),
+      clockInfoSlot: _decodeSlot(
+        row.clockInfoSlot,
+        ReaderPreferences.defaultClockInfoSlot,
+      ),
+      wholeBookProgressInfoSlot: _decodeSlot(
+        row.wholeBookProgressInfoSlot,
+        ReaderPreferences.defaultWholeBookProgressInfoSlot,
+      ),
+      infoDividerSlot: _decodeSlot(
+        row.infoDividerSlot,
+        ReaderPreferences.defaultInfoDividerSlot,
+      ),
     );
   }
+
+  ReaderInfoSlot _decodeSlot(String value, ReaderInfoSlot fallback) =>
+      ReaderInfoSlot.values.firstWhere(
+        (slot) => slot.name == value,
+        orElse: () => fallback,
+      );
 }

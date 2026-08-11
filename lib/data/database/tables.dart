@@ -247,6 +247,25 @@ class ReaderPreferencesRows extends Table {
       text().withDefault(const Constant('system'))();
   TextColumn get timeDisplayMode =>
       text().withDefault(const Constant('twentyFourHour'))();
+  BoolColumn get showChapterInfo =>
+      boolean().withDefault(const Constant(true))();
+  BoolColumn get showChapterProgressInfo =>
+      boolean().withDefault(const Constant(true))();
+  BoolColumn get showClockInfo => boolean().withDefault(const Constant(true))();
+  BoolColumn get showWholeBookProgressInfo =>
+      boolean().withDefault(const Constant(true))();
+  BoolColumn get showInfoDivider =>
+      boolean().withDefault(const Constant(false))();
+  TextColumn get chapterInfoSlot =>
+      text().withDefault(const Constant('topLeft'))();
+  TextColumn get chapterProgressInfoSlot =>
+      text().withDefault(const Constant('topRight'))();
+  TextColumn get clockInfoSlot =>
+      text().withDefault(const Constant('bottomLeft'))();
+  TextColumn get wholeBookProgressInfoSlot =>
+      text().withDefault(const Constant('bottomRight'))();
+  TextColumn get infoDividerSlot =>
+      text().withDefault(const Constant('topCenter'))();
   DateTimeColumn get updatedAt => dateTime()();
 
   @override

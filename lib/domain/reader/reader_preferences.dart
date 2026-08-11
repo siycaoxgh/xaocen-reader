@@ -12,6 +12,18 @@ enum ReaderStatusBarMode { system, readerInfo, hidden }
 /// Clock presentation used by the optional Reader information layer.
 enum ReaderTimeDisplayMode { twentyFourHour, twelveHour, hidden }
 
+/// Fixed semantic slots for the minimal Reader information layer.  Slots are
+/// intentionally named rather than pixel coordinates so the layer remains
+/// safe across cutouts, window resizes and future responsive layouts.
+enum ReaderInfoSlot {
+  topLeft,
+  topCenter,
+  topRight,
+  bottomLeft,
+  bottomCenter,
+  bottomRight,
+}
+
 enum ReaderPreferenceChangeKind { metrics, paint, display }
 
 final class ReaderPreferences {
@@ -39,6 +51,16 @@ final class ReaderPreferences {
     required this.showProgressInfo,
     required this.statusBarMode,
     required this.timeDisplayMode,
+    required this.showChapterInfo,
+    required this.showChapterProgressInfo,
+    required this.showClockInfo,
+    required this.showWholeBookProgressInfo,
+    required this.showInfoDivider,
+    required this.chapterInfoSlot,
+    required this.chapterProgressInfoSlot,
+    required this.clockInfoSlot,
+    required this.wholeBookProgressInfoSlot,
+    required this.infoDividerSlot,
   });
 
   static const double defaultFontSize = 17;
@@ -91,6 +113,18 @@ final class ReaderPreferences {
       ReaderStatusBarMode.system;
   static const ReaderTimeDisplayMode defaultTimeDisplayMode =
       ReaderTimeDisplayMode.twentyFourHour;
+  static const bool defaultShowChapterInfo = true;
+  static const bool defaultShowChapterProgressInfo = true;
+  static const bool defaultShowClockInfo = true;
+  static const bool defaultShowWholeBookProgressInfo = true;
+  static const bool defaultShowInfoDivider = false;
+  static const ReaderInfoSlot defaultChapterInfoSlot = ReaderInfoSlot.topLeft;
+  static const ReaderInfoSlot defaultChapterProgressInfoSlot =
+      ReaderInfoSlot.topRight;
+  static const ReaderInfoSlot defaultClockInfoSlot = ReaderInfoSlot.bottomLeft;
+  static const ReaderInfoSlot defaultWholeBookProgressInfoSlot =
+      ReaderInfoSlot.bottomRight;
+  static const ReaderInfoSlot defaultInfoDividerSlot = ReaderInfoSlot.topCenter;
 
   static const ReaderPreferences defaults = ReaderPreferences._(
     fontSize: defaultFontSize,
@@ -116,6 +150,16 @@ final class ReaderPreferences {
     showProgressInfo: defaultShowProgressInfo,
     statusBarMode: defaultStatusBarMode,
     timeDisplayMode: defaultTimeDisplayMode,
+    showChapterInfo: defaultShowChapterInfo,
+    showChapterProgressInfo: defaultShowChapterProgressInfo,
+    showClockInfo: defaultShowClockInfo,
+    showWholeBookProgressInfo: defaultShowWholeBookProgressInfo,
+    showInfoDivider: defaultShowInfoDivider,
+    chapterInfoSlot: defaultChapterInfoSlot,
+    chapterProgressInfoSlot: defaultChapterProgressInfoSlot,
+    clockInfoSlot: defaultClockInfoSlot,
+    wholeBookProgressInfoSlot: defaultWholeBookProgressInfoSlot,
+    infoDividerSlot: defaultInfoDividerSlot,
   );
 
   factory ReaderPreferences({
@@ -144,6 +188,16 @@ final class ReaderPreferences {
     bool showProgressInfo = defaultShowProgressInfo,
     ReaderStatusBarMode statusBarMode = defaultStatusBarMode,
     ReaderTimeDisplayMode timeDisplayMode = defaultTimeDisplayMode,
+    bool? showChapterInfo,
+    bool? showChapterProgressInfo,
+    bool? showClockInfo,
+    bool? showWholeBookProgressInfo,
+    bool showInfoDivider = defaultShowInfoDivider,
+    ReaderInfoSlot chapterInfoSlot = defaultChapterInfoSlot,
+    ReaderInfoSlot chapterProgressInfoSlot = defaultChapterProgressInfoSlot,
+    ReaderInfoSlot clockInfoSlot = defaultClockInfoSlot,
+    ReaderInfoSlot wholeBookProgressInfoSlot = defaultWholeBookProgressInfoSlot,
+    ReaderInfoSlot infoDividerSlot = defaultInfoDividerSlot,
   }) => ReaderPreferences._(
     fontSize: _valid(fontSize, minFontSize, maxFontSize, defaultFontSize),
     letterSpacing: _valid(
@@ -226,9 +280,21 @@ final class ReaderPreferences {
     ),
     showTopInfoBar: showTopInfoBar,
     showBottomInfoBar: showBottomInfoBar,
-    showProgressInfo: showProgressInfo,
+    showProgressInfo:
+        (showChapterProgressInfo ?? showProgressInfo) &&
+        (showWholeBookProgressInfo ?? showProgressInfo),
     statusBarMode: statusBarMode,
     timeDisplayMode: timeDisplayMode,
+    showChapterInfo: showChapterInfo ?? defaultShowChapterInfo,
+    showChapterProgressInfo: showChapterProgressInfo ?? showProgressInfo,
+    showClockInfo: showClockInfo ?? defaultShowClockInfo,
+    showWholeBookProgressInfo: showWholeBookProgressInfo ?? showProgressInfo,
+    showInfoDivider: showInfoDivider,
+    chapterInfoSlot: chapterInfoSlot,
+    chapterProgressInfoSlot: chapterProgressInfoSlot,
+    clockInfoSlot: clockInfoSlot,
+    wholeBookProgressInfoSlot: wholeBookProgressInfoSlot,
+    infoDividerSlot: infoDividerSlot,
   );
 
   final double fontSize;
@@ -254,6 +320,16 @@ final class ReaderPreferences {
   final bool showProgressInfo;
   final ReaderStatusBarMode statusBarMode;
   final ReaderTimeDisplayMode timeDisplayMode;
+  final bool showChapterInfo;
+  final bool showChapterProgressInfo;
+  final bool showClockInfo;
+  final bool showWholeBookProgressInfo;
+  final bool showInfoDivider;
+  final ReaderInfoSlot chapterInfoSlot;
+  final ReaderInfoSlot chapterProgressInfoSlot;
+  final ReaderInfoSlot clockInfoSlot;
+  final ReaderInfoSlot wholeBookProgressInfoSlot;
+  final ReaderInfoSlot infoDividerSlot;
 
   /// Legacy aliases retained for callers from schema 7. They represent the
   /// light override; canonical storage keeps separate light/dark values.
@@ -295,6 +371,16 @@ final class ReaderPreferences {
     bool? showProgressInfo,
     ReaderStatusBarMode? statusBarMode,
     ReaderTimeDisplayMode? timeDisplayMode,
+    bool? showChapterInfo,
+    bool? showChapterProgressInfo,
+    bool? showClockInfo,
+    bool? showWholeBookProgressInfo,
+    bool? showInfoDivider,
+    ReaderInfoSlot? chapterInfoSlot,
+    ReaderInfoSlot? chapterProgressInfoSlot,
+    ReaderInfoSlot? clockInfoSlot,
+    ReaderInfoSlot? wholeBookProgressInfoSlot,
+    ReaderInfoSlot? infoDividerSlot,
   }) {
     final legacyText = identical(textColorArgb, _unset)
         ? null
@@ -335,6 +421,15 @@ final class ReaderPreferences {
     final nextPaletteId =
         paletteId ??
         (overrideWasEdited ? ReaderPaletteId.custom : this.paletteId);
+    final nextChapterInfo = showChapterInfo ?? this.showChapterInfo;
+    final nextChapterProgress =
+        showChapterProgressInfo ??
+        showProgressInfo ??
+        this.showChapterProgressInfo;
+    final nextWholeBookProgress =
+        showWholeBookProgressInfo ??
+        showProgressInfo ??
+        this.showWholeBookProgressInfo;
     return ReaderPreferences(
       fontSize: fontSize ?? this.fontSize,
       letterSpacing: letterSpacing ?? this.letterSpacing,
@@ -360,9 +455,21 @@ final class ReaderPreferences {
           backgroundOverlayOpacity ?? this.backgroundOverlayOpacity,
       showTopInfoBar: showTopInfoBar ?? this.showTopInfoBar,
       showBottomInfoBar: showBottomInfoBar ?? this.showBottomInfoBar,
-      showProgressInfo: showProgressInfo ?? this.showProgressInfo,
+      showProgressInfo: nextChapterProgress && nextWholeBookProgress,
       statusBarMode: statusBarMode ?? this.statusBarMode,
       timeDisplayMode: timeDisplayMode ?? this.timeDisplayMode,
+      showChapterInfo: nextChapterInfo,
+      showChapterProgressInfo: nextChapterProgress,
+      showClockInfo: showClockInfo ?? this.showClockInfo,
+      showWholeBookProgressInfo: nextWholeBookProgress,
+      showInfoDivider: showInfoDivider ?? this.showInfoDivider,
+      chapterInfoSlot: chapterInfoSlot ?? this.chapterInfoSlot,
+      chapterProgressInfoSlot:
+          chapterProgressInfoSlot ?? this.chapterProgressInfoSlot,
+      clockInfoSlot: clockInfoSlot ?? this.clockInfoSlot,
+      wholeBookProgressInfoSlot:
+          wholeBookProgressInfoSlot ?? this.wholeBookProgressInfoSlot,
+      infoDividerSlot: infoDividerSlot ?? this.infoDividerSlot,
     );
   }
 
@@ -394,7 +501,17 @@ final class ReaderPreferences {
         showBottomInfoBar != previous.showBottomInfoBar ||
         showProgressInfo != previous.showProgressInfo ||
         statusBarMode != previous.statusBarMode ||
-        timeDisplayMode != previous.timeDisplayMode) {
+        timeDisplayMode != previous.timeDisplayMode ||
+        showChapterInfo != previous.showChapterInfo ||
+        showChapterProgressInfo != previous.showChapterProgressInfo ||
+        showClockInfo != previous.showClockInfo ||
+        showWholeBookProgressInfo != previous.showWholeBookProgressInfo ||
+        showInfoDivider != previous.showInfoDivider ||
+        chapterInfoSlot != previous.chapterInfoSlot ||
+        chapterProgressInfoSlot != previous.chapterProgressInfoSlot ||
+        clockInfoSlot != previous.clockInfoSlot ||
+        wholeBookProgressInfoSlot != previous.wholeBookProgressInfoSlot ||
+        infoDividerSlot != previous.infoDividerSlot) {
       result.add(ReaderPreferenceChangeKind.display);
     }
     return result;
@@ -437,7 +554,17 @@ final class ReaderPreferences {
       showBottomInfoBar == other.showBottomInfoBar &&
       showProgressInfo == other.showProgressInfo &&
       statusBarMode == other.statusBarMode &&
-      timeDisplayMode == other.timeDisplayMode;
+      timeDisplayMode == other.timeDisplayMode &&
+      showChapterInfo == other.showChapterInfo &&
+      showChapterProgressInfo == other.showChapterProgressInfo &&
+      showClockInfo == other.showClockInfo &&
+      showWholeBookProgressInfo == other.showWholeBookProgressInfo &&
+      showInfoDivider == other.showInfoDivider &&
+      chapterInfoSlot == other.chapterInfoSlot &&
+      chapterProgressInfoSlot == other.chapterProgressInfoSlot &&
+      clockInfoSlot == other.clockInfoSlot &&
+      wholeBookProgressInfoSlot == other.wholeBookProgressInfoSlot &&
+      infoDividerSlot == other.infoDividerSlot;
 
   @override
   int get hashCode => Object.hashAll([
@@ -464,5 +591,15 @@ final class ReaderPreferences {
     showProgressInfo,
     statusBarMode,
     timeDisplayMode,
+    showChapterInfo,
+    showChapterProgressInfo,
+    showClockInfo,
+    showWholeBookProgressInfo,
+    showInfoDivider,
+    chapterInfoSlot,
+    chapterProgressInfoSlot,
+    clockInfoSlot,
+    wholeBookProgressInfoSlot,
+    infoDividerSlot,
   ]);
 }

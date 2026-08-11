@@ -1,6 +1,6 @@
 # KNOWN_ISSUES.md — XAOCEN Reader v4 已知问题清单
 
-> 状态截至 M5.6a（`feat/m4-horizontal-reader`，Drift schema 9）。Android 真机按阶段策略另行复核。
+> 状态截至 M5.6b（`feat/m4-horizontal-reader`，Drift schema 10）。Android 真机按阶段策略另行复核。
 > 已解决的问题不在此列为 open；「Resolved but regression-sensitive」列出需要持续盯防的已修复项。
 
 ---
@@ -328,3 +328,10 @@ Me, Reading History, Reader Settings, and platform input settings now have
 separate responsibilities and responsive containers. Remaining visual audit
 items are appearance-only follow-ups; no history, input, or Reader data issue
 was introduced.
+
+## M5.6b status
+
+The minimal Reader information layer and schema 9→10 migration passed the full
+automated, Windows integration, four-real-TXT, Windows Release, and Android
+Debug validation. Android physical-device validation was not run in this coding
+pass and remains deferred; no new P0/P1/P2 issue was found.

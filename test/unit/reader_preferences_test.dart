@@ -324,7 +324,7 @@ void main() {
     expect(
       (await db.customSelect('PRAGMA user_version').getSingle())
           .data['user_version'],
-      9,
+      10,
     );
     await db.close();
     await dir.delete(recursive: true);
@@ -412,7 +412,7 @@ void main() {
     expect(
       (await db.customSelect('PRAGMA user_version').getSingle())
           .data['user_version'],
-      9,
+      10,
     );
     expect((await db.select(db.contentCollections).get()).single.id, a);
     await db.close();
@@ -493,11 +493,108 @@ void main() {
       expect(migrated.showTopInfoBar, isTrue);
       expect(migrated.showBottomInfoBar, isTrue);
       expect(migrated.showProgressInfo, isTrue);
+      expect(migrated.showChapterInfo, isTrue);
+      expect(migrated.showChapterProgressInfo, isTrue);
+      expect(migrated.showClockInfo, isTrue);
+      expect(migrated.showWholeBookProgressInfo, isTrue);
+      expect(migrated.chapterInfoSlot, ReaderInfoSlot.topLeft);
+      expect(migrated.chapterProgressInfoSlot, ReaderInfoSlot.topRight);
+      expect(migrated.clockInfoSlot, ReaderInfoSlot.bottomLeft);
+      expect(migrated.wholeBookProgressInfoSlot, ReaderInfoSlot.bottomRight);
       expect(migrated.statusBarMode, ReaderStatusBarMode.system);
       expect(
         (await db.customSelect('PRAGMA user_version').getSingle())
             .data['user_version'],
-        9,
+        10,
+      );
+      await db.close();
+      await dir.delete(recursive: true);
+    },
+  );
+
+  test(
+    'schema 9→10 adds fixed info slots and preserves display choices',
+    () async {
+      final dir = await Directory.systemTemp.createTemp('m56b_slots_migration');
+      final file = File('${dir.path}${Platform.pathSeparator}db.sqlite');
+      var db = AppDatabase(NativeDatabase(file));
+      await seedBook(db, a);
+      await ReaderPreferencesRepository(db: db).update(
+        a,
+        ReaderPreferences.defaults.copyWith(
+          showChapterInfo: false,
+          showClockInfo: false,
+          showProgressInfo: false,
+        ),
+      );
+      await db.close();
+
+      final raw = sqlite3.open(file.path);
+      raw.execute(
+        'ALTER TABLE reader_preferences RENAME TO reader_preferences_v10',
+      );
+      raw.execute('''
+        CREATE TABLE reader_preferences (
+          collection_id TEXT NOT NULL PRIMARY KEY
+            REFERENCES content_collections (id) ON DELETE CASCADE,
+          font_size REAL NOT NULL, letter_spacing REAL NOT NULL,
+          line_height REAL NOT NULL, paragraph_spacing REAL NOT NULL,
+          first_line_indent REAL NOT NULL, padding_top REAL NOT NULL,
+          padding_bottom REAL NOT NULL, padding_left REAL NOT NULL,
+          padding_right REAL NOT NULL, theme_mode TEXT NOT NULL,
+          palette_id TEXT NOT NULL DEFAULT 'paperWhite',
+          text_color_argb INTEGER, background_color_argb INTEGER,
+          light_text_color_argb INTEGER, light_background_color_argb INTEGER,
+          dark_text_color_argb INTEGER, dark_background_color_argb INTEGER,
+          background_image_path TEXT,
+          background_image_opacity REAL NOT NULL DEFAULT 1.0,
+          background_overlay_opacity REAL NOT NULL DEFAULT 0.45,
+          show_top_info_bar INTEGER NOT NULL DEFAULT 1,
+          show_bottom_info_bar INTEGER NOT NULL DEFAULT 1,
+          show_progress_info INTEGER NOT NULL DEFAULT 1,
+          status_bar_mode TEXT NOT NULL DEFAULT 'system',
+          time_display_mode TEXT NOT NULL DEFAULT 'twentyFourHour',
+          updated_at INTEGER NOT NULL
+        )
+      ''');
+      raw.execute('''
+        INSERT INTO reader_preferences (
+          collection_id, font_size, letter_spacing, line_height,
+          paragraph_spacing, first_line_indent, padding_top, padding_bottom,
+          padding_left, padding_right, theme_mode, palette_id,
+          text_color_argb, background_color_argb, light_text_color_argb,
+          light_background_color_argb, dark_text_color_argb,
+          dark_background_color_argb, background_image_path,
+          background_image_opacity, background_overlay_opacity,
+          show_top_info_bar, show_bottom_info_bar, show_progress_info,
+          status_bar_mode, time_display_mode, updated_at
+        ) SELECT collection_id, font_size, letter_spacing, line_height,
+          paragraph_spacing, first_line_indent, padding_top, padding_bottom,
+          padding_left, padding_right, theme_mode, palette_id,
+          text_color_argb, background_color_argb, light_text_color_argb,
+          light_background_color_argb, dark_text_color_argb,
+          dark_background_color_argb, background_image_path,
+          background_image_opacity, background_overlay_opacity,
+          show_top_info_bar, show_bottom_info_bar, show_progress_info,
+          status_bar_mode, time_display_mode, updated_at
+        FROM reader_preferences_v10
+      ''');
+      raw.execute('DROP TABLE reader_preferences_v10');
+      raw.execute('PRAGMA user_version = 9');
+      raw.dispose();
+
+      db = AppDatabase(NativeDatabase(file));
+      final migrated = await ReaderPreferencesRepository(db: db).load(a);
+      expect(migrated.showChapterInfo, isTrue);
+      expect(migrated.showClockInfo, isTrue);
+      expect(migrated.showChapterProgressInfo, isFalse);
+      expect(migrated.showWholeBookProgressInfo, isFalse);
+      expect(migrated.chapterInfoSlot, ReaderInfoSlot.topLeft);
+      expect(migrated.wholeBookProgressInfoSlot, ReaderInfoSlot.bottomRight);
+      expect(
+        (await db.customSelect('PRAGMA user_version').getSingle())
+            .data['user_version'],
+        10,
       );
       await db.close();
       await dir.delete(recursive: true);
