@@ -5,6 +5,9 @@
 library;
 
 enum ReaderPaletteId {
+  /// Explicit custom mode. Stored light/dark overrides are authoritative
+  /// only while this value is selected.
+  custom,
   paperWhite,
   warmYellow,
   tealGreen,
@@ -74,7 +77,7 @@ final class ReaderPalette {
   );
   static const night = ReaderPalette(
     id: ReaderPaletteId.night,
-    label: '夜间',
+    label: '浅灰',
     light: ReaderPaletteColors(
       textArgb: 0xff303238,
       backgroundArgb: 0xfff1f1f1,
@@ -117,15 +120,27 @@ final class ReaderPaletteResolver {
     int? darkTextArgb,
     int? darkBackgroundArgb,
   }) {
-    final palette = ReaderPalette.fromId(paletteId);
+    // Presets and custom colors are mutually exclusive paint sources.
+    // Custom mode falls back to the neutral paper-white pair for a brightness
+    // without an explicit override.
+    final palette = ReaderPalette.fromId(
+      paletteId == ReaderPaletteId.custom
+          ? ReaderPaletteId.paperWhite
+          : paletteId,
+    );
     final base = dark ? palette.dark : palette.light;
+    final useCustom = paletteId == ReaderPaletteId.custom;
     return ReaderPaletteColors(
-      textArgb: dark
+      textArgb: useCustom && dark
           ? darkTextArgb ?? base.textArgb
-          : lightTextArgb ?? base.textArgb,
-      backgroundArgb: dark
+          : useCustom && !dark
+          ? lightTextArgb ?? base.textArgb
+          : base.textArgb,
+      backgroundArgb: useCustom && dark
           ? darkBackgroundArgb ?? base.backgroundArgb
-          : lightBackgroundArgb ?? base.backgroundArgb,
+          : useCustom && !dark
+          ? lightBackgroundArgb ?? base.backgroundArgb
+          : base.backgroundArgb,
     );
   }
 }

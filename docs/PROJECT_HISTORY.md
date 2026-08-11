@@ -747,3 +747,11 @@ legacy colors, managed background references, typography, books, and
 reading_progress. The 465-test Flutter suite, 11 integration files / 14
 scenarios, four real TXT logical-error checks, Windows Release, and Android
 Debug all passed.
+
+## M5.5e.4.1 — Palette source and Windows Aa width correction（2026-08-11）
+
+修复 preset/custom 颜色源未互斥导致的主题与 Palette 点击无明显变化：新增持久化的
+`ReaderPaletteId.custom` 状态，预设立即生效而保留的自定义浅/深色只在 custom 状态绘制。
+旧 schema 7 颜色迁移为 custom，预设“夜间”更名为“浅灰”。Windows Aa 使用稳定的桌面
+外层宽度、分类栏和内容区；Drift schema 保持 8。468 项 Flutter 测试、11 个 integration
+文件 / 14 个场景、4 个真实 TXT logical error 0、Windows Release 与 Android Debug 全部通过。

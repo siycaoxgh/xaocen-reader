@@ -7,10 +7,10 @@
 
 - 建立 `ReaderPalette` / `ReaderPaletteResolver`，统一解析 Reader 的 system、light、dark
   语义和成套阅读配色。
-- 提供纸白、暖黄、青绿、青蓝、夜间、墨黑六组 palette；每组分别定义浅色与深色
+- 提供纸白、暖黄、青绿、青蓝、浅灰、墨黑六组 palette；每组分别定义浅色与深色
   的字体色和背景色。
 - `ReaderPreferences` 按书保存 palette 选择，以及浅色/深色两套可选字体色、背景色覆盖。
-  自定义覆盖优先于当前 palette；未覆盖时使用对应亮度 palette 值。
+  preset 与 custom 是互斥的显式选择状态；只有选中 custom 时才使用颜色覆盖值。
 - 颜色输入继续支持 `#RRGGBB`、`rgb(r,g,b)` 和可视色板；非法值只显示错误，不保存。
 - 用户明确选择的字体色始终传入正文 `TextStyle` 实际绘制；低对比度只产生警告，
   不再由 `ensureReadableTextColor` 静默替换为黑/白。
@@ -41,3 +41,13 @@
 - `C:\Users\TOM\Desktop\xaocen-reader-v4\xaocen_reader\build\app\outputs\flutter-apk\app-debug.apk`
 
 Android 真机本轮未执行；仅完成 Debug APK 构建。
+
+## M5.5e.4.1 修正
+
+- 修复 preset/custom 颜色源未明确分离导致的主题或 Palette 点击无明显变化。
+- 旧 schema 7 单套颜色迁移为 `custom` 状态并复制到浅色/深色覆盖；选择 preset
+  时保留覆盖值但不参与绘制，重新选择 custom 即可继续使用。
+- 预设“夜间”更名为“浅灰”。
+- Windows Aa 设置页按 Windows 平台使用固定桌面外层宽度、固定分类栏和填充式内容区，
+  切换分类不再改变面板宽度。
+- 本修正不升级 Drift，schema 保持 8。

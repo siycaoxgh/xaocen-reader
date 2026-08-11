@@ -1,6 +1,6 @@
 # TEST_VALIDATION_MATRIX.md — XAOCEN Reader v4 验证矩阵
 
-> 状态：M5.5e.4 COMPLETE（`feat/m4-horizontal-reader`，Drift schema 8）；Android 真机按阶段策略另行复核。
+> 状态：M5.5e.4.1 COMPLETE（`feat/m4-horizontal-reader`，Drift schema 8）；Android 真机按阶段策略另行复核。
 > 自动测试与真人测试分开记录。**Android Debug 构建 PASS ≠ Android 真机 PASS**，两者分别列出。
 > 真人环境：Windows（本机，用户 + 自动化集成测试）；Android 真机 Redmi K60（23013RK75C / mondrian，Android 15 / API 35，无线 adb）。
 
@@ -582,3 +582,19 @@ vertical A → paged → 不翻页 → 重开 = paged + A · vertical A → page
 | Windows Release / Android Debug | PASS / PASS |
 | Android real device | NOT-RUN (not requested in this coding pass) |
 | Drift schema | 8 |
+
+## M5.5e.4.1 Palette source and Windows Aa width correction
+
+| Area | Result |
+|---|---|
+| Preset/custom explicit mutual exclusion | PASS |
+| Preset immediately paints and retained custom values do not mask it | PASS |
+| Schema-7 legacy colors migrate to custom; schema remains 8 | PASS |
+| `夜间` renamed to `浅灰`; `墨黑` retained | PASS |
+| Windows fixed Aa outer width, category rail, and content width | PASS |
+| Full Flutter unit/contract/widget | 468/468 PASS |
+| Windows integration | 11 files / 14 scenarios PASS |
+| Four real TXT / logical error | PASS / 0 |
+| Windows Release / Android Debug | PASS / PASS |
+| Android real device | NOT-RUN (not requested in this coding pass) |
+| Drift schema | 8, unchanged |

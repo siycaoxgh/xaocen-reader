@@ -104,7 +104,7 @@ final class ReaderPreferences {
     double paddingLeft = defaultPaddingLeft,
     double paddingRight = defaultPaddingRight,
     ReaderThemeMode themeMode = defaultThemeMode,
-    ReaderPaletteId paletteId = defaultPaletteId,
+    ReaderPaletteId? paletteId,
     int? textColorArgb,
     int? backgroundColorArgb,
     int? lightTextColorArgb,
@@ -165,7 +165,14 @@ final class ReaderPreferences {
       defaultPaddingRight,
     ),
     themeMode: themeMode,
-    paletteId: paletteId,
+    // Legacy callers that provide the old single color pair are explicitly
+    // entering custom mode. A caller that wants a preset can still pass its
+    // palette id, which keeps preset/custom selection unambiguous.
+    paletteId:
+        paletteId ??
+        ((textColorArgb != null || backgroundColorArgb != null)
+            ? ReaderPaletteId.custom
+            : defaultPaletteId),
     lightTextColorArgb: _validArgb(lightTextColorArgb ?? textColorArgb),
     lightBackgroundColorArgb: _validArgb(
       lightBackgroundColorArgb ?? backgroundColorArgb,
@@ -273,6 +280,16 @@ final class ReaderPreferences {
         : identical(darkBackgroundColorArgb, _unset)
         ? this.darkBackgroundColorArgb
         : darkBackgroundColorArgb as int?;
+    final overrideWasEdited =
+        !identical(textColorArgb, _unset) ||
+        !identical(backgroundColorArgb, _unset) ||
+        !identical(lightTextColorArgb, _unset) ||
+        !identical(lightBackgroundColorArgb, _unset) ||
+        !identical(darkTextColorArgb, _unset) ||
+        !identical(darkBackgroundColorArgb, _unset);
+    final nextPaletteId =
+        paletteId ??
+        (overrideWasEdited ? ReaderPaletteId.custom : this.paletteId);
     return ReaderPreferences(
       fontSize: fontSize ?? this.fontSize,
       letterSpacing: letterSpacing ?? this.letterSpacing,
@@ -284,7 +301,7 @@ final class ReaderPreferences {
       paddingLeft: paddingLeft ?? this.paddingLeft,
       paddingRight: paddingRight ?? this.paddingRight,
       themeMode: themeMode ?? this.themeMode,
-      paletteId: paletteId ?? this.paletteId,
+      paletteId: nextPaletteId,
       lightTextColorArgb: nextLightText,
       lightBackgroundColorArgb: nextLightBackground,
       darkTextColorArgb: nextDarkText,

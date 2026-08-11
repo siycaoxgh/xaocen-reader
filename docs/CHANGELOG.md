@@ -50,6 +50,15 @@ Debug. Android targeted ADB was not run because no device was connected.
 
 ## Unreleased
 
+### M5.5e.4.1 — Palette source and Windows Aa width correction (2026-08-11)
+- Made preset/custom Reader palette selection explicit and mutually exclusive. Presets now
+  immediately paint their light/dark colors; retained custom overrides are inert until custom
+  is selected. Schema-7 legacy colors migrate to custom without a schema change (schema 8).
+- Renamed the `夜间` preset to `浅灰` and fixed the Windows Aa sheet to a stable desktop
+  width/category rail/content layout.
+- Validation: 468 Flutter tests, 11 integration files / 14 scenarios, four real TXT
+  logical-error-zero checks, Windows Release, and Android Debug PASS.
+
 ### M5.5e.4 — Reader palette and theme model (2026-08-11)
 - Added typed `ReaderPalette` and resolver with six bundled reading palettes,
   independent light/dark values, and per-book custom text/background overrides.

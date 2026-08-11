@@ -1,6 +1,6 @@
 # ARCHITECTURE_CURRENT.md — XAOCEN Reader v4 当前架构与合同
 
-> 只描述当前代码与合同（`feat/m4-horizontal-reader`，M5.5e.4 完成点，Drift schema 8）。
+> 只描述当前代码与合同（`feat/m4-horizontal-reader`，M5.5e.4.1 完成点，Drift schema 8）。
 > 不记录历史故事（见 PROJECT_HISTORY.md）。
 > 代码位置均以本仓库实际文件为准。
 
@@ -11,8 +11,9 @@
 `ReaderPalette` and `ReaderPaletteResolver` are the only place that maps a
 per-book palette id plus effective Reader brightness to body colors. Bundled
 palettes provide independent light/dark text/background pairs. `ReaderPreferences`
-stores the palette id and nullable light/dark custom ARGB overrides; an override
-is paint-only and wins over the selected palette for that brightness. The
+stores the palette id and nullable light/dark custom ARGB overrides. The explicit
+`custom` palette id is the only state in which those overrides participate; a
+preset immediately wins while retaining custom values for a later return to custom. The
 `ReaderThemeMode` system/light/dark value drives the effective Reader `ThemeData`
 and therefore the body palette as well as Chrome.
 
@@ -24,7 +25,7 @@ overlay controls; image data is not stored in Drift.
 
 Drift schema is 8. Migration 7→8 adds palette identity and four nullable
 brightness-specific color columns. Legacy schema-7 single color values are
-copied to both brightness columns, preserving books, typography, images,
+copied to both brightness columns and marked `custom`, preserving books, typography, images,
 reading_progress, readingMode, and ReaderLocator.
 
 ## M5.3.1 chapter boundary and vertical progress contract
@@ -881,8 +882,9 @@ Schema 8 adds `palette_id`, `light_text_color_argb`,
 `light_background_color_argb`, `dark_text_color_argb`, and
 `dark_background_color_argb` to that same per-book table. The resolver first
 selects the effective system/light/dark brightness, then applies only that
-brightness's nullable custom override over the selected palette. Existing
-schema-7 color values are copied to both brightness columns during migration;
+brightness's nullable custom override when `palette_id == custom`; preset colors
+cannot be masked by retained custom values. Existing schema-7 color values are
+copied to both brightness columns and marked custom during migration;
 no book, image reference, typography, reading progress, or ReaderLocator data
 is dropped.
 

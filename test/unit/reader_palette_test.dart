@@ -28,19 +28,53 @@ void main() {
 
   test('resolver uses custom override only for the selected brightness', () {
     final light = ReaderPaletteResolver.resolve(
-      paletteId: ReaderPaletteId.paperWhite,
+      paletteId: ReaderPaletteId.custom,
       dark: false,
       lightTextArgb: 0xff123456,
       darkTextArgb: 0xffabcdef,
     );
     final dark = ReaderPaletteResolver.resolve(
-      paletteId: ReaderPaletteId.paperWhite,
+      paletteId: ReaderPaletteId.custom,
       dark: true,
       lightTextArgb: 0xff123456,
       darkTextArgb: 0xffabcdef,
     );
     expect(light.textArgb, 0xff123456);
     expect(dark.textArgb, 0xffabcdef);
+  });
+
+  test('preset selection cannot be masked by retained custom overrides', () {
+    final colors = ReaderPaletteResolver.resolve(
+      paletteId: ReaderPaletteId.inkBlack,
+      dark: true,
+      darkTextArgb: 0xff123456,
+      darkBackgroundArgb: 0xffabcdef,
+    );
+    expect(colors.textArgb, ReaderPalette.inkBlack.dark.textArgb);
+    expect(colors.backgroundArgb, ReaderPalette.inkBlack.dark.backgroundArgb);
+  });
+
+  test('custom mode can retain independent light and dark overrides', () {
+    final light = ReaderPaletteResolver.resolve(
+      paletteId: ReaderPaletteId.custom,
+      dark: false,
+      lightTextArgb: 0xff123456,
+      lightBackgroundArgb: 0xffabcdef,
+    );
+    final dark = ReaderPaletteResolver.resolve(
+      paletteId: ReaderPaletteId.custom,
+      dark: true,
+      lightTextArgb: 0xff123456,
+      lightBackgroundArgb: 0xffabcdef,
+    );
+    expect(light.textArgb, 0xff123456);
+    expect(light.backgroundArgb, 0xffabcdef);
+    expect(dark.textArgb, ReaderPalette.paperWhite.dark.textArgb);
+    expect(dark.backgroundArgb, ReaderPalette.paperWhite.dark.backgroundArgb);
+  });
+
+  test('浅灰 is the neutral light-gray preset label', () {
+    expect(ReaderPalette.night.label, '浅灰');
   });
 
   testWidgets('appearance resolver honors the effective Reader theme', (

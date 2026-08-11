@@ -375,7 +375,7 @@ void main() {
     final migrated = await ReaderPreferencesRepository(db: db).load(a);
     expect(migrated.fontSize, 21);
     expect(migrated.themeMode, ReaderThemeMode.dark);
-    expect(migrated.paletteId, ReaderPreferences.defaultPaletteId);
+    expect(migrated.paletteId, ReaderPaletteId.custom);
     expect(migrated.lightTextColorArgb, 4280624128);
     expect(migrated.darkTextColorArgb, 4280624128);
     expect(migrated.lightBackgroundColorArgb, 4294246400);

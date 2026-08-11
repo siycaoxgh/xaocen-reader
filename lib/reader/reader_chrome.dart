@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../domain/reader/reader_bookmark.dart';
@@ -777,12 +779,12 @@ Future<void> showReaderSettings(
   Future<String?> Function()? onPickBackgroundImage,
   Future<void> Function(String? path)? onDeleteBackgroundImage,
 }) {
-  final isDesktop = MediaQuery.sizeOf(context).width >= 720;
+  final isDesktop = defaultTargetPlatform == TargetPlatform.windows;
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
     showDragHandle: true,
-    constraints: BoxConstraints(maxWidth: isDesktop ? 560 : double.infinity),
+    constraints: BoxConstraints(maxWidth: isDesktop ? 960 : double.infinity),
     builder: (context) => ReaderSettingsSheet(
       preferences: preferences,
       mode: mode,
@@ -874,11 +876,23 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
     if (value.trim().isEmpty) {
       final next = text
           ? (light
-                ? _draft.copyWith(lightTextColorArgb: null)
-                : _draft.copyWith(darkTextColorArgb: null))
+                ? _draft.copyWith(
+                    paletteId: ReaderPaletteId.custom,
+                    lightTextColorArgb: null,
+                  )
+                : _draft.copyWith(
+                    paletteId: ReaderPaletteId.custom,
+                    darkTextColorArgb: null,
+                  ))
           : (light
-                ? _draft.copyWith(lightBackgroundColorArgb: null)
-                : _draft.copyWith(darkBackgroundColorArgb: null));
+                ? _draft.copyWith(
+                    paletteId: ReaderPaletteId.custom,
+                    lightBackgroundColorArgb: null,
+                  )
+                : _draft.copyWith(
+                    paletteId: ReaderPaletteId.custom,
+                    darkBackgroundColorArgb: null,
+                  ));
       setState(() {
         _draft = next;
         if (text) {
@@ -897,8 +911,14 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
             : '请输入 #RRGGBB 或 rgb(r,g,b)';
         if (parsed != null) {
           _draft = light
-              ? _draft.copyWith(lightTextColorArgb: parsed)
-              : _draft.copyWith(darkTextColorArgb: parsed);
+              ? _draft.copyWith(
+                  paletteId: ReaderPaletteId.custom,
+                  lightTextColorArgb: parsed,
+                )
+              : _draft.copyWith(
+                  paletteId: ReaderPaletteId.custom,
+                  darkTextColorArgb: parsed,
+                );
         }
       } else {
         _backgroundColorError = value.trim().isEmpty || parsed != null
@@ -906,8 +926,14 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
             : '请输入 #RRGGBB 或 rgb(r,g,b)';
         if (parsed != null) {
           _draft = light
-              ? _draft.copyWith(lightBackgroundColorArgb: parsed)
-              : _draft.copyWith(darkBackgroundColorArgb: parsed);
+              ? _draft.copyWith(
+                  paletteId: ReaderPaletteId.custom,
+                  lightBackgroundColorArgb: parsed,
+                )
+              : _draft.copyWith(
+                  paletteId: ReaderPaletteId.custom,
+                  darkBackgroundColorArgb: parsed,
+                );
         }
       }
     });
@@ -1100,13 +1126,9 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
           key: readerPaletteControlKey,
           selected: _draft.paletteId,
           onSelected: (palette) => _commit(
-            _draft.copyWith(
-              paletteId: palette,
-              lightTextColorArgb: null,
-              lightBackgroundColorArgb: null,
-              darkTextColorArgb: null,
-              darkBackgroundColorArgb: null,
-            ),
+            // Keep custom light/dark values for a future return to custom;
+            // selecting a preset changes the sole active paint source.
+            _draft.copyWith(paletteId: palette),
           ),
         ),
         const SizedBox(height: 14),
@@ -1145,8 +1167,14 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
             _textColorController.text = _hexColor(value);
             _commit(
               _editingBrightness == Brightness.light
-                  ? _draft.copyWith(lightTextColorArgb: value)
-                  : _draft.copyWith(darkTextColorArgb: value),
+                  ? _draft.copyWith(
+                      paletteId: ReaderPaletteId.custom,
+                      lightTextColorArgb: value,
+                    )
+                  : _draft.copyWith(
+                      paletteId: ReaderPaletteId.custom,
+                      darkTextColorArgb: value,
+                    ),
             );
           },
         ),
@@ -1181,8 +1209,14 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
             _backgroundColorController.text = _hexColor(value);
             _commit(
               _editingBrightness == Brightness.light
-                  ? _draft.copyWith(lightBackgroundColorArgb: value)
-                  : _draft.copyWith(darkBackgroundColorArgb: value),
+                  ? _draft.copyWith(
+                      paletteId: ReaderPaletteId.custom,
+                      lightBackgroundColorArgb: value,
+                    )
+                  : _draft.copyWith(
+                      paletteId: ReaderPaletteId.custom,
+                      darkBackgroundColorArgb: value,
+                    ),
             );
           },
         ),
@@ -1359,7 +1393,11 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final isDesktop = MediaQuery.sizeOf(context).width >= 720;
+    final isDesktop = defaultTargetPlatform == TargetPlatform.windows;
+    final availableWidth = MediaQuery.sizeOf(context).width;
+    final panelWidth = isDesktop
+        ? math.min(960.0, availableWidth)
+        : availableWidth;
     final categories = [
       (_ReaderSettingsCategory.typography, '排版', Icons.text_fields_rounded),
       (_ReaderSettingsCategory.appearance, '外观', Icons.palette_outlined),
@@ -1419,26 +1457,28 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
             ],
           );
     return SafeArea(
-      child: ConstrainedBox(
-        constraints: BoxConstraints(
-          minWidth: isDesktop ? 720 : 0,
-          maxHeight: MediaQuery.sizeOf(context).height * .9,
-        ),
-        child: Padding(
-          key: readerSettingsSheetKey,
-          padding: EdgeInsets.fromLTRB(
-            isDesktop ? 28 : 20,
-            0,
-            isDesktop ? 28 : 20,
-            24,
+      child: SizedBox(
+        width: panelWidth,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.sizeOf(context).height * .9,
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('阅读设置', style: Theme.of(context).textTheme.titleLarge),
-              const SizedBox(height: 16),
-              Expanded(child: panel),
-            ],
+          child: Padding(
+            key: readerSettingsSheetKey,
+            padding: EdgeInsets.fromLTRB(
+              isDesktop ? 28 : 20,
+              0,
+              isDesktop ? 28 : 20,
+              24,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('阅读设置', style: Theme.of(context).textTheme.titleLarge),
+                const SizedBox(height: 16),
+                Expanded(child: panel),
+              ],
+            ),
           ),
         ),
       ),
@@ -1518,6 +1558,11 @@ class _ReaderPalettePresetGrid extends StatelessWidget {
           spacing: 8,
           runSpacing: 8,
           children: [
+            ChoiceChip(
+              label: const Text('自定义'),
+              selected: selected == ReaderPaletteId.custom,
+              onSelected: (_) => onSelected(ReaderPaletteId.custom),
+            ),
             for (final palette in ReaderPalette.presets)
               ChoiceChip(
                 label: Text(palette.label),

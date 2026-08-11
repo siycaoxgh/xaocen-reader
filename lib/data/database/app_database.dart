@@ -162,7 +162,13 @@ class AppDatabase extends _$AppDatabase {
           SET light_text_color_argb = text_color_argb,
               light_background_color_argb = background_color_argb,
               dark_text_color_argb = text_color_argb,
-              dark_background_color_argb = background_color_argb
+              dark_background_color_argb = background_color_argb,
+              palette_id = CASE
+                WHEN text_color_argb IS NOT NULL
+                  OR background_color_argb IS NOT NULL
+                THEN 'custom'
+                ELSE palette_id
+              END
         ''');
       }
     },
