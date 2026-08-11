@@ -16,6 +16,9 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../domain/reader/reader_palette.dart';
+import '../domain/reader/reader_preferences.dart';
+
 /// Reader 已解析外观（不可变）。
 class ReaderResolvedAppearance {
   const ReaderResolvedAppearance({
@@ -25,6 +28,9 @@ class ReaderResolvedAppearance {
     required this.headingColor,
     required this.selectionColor,
     required this.baseTextStyle,
+    this.paletteId = ReaderPaletteId.paperWhite,
+    this.textContrastRatio = 21,
+    this.hasLowContrastWarning = false,
     this.hasBackgroundImage = false,
   });
 
@@ -36,6 +42,9 @@ class ReaderResolvedAppearance {
 
   /// 正文基准样式（显示与测量使用同一实例，禁止两套）。
   final TextStyle baseTextStyle;
+  final ReaderPaletteId paletteId;
+  final double textContrastRatio;
+  final bool hasLowContrastWarning;
   final bool hasBackgroundImage;
 }
 
@@ -44,36 +53,61 @@ class ReaderResolvedAppearance {
 /// [fontSize]/[lineHeight] 为正文度量默认值（后续阅读设置阶段再放开）。
 ReaderResolvedAppearance resolveReaderAppearance(
   BuildContext context, {
+  ThemeData? theme,
+  ReaderPreferences? preferences,
+  ReaderPaletteId paletteId = ReaderPaletteId.paperWhite,
   double fontSize = 17,
   double lineHeight = 1.7,
   double letterSpacing = 0,
   int? textColorArgb,
   int? backgroundColorArgb,
+  int? lightTextColorArgb,
+  int? lightBackgroundColorArgb,
+  int? darkTextColorArgb,
+  int? darkBackgroundColorArgb,
   bool hasBackgroundImage = false,
 }) {
-  final scheme = Theme.of(context).colorScheme;
-  final requestedTextColor = textColorArgb == null
-      ? scheme.onSurface
-      : Color(textColorArgb);
-  final backgroundColor = backgroundColorArgb == null
-      ? scheme.surface
-      : Color(backgroundColorArgb);
-  final textColor = ensureReadableTextColor(
-    requestedTextColor,
-    backgroundColor,
+  final scheme = (theme ?? Theme.of(context)).colorScheme;
+  final dark = scheme.brightness == Brightness.dark;
+  final resolvedPreferences = preferences;
+  final palette = ReaderPaletteResolver.resolve(
+    paletteId: resolvedPreferences?.paletteId ?? paletteId,
+    dark: dark,
+    lightTextArgb:
+        resolvedPreferences?.lightTextColorArgb ??
+        lightTextColorArgb ??
+        textColorArgb,
+    lightBackgroundArgb:
+        resolvedPreferences?.lightBackgroundColorArgb ??
+        lightBackgroundColorArgb ??
+        backgroundColorArgb,
+    darkTextArgb:
+        resolvedPreferences?.darkTextColorArgb ??
+        darkTextColorArgb ??
+        textColorArgb,
+    darkBackgroundArgb:
+        resolvedPreferences?.darkBackgroundColorArgb ??
+        darkBackgroundColorArgb ??
+        backgroundColorArgb,
   );
+  final backgroundColor = Color(palette.backgroundArgb);
+  final textColor = Color(palette.textArgb);
+  final textContrast = contrastRatio(textColor, backgroundColor);
   return ReaderResolvedAppearance(
     backgroundColor: backgroundColor,
     textColor: textColor,
-    secondaryTextColor: textColorArgb == null && backgroundColorArgb == null
+    secondaryTextColor: resolvedPreferences == null && textColorArgb == null
         ? scheme.onSurfaceVariant
         : textColor.withValues(alpha: 0.72),
     headingColor: textColor,
     selectionColor: scheme.primaryContainer,
+    paletteId: resolvedPreferences?.paletteId ?? paletteId,
+    textContrastRatio: textContrast,
+    hasLowContrastWarning: textContrast < 4.5,
     baseTextStyle: TextStyle(
-      fontSize: fontSize,
-      height: lineHeight,
-      letterSpacing: letterSpacing,
+      fontSize: resolvedPreferences?.fontSize ?? fontSize,
+      height: resolvedPreferences?.lineHeight ?? lineHeight,
+      letterSpacing: resolvedPreferences?.letterSpacing ?? letterSpacing,
       color: textColor,
     ),
     hasBackgroundImage: hasBackgroundImage,
@@ -110,15 +144,13 @@ bool isReadable(Color fg, Color bg, {double minimum = 4.5}) {
   return contrastRatio(fg, bg) >= minimum;
 }
 
-/// Keeps custom Reader colors readable without changing pagination metrics.
+/// Legacy compatibility helper. Custom Reader colors are user-owned values and
+/// must never be silently replaced; callers should use [isReadable] to show a
+/// warning instead.
 Color ensureReadableTextColor(
   Color requested,
   Color background, {
   double minimum = 4.5,
 }) {
-  if (isReadable(requested, background, minimum: minimum)) return requested;
-  return contrastRatio(Colors.black, background) >=
-          contrastRatio(Colors.white, background)
-      ? Colors.black
-      : Colors.white;
+  return requested;
 }

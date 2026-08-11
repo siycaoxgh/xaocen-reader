@@ -21,7 +21,7 @@ void main() {
   tearDown(() => db.close());
 
   test('defaults and derived velocity mapping are typed', () async {
-    expect(db.schemaVersion, 7);
+    expect(db.schemaVersion, 8);
     final preferences = await repository.load();
     expect(preferences.verticalSpeedPreset, VerticalSpeedPreset.standard);
     expect(preferences.pagedIntervalSeconds, 5);
@@ -174,7 +174,7 @@ void main() {
         )).commandFor(PhysicalInputId.keyboardArrowLeft),
         ReaderCommand.previousPage,
       );
-      expect(secondDb.schemaVersion, 7);
+      expect(secondDb.schemaVersion, 8);
       await secondDb.close();
       await directory.delete(recursive: true);
     },

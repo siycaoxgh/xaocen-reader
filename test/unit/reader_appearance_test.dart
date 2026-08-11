@@ -19,13 +19,13 @@ void main() {
       expect(isReadable(Colors.grey.shade400, Colors.white), isFalse);
     });
 
-    test('低对比自定义颜色安全回退为可读前景色', () {
+    test('低对比自定义颜色只警告，不偷偷替换用户选择', () {
       final resolved = ensureReadableTextColor(
         const Color(0xffeeeeee),
         Colors.white,
       );
-      expect(isReadable(resolved, Colors.white), isTrue);
-      expect(resolved, Colors.black);
+      expect(isReadable(resolved, Colors.white), isFalse);
+      expect(resolved, const Color(0xffeeeeee));
     });
   });
 

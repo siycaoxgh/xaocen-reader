@@ -1,6 +1,6 @@
 # TEST_VALIDATION_MATRIX.md — XAOCEN Reader v4 验证矩阵
 
-> 状态：M5.2d COMPLETE（`feat/m4-horizontal-reader`）；Android 真机继续按后续统一复核安排。
+> 状态：M5.5e.4 COMPLETE（`feat/m4-horizontal-reader`，Drift schema 8）；Android 真机按阶段策略另行复核。
 > 自动测试与真人测试分开记录。**Android Debug 构建 PASS ≠ Android 真机 PASS**，两者分别列出。
 > 真人环境：Windows（本机，用户 + 自动化集成测试）；Android 真机 Redmi K60（23013RK75C / mondrian，Android 15 / API 35，无线 adb）。
 
@@ -564,3 +564,21 @@ vertical A → paged → 不翻页 → 重开 = paged + A · vertical A → page
 | 11 integration files / 14 scenarios | PASS |
 | Windows Release / Android Debug | PASS |
 | Drift schema | 7, unchanged |
+
+## M5.5e.4 Reader palette and theme model
+
+| Area | Result |
+|---|---|
+| Six bundled Reader palettes with light/dark values | PASS |
+| Per-book custom light/dark text and background overrides | PASS |
+| System/light/dark changes Reader body colors as well as Chrome | PASS |
+| `#RRGGBB`, `rgb(r,g,b)`, visual swatches, invalid-value warning | PASS |
+| Explicit low-contrast text color is painted without silent replacement | PASS |
+| Image reference/opacity/overlay contract unchanged | PASS |
+| Schema 7→8 real SQLite migration; books, images, progress preserved | PASS |
+| Full Flutter unit/contract/widget | 465/465 PASS |
+| Windows integration | 11 files / 14 scenarios PASS |
+| Four real TXT / logical error | PASS / 0 |
+| Windows Release / Android Debug | PASS / PASS |
+| Android real device | NOT-RUN (not requested in this coding pass) |
+| Drift schema | 8 |

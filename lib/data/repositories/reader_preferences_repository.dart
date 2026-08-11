@@ -6,6 +6,7 @@ library;
 import 'package:drift/drift.dart';
 
 import '../../domain/reader/reader_preferences.dart';
+import '../../domain/reader/reader_palette.dart';
 import '../database/app_database.dart';
 
 final class ReaderPreferencesRepository {
@@ -41,8 +42,11 @@ final class ReaderPreferencesRepository {
       paddingLeft: preferences.paddingLeft,
       paddingRight: preferences.paddingRight,
       themeMode: preferences.themeMode,
-      textColorArgb: preferences.textColorArgb,
-      backgroundColorArgb: preferences.backgroundColorArgb,
+      paletteId: preferences.paletteId,
+      lightTextColorArgb: preferences.lightTextColorArgb,
+      lightBackgroundColorArgb: preferences.lightBackgroundColorArgb,
+      darkTextColorArgb: preferences.darkTextColorArgb,
+      darkBackgroundColorArgb: preferences.darkBackgroundColorArgb,
       backgroundImagePath: preferences.backgroundImagePath,
       backgroundImageOpacity: preferences.backgroundImageOpacity,
       backgroundOverlayOpacity: preferences.backgroundOverlayOpacity,
@@ -62,8 +66,15 @@ final class ReaderPreferencesRepository {
             paddingLeft: Value(safe.paddingLeft),
             paddingRight: Value(safe.paddingRight),
             themeMode: Value(safe.themeMode.name),
-            textColorArgb: Value(safe.textColorArgb),
-            backgroundColorArgb: Value(safe.backgroundColorArgb),
+            paletteId: Value(safe.paletteId.name),
+            // Keep schema-7 columns synchronized for downgrade-safe reads and
+            // existing diagnostics; canonical values are brightness-specific.
+            textColorArgb: Value(safe.lightTextColorArgb),
+            backgroundColorArgb: Value(safe.lightBackgroundColorArgb),
+            lightTextColorArgb: Value(safe.lightTextColorArgb),
+            lightBackgroundColorArgb: Value(safe.lightBackgroundColorArgb),
+            darkTextColorArgb: Value(safe.darkTextColorArgb),
+            darkBackgroundColorArgb: Value(safe.darkBackgroundColorArgb),
             backgroundImagePath: Value(safe.backgroundImagePath),
             backgroundImageOpacity: Value(safe.backgroundImageOpacity),
             backgroundOverlayOpacity: Value(safe.backgroundOverlayOpacity),
@@ -95,8 +106,17 @@ final class ReaderPreferencesRepository {
               .where((value) => value.name == row.themeMode)
               .firstOrNull ??
           ReaderPreferences.defaultThemeMode,
-      textColorArgb: row.textColorArgb,
-      backgroundColorArgb: row.backgroundColorArgb,
+      paletteId:
+          ReaderPaletteId.values
+              .where((value) => value.name == row.paletteId)
+              .firstOrNull ??
+          ReaderPreferences.defaultPaletteId,
+      lightTextColorArgb: row.lightTextColorArgb ?? row.textColorArgb,
+      lightBackgroundColorArgb:
+          row.lightBackgroundColorArgb ?? row.backgroundColorArgb,
+      darkTextColorArgb: row.darkTextColorArgb ?? row.textColorArgb,
+      darkBackgroundColorArgb:
+          row.darkBackgroundColorArgb ?? row.backgroundColorArgb,
       backgroundImagePath: row.backgroundImagePath,
       backgroundImageOpacity: row.backgroundImageOpacity,
       backgroundOverlayOpacity: row.backgroundOverlayOpacity,

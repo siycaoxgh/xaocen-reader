@@ -205,7 +205,8 @@ class AppSettings extends Table {
   Set<Column> get primaryKey => {key};
 }
 
-/// reader_preferences —— per-collection Reader appearance (schema 5).
+/// reader_preferences —— per-collection Reader appearance (schema 5+;
+/// palette/light-dark overrides added in schema 8).
 class ReaderPreferencesRows extends Table {
   @override
   String get tableName => 'reader_preferences';
@@ -223,8 +224,14 @@ class ReaderPreferencesRows extends Table {
   RealColumn get paddingLeft => real()();
   RealColumn get paddingRight => real()();
   TextColumn get themeMode => text()();
+  TextColumn get paletteId =>
+      text().withDefault(const Constant('paperWhite'))();
   IntColumn get textColorArgb => integer().nullable()();
   IntColumn get backgroundColorArgb => integer().nullable()();
+  IntColumn get lightTextColorArgb => integer().nullable()();
+  IntColumn get lightBackgroundColorArgb => integer().nullable()();
+  IntColumn get darkTextColorArgb => integer().nullable()();
+  IntColumn get darkBackgroundColorArgb => integer().nullable()();
   TextColumn get backgroundImagePath => text().nullable()();
   RealColumn get backgroundImageOpacity =>
       real().withDefault(const Constant(1.0))();

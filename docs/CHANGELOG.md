@@ -50,6 +50,18 @@ Debug. Android targeted ADB was not run because no device was connected.
 
 ## Unreleased
 
+### M5.5e.4 — Reader palette and theme model (2026-08-11)
+- Added typed `ReaderPalette` and resolver with six bundled reading palettes,
+  independent light/dark values, and per-book custom text/background overrides.
+- Reader body now follows the effective system/light/dark Reader theme instead of
+  changing Chrome only. Explicit custom text colors are painted as selected;
+  low contrast is warned about without silent black/white replacement.
+- Migrated `reader_preferences` from Drift schema 7 to 8. Legacy colors are
+  copied to both brightness overrides; books, images, typography, progress, and
+  Locator contracts are preserved. Validation: 465 Flutter tests, 11 integration
+  files / 14 scenarios, four real TXT logical-error-zero checks, Windows Release,
+  and Android Debug PASS.
+
 ### M5.3e.2 — Reading History display and shortcut gestures (2026-08-10)
 - Fixed Reading History object interpolation and omitted empty snapshots.
 - Added canonical Ctrl/Alt/Shift Windows gestures while preserving and

@@ -5,8 +5,10 @@ import 'package:flutter/material.dart';
 import '../domain/reader/reader_bookmark.dart';
 import '../domain/reader/auto_read_controller.dart';
 import '../domain/reader/auto_read_preferences.dart';
+import '../domain/reader/reader_palette.dart';
 import '../domain/reader/reader_preferences.dart';
 import '../domain/reader/reader_search.dart';
+import 'reader_appearance.dart';
 import 'reader_mode.dart';
 
 const readerChromeToggleKey = Key('reader-chrome-toggle');
@@ -35,6 +37,7 @@ const readerVerticalPaddingSliderKey = Key('reader-vertical-padding-slider');
 const readerPaddingRightSliderKey = Key('reader-padding-right-slider');
 const readerPaddingBottomSliderKey = Key('reader-padding-bottom-slider');
 const readerThemeControlKey = Key('reader-theme-control');
+const readerPaletteControlKey = Key('reader-palette-control');
 const readerTextColorControlKey = Key('reader-text-color-control');
 const readerBackgroundColorControlKey = Key('reader-background-color-control');
 const readerBackgroundImageActionKey = Key('reader-background-image-action');
@@ -395,7 +398,9 @@ class ReaderAutoReadStatusBar extends StatelessWidget {
         top: false,
         minimum: const EdgeInsets.fromLTRB(12, 0, 12, 74),
         child: ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: isDesktop ? 520 : double.infinity),
+          constraints: BoxConstraints(
+            maxWidth: isDesktop ? 520 : double.infinity,
+          ),
           child: Material(
             color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.98),
             elevation: 3,
@@ -818,11 +823,15 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
   late ReaderPreferences _draft = widget.preferences;
   late ReaderMode _mode = widget.mode;
   _ReaderSettingsCategory _category = _ReaderSettingsCategory.typography;
-  late final TextEditingController _textColorController = TextEditingController(
-    text: _hexColor(_draft.textColorArgb),
-  );
-  late final TextEditingController _backgroundColorController =
-      TextEditingController(text: _hexColor(_draft.backgroundColorArgb));
+  late final TextEditingController _lightTextColorController =
+      TextEditingController(text: _hexColor(_draft.lightTextColorArgb));
+  late final TextEditingController _lightBackgroundColorController =
+      TextEditingController(text: _hexColor(_draft.lightBackgroundColorArgb));
+  late final TextEditingController _darkTextColorController =
+      TextEditingController(text: _hexColor(_draft.darkTextColorArgb));
+  late final TextEditingController _darkBackgroundColorController =
+      TextEditingController(text: _hexColor(_draft.darkBackgroundColorArgb));
+  Brightness _editingBrightness = Brightness.light;
   String? _textColorError;
   String? _backgroundColorError;
 
@@ -833,17 +842,43 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
 
   @override
   void dispose() {
-    _textColorController.dispose();
-    _backgroundColorController.dispose();
+    _lightTextColorController.dispose();
+    _lightBackgroundColorController.dispose();
+    _darkTextColorController.dispose();
+    _darkBackgroundColorController.dispose();
     super.dispose();
   }
 
+  TextEditingController get _textColorController =>
+      _editingBrightness == Brightness.light
+      ? _lightTextColorController
+      : _darkTextColorController;
+
+  TextEditingController get _backgroundColorController =>
+      _editingBrightness == Brightness.light
+      ? _lightBackgroundColorController
+      : _darkBackgroundColorController;
+
+  int? _textColorFor(Brightness brightness) => brightness == Brightness.light
+      ? _draft.lightTextColorArgb
+      : _draft.darkTextColorArgb;
+
+  int? _backgroundColorFor(Brightness brightness) =>
+      brightness == Brightness.light
+      ? _draft.lightBackgroundColorArgb
+      : _draft.darkBackgroundColorArgb;
+
   void _previewColor({required bool text, required String value}) {
     final parsed = _parseColor(value);
+    final light = _editingBrightness == Brightness.light;
     if (value.trim().isEmpty) {
       final next = text
-          ? _draft.copyWith(textColorArgb: null)
-          : _draft.copyWith(backgroundColorArgb: null);
+          ? (light
+                ? _draft.copyWith(lightTextColorArgb: null)
+                : _draft.copyWith(darkTextColorArgb: null))
+          : (light
+                ? _draft.copyWith(lightBackgroundColorArgb: null)
+                : _draft.copyWith(darkBackgroundColorArgb: null));
       setState(() {
         _draft = next;
         if (text) {
@@ -861,14 +896,18 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
             ? null
             : '请输入 #RRGGBB 或 rgb(r,g,b)';
         if (parsed != null) {
-          _draft = _draft.copyWith(textColorArgb: parsed);
+          _draft = light
+              ? _draft.copyWith(lightTextColorArgb: parsed)
+              : _draft.copyWith(darkTextColorArgb: parsed);
         }
       } else {
         _backgroundColorError = value.trim().isEmpty || parsed != null
             ? null
             : '请输入 #RRGGBB 或 rgb(r,g,b)';
         if (parsed != null) {
-          _draft = _draft.copyWith(backgroundColorArgb: parsed);
+          _draft = light
+              ? _draft.copyWith(lightBackgroundColorArgb: parsed)
+              : _draft.copyWith(darkBackgroundColorArgb: parsed);
         }
       }
     });
@@ -1031,12 +1070,15 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
   }
 
   Widget _buildAppearancePanel(BuildContext context) {
-    final textColor = _draft.textColorArgb == null
+    final textColor = _textColorFor(_editingBrightness) == null
         ? null
-        : Color(_draft.textColorArgb!);
-    final backgroundColor = _draft.backgroundColorArgb == null
+        : Color(_textColorFor(_editingBrightness)!);
+    final backgroundColor = _backgroundColorFor(_editingBrightness) == null
         ? null
-        : Color(_draft.backgroundColorArgb!);
+        : Color(_backgroundColorFor(_editingBrightness)!);
+    final contrastWarning = textColor != null && backgroundColor != null
+        ? !isReadable(textColor, backgroundColor)
+        : false;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1054,10 +1096,45 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
               _commit(_draft.copyWith(themeMode: selection.single)),
         ),
         const SizedBox(height: 18),
+        _ReaderPalettePresetGrid(
+          key: readerPaletteControlKey,
+          selected: _draft.paletteId,
+          onSelected: (palette) => _commit(
+            _draft.copyWith(
+              paletteId: palette,
+              lightTextColorArgb: null,
+              lightBackgroundColorArgb: null,
+              darkTextColorArgb: null,
+              darkBackgroundColorArgb: null,
+            ),
+          ),
+        ),
+        const SizedBox(height: 14),
+        Text('自定义配色', style: Theme.of(context).textTheme.titleSmall),
+        const SizedBox(height: 8),
+        SegmentedButton<Brightness>(
+          segments: const [
+            ButtonSegment(value: Brightness.light, label: Text('浅色配色')),
+            ButtonSegment(value: Brightness.dark, label: Text('深色配色')),
+          ],
+          selected: {_editingBrightness},
+          onSelectionChanged: (selection) => setState(() {
+            _editingBrightness = selection.single;
+            _textColorController.text = _hexColor(
+              _textColorFor(_editingBrightness),
+            );
+            _backgroundColorController.text = _hexColor(
+              _backgroundColorFor(_editingBrightness),
+            );
+            _textColorError = null;
+            _backgroundColorError = null;
+          }),
+        ),
+        const SizedBox(height: 8),
         _ReaderColorPalette(
           key: readerTextColorControlKey,
-          label: '字体颜色预设',
-          selectedArgb: _draft.textColorArgb,
+          label: '字体颜色（当前亮度）',
+          selectedArgb: textColor?.toARGB32(),
           colors: const [
             Color(0xff1c1b1f),
             Color(0xff4b3425),
@@ -1066,7 +1143,11 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
           ],
           onChanged: (value) {
             _textColorController.text = _hexColor(value);
-            _commit(_draft.copyWith(textColorArgb: value));
+            _commit(
+              _editingBrightness == Brightness.light
+                  ? _draft.copyWith(lightTextColorArgb: value)
+                  : _draft.copyWith(darkTextColorArgb: value),
+            );
           },
         ),
         _ColorInput(
@@ -1077,11 +1158,18 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
           onChanged: (value) => _previewColor(text: true, value: value),
           onSubmitted: (value) => _previewColor(text: true, value: value),
         ),
+        if (contrastWarning)
+          Text(
+            '当前字体与背景对比度较低，仍将按你的选择显示。',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: Theme.of(context).colorScheme.error,
+            ),
+          ),
         const SizedBox(height: 14),
         _ReaderColorPalette(
           key: readerBackgroundColorControlKey,
-          label: '背景颜色预设',
-          selectedArgb: _draft.backgroundColorArgb,
+          label: '阅读背景颜色（当前亮度）',
+          selectedArgb: backgroundColor?.toARGB32(),
           colors: const [
             Color(0xffffffff),
             Color(0xfffff8e7),
@@ -1091,7 +1179,11 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
           ],
           onChanged: (value) {
             _backgroundColorController.text = _hexColor(value);
-            _commit(_draft.copyWith(backgroundColorArgb: value));
+            _commit(
+              _editingBrightness == Brightness.light
+                  ? _draft.copyWith(lightBackgroundColorArgb: value)
+                  : _draft.copyWith(darkBackgroundColorArgb: value),
+            );
           },
         ),
         _ColorInput(
@@ -1177,10 +1269,13 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
           key: readerResetAppearanceKey,
           onPressed: () async {
             final previous = _draft.backgroundImagePath;
-            _textColorController.clear();
-            _backgroundColorController.clear();
+            _lightTextColorController.clear();
+            _lightBackgroundColorController.clear();
+            _darkTextColorController.clear();
+            _darkBackgroundColorController.clear();
             _commit(
               _draft.copyWith(
+                paletteId: ReaderPreferences.defaultPaletteId,
                 textColorArgb: null,
                 backgroundColorArgb: null,
                 backgroundImagePath: null,
@@ -1241,8 +1336,10 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
         OutlinedButton.icon(
           key: readerResetPreferencesKey,
           onPressed: () {
-            _textColorController.clear();
-            _backgroundColorController.clear();
+            _lightTextColorController.clear();
+            _lightBackgroundColorController.clear();
+            _darkTextColorController.clear();
+            _darkBackgroundColorController.clear();
             setState(() => _draft = ReaderPreferences.defaults);
             widget.onResetPreferences();
           },
@@ -1270,69 +1367,77 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
       (_ReaderSettingsCategory.advanced, '高级', Icons.tune_rounded),
     ];
     final content = _buildCategoryPanel(context);
+    final navigation = isDesktop
+        ? SizedBox(
+            width: 132,
+            child: Column(
+              children: [
+                for (final item in categories)
+                  ListTile(
+                    dense: true,
+                    selected: _category == item.$1,
+                    leading: Icon(item.$3),
+                    title: Text(item.$2),
+                    onTap: () => setState(() => _category = item.$1),
+                  ),
+              ],
+            ),
+          )
+        : SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                for (final item in categories) ...[
+                  ChoiceChip(
+                    selected: _category == item.$1,
+                    label: Text(item.$2),
+                    avatar: Icon(item.$3, size: 17),
+                    onSelected: (_) => setState(() => _category = item.$1),
+                  ),
+                  const SizedBox(width: 8),
+                ],
+              ],
+            ),
+          );
+    final panel = isDesktop
+        ? Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              navigation,
+              const SizedBox(width: 24),
+              const VerticalDivider(width: 1),
+              const SizedBox(width: 24),
+              Expanded(child: SingleChildScrollView(child: content)),
+            ],
+          )
+        : Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              navigation,
+              const SizedBox(height: 18),
+              Expanded(child: SingleChildScrollView(child: content)),
+            ],
+          );
     return SafeArea(
-      child: SingleChildScrollView(
-        key: readerSettingsSheetKey,
-        padding: EdgeInsets.fromLTRB(
-          isDesktop ? 28 : 20,
-          0,
-          isDesktop ? 28 : 20,
-          24,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          minWidth: isDesktop ? 720 : 0,
+          maxHeight: MediaQuery.sizeOf(context).height * .9,
         ),
-        child: ConstrainedBox(
-          constraints: BoxConstraints(minWidth: isDesktop ? 720 : 0),
+        child: Padding(
+          key: readerSettingsSheetKey,
+          padding: EdgeInsets.fromLTRB(
+            isDesktop ? 28 : 20,
+            0,
+            isDesktop ? 28 : 20,
+            24,
+          ),
           child: Column(
-            mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text('阅读设置', style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 16),
-              if (isDesktop)
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SizedBox(
-                      width: 132,
-                      child: Column(
-                        children: [
-                          for (final item in categories)
-                            ListTile(
-                              dense: true,
-                              selected: _category == item.$1,
-                              leading: Icon(item.$3),
-                              title: Text(item.$2),
-                              onTap: () => setState(() => _category = item.$1),
-                            ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 24),
-                    const VerticalDivider(width: 1),
-                    const SizedBox(width: 24),
-                    Expanded(child: content),
-                  ],
-                )
-              else ...[
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      for (final item in categories) ...[
-                        ChoiceChip(
-                          selected: _category == item.$1,
-                          label: Text(item.$2),
-                          avatar: Icon(item.$3, size: 17),
-                          onSelected: (_) =>
-                              setState(() => _category = item.$1),
-                        ),
-                        const SizedBox(width: 8),
-                      ],
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 18),
-                content,
-              ],
+              Expanded(child: panel),
             ],
           ),
         ),
@@ -1388,6 +1493,45 @@ class _ColorInput extends StatelessWidget {
         onChanged: onChanged,
         onSubmitted: onSubmitted,
       ),
+    );
+  }
+}
+
+class _ReaderPalettePresetGrid extends StatelessWidget {
+  const _ReaderPalettePresetGrid({
+    super.key,
+    required this.selected,
+    required this.onSelected,
+  });
+
+  final ReaderPaletteId selected;
+  final ValueChanged<ReaderPaletteId> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('阅读配色', style: Theme.of(context).textTheme.titleSmall),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final palette in ReaderPalette.presets)
+              ChoiceChip(
+                label: Text(palette.label),
+                selected: palette.id == selected,
+                avatar: CircleAvatar(
+                  backgroundColor: Color(palette.light.backgroundArgb),
+                  foregroundColor: Color(palette.light.textArgb),
+                  child: const Icon(Icons.text_fields_rounded, size: 14),
+                ),
+                onSelected: (_) => onSelected(palette.id),
+              ),
+          ],
+        ),
+      ],
     );
   }
 }

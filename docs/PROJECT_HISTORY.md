@@ -735,3 +735,15 @@ the More panel is their single entry. Per-book appearance now also exposes
 reading-friendly presets and validated custom color input (`#RRGGBB` and
 `rgb(r,g,b)`) with immediate paint preview. No data or Reader position
 contract changed.
+
+## M5.5e.4 Reader palette and theme model
+
+Introduced the typed `ReaderPalette` resolver and six bundled light/dark
+reading palettes. Per-book ReaderPreferences now keeps independent light and
+dark custom text/background overrides, so changing Reader theme brightness does
+not reuse an unsuitable color pair. Explicit custom text colors are painted as
+chosen; low contrast is a warning only. A formal Drift 7→8 migration preserves
+legacy colors, managed background references, typography, books, and
+reading_progress. The 465-test Flutter suite, 11 integration files / 14
+scenarios, four real TXT logical-error checks, Windows Release, and Android
+Debug all passed.

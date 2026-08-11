@@ -4233,6 +4233,18 @@ class $ReaderPreferencesRowsTable extends ReaderPreferencesRows
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _paletteIdMeta = const VerificationMeta(
+    'paletteId',
+  );
+  @override
+  late final GeneratedColumn<String> paletteId = GeneratedColumn<String>(
+    'palette_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('paperWhite'),
+  );
   static const VerificationMeta _textColorArgbMeta = const VerificationMeta(
     'textColorArgb',
   );
@@ -4254,6 +4266,49 @@ class $ReaderPreferencesRowsTable extends ReaderPreferencesRows
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _lightTextColorArgbMeta =
+      const VerificationMeta('lightTextColorArgb');
+  @override
+  late final GeneratedColumn<int> lightTextColorArgb = GeneratedColumn<int>(
+    'light_text_color_argb',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _lightBackgroundColorArgbMeta =
+      const VerificationMeta('lightBackgroundColorArgb');
+  @override
+  late final GeneratedColumn<int> lightBackgroundColorArgb =
+      GeneratedColumn<int>(
+        'light_background_color_argb',
+        aliasedName,
+        true,
+        type: DriftSqlType.int,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _darkTextColorArgbMeta = const VerificationMeta(
+    'darkTextColorArgb',
+  );
+  @override
+  late final GeneratedColumn<int> darkTextColorArgb = GeneratedColumn<int>(
+    'dark_text_color_argb',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _darkBackgroundColorArgbMeta =
+      const VerificationMeta('darkBackgroundColorArgb');
+  @override
+  late final GeneratedColumn<int> darkBackgroundColorArgb =
+      GeneratedColumn<int>(
+        'dark_background_color_argb',
+        aliasedName,
+        true,
+        type: DriftSqlType.int,
+        requiredDuringInsert: false,
+      );
   static const VerificationMeta _backgroundImagePathMeta =
       const VerificationMeta('backgroundImagePath');
   @override
@@ -4313,8 +4368,13 @@ class $ReaderPreferencesRowsTable extends ReaderPreferencesRows
     paddingLeft,
     paddingRight,
     themeMode,
+    paletteId,
     textColorArgb,
     backgroundColorArgb,
+    lightTextColorArgb,
+    lightBackgroundColorArgb,
+    darkTextColorArgb,
+    darkBackgroundColorArgb,
     backgroundImagePath,
     backgroundImageOpacity,
     backgroundOverlayOpacity,
@@ -4441,6 +4501,12 @@ class $ReaderPreferencesRowsTable extends ReaderPreferencesRows
     } else if (isInserting) {
       context.missing(_themeModeMeta);
     }
+    if (data.containsKey('palette_id')) {
+      context.handle(
+        _paletteIdMeta,
+        paletteId.isAcceptableOrUnknown(data['palette_id']!, _paletteIdMeta),
+      );
+    }
     if (data.containsKey('text_color_argb')) {
       context.handle(
         _textColorArgbMeta,
@@ -4456,6 +4522,42 @@ class $ReaderPreferencesRowsTable extends ReaderPreferencesRows
         backgroundColorArgb.isAcceptableOrUnknown(
           data['background_color_argb']!,
           _backgroundColorArgbMeta,
+        ),
+      );
+    }
+    if (data.containsKey('light_text_color_argb')) {
+      context.handle(
+        _lightTextColorArgbMeta,
+        lightTextColorArgb.isAcceptableOrUnknown(
+          data['light_text_color_argb']!,
+          _lightTextColorArgbMeta,
+        ),
+      );
+    }
+    if (data.containsKey('light_background_color_argb')) {
+      context.handle(
+        _lightBackgroundColorArgbMeta,
+        lightBackgroundColorArgb.isAcceptableOrUnknown(
+          data['light_background_color_argb']!,
+          _lightBackgroundColorArgbMeta,
+        ),
+      );
+    }
+    if (data.containsKey('dark_text_color_argb')) {
+      context.handle(
+        _darkTextColorArgbMeta,
+        darkTextColorArgb.isAcceptableOrUnknown(
+          data['dark_text_color_argb']!,
+          _darkTextColorArgbMeta,
+        ),
+      );
+    }
+    if (data.containsKey('dark_background_color_argb')) {
+      context.handle(
+        _darkBackgroundColorArgbMeta,
+        darkBackgroundColorArgb.isAcceptableOrUnknown(
+          data['dark_background_color_argb']!,
+          _darkBackgroundColorArgbMeta,
         ),
       );
     }
@@ -4547,6 +4649,10 @@ class $ReaderPreferencesRowsTable extends ReaderPreferencesRows
         DriftSqlType.string,
         data['${effectivePrefix}theme_mode'],
       )!,
+      paletteId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}palette_id'],
+      )!,
       textColorArgb: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}text_color_argb'],
@@ -4554,6 +4660,22 @@ class $ReaderPreferencesRowsTable extends ReaderPreferencesRows
       backgroundColorArgb: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}background_color_argb'],
+      ),
+      lightTextColorArgb: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}light_text_color_argb'],
+      ),
+      lightBackgroundColorArgb: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}light_background_color_argb'],
+      ),
+      darkTextColorArgb: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}dark_text_color_argb'],
+      ),
+      darkBackgroundColorArgb: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}dark_background_color_argb'],
       ),
       backgroundImagePath: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
@@ -4593,8 +4715,13 @@ class ReaderPreferencesRow extends DataClass
   final double paddingLeft;
   final double paddingRight;
   final String themeMode;
+  final String paletteId;
   final int? textColorArgb;
   final int? backgroundColorArgb;
+  final int? lightTextColorArgb;
+  final int? lightBackgroundColorArgb;
+  final int? darkTextColorArgb;
+  final int? darkBackgroundColorArgb;
   final String? backgroundImagePath;
   final double backgroundImageOpacity;
   final double backgroundOverlayOpacity;
@@ -4611,8 +4738,13 @@ class ReaderPreferencesRow extends DataClass
     required this.paddingLeft,
     required this.paddingRight,
     required this.themeMode,
+    required this.paletteId,
     this.textColorArgb,
     this.backgroundColorArgb,
+    this.lightTextColorArgb,
+    this.lightBackgroundColorArgb,
+    this.darkTextColorArgb,
+    this.darkBackgroundColorArgb,
     this.backgroundImagePath,
     required this.backgroundImageOpacity,
     required this.backgroundOverlayOpacity,
@@ -4632,11 +4764,28 @@ class ReaderPreferencesRow extends DataClass
     map['padding_left'] = Variable<double>(paddingLeft);
     map['padding_right'] = Variable<double>(paddingRight);
     map['theme_mode'] = Variable<String>(themeMode);
+    map['palette_id'] = Variable<String>(paletteId);
     if (!nullToAbsent || textColorArgb != null) {
       map['text_color_argb'] = Variable<int>(textColorArgb);
     }
     if (!nullToAbsent || backgroundColorArgb != null) {
       map['background_color_argb'] = Variable<int>(backgroundColorArgb);
+    }
+    if (!nullToAbsent || lightTextColorArgb != null) {
+      map['light_text_color_argb'] = Variable<int>(lightTextColorArgb);
+    }
+    if (!nullToAbsent || lightBackgroundColorArgb != null) {
+      map['light_background_color_argb'] = Variable<int>(
+        lightBackgroundColorArgb,
+      );
+    }
+    if (!nullToAbsent || darkTextColorArgb != null) {
+      map['dark_text_color_argb'] = Variable<int>(darkTextColorArgb);
+    }
+    if (!nullToAbsent || darkBackgroundColorArgb != null) {
+      map['dark_background_color_argb'] = Variable<int>(
+        darkBackgroundColorArgb,
+      );
     }
     if (!nullToAbsent || backgroundImagePath != null) {
       map['background_image_path'] = Variable<String>(backgroundImagePath);
@@ -4662,12 +4811,25 @@ class ReaderPreferencesRow extends DataClass
       paddingLeft: Value(paddingLeft),
       paddingRight: Value(paddingRight),
       themeMode: Value(themeMode),
+      paletteId: Value(paletteId),
       textColorArgb: textColorArgb == null && nullToAbsent
           ? const Value.absent()
           : Value(textColorArgb),
       backgroundColorArgb: backgroundColorArgb == null && nullToAbsent
           ? const Value.absent()
           : Value(backgroundColorArgb),
+      lightTextColorArgb: lightTextColorArgb == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lightTextColorArgb),
+      lightBackgroundColorArgb: lightBackgroundColorArgb == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lightBackgroundColorArgb),
+      darkTextColorArgb: darkTextColorArgb == null && nullToAbsent
+          ? const Value.absent()
+          : Value(darkTextColorArgb),
+      darkBackgroundColorArgb: darkBackgroundColorArgb == null && nullToAbsent
+          ? const Value.absent()
+          : Value(darkBackgroundColorArgb),
       backgroundImagePath: backgroundImagePath == null && nullToAbsent
           ? const Value.absent()
           : Value(backgroundImagePath),
@@ -4694,9 +4856,18 @@ class ReaderPreferencesRow extends DataClass
       paddingLeft: serializer.fromJson<double>(json['paddingLeft']),
       paddingRight: serializer.fromJson<double>(json['paddingRight']),
       themeMode: serializer.fromJson<String>(json['themeMode']),
+      paletteId: serializer.fromJson<String>(json['paletteId']),
       textColorArgb: serializer.fromJson<int?>(json['textColorArgb']),
       backgroundColorArgb: serializer.fromJson<int?>(
         json['backgroundColorArgb'],
+      ),
+      lightTextColorArgb: serializer.fromJson<int?>(json['lightTextColorArgb']),
+      lightBackgroundColorArgb: serializer.fromJson<int?>(
+        json['lightBackgroundColorArgb'],
+      ),
+      darkTextColorArgb: serializer.fromJson<int?>(json['darkTextColorArgb']),
+      darkBackgroundColorArgb: serializer.fromJson<int?>(
+        json['darkBackgroundColorArgb'],
       ),
       backgroundImagePath: serializer.fromJson<String?>(
         json['backgroundImagePath'],
@@ -4725,8 +4896,17 @@ class ReaderPreferencesRow extends DataClass
       'paddingLeft': serializer.toJson<double>(paddingLeft),
       'paddingRight': serializer.toJson<double>(paddingRight),
       'themeMode': serializer.toJson<String>(themeMode),
+      'paletteId': serializer.toJson<String>(paletteId),
       'textColorArgb': serializer.toJson<int?>(textColorArgb),
       'backgroundColorArgb': serializer.toJson<int?>(backgroundColorArgb),
+      'lightTextColorArgb': serializer.toJson<int?>(lightTextColorArgb),
+      'lightBackgroundColorArgb': serializer.toJson<int?>(
+        lightBackgroundColorArgb,
+      ),
+      'darkTextColorArgb': serializer.toJson<int?>(darkTextColorArgb),
+      'darkBackgroundColorArgb': serializer.toJson<int?>(
+        darkBackgroundColorArgb,
+      ),
       'backgroundImagePath': serializer.toJson<String?>(backgroundImagePath),
       'backgroundImageOpacity': serializer.toJson<double>(
         backgroundImageOpacity,
@@ -4750,8 +4930,13 @@ class ReaderPreferencesRow extends DataClass
     double? paddingLeft,
     double? paddingRight,
     String? themeMode,
+    String? paletteId,
     Value<int?> textColorArgb = const Value.absent(),
     Value<int?> backgroundColorArgb = const Value.absent(),
+    Value<int?> lightTextColorArgb = const Value.absent(),
+    Value<int?> lightBackgroundColorArgb = const Value.absent(),
+    Value<int?> darkTextColorArgb = const Value.absent(),
+    Value<int?> darkBackgroundColorArgb = const Value.absent(),
     Value<String?> backgroundImagePath = const Value.absent(),
     double? backgroundImageOpacity,
     double? backgroundOverlayOpacity,
@@ -4768,12 +4953,25 @@ class ReaderPreferencesRow extends DataClass
     paddingLeft: paddingLeft ?? this.paddingLeft,
     paddingRight: paddingRight ?? this.paddingRight,
     themeMode: themeMode ?? this.themeMode,
+    paletteId: paletteId ?? this.paletteId,
     textColorArgb: textColorArgb.present
         ? textColorArgb.value
         : this.textColorArgb,
     backgroundColorArgb: backgroundColorArgb.present
         ? backgroundColorArgb.value
         : this.backgroundColorArgb,
+    lightTextColorArgb: lightTextColorArgb.present
+        ? lightTextColorArgb.value
+        : this.lightTextColorArgb,
+    lightBackgroundColorArgb: lightBackgroundColorArgb.present
+        ? lightBackgroundColorArgb.value
+        : this.lightBackgroundColorArgb,
+    darkTextColorArgb: darkTextColorArgb.present
+        ? darkTextColorArgb.value
+        : this.darkTextColorArgb,
+    darkBackgroundColorArgb: darkBackgroundColorArgb.present
+        ? darkBackgroundColorArgb.value
+        : this.darkBackgroundColorArgb,
     backgroundImagePath: backgroundImagePath.present
         ? backgroundImagePath.value
         : this.backgroundImagePath,
@@ -4814,12 +5012,25 @@ class ReaderPreferencesRow extends DataClass
           ? data.paddingRight.value
           : this.paddingRight,
       themeMode: data.themeMode.present ? data.themeMode.value : this.themeMode,
+      paletteId: data.paletteId.present ? data.paletteId.value : this.paletteId,
       textColorArgb: data.textColorArgb.present
           ? data.textColorArgb.value
           : this.textColorArgb,
       backgroundColorArgb: data.backgroundColorArgb.present
           ? data.backgroundColorArgb.value
           : this.backgroundColorArgb,
+      lightTextColorArgb: data.lightTextColorArgb.present
+          ? data.lightTextColorArgb.value
+          : this.lightTextColorArgb,
+      lightBackgroundColorArgb: data.lightBackgroundColorArgb.present
+          ? data.lightBackgroundColorArgb.value
+          : this.lightBackgroundColorArgb,
+      darkTextColorArgb: data.darkTextColorArgb.present
+          ? data.darkTextColorArgb.value
+          : this.darkTextColorArgb,
+      darkBackgroundColorArgb: data.darkBackgroundColorArgb.present
+          ? data.darkBackgroundColorArgb.value
+          : this.darkBackgroundColorArgb,
       backgroundImagePath: data.backgroundImagePath.present
           ? data.backgroundImagePath.value
           : this.backgroundImagePath,
@@ -4847,8 +5058,13 @@ class ReaderPreferencesRow extends DataClass
           ..write('paddingLeft: $paddingLeft, ')
           ..write('paddingRight: $paddingRight, ')
           ..write('themeMode: $themeMode, ')
+          ..write('paletteId: $paletteId, ')
           ..write('textColorArgb: $textColorArgb, ')
           ..write('backgroundColorArgb: $backgroundColorArgb, ')
+          ..write('lightTextColorArgb: $lightTextColorArgb, ')
+          ..write('lightBackgroundColorArgb: $lightBackgroundColorArgb, ')
+          ..write('darkTextColorArgb: $darkTextColorArgb, ')
+          ..write('darkBackgroundColorArgb: $darkBackgroundColorArgb, ')
           ..write('backgroundImagePath: $backgroundImagePath, ')
           ..write('backgroundImageOpacity: $backgroundImageOpacity, ')
           ..write('backgroundOverlayOpacity: $backgroundOverlayOpacity, ')
@@ -4858,7 +5074,7 @@ class ReaderPreferencesRow extends DataClass
   }
 
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll([
     collectionId,
     fontSize,
     letterSpacing,
@@ -4870,13 +5086,18 @@ class ReaderPreferencesRow extends DataClass
     paddingLeft,
     paddingRight,
     themeMode,
+    paletteId,
     textColorArgb,
     backgroundColorArgb,
+    lightTextColorArgb,
+    lightBackgroundColorArgb,
+    darkTextColorArgb,
+    darkBackgroundColorArgb,
     backgroundImagePath,
     backgroundImageOpacity,
     backgroundOverlayOpacity,
     updatedAt,
-  );
+  ]);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -4892,8 +5113,13 @@ class ReaderPreferencesRow extends DataClass
           other.paddingLeft == this.paddingLeft &&
           other.paddingRight == this.paddingRight &&
           other.themeMode == this.themeMode &&
+          other.paletteId == this.paletteId &&
           other.textColorArgb == this.textColorArgb &&
           other.backgroundColorArgb == this.backgroundColorArgb &&
+          other.lightTextColorArgb == this.lightTextColorArgb &&
+          other.lightBackgroundColorArgb == this.lightBackgroundColorArgb &&
+          other.darkTextColorArgb == this.darkTextColorArgb &&
+          other.darkBackgroundColorArgb == this.darkBackgroundColorArgb &&
           other.backgroundImagePath == this.backgroundImagePath &&
           other.backgroundImageOpacity == this.backgroundImageOpacity &&
           other.backgroundOverlayOpacity == this.backgroundOverlayOpacity &&
@@ -4913,8 +5139,13 @@ class ReaderPreferencesRowsCompanion
   final Value<double> paddingLeft;
   final Value<double> paddingRight;
   final Value<String> themeMode;
+  final Value<String> paletteId;
   final Value<int?> textColorArgb;
   final Value<int?> backgroundColorArgb;
+  final Value<int?> lightTextColorArgb;
+  final Value<int?> lightBackgroundColorArgb;
+  final Value<int?> darkTextColorArgb;
+  final Value<int?> darkBackgroundColorArgb;
   final Value<String?> backgroundImagePath;
   final Value<double> backgroundImageOpacity;
   final Value<double> backgroundOverlayOpacity;
@@ -4932,8 +5163,13 @@ class ReaderPreferencesRowsCompanion
     this.paddingLeft = const Value.absent(),
     this.paddingRight = const Value.absent(),
     this.themeMode = const Value.absent(),
+    this.paletteId = const Value.absent(),
     this.textColorArgb = const Value.absent(),
     this.backgroundColorArgb = const Value.absent(),
+    this.lightTextColorArgb = const Value.absent(),
+    this.lightBackgroundColorArgb = const Value.absent(),
+    this.darkTextColorArgb = const Value.absent(),
+    this.darkBackgroundColorArgb = const Value.absent(),
     this.backgroundImagePath = const Value.absent(),
     this.backgroundImageOpacity = const Value.absent(),
     this.backgroundOverlayOpacity = const Value.absent(),
@@ -4952,8 +5188,13 @@ class ReaderPreferencesRowsCompanion
     required double paddingLeft,
     required double paddingRight,
     required String themeMode,
+    this.paletteId = const Value.absent(),
     this.textColorArgb = const Value.absent(),
     this.backgroundColorArgb = const Value.absent(),
+    this.lightTextColorArgb = const Value.absent(),
+    this.lightBackgroundColorArgb = const Value.absent(),
+    this.darkTextColorArgb = const Value.absent(),
+    this.darkBackgroundColorArgb = const Value.absent(),
     this.backgroundImagePath = const Value.absent(),
     this.backgroundImageOpacity = const Value.absent(),
     this.backgroundOverlayOpacity = const Value.absent(),
@@ -4983,8 +5224,13 @@ class ReaderPreferencesRowsCompanion
     Expression<double>? paddingLeft,
     Expression<double>? paddingRight,
     Expression<String>? themeMode,
+    Expression<String>? paletteId,
     Expression<int>? textColorArgb,
     Expression<int>? backgroundColorArgb,
+    Expression<int>? lightTextColorArgb,
+    Expression<int>? lightBackgroundColorArgb,
+    Expression<int>? darkTextColorArgb,
+    Expression<int>? darkBackgroundColorArgb,
     Expression<String>? backgroundImagePath,
     Expression<double>? backgroundImageOpacity,
     Expression<double>? backgroundOverlayOpacity,
@@ -5003,9 +5249,17 @@ class ReaderPreferencesRowsCompanion
       if (paddingLeft != null) 'padding_left': paddingLeft,
       if (paddingRight != null) 'padding_right': paddingRight,
       if (themeMode != null) 'theme_mode': themeMode,
+      if (paletteId != null) 'palette_id': paletteId,
       if (textColorArgb != null) 'text_color_argb': textColorArgb,
       if (backgroundColorArgb != null)
         'background_color_argb': backgroundColorArgb,
+      if (lightTextColorArgb != null)
+        'light_text_color_argb': lightTextColorArgb,
+      if (lightBackgroundColorArgb != null)
+        'light_background_color_argb': lightBackgroundColorArgb,
+      if (darkTextColorArgb != null) 'dark_text_color_argb': darkTextColorArgb,
+      if (darkBackgroundColorArgb != null)
+        'dark_background_color_argb': darkBackgroundColorArgb,
       if (backgroundImagePath != null)
         'background_image_path': backgroundImagePath,
       if (backgroundImageOpacity != null)
@@ -5029,8 +5283,13 @@ class ReaderPreferencesRowsCompanion
     Value<double>? paddingLeft,
     Value<double>? paddingRight,
     Value<String>? themeMode,
+    Value<String>? paletteId,
     Value<int?>? textColorArgb,
     Value<int?>? backgroundColorArgb,
+    Value<int?>? lightTextColorArgb,
+    Value<int?>? lightBackgroundColorArgb,
+    Value<int?>? darkTextColorArgb,
+    Value<int?>? darkBackgroundColorArgb,
     Value<String?>? backgroundImagePath,
     Value<double>? backgroundImageOpacity,
     Value<double>? backgroundOverlayOpacity,
@@ -5049,8 +5308,15 @@ class ReaderPreferencesRowsCompanion
       paddingLeft: paddingLeft ?? this.paddingLeft,
       paddingRight: paddingRight ?? this.paddingRight,
       themeMode: themeMode ?? this.themeMode,
+      paletteId: paletteId ?? this.paletteId,
       textColorArgb: textColorArgb ?? this.textColorArgb,
       backgroundColorArgb: backgroundColorArgb ?? this.backgroundColorArgb,
+      lightTextColorArgb: lightTextColorArgb ?? this.lightTextColorArgb,
+      lightBackgroundColorArgb:
+          lightBackgroundColorArgb ?? this.lightBackgroundColorArgb,
+      darkTextColorArgb: darkTextColorArgb ?? this.darkTextColorArgb,
+      darkBackgroundColorArgb:
+          darkBackgroundColorArgb ?? this.darkBackgroundColorArgb,
       backgroundImagePath: backgroundImagePath ?? this.backgroundImagePath,
       backgroundImageOpacity:
           backgroundImageOpacity ?? this.backgroundImageOpacity,
@@ -5097,11 +5363,30 @@ class ReaderPreferencesRowsCompanion
     if (themeMode.present) {
       map['theme_mode'] = Variable<String>(themeMode.value);
     }
+    if (paletteId.present) {
+      map['palette_id'] = Variable<String>(paletteId.value);
+    }
     if (textColorArgb.present) {
       map['text_color_argb'] = Variable<int>(textColorArgb.value);
     }
     if (backgroundColorArgb.present) {
       map['background_color_argb'] = Variable<int>(backgroundColorArgb.value);
+    }
+    if (lightTextColorArgb.present) {
+      map['light_text_color_argb'] = Variable<int>(lightTextColorArgb.value);
+    }
+    if (lightBackgroundColorArgb.present) {
+      map['light_background_color_argb'] = Variable<int>(
+        lightBackgroundColorArgb.value,
+      );
+    }
+    if (darkTextColorArgb.present) {
+      map['dark_text_color_argb'] = Variable<int>(darkTextColorArgb.value);
+    }
+    if (darkBackgroundColorArgb.present) {
+      map['dark_background_color_argb'] = Variable<int>(
+        darkBackgroundColorArgb.value,
+      );
     }
     if (backgroundImagePath.present) {
       map['background_image_path'] = Variable<String>(
@@ -5141,8 +5426,13 @@ class ReaderPreferencesRowsCompanion
           ..write('paddingLeft: $paddingLeft, ')
           ..write('paddingRight: $paddingRight, ')
           ..write('themeMode: $themeMode, ')
+          ..write('paletteId: $paletteId, ')
           ..write('textColorArgb: $textColorArgb, ')
           ..write('backgroundColorArgb: $backgroundColorArgb, ')
+          ..write('lightTextColorArgb: $lightTextColorArgb, ')
+          ..write('lightBackgroundColorArgb: $lightBackgroundColorArgb, ')
+          ..write('darkTextColorArgb: $darkTextColorArgb, ')
+          ..write('darkBackgroundColorArgb: $darkBackgroundColorArgb, ')
           ..write('backgroundImagePath: $backgroundImagePath, ')
           ..write('backgroundImageOpacity: $backgroundImageOpacity, ')
           ..write('backgroundOverlayOpacity: $backgroundOverlayOpacity, ')
@@ -9634,8 +9924,13 @@ typedef $$ReaderPreferencesRowsTableCreateCompanionBuilder =
       required double paddingLeft,
       required double paddingRight,
       required String themeMode,
+      Value<String> paletteId,
       Value<int?> textColorArgb,
       Value<int?> backgroundColorArgb,
+      Value<int?> lightTextColorArgb,
+      Value<int?> lightBackgroundColorArgb,
+      Value<int?> darkTextColorArgb,
+      Value<int?> darkBackgroundColorArgb,
       Value<String?> backgroundImagePath,
       Value<double> backgroundImageOpacity,
       Value<double> backgroundOverlayOpacity,
@@ -9655,8 +9950,13 @@ typedef $$ReaderPreferencesRowsTableUpdateCompanionBuilder =
       Value<double> paddingLeft,
       Value<double> paddingRight,
       Value<String> themeMode,
+      Value<String> paletteId,
       Value<int?> textColorArgb,
       Value<int?> backgroundColorArgb,
+      Value<int?> lightTextColorArgb,
+      Value<int?> lightBackgroundColorArgb,
+      Value<int?> darkTextColorArgb,
+      Value<int?> darkBackgroundColorArgb,
       Value<String?> backgroundImagePath,
       Value<double> backgroundImageOpacity,
       Value<double> backgroundOverlayOpacity,
@@ -9759,6 +10059,11 @@ class $$ReaderPreferencesRowsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<String> get paletteId => $composableBuilder(
+    column: $table.paletteId,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<int> get textColorArgb => $composableBuilder(
     column: $table.textColorArgb,
     builder: (column) => ColumnFilters(column),
@@ -9766,6 +10071,26 @@ class $$ReaderPreferencesRowsTableFilterComposer
 
   ColumnFilters<int> get backgroundColorArgb => $composableBuilder(
     column: $table.backgroundColorArgb,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get lightTextColorArgb => $composableBuilder(
+    column: $table.lightTextColorArgb,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get lightBackgroundColorArgb => $composableBuilder(
+    column: $table.lightBackgroundColorArgb,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get darkTextColorArgb => $composableBuilder(
+    column: $table.darkTextColorArgb,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get darkBackgroundColorArgb => $composableBuilder(
+    column: $table.darkBackgroundColorArgb,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -9872,6 +10197,11 @@ class $$ReaderPreferencesRowsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get paletteId => $composableBuilder(
+    column: $table.paletteId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get textColorArgb => $composableBuilder(
     column: $table.textColorArgb,
     builder: (column) => ColumnOrderings(column),
@@ -9879,6 +10209,26 @@ class $$ReaderPreferencesRowsTableOrderingComposer
 
   ColumnOrderings<int> get backgroundColorArgb => $composableBuilder(
     column: $table.backgroundColorArgb,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get lightTextColorArgb => $composableBuilder(
+    column: $table.lightTextColorArgb,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get lightBackgroundColorArgb => $composableBuilder(
+    column: $table.lightBackgroundColorArgb,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get darkTextColorArgb => $composableBuilder(
+    column: $table.darkTextColorArgb,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get darkBackgroundColorArgb => $composableBuilder(
+    column: $table.darkBackgroundColorArgb,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -9981,6 +10331,9 @@ class $$ReaderPreferencesRowsTableAnnotationComposer
   GeneratedColumn<String> get themeMode =>
       $composableBuilder(column: $table.themeMode, builder: (column) => column);
 
+  GeneratedColumn<String> get paletteId =>
+      $composableBuilder(column: $table.paletteId, builder: (column) => column);
+
   GeneratedColumn<int> get textColorArgb => $composableBuilder(
     column: $table.textColorArgb,
     builder: (column) => column,
@@ -9988,6 +10341,26 @@ class $$ReaderPreferencesRowsTableAnnotationComposer
 
   GeneratedColumn<int> get backgroundColorArgb => $composableBuilder(
     column: $table.backgroundColorArgb,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get lightTextColorArgb => $composableBuilder(
+    column: $table.lightTextColorArgb,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get lightBackgroundColorArgb => $composableBuilder(
+    column: $table.lightBackgroundColorArgb,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get darkTextColorArgb => $composableBuilder(
+    column: $table.darkTextColorArgb,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get darkBackgroundColorArgb => $composableBuilder(
+    column: $table.darkBackgroundColorArgb,
     builder: (column) => column,
   );
 
@@ -10084,8 +10457,13 @@ class $$ReaderPreferencesRowsTableTableManager
                 Value<double> paddingLeft = const Value.absent(),
                 Value<double> paddingRight = const Value.absent(),
                 Value<String> themeMode = const Value.absent(),
+                Value<String> paletteId = const Value.absent(),
                 Value<int?> textColorArgb = const Value.absent(),
                 Value<int?> backgroundColorArgb = const Value.absent(),
+                Value<int?> lightTextColorArgb = const Value.absent(),
+                Value<int?> lightBackgroundColorArgb = const Value.absent(),
+                Value<int?> darkTextColorArgb = const Value.absent(),
+                Value<int?> darkBackgroundColorArgb = const Value.absent(),
                 Value<String?> backgroundImagePath = const Value.absent(),
                 Value<double> backgroundImageOpacity = const Value.absent(),
                 Value<double> backgroundOverlayOpacity = const Value.absent(),
@@ -10103,8 +10481,13 @@ class $$ReaderPreferencesRowsTableTableManager
                 paddingLeft: paddingLeft,
                 paddingRight: paddingRight,
                 themeMode: themeMode,
+                paletteId: paletteId,
                 textColorArgb: textColorArgb,
                 backgroundColorArgb: backgroundColorArgb,
+                lightTextColorArgb: lightTextColorArgb,
+                lightBackgroundColorArgb: lightBackgroundColorArgb,
+                darkTextColorArgb: darkTextColorArgb,
+                darkBackgroundColorArgb: darkBackgroundColorArgb,
                 backgroundImagePath: backgroundImagePath,
                 backgroundImageOpacity: backgroundImageOpacity,
                 backgroundOverlayOpacity: backgroundOverlayOpacity,
@@ -10124,8 +10507,13 @@ class $$ReaderPreferencesRowsTableTableManager
                 required double paddingLeft,
                 required double paddingRight,
                 required String themeMode,
+                Value<String> paletteId = const Value.absent(),
                 Value<int?> textColorArgb = const Value.absent(),
                 Value<int?> backgroundColorArgb = const Value.absent(),
+                Value<int?> lightTextColorArgb = const Value.absent(),
+                Value<int?> lightBackgroundColorArgb = const Value.absent(),
+                Value<int?> darkTextColorArgb = const Value.absent(),
+                Value<int?> darkBackgroundColorArgb = const Value.absent(),
                 Value<String?> backgroundImagePath = const Value.absent(),
                 Value<double> backgroundImageOpacity = const Value.absent(),
                 Value<double> backgroundOverlayOpacity = const Value.absent(),
@@ -10143,8 +10531,13 @@ class $$ReaderPreferencesRowsTableTableManager
                 paddingLeft: paddingLeft,
                 paddingRight: paddingRight,
                 themeMode: themeMode,
+                paletteId: paletteId,
                 textColorArgb: textColorArgb,
                 backgroundColorArgb: backgroundColorArgb,
+                lightTextColorArgb: lightTextColorArgb,
+                lightBackgroundColorArgb: lightBackgroundColorArgb,
+                darkTextColorArgb: darkTextColorArgb,
+                darkBackgroundColorArgb: darkBackgroundColorArgb,
                 backgroundImagePath: backgroundImagePath,
                 backgroundImageOpacity: backgroundImageOpacity,
                 backgroundOverlayOpacity: backgroundOverlayOpacity,

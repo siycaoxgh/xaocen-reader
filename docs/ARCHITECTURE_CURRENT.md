@@ -1,10 +1,31 @@
 # ARCHITECTURE_CURRENT.md — XAOCEN Reader v4 当前架构与合同
 
-> 只描述当前代码与合同（`feat/m4-horizontal-reader`，M5.2d 完成点）。
+> 只描述当前代码与合同（`feat/m4-horizontal-reader`，M5.5e.4 完成点，Drift schema 8）。
 > 不记录历史故事（见 PROJECT_HISTORY.md）。
 > 代码位置均以本仓库实际文件为准。
 
 ---
+
+## M5.5e.4 Reader palette and theme contract
+
+`ReaderPalette` and `ReaderPaletteResolver` are the only place that maps a
+per-book palette id plus effective Reader brightness to body colors. Bundled
+palettes provide independent light/dark text/background pairs. `ReaderPreferences`
+stores the palette id and nullable light/dark custom ARGB overrides; an override
+is paint-only and wins over the selected palette for that brightness. The
+`ReaderThemeMode` system/light/dark value drives the effective Reader `ThemeData`
+and therefore the body palette as well as Chrome.
+
+Custom colors are written to the same `TextStyle` used by body paint and measure;
+low contrast is exposed as a warning only. No automatic color substitution,
+layout invalidation, Locator restore, progress write, or session change occurs.
+Managed background images remain app-owned file references with opacity and
+overlay controls; image data is not stored in Drift.
+
+Drift schema is 8. Migration 7→8 adds palette identity and four nullable
+brightness-specific color columns. Legacy schema-7 single color values are
+copied to both brightness columns, preserving books, typography, images,
+reading_progress, readingMode, and ReaderLocator.
 
 ## M5.3.1 chapter boundary and vertical progress contract
 
@@ -854,6 +875,17 @@ and paged content, so text geometry is unchanged. Schema 7 extends only the
 existing per-book `reader_preferences` table; ReaderLocator remains the sole
 position source.
 
+## M5.5e.4 Reader palette implementation
+
+Schema 8 adds `palette_id`, `light_text_color_argb`,
+`light_background_color_argb`, `dark_text_color_argb`, and
+`dark_background_color_argb` to that same per-book table. The resolver first
+selects the effective system/light/dark brightness, then applies only that
+brightness's nullable custom override over the selected palette. Existing
+schema-7 color values are copied to both brightness columns during migration;
+no book, image reference, typography, reading progress, or ReaderLocator data
+is dropped.
+
 ## M5.5e.1 Reader settings surface
 
 `ReaderSettingsSheet` is categorized into Typography, Appearance, Paging, and
@@ -875,4 +907,6 @@ capabilities. The primary bottom actions are TOC, AutoRead, Bookmarks, Aa, and
 More. AutoRead's status strip is outside the hideable chrome and delegates pause,
 resume, and stop to the existing controller. More no longer owns an AutoRead
 entry. This is a presentation-layer change only: Locator, PageWindow,
-pagination, AutoRead drivers, ReadingSession, and schema 7 are unchanged.
+pagination, AutoRead drivers, ReadingSession, and Locator behavior are
+unchanged; the only persistence change is the formal schema 7→8 appearance
+migration described above.

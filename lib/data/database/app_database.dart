@@ -36,7 +36,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting() : super(NativeDatabase.memory());
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 8;
 
   /// 打开应用数据库（support 目录下）。
   static Future<AppDatabase> open() async {
@@ -132,6 +132,38 @@ class AppDatabase extends _$AppDatabase {
           readerPreferencesRows,
           readerPreferencesRows.backgroundOverlayOpacity,
         );
+      }
+      // schema 7 → 8: add palette identity and independent light/dark custom
+      // overrides. Legacy single-pair colors are copied to both brightnesses
+      // so existing books retain their exact appearance.
+      if (from >= 5 && from < 8) {
+        await m.addColumn(
+          readerPreferencesRows,
+          readerPreferencesRows.paletteId,
+        );
+        await m.addColumn(
+          readerPreferencesRows,
+          readerPreferencesRows.lightTextColorArgb,
+        );
+        await m.addColumn(
+          readerPreferencesRows,
+          readerPreferencesRows.lightBackgroundColorArgb,
+        );
+        await m.addColumn(
+          readerPreferencesRows,
+          readerPreferencesRows.darkTextColorArgb,
+        );
+        await m.addColumn(
+          readerPreferencesRows,
+          readerPreferencesRows.darkBackgroundColorArgb,
+        );
+        await customStatement('''
+          UPDATE reader_preferences
+          SET light_text_color_argb = text_color_argb,
+              light_background_color_argb = background_color_argb,
+              dark_text_color_argb = text_color_argb,
+              dark_background_color_argb = background_color_argb
+        ''');
       }
     },
     beforeOpen: (details) async {

@@ -1,6 +1,8 @@
 /// Per-book Reader appearance contract (M5.1e.1).
 library;
 
+import 'reader_palette.dart';
+
 enum ReaderThemeMode { system, light, dark }
 
 enum ReaderPreferenceChangeKind { metrics, paint }
@@ -17,8 +19,11 @@ final class ReaderPreferences {
     required this.paddingLeft,
     required this.paddingRight,
     required this.themeMode,
-    required this.textColorArgb,
-    required this.backgroundColorArgb,
+    required this.paletteId,
+    required this.lightTextColorArgb,
+    required this.lightBackgroundColorArgb,
+    required this.darkTextColorArgb,
+    required this.darkBackgroundColorArgb,
     required this.backgroundImagePath,
     required this.backgroundImageOpacity,
     required this.backgroundOverlayOpacity,
@@ -61,6 +66,7 @@ final class ReaderPreferences {
   static const double paddingStep = 2;
 
   static const ReaderThemeMode defaultThemeMode = ReaderThemeMode.system;
+  static const ReaderPaletteId defaultPaletteId = ReaderPaletteId.paperWhite;
   static const double defaultBackgroundImageOpacity = 1;
   static const double defaultBackgroundOverlayOpacity = 0.45;
   static const double minAppearanceOpacity = 0;
@@ -77,8 +83,11 @@ final class ReaderPreferences {
     paddingLeft: defaultPaddingLeft,
     paddingRight: defaultPaddingRight,
     themeMode: defaultThemeMode,
-    textColorArgb: null,
-    backgroundColorArgb: null,
+    paletteId: defaultPaletteId,
+    lightTextColorArgb: null,
+    lightBackgroundColorArgb: null,
+    darkTextColorArgb: null,
+    darkBackgroundColorArgb: null,
     backgroundImagePath: null,
     backgroundImageOpacity: defaultBackgroundImageOpacity,
     backgroundOverlayOpacity: defaultBackgroundOverlayOpacity,
@@ -95,8 +104,13 @@ final class ReaderPreferences {
     double paddingLeft = defaultPaddingLeft,
     double paddingRight = defaultPaddingRight,
     ReaderThemeMode themeMode = defaultThemeMode,
+    ReaderPaletteId paletteId = defaultPaletteId,
     int? textColorArgb,
     int? backgroundColorArgb,
+    int? lightTextColorArgb,
+    int? lightBackgroundColorArgb,
+    int? darkTextColorArgb,
+    int? darkBackgroundColorArgb,
     String? backgroundImagePath,
     double backgroundImageOpacity = defaultBackgroundImageOpacity,
     double backgroundOverlayOpacity = defaultBackgroundOverlayOpacity,
@@ -151,8 +165,15 @@ final class ReaderPreferences {
       defaultPaddingRight,
     ),
     themeMode: themeMode,
-    textColorArgb: _validArgb(textColorArgb),
-    backgroundColorArgb: _validArgb(backgroundColorArgb),
+    paletteId: paletteId,
+    lightTextColorArgb: _validArgb(lightTextColorArgb ?? textColorArgb),
+    lightBackgroundColorArgb: _validArgb(
+      lightBackgroundColorArgb ?? backgroundColorArgb,
+    ),
+    darkTextColorArgb: _validArgb(darkTextColorArgb ?? textColorArgb),
+    darkBackgroundColorArgb: _validArgb(
+      darkBackgroundColorArgb ?? backgroundColorArgb,
+    ),
     backgroundImagePath: _validManagedPath(backgroundImagePath),
     backgroundImageOpacity: _valid(
       backgroundImageOpacity,
@@ -178,15 +199,25 @@ final class ReaderPreferences {
   final double paddingLeft;
   final double paddingRight;
   final ReaderThemeMode themeMode;
-  final int? textColorArgb;
-  final int? backgroundColorArgb;
+  final ReaderPaletteId paletteId;
+  final int? lightTextColorArgb;
+  final int? lightBackgroundColorArgb;
+  final int? darkTextColorArgb;
+  final int? darkBackgroundColorArgb;
   final String? backgroundImagePath;
   final double backgroundImageOpacity;
   final double backgroundOverlayOpacity;
 
+  /// Legacy aliases retained for callers from schema 7. They represent the
+  /// light override; canonical storage keeps separate light/dark values.
+  int? get textColorArgb => lightTextColorArgb;
+  int? get backgroundColorArgb => lightBackgroundColorArgb;
+
   bool get hasCustomAppearance =>
-      textColorArgb != null ||
-      backgroundColorArgb != null ||
+      lightTextColorArgb != null ||
+      lightBackgroundColorArgb != null ||
+      darkTextColorArgb != null ||
+      darkBackgroundColorArgb != null ||
       backgroundImagePath != null;
 
   static const Object _unset = Object();
@@ -202,36 +233,71 @@ final class ReaderPreferences {
     double? paddingLeft,
     double? paddingRight,
     ReaderThemeMode? themeMode,
+    ReaderPaletteId? paletteId,
     Object? textColorArgb = _unset,
     Object? backgroundColorArgb = _unset,
+    Object? lightTextColorArgb = _unset,
+    Object? lightBackgroundColorArgb = _unset,
+    Object? darkTextColorArgb = _unset,
+    Object? darkBackgroundColorArgb = _unset,
     Object? backgroundImagePath = _unset,
     double? backgroundImageOpacity,
     double? backgroundOverlayOpacity,
-  }) => ReaderPreferences(
-    fontSize: fontSize ?? this.fontSize,
-    letterSpacing: letterSpacing ?? this.letterSpacing,
-    lineHeight: lineHeight ?? this.lineHeight,
-    paragraphSpacing: paragraphSpacing ?? this.paragraphSpacing,
-    firstLineIndent: firstLineIndent ?? this.firstLineIndent,
-    paddingTop: paddingTop ?? this.paddingTop,
-    paddingBottom: paddingBottom ?? this.paddingBottom,
-    paddingLeft: paddingLeft ?? this.paddingLeft,
-    paddingRight: paddingRight ?? this.paddingRight,
-    themeMode: themeMode ?? this.themeMode,
-    textColorArgb: identical(textColorArgb, _unset)
-        ? this.textColorArgb
-        : textColorArgb as int?,
-    backgroundColorArgb: identical(backgroundColorArgb, _unset)
-        ? this.backgroundColorArgb
-        : backgroundColorArgb as int?,
-    backgroundImagePath: identical(backgroundImagePath, _unset)
-        ? this.backgroundImagePath
-        : backgroundImagePath as String?,
-    backgroundImageOpacity:
-        backgroundImageOpacity ?? this.backgroundImageOpacity,
-    backgroundOverlayOpacity:
-        backgroundOverlayOpacity ?? this.backgroundOverlayOpacity,
-  );
+  }) {
+    final legacyText = identical(textColorArgb, _unset)
+        ? null
+        : textColorArgb as int?;
+    final legacyBackground = identical(backgroundColorArgb, _unset)
+        ? null
+        : backgroundColorArgb as int?;
+    final nextLightText =
+        legacyText != null || !identical(textColorArgb, _unset)
+        ? legacyText
+        : identical(lightTextColorArgb, _unset)
+        ? this.lightTextColorArgb
+        : lightTextColorArgb as int?;
+    final nextDarkText = legacyText != null || !identical(textColorArgb, _unset)
+        ? legacyText
+        : identical(darkTextColorArgb, _unset)
+        ? this.darkTextColorArgb
+        : darkTextColorArgb as int?;
+    final nextLightBackground =
+        legacyBackground != null || !identical(backgroundColorArgb, _unset)
+        ? legacyBackground
+        : identical(lightBackgroundColorArgb, _unset)
+        ? this.lightBackgroundColorArgb
+        : lightBackgroundColorArgb as int?;
+    final nextDarkBackground =
+        legacyBackground != null || !identical(backgroundColorArgb, _unset)
+        ? legacyBackground
+        : identical(darkBackgroundColorArgb, _unset)
+        ? this.darkBackgroundColorArgb
+        : darkBackgroundColorArgb as int?;
+    return ReaderPreferences(
+      fontSize: fontSize ?? this.fontSize,
+      letterSpacing: letterSpacing ?? this.letterSpacing,
+      lineHeight: lineHeight ?? this.lineHeight,
+      paragraphSpacing: paragraphSpacing ?? this.paragraphSpacing,
+      firstLineIndent: firstLineIndent ?? this.firstLineIndent,
+      paddingTop: paddingTop ?? this.paddingTop,
+      paddingBottom: paddingBottom ?? this.paddingBottom,
+      paddingLeft: paddingLeft ?? this.paddingLeft,
+      paddingRight: paddingRight ?? this.paddingRight,
+      themeMode: themeMode ?? this.themeMode,
+      paletteId: paletteId ?? this.paletteId,
+      lightTextColorArgb: nextLightText,
+      lightBackgroundColorArgb: nextLightBackground,
+      darkTextColorArgb: nextDarkText,
+      darkBackgroundColorArgb: nextDarkBackground,
+      backgroundImagePath: identical(backgroundImagePath, _unset)
+          ? this.backgroundImagePath
+          : backgroundImagePath as String?,
+      backgroundImageOpacity:
+          backgroundImageOpacity ?? this.backgroundImageOpacity,
+      backgroundOverlayOpacity:
+          backgroundOverlayOpacity ?? this.backgroundOverlayOpacity,
+    );
+  }
 
   Set<ReaderPreferenceChangeKind> changesFrom(ReaderPreferences previous) {
     final result = <ReaderPreferenceChangeKind>{};
@@ -247,8 +313,11 @@ final class ReaderPreferences {
       result.add(ReaderPreferenceChangeKind.metrics);
     }
     if (themeMode != previous.themeMode ||
-        textColorArgb != previous.textColorArgb ||
-        backgroundColorArgb != previous.backgroundColorArgb ||
+        paletteId != previous.paletteId ||
+        lightTextColorArgb != previous.lightTextColorArgb ||
+        lightBackgroundColorArgb != previous.lightBackgroundColorArgb ||
+        darkTextColorArgb != previous.darkTextColorArgb ||
+        darkBackgroundColorArgb != previous.darkBackgroundColorArgb ||
         backgroundImagePath != previous.backgroundImagePath ||
         backgroundImageOpacity != previous.backgroundImageOpacity ||
         backgroundOverlayOpacity != previous.backgroundOverlayOpacity) {
@@ -282,8 +351,11 @@ final class ReaderPreferences {
       paddingLeft == other.paddingLeft &&
       paddingRight == other.paddingRight &&
       themeMode == other.themeMode &&
-      textColorArgb == other.textColorArgb &&
-      backgroundColorArgb == other.backgroundColorArgb &&
+      paletteId == other.paletteId &&
+      lightTextColorArgb == other.lightTextColorArgb &&
+      lightBackgroundColorArgb == other.lightBackgroundColorArgb &&
+      darkTextColorArgb == other.darkTextColorArgb &&
+      darkBackgroundColorArgb == other.darkBackgroundColorArgb &&
       backgroundImagePath == other.backgroundImagePath &&
       backgroundImageOpacity == other.backgroundImageOpacity &&
       backgroundOverlayOpacity == other.backgroundOverlayOpacity;
@@ -300,8 +372,11 @@ final class ReaderPreferences {
     paddingLeft,
     paddingRight,
     themeMode,
-    textColorArgb,
-    backgroundColorArgb,
+    paletteId,
+    lightTextColorArgb,
+    lightBackgroundColorArgb,
+    darkTextColorArgb,
+    darkBackgroundColorArgb,
     backgroundImagePath,
     backgroundImageOpacity,
     backgroundOverlayOpacity,

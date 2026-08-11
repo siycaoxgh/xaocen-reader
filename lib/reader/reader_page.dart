@@ -613,31 +613,10 @@ class _ReaderPageState extends State<ReaderPage>
   };
 
   void _resolveAppearance() {
-    final scheme = _effectiveReaderTheme().colorScheme;
-    final backgroundColor = _preferences.backgroundColorArgb == null
-        ? scheme.surface
-        : Color(_preferences.backgroundColorArgb!);
-    final requestedTextColor = _preferences.textColorArgb == null
-        ? scheme.onSurface
-        : Color(_preferences.textColorArgb!);
-    final textColor = ensureReadableTextColor(
-      requestedTextColor,
-      backgroundColor,
-    );
-    _appearance = ReaderResolvedAppearance(
-      backgroundColor: backgroundColor,
-      textColor: textColor,
-      secondaryTextColor: _preferences.textColorArgb == null
-          ? scheme.onSurfaceVariant
-          : textColor.withValues(alpha: 0.72),
-      headingColor: textColor,
-      selectionColor: scheme.primaryContainer,
-      baseTextStyle: TextStyle(
-        fontSize: _preferences.fontSize,
-        height: _preferences.lineHeight,
-        letterSpacing: _preferences.letterSpacing,
-        color: textColor,
-      ),
+    _appearance = resolveReaderAppearance(
+      context,
+      theme: _effectiveReaderTheme(),
+      preferences: _preferences,
       hasBackgroundImage: _preferences.backgroundImagePath != null,
     );
     _bodyStyle = _appearance.baseTextStyle;
@@ -1945,10 +1924,7 @@ class _ReaderPageState extends State<ReaderPage>
             onMore: () {
               _showChrome();
               _pauseAutoRead(AutoReadPauseReason.settingsPanel);
-              showReaderMorePreview(
-                context,
-                onSearch: _openSearch,
-              );
+              showReaderMorePreview(context, onSearch: _openSearch);
             },
             onBookmarks: _openBookmarks,
             onSearch: _openSearch,
