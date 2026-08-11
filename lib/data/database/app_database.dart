@@ -20,6 +20,7 @@ part 'app_database.g.dart';
     ReadingProgress,
     AppSettings,
     ReaderPreferencesRows,
+    ReaderFontAssetRows,
     ReaderBookmarks,
     ReadingHistory,
     ReadingSessions,
@@ -36,7 +37,7 @@ class AppDatabase extends _$AppDatabase {
       super(NativeDatabase.memory());
 
   @override
-  int get schemaVersion => 11;
+  int get schemaVersion => 12;
 
   /// 打开应用数据库（support 目录下）。
   static Future<AppDatabase> open({DataRoot? dataRoot}) async {
@@ -65,6 +66,7 @@ class AppDatabase extends _$AppDatabase {
       await m.createAll();
       await _createIndexes(customStatement);
       await _createM52Indexes(customStatement);
+      await _createFontIndexes(customStatement);
     },
     onUpgrade: (m, from, to) async {
       // schema 1 → 2：仅新增 reading_progress 表，不触碰 M2 既有数据。
@@ -269,6 +271,15 @@ class AppDatabase extends _$AppDatabase {
           readerPreferencesRows.showAutoReadMinimalInfo,
         );
       }
+      // schema 11 → 12: app-managed font metadata plus a nullable per-book
+      // font identity. Existing books remain on systemDefault (null).
+      if (from < 12) {
+        await m.createTable(readerFontAssetRows);
+        await _createFontIndexes(customStatement);
+      }
+      if (from >= 5 && from < 12) {
+        await m.addColumn(readerPreferencesRows, readerPreferencesRows.fontId);
+      }
     },
     beforeOpen: (details) async {
       await customStatement('PRAGMA foreign_keys = ON');
@@ -310,6 +321,13 @@ class AppDatabase extends _$AppDatabase {
     await exec(
       'CREATE INDEX IF NOT EXISTS idx_reading_sessions_history '
       'ON reading_sessions (history_entry_id)',
+    );
+  }
+
+  Future<void> _createFontIndexes(Future<void> Function(String) exec) async {
+    await exec(
+      'CREATE UNIQUE INDEX IF NOT EXISTS idx_reader_fonts_content_hash '
+      'ON reader_font_asset_rows (content_hash)',
     );
   }
 }

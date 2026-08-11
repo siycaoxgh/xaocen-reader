@@ -4123,6 +4123,15 @@ class $ReaderPreferencesRowsTable extends ReaderPreferencesRows
     $customConstraints:
         'NOT NULL REFERENCES content_collections (id) ON DELETE CASCADE',
   );
+  static const VerificationMeta _fontIdMeta = const VerificationMeta('fontId');
+  @override
+  late final GeneratedColumn<String> fontId = GeneratedColumn<String>(
+    'font_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _fontSizeMeta = const VerificationMeta(
     'fontSize',
   );
@@ -4577,6 +4586,7 @@ class $ReaderPreferencesRowsTable extends ReaderPreferencesRows
   @override
   List<GeneratedColumn> get $columns => [
     collectionId,
+    fontId,
     fontSize,
     letterSpacing,
     lineHeight,
@@ -4637,6 +4647,12 @@ class $ReaderPreferencesRowsTable extends ReaderPreferencesRows
       );
     } else if (isInserting) {
       context.missing(_collectionIdMeta);
+    }
+    if (data.containsKey('font_id')) {
+      context.handle(
+        _fontIdMeta,
+        fontId.isAcceptableOrUnknown(data['font_id']!, _fontIdMeta),
+      );
     }
     if (data.containsKey('font_size')) {
       context.handle(
@@ -4988,6 +5004,10 @@ class $ReaderPreferencesRowsTable extends ReaderPreferencesRows
         DriftSqlType.string,
         data['${effectivePrefix}collection_id'],
       )!,
+      fontId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}font_id'],
+      ),
       fontSize: attachedDatabase.typeMapping.read(
         DriftSqlType.double,
         data['${effectivePrefix}font_size'],
@@ -5148,6 +5168,9 @@ class $ReaderPreferencesRowsTable extends ReaderPreferencesRows
 class ReaderPreferencesRow extends DataClass
     implements Insertable<ReaderPreferencesRow> {
   final String collectionId;
+
+  /// Null means the per-book choice is the platform/system default.
+  final String? fontId;
   final double fontSize;
   final double letterSpacing;
   final double lineHeight;
@@ -5187,6 +5210,7 @@ class ReaderPreferencesRow extends DataClass
   final DateTime updatedAt;
   const ReaderPreferencesRow({
     required this.collectionId,
+    this.fontId,
     required this.fontSize,
     required this.letterSpacing,
     required this.lineHeight,
@@ -5229,6 +5253,9 @@ class ReaderPreferencesRow extends DataClass
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['collection_id'] = Variable<String>(collectionId);
+    if (!nullToAbsent || fontId != null) {
+      map['font_id'] = Variable<String>(fontId);
+    }
     map['font_size'] = Variable<double>(fontSize);
     map['letter_spacing'] = Variable<double>(letterSpacing);
     map['line_height'] = Variable<double>(lineHeight);
@@ -5300,6 +5327,9 @@ class ReaderPreferencesRow extends DataClass
   ReaderPreferencesRowsCompanion toCompanion(bool nullToAbsent) {
     return ReaderPreferencesRowsCompanion(
       collectionId: Value(collectionId),
+      fontId: fontId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(fontId),
       fontSize: Value(fontSize),
       letterSpacing: Value(letterSpacing),
       lineHeight: Value(lineHeight),
@@ -5361,6 +5391,7 @@ class ReaderPreferencesRow extends DataClass
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return ReaderPreferencesRow(
       collectionId: serializer.fromJson<String>(json['collectionId']),
+      fontId: serializer.fromJson<String?>(json['fontId']),
       fontSize: serializer.fromJson<double>(json['fontSize']),
       letterSpacing: serializer.fromJson<double>(json['letterSpacing']),
       lineHeight: serializer.fromJson<double>(json['lineHeight']),
@@ -5427,6 +5458,7 @@ class ReaderPreferencesRow extends DataClass
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'collectionId': serializer.toJson<String>(collectionId),
+      'fontId': serializer.toJson<String?>(fontId),
       'fontSize': serializer.toJson<double>(fontSize),
       'letterSpacing': serializer.toJson<double>(letterSpacing),
       'lineHeight': serializer.toJson<double>(lineHeight),
@@ -5487,6 +5519,7 @@ class ReaderPreferencesRow extends DataClass
 
   ReaderPreferencesRow copyWith({
     String? collectionId,
+    Value<String?> fontId = const Value.absent(),
     double? fontSize,
     double? letterSpacing,
     double? lineHeight,
@@ -5526,6 +5559,7 @@ class ReaderPreferencesRow extends DataClass
     DateTime? updatedAt,
   }) => ReaderPreferencesRow(
     collectionId: collectionId ?? this.collectionId,
+    fontId: fontId.present ? fontId.value : this.fontId,
     fontSize: fontSize ?? this.fontSize,
     letterSpacing: letterSpacing ?? this.letterSpacing,
     lineHeight: lineHeight ?? this.lineHeight,
@@ -5590,6 +5624,7 @@ class ReaderPreferencesRow extends DataClass
       collectionId: data.collectionId.present
           ? data.collectionId.value
           : this.collectionId,
+      fontId: data.fontId.present ? data.fontId.value : this.fontId,
       fontSize: data.fontSize.present ? data.fontSize.value : this.fontSize,
       letterSpacing: data.letterSpacing.present
           ? data.letterSpacing.value
@@ -5700,6 +5735,7 @@ class ReaderPreferencesRow extends DataClass
   String toString() {
     return (StringBuffer('ReaderPreferencesRow(')
           ..write('collectionId: $collectionId, ')
+          ..write('fontId: $fontId, ')
           ..write('fontSize: $fontSize, ')
           ..write('letterSpacing: $letterSpacing, ')
           ..write('lineHeight: $lineHeight, ')
@@ -5744,6 +5780,7 @@ class ReaderPreferencesRow extends DataClass
   @override
   int get hashCode => Object.hashAll([
     collectionId,
+    fontId,
     fontSize,
     letterSpacing,
     lineHeight,
@@ -5787,6 +5824,7 @@ class ReaderPreferencesRow extends DataClass
       identical(this, other) ||
       (other is ReaderPreferencesRow &&
           other.collectionId == this.collectionId &&
+          other.fontId == this.fontId &&
           other.fontSize == this.fontSize &&
           other.letterSpacing == this.letterSpacing &&
           other.lineHeight == this.lineHeight &&
@@ -5829,6 +5867,7 @@ class ReaderPreferencesRow extends DataClass
 class ReaderPreferencesRowsCompanion
     extends UpdateCompanion<ReaderPreferencesRow> {
   final Value<String> collectionId;
+  final Value<String?> fontId;
   final Value<double> fontSize;
   final Value<double> letterSpacing;
   final Value<double> lineHeight;
@@ -5869,6 +5908,7 @@ class ReaderPreferencesRowsCompanion
   final Value<int> rowid;
   const ReaderPreferencesRowsCompanion({
     this.collectionId = const Value.absent(),
+    this.fontId = const Value.absent(),
     this.fontSize = const Value.absent(),
     this.letterSpacing = const Value.absent(),
     this.lineHeight = const Value.absent(),
@@ -5910,6 +5950,7 @@ class ReaderPreferencesRowsCompanion
   });
   ReaderPreferencesRowsCompanion.insert({
     required String collectionId,
+    this.fontId = const Value.absent(),
     required double fontSize,
     required double letterSpacing,
     required double lineHeight,
@@ -5962,6 +6003,7 @@ class ReaderPreferencesRowsCompanion
        updatedAt = Value(updatedAt);
   static Insertable<ReaderPreferencesRow> custom({
     Expression<String>? collectionId,
+    Expression<String>? fontId,
     Expression<double>? fontSize,
     Expression<double>? letterSpacing,
     Expression<double>? lineHeight,
@@ -6003,6 +6045,7 @@ class ReaderPreferencesRowsCompanion
   }) {
     return RawValuesInsertable({
       if (collectionId != null) 'collection_id': collectionId,
+      if (fontId != null) 'font_id': fontId,
       if (fontSize != null) 'font_size': fontSize,
       if (letterSpacing != null) 'letter_spacing': letterSpacing,
       if (lineHeight != null) 'line_height': lineHeight,
@@ -6058,6 +6101,7 @@ class ReaderPreferencesRowsCompanion
 
   ReaderPreferencesRowsCompanion copyWith({
     Value<String>? collectionId,
+    Value<String?>? fontId,
     Value<double>? fontSize,
     Value<double>? letterSpacing,
     Value<double>? lineHeight,
@@ -6099,6 +6143,7 @@ class ReaderPreferencesRowsCompanion
   }) {
     return ReaderPreferencesRowsCompanion(
       collectionId: collectionId ?? this.collectionId,
+      fontId: fontId ?? this.fontId,
       fontSize: fontSize ?? this.fontSize,
       letterSpacing: letterSpacing ?? this.letterSpacing,
       lineHeight: lineHeight ?? this.lineHeight,
@@ -6154,6 +6199,9 @@ class ReaderPreferencesRowsCompanion
     final map = <String, Expression>{};
     if (collectionId.present) {
       map['collection_id'] = Variable<String>(collectionId.value);
+    }
+    if (fontId.present) {
+      map['font_id'] = Variable<String>(fontId.value);
     }
     if (fontSize.present) {
       map['font_size'] = Variable<double>(fontSize.value);
@@ -6296,6 +6344,7 @@ class ReaderPreferencesRowsCompanion
   String toString() {
     return (StringBuffer('ReaderPreferencesRowsCompanion(')
           ..write('collectionId: $collectionId, ')
+          ..write('fontId: $fontId, ')
           ..write('fontSize: $fontSize, ')
           ..write('letterSpacing: $letterSpacing, ')
           ..write('lineHeight: $lineHeight, ')
@@ -6333,6 +6382,702 @@ class ReaderPreferencesRowsCompanion
           ..write('wholeBookProgressInfoSlot: $wholeBookProgressInfoSlot, ')
           ..write('infoDividerSlot: $infoDividerSlot, ')
           ..write('updatedAt: $updatedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $ReaderFontAssetRowsTable extends ReaderFontAssetRows
+    with TableInfo<$ReaderFontAssetRowsTable, ReaderFontAssetRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ReaderFontAssetRowsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _fontIdMeta = const VerificationMeta('fontId');
+  @override
+  late final GeneratedColumn<String> fontId = GeneratedColumn<String>(
+    'font_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _contentHashMeta = const VerificationMeta(
+    'contentHash',
+  );
+  @override
+  late final GeneratedColumn<String> contentHash = GeneratedColumn<String>(
+    'content_hash',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _relativePathMeta = const VerificationMeta(
+    'relativePath',
+  );
+  @override
+  late final GeneratedColumn<String> relativePath = GeneratedColumn<String>(
+    'relative_path',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _formatMeta = const VerificationMeta('format');
+  @override
+  late final GeneratedColumn<String> format = GeneratedColumn<String>(
+    'format',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _familyNameSnapshotMeta =
+      const VerificationMeta('familyNameSnapshot');
+  @override
+  late final GeneratedColumn<String> familyNameSnapshot =
+      GeneratedColumn<String>(
+        'family_name_snapshot',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: true,
+      );
+  static const VerificationMeta _styleNameSnapshotMeta = const VerificationMeta(
+    'styleNameSnapshot',
+  );
+  @override
+  late final GeneratedColumn<String> styleNameSnapshot =
+      GeneratedColumn<String>(
+        'style_name_snapshot',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _faceIndexMeta = const VerificationMeta(
+    'faceIndex',
+  );
+  @override
+  late final GeneratedColumn<int> faceIndex = GeneratedColumn<int>(
+    'face_index',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _fileSizeMeta = const VerificationMeta(
+    'fileSize',
+  );
+  @override
+  late final GeneratedColumn<int> fileSize = GeneratedColumn<int>(
+    'file_size',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _lastUsedAtMeta = const VerificationMeta(
+    'lastUsedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> lastUsedAt = GeneratedColumn<DateTime>(
+    'last_used_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _availabilityMeta = const VerificationMeta(
+    'availability',
+  );
+  @override
+  late final GeneratedColumn<String> availability = GeneratedColumn<String>(
+    'availability',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('available'),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    fontId,
+    contentHash,
+    relativePath,
+    format,
+    familyNameSnapshot,
+    styleNameSnapshot,
+    faceIndex,
+    fileSize,
+    createdAt,
+    lastUsedAt,
+    availability,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'reader_font_asset_rows';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ReaderFontAssetRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('font_id')) {
+      context.handle(
+        _fontIdMeta,
+        fontId.isAcceptableOrUnknown(data['font_id']!, _fontIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_fontIdMeta);
+    }
+    if (data.containsKey('content_hash')) {
+      context.handle(
+        _contentHashMeta,
+        contentHash.isAcceptableOrUnknown(
+          data['content_hash']!,
+          _contentHashMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_contentHashMeta);
+    }
+    if (data.containsKey('relative_path')) {
+      context.handle(
+        _relativePathMeta,
+        relativePath.isAcceptableOrUnknown(
+          data['relative_path']!,
+          _relativePathMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_relativePathMeta);
+    }
+    if (data.containsKey('format')) {
+      context.handle(
+        _formatMeta,
+        format.isAcceptableOrUnknown(data['format']!, _formatMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_formatMeta);
+    }
+    if (data.containsKey('family_name_snapshot')) {
+      context.handle(
+        _familyNameSnapshotMeta,
+        familyNameSnapshot.isAcceptableOrUnknown(
+          data['family_name_snapshot']!,
+          _familyNameSnapshotMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_familyNameSnapshotMeta);
+    }
+    if (data.containsKey('style_name_snapshot')) {
+      context.handle(
+        _styleNameSnapshotMeta,
+        styleNameSnapshot.isAcceptableOrUnknown(
+          data['style_name_snapshot']!,
+          _styleNameSnapshotMeta,
+        ),
+      );
+    }
+    if (data.containsKey('face_index')) {
+      context.handle(
+        _faceIndexMeta,
+        faceIndex.isAcceptableOrUnknown(data['face_index']!, _faceIndexMeta),
+      );
+    }
+    if (data.containsKey('file_size')) {
+      context.handle(
+        _fileSizeMeta,
+        fileSize.isAcceptableOrUnknown(data['file_size']!, _fileSizeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_fileSizeMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('last_used_at')) {
+      context.handle(
+        _lastUsedAtMeta,
+        lastUsedAt.isAcceptableOrUnknown(
+          data['last_used_at']!,
+          _lastUsedAtMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_lastUsedAtMeta);
+    }
+    if (data.containsKey('availability')) {
+      context.handle(
+        _availabilityMeta,
+        availability.isAcceptableOrUnknown(
+          data['availability']!,
+          _availabilityMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {fontId};
+  @override
+  ReaderFontAssetRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ReaderFontAssetRow(
+      fontId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}font_id'],
+      )!,
+      contentHash: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}content_hash'],
+      )!,
+      relativePath: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}relative_path'],
+      )!,
+      format: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}format'],
+      )!,
+      familyNameSnapshot: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}family_name_snapshot'],
+      )!,
+      styleNameSnapshot: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}style_name_snapshot'],
+      ),
+      faceIndex: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}face_index'],
+      ),
+      fileSize: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}file_size'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      lastUsedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}last_used_at'],
+      )!,
+      availability: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}availability'],
+      )!,
+    );
+  }
+
+  @override
+  $ReaderFontAssetRowsTable createAlias(String alias) {
+    return $ReaderFontAssetRowsTable(attachedDatabase, alias);
+  }
+}
+
+class ReaderFontAssetRow extends DataClass
+    implements Insertable<ReaderFontAssetRow> {
+  final String fontId;
+  final String contentHash;
+  final String relativePath;
+  final String format;
+  final String familyNameSnapshot;
+  final String? styleNameSnapshot;
+  final int? faceIndex;
+  final int fileSize;
+  final DateTime createdAt;
+  final DateTime lastUsedAt;
+  final String availability;
+  const ReaderFontAssetRow({
+    required this.fontId,
+    required this.contentHash,
+    required this.relativePath,
+    required this.format,
+    required this.familyNameSnapshot,
+    this.styleNameSnapshot,
+    this.faceIndex,
+    required this.fileSize,
+    required this.createdAt,
+    required this.lastUsedAt,
+    required this.availability,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['font_id'] = Variable<String>(fontId);
+    map['content_hash'] = Variable<String>(contentHash);
+    map['relative_path'] = Variable<String>(relativePath);
+    map['format'] = Variable<String>(format);
+    map['family_name_snapshot'] = Variable<String>(familyNameSnapshot);
+    if (!nullToAbsent || styleNameSnapshot != null) {
+      map['style_name_snapshot'] = Variable<String>(styleNameSnapshot);
+    }
+    if (!nullToAbsent || faceIndex != null) {
+      map['face_index'] = Variable<int>(faceIndex);
+    }
+    map['file_size'] = Variable<int>(fileSize);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['last_used_at'] = Variable<DateTime>(lastUsedAt);
+    map['availability'] = Variable<String>(availability);
+    return map;
+  }
+
+  ReaderFontAssetRowsCompanion toCompanion(bool nullToAbsent) {
+    return ReaderFontAssetRowsCompanion(
+      fontId: Value(fontId),
+      contentHash: Value(contentHash),
+      relativePath: Value(relativePath),
+      format: Value(format),
+      familyNameSnapshot: Value(familyNameSnapshot),
+      styleNameSnapshot: styleNameSnapshot == null && nullToAbsent
+          ? const Value.absent()
+          : Value(styleNameSnapshot),
+      faceIndex: faceIndex == null && nullToAbsent
+          ? const Value.absent()
+          : Value(faceIndex),
+      fileSize: Value(fileSize),
+      createdAt: Value(createdAt),
+      lastUsedAt: Value(lastUsedAt),
+      availability: Value(availability),
+    );
+  }
+
+  factory ReaderFontAssetRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ReaderFontAssetRow(
+      fontId: serializer.fromJson<String>(json['fontId']),
+      contentHash: serializer.fromJson<String>(json['contentHash']),
+      relativePath: serializer.fromJson<String>(json['relativePath']),
+      format: serializer.fromJson<String>(json['format']),
+      familyNameSnapshot: serializer.fromJson<String>(
+        json['familyNameSnapshot'],
+      ),
+      styleNameSnapshot: serializer.fromJson<String?>(
+        json['styleNameSnapshot'],
+      ),
+      faceIndex: serializer.fromJson<int?>(json['faceIndex']),
+      fileSize: serializer.fromJson<int>(json['fileSize']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      lastUsedAt: serializer.fromJson<DateTime>(json['lastUsedAt']),
+      availability: serializer.fromJson<String>(json['availability']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'fontId': serializer.toJson<String>(fontId),
+      'contentHash': serializer.toJson<String>(contentHash),
+      'relativePath': serializer.toJson<String>(relativePath),
+      'format': serializer.toJson<String>(format),
+      'familyNameSnapshot': serializer.toJson<String>(familyNameSnapshot),
+      'styleNameSnapshot': serializer.toJson<String?>(styleNameSnapshot),
+      'faceIndex': serializer.toJson<int?>(faceIndex),
+      'fileSize': serializer.toJson<int>(fileSize),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'lastUsedAt': serializer.toJson<DateTime>(lastUsedAt),
+      'availability': serializer.toJson<String>(availability),
+    };
+  }
+
+  ReaderFontAssetRow copyWith({
+    String? fontId,
+    String? contentHash,
+    String? relativePath,
+    String? format,
+    String? familyNameSnapshot,
+    Value<String?> styleNameSnapshot = const Value.absent(),
+    Value<int?> faceIndex = const Value.absent(),
+    int? fileSize,
+    DateTime? createdAt,
+    DateTime? lastUsedAt,
+    String? availability,
+  }) => ReaderFontAssetRow(
+    fontId: fontId ?? this.fontId,
+    contentHash: contentHash ?? this.contentHash,
+    relativePath: relativePath ?? this.relativePath,
+    format: format ?? this.format,
+    familyNameSnapshot: familyNameSnapshot ?? this.familyNameSnapshot,
+    styleNameSnapshot: styleNameSnapshot.present
+        ? styleNameSnapshot.value
+        : this.styleNameSnapshot,
+    faceIndex: faceIndex.present ? faceIndex.value : this.faceIndex,
+    fileSize: fileSize ?? this.fileSize,
+    createdAt: createdAt ?? this.createdAt,
+    lastUsedAt: lastUsedAt ?? this.lastUsedAt,
+    availability: availability ?? this.availability,
+  );
+  ReaderFontAssetRow copyWithCompanion(ReaderFontAssetRowsCompanion data) {
+    return ReaderFontAssetRow(
+      fontId: data.fontId.present ? data.fontId.value : this.fontId,
+      contentHash: data.contentHash.present
+          ? data.contentHash.value
+          : this.contentHash,
+      relativePath: data.relativePath.present
+          ? data.relativePath.value
+          : this.relativePath,
+      format: data.format.present ? data.format.value : this.format,
+      familyNameSnapshot: data.familyNameSnapshot.present
+          ? data.familyNameSnapshot.value
+          : this.familyNameSnapshot,
+      styleNameSnapshot: data.styleNameSnapshot.present
+          ? data.styleNameSnapshot.value
+          : this.styleNameSnapshot,
+      faceIndex: data.faceIndex.present ? data.faceIndex.value : this.faceIndex,
+      fileSize: data.fileSize.present ? data.fileSize.value : this.fileSize,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      lastUsedAt: data.lastUsedAt.present
+          ? data.lastUsedAt.value
+          : this.lastUsedAt,
+      availability: data.availability.present
+          ? data.availability.value
+          : this.availability,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ReaderFontAssetRow(')
+          ..write('fontId: $fontId, ')
+          ..write('contentHash: $contentHash, ')
+          ..write('relativePath: $relativePath, ')
+          ..write('format: $format, ')
+          ..write('familyNameSnapshot: $familyNameSnapshot, ')
+          ..write('styleNameSnapshot: $styleNameSnapshot, ')
+          ..write('faceIndex: $faceIndex, ')
+          ..write('fileSize: $fileSize, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('lastUsedAt: $lastUsedAt, ')
+          ..write('availability: $availability')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    fontId,
+    contentHash,
+    relativePath,
+    format,
+    familyNameSnapshot,
+    styleNameSnapshot,
+    faceIndex,
+    fileSize,
+    createdAt,
+    lastUsedAt,
+    availability,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ReaderFontAssetRow &&
+          other.fontId == this.fontId &&
+          other.contentHash == this.contentHash &&
+          other.relativePath == this.relativePath &&
+          other.format == this.format &&
+          other.familyNameSnapshot == this.familyNameSnapshot &&
+          other.styleNameSnapshot == this.styleNameSnapshot &&
+          other.faceIndex == this.faceIndex &&
+          other.fileSize == this.fileSize &&
+          other.createdAt == this.createdAt &&
+          other.lastUsedAt == this.lastUsedAt &&
+          other.availability == this.availability);
+}
+
+class ReaderFontAssetRowsCompanion extends UpdateCompanion<ReaderFontAssetRow> {
+  final Value<String> fontId;
+  final Value<String> contentHash;
+  final Value<String> relativePath;
+  final Value<String> format;
+  final Value<String> familyNameSnapshot;
+  final Value<String?> styleNameSnapshot;
+  final Value<int?> faceIndex;
+  final Value<int> fileSize;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> lastUsedAt;
+  final Value<String> availability;
+  final Value<int> rowid;
+  const ReaderFontAssetRowsCompanion({
+    this.fontId = const Value.absent(),
+    this.contentHash = const Value.absent(),
+    this.relativePath = const Value.absent(),
+    this.format = const Value.absent(),
+    this.familyNameSnapshot = const Value.absent(),
+    this.styleNameSnapshot = const Value.absent(),
+    this.faceIndex = const Value.absent(),
+    this.fileSize = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.lastUsedAt = const Value.absent(),
+    this.availability = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ReaderFontAssetRowsCompanion.insert({
+    required String fontId,
+    required String contentHash,
+    required String relativePath,
+    required String format,
+    required String familyNameSnapshot,
+    this.styleNameSnapshot = const Value.absent(),
+    this.faceIndex = const Value.absent(),
+    required int fileSize,
+    required DateTime createdAt,
+    required DateTime lastUsedAt,
+    this.availability = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : fontId = Value(fontId),
+       contentHash = Value(contentHash),
+       relativePath = Value(relativePath),
+       format = Value(format),
+       familyNameSnapshot = Value(familyNameSnapshot),
+       fileSize = Value(fileSize),
+       createdAt = Value(createdAt),
+       lastUsedAt = Value(lastUsedAt);
+  static Insertable<ReaderFontAssetRow> custom({
+    Expression<String>? fontId,
+    Expression<String>? contentHash,
+    Expression<String>? relativePath,
+    Expression<String>? format,
+    Expression<String>? familyNameSnapshot,
+    Expression<String>? styleNameSnapshot,
+    Expression<int>? faceIndex,
+    Expression<int>? fileSize,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? lastUsedAt,
+    Expression<String>? availability,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (fontId != null) 'font_id': fontId,
+      if (contentHash != null) 'content_hash': contentHash,
+      if (relativePath != null) 'relative_path': relativePath,
+      if (format != null) 'format': format,
+      if (familyNameSnapshot != null)
+        'family_name_snapshot': familyNameSnapshot,
+      if (styleNameSnapshot != null) 'style_name_snapshot': styleNameSnapshot,
+      if (faceIndex != null) 'face_index': faceIndex,
+      if (fileSize != null) 'file_size': fileSize,
+      if (createdAt != null) 'created_at': createdAt,
+      if (lastUsedAt != null) 'last_used_at': lastUsedAt,
+      if (availability != null) 'availability': availability,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ReaderFontAssetRowsCompanion copyWith({
+    Value<String>? fontId,
+    Value<String>? contentHash,
+    Value<String>? relativePath,
+    Value<String>? format,
+    Value<String>? familyNameSnapshot,
+    Value<String?>? styleNameSnapshot,
+    Value<int?>? faceIndex,
+    Value<int>? fileSize,
+    Value<DateTime>? createdAt,
+    Value<DateTime>? lastUsedAt,
+    Value<String>? availability,
+    Value<int>? rowid,
+  }) {
+    return ReaderFontAssetRowsCompanion(
+      fontId: fontId ?? this.fontId,
+      contentHash: contentHash ?? this.contentHash,
+      relativePath: relativePath ?? this.relativePath,
+      format: format ?? this.format,
+      familyNameSnapshot: familyNameSnapshot ?? this.familyNameSnapshot,
+      styleNameSnapshot: styleNameSnapshot ?? this.styleNameSnapshot,
+      faceIndex: faceIndex ?? this.faceIndex,
+      fileSize: fileSize ?? this.fileSize,
+      createdAt: createdAt ?? this.createdAt,
+      lastUsedAt: lastUsedAt ?? this.lastUsedAt,
+      availability: availability ?? this.availability,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (fontId.present) {
+      map['font_id'] = Variable<String>(fontId.value);
+    }
+    if (contentHash.present) {
+      map['content_hash'] = Variable<String>(contentHash.value);
+    }
+    if (relativePath.present) {
+      map['relative_path'] = Variable<String>(relativePath.value);
+    }
+    if (format.present) {
+      map['format'] = Variable<String>(format.value);
+    }
+    if (familyNameSnapshot.present) {
+      map['family_name_snapshot'] = Variable<String>(familyNameSnapshot.value);
+    }
+    if (styleNameSnapshot.present) {
+      map['style_name_snapshot'] = Variable<String>(styleNameSnapshot.value);
+    }
+    if (faceIndex.present) {
+      map['face_index'] = Variable<int>(faceIndex.value);
+    }
+    if (fileSize.present) {
+      map['file_size'] = Variable<int>(fileSize.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (lastUsedAt.present) {
+      map['last_used_at'] = Variable<DateTime>(lastUsedAt.value);
+    }
+    if (availability.present) {
+      map['availability'] = Variable<String>(availability.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ReaderFontAssetRowsCompanion(')
+          ..write('fontId: $fontId, ')
+          ..write('contentHash: $contentHash, ')
+          ..write('relativePath: $relativePath, ')
+          ..write('format: $format, ')
+          ..write('familyNameSnapshot: $familyNameSnapshot, ')
+          ..write('styleNameSnapshot: $styleNameSnapshot, ')
+          ..write('faceIndex: $faceIndex, ')
+          ..write('fileSize: $fileSize, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('lastUsedAt: $lastUsedAt, ')
+          ..write('availability: $availability, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -8138,6 +8883,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $AppSettingsTable appSettings = $AppSettingsTable(this);
   late final $ReaderPreferencesRowsTable readerPreferencesRows =
       $ReaderPreferencesRowsTable(this);
+  late final $ReaderFontAssetRowsTable readerFontAssetRows =
+      $ReaderFontAssetRowsTable(this);
   late final $ReaderBookmarksTable readerBookmarks = $ReaderBookmarksTable(
     this,
   );
@@ -8159,6 +8906,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     readingProgress,
     appSettings,
     readerPreferencesRows,
+    readerFontAssetRows,
     readerBookmarks,
     readingHistory,
     readingSessions,
@@ -10810,6 +11558,7 @@ typedef $$AppSettingsTableProcessedTableManager =
 typedef $$ReaderPreferencesRowsTableCreateCompanionBuilder =
     ReaderPreferencesRowsCompanion Function({
       required String collectionId,
+      Value<String?> fontId,
       required double fontSize,
       required double letterSpacing,
       required double lineHeight,
@@ -10852,6 +11601,7 @@ typedef $$ReaderPreferencesRowsTableCreateCompanionBuilder =
 typedef $$ReaderPreferencesRowsTableUpdateCompanionBuilder =
     ReaderPreferencesRowsCompanion Function({
       Value<String> collectionId,
+      Value<String?> fontId,
       Value<double> fontSize,
       Value<double> letterSpacing,
       Value<double> lineHeight,
@@ -10937,6 +11687,11 @@ class $$ReaderPreferencesRowsTableFilterComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  ColumnFilters<String> get fontId => $composableBuilder(
+    column: $table.fontId,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<double> get fontSize => $composableBuilder(
     column: $table.fontSize,
     builder: (column) => ColumnFilters(column),
@@ -11155,6 +11910,11 @@ class $$ReaderPreferencesRowsTableOrderingComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  ColumnOrderings<String> get fontId => $composableBuilder(
+    column: $table.fontId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<double> get fontSize => $composableBuilder(
     column: $table.fontSize,
     builder: (column) => ColumnOrderings(column),
@@ -11373,6 +12133,9 @@ class $$ReaderPreferencesRowsTableAnnotationComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  GeneratedColumn<String> get fontId =>
+      $composableBuilder(column: $table.fontId, builder: (column) => column);
+
   GeneratedColumn<double> get fontSize =>
       $composableBuilder(column: $table.fontSize, builder: (column) => column);
 
@@ -11615,6 +12378,7 @@ class $$ReaderPreferencesRowsTableTableManager
           updateCompanionCallback:
               ({
                 Value<String> collectionId = const Value.absent(),
+                Value<String?> fontId = const Value.absent(),
                 Value<double> fontSize = const Value.absent(),
                 Value<double> letterSpacing = const Value.absent(),
                 Value<double> lineHeight = const Value.absent(),
@@ -11655,6 +12419,7 @@ class $$ReaderPreferencesRowsTableTableManager
                 Value<int> rowid = const Value.absent(),
               }) => ReaderPreferencesRowsCompanion(
                 collectionId: collectionId,
+                fontId: fontId,
                 fontSize: fontSize,
                 letterSpacing: letterSpacing,
                 lineHeight: lineHeight,
@@ -11697,6 +12462,7 @@ class $$ReaderPreferencesRowsTableTableManager
           createCompanionCallback:
               ({
                 required String collectionId,
+                Value<String?> fontId = const Value.absent(),
                 required double fontSize,
                 required double letterSpacing,
                 required double lineHeight,
@@ -11737,6 +12503,7 @@ class $$ReaderPreferencesRowsTableTableManager
                 Value<int> rowid = const Value.absent(),
               }) => ReaderPreferencesRowsCompanion.insert(
                 collectionId: collectionId,
+                fontId: fontId,
                 fontSize: fontSize,
                 letterSpacing: letterSpacing,
                 lineHeight: lineHeight,
@@ -11844,6 +12611,348 @@ typedef $$ReaderPreferencesRowsTableProcessedTableManager =
       (ReaderPreferencesRow, $$ReaderPreferencesRowsTableReferences),
       ReaderPreferencesRow,
       PrefetchHooks Function({bool collectionId})
+    >;
+typedef $$ReaderFontAssetRowsTableCreateCompanionBuilder =
+    ReaderFontAssetRowsCompanion Function({
+      required String fontId,
+      required String contentHash,
+      required String relativePath,
+      required String format,
+      required String familyNameSnapshot,
+      Value<String?> styleNameSnapshot,
+      Value<int?> faceIndex,
+      required int fileSize,
+      required DateTime createdAt,
+      required DateTime lastUsedAt,
+      Value<String> availability,
+      Value<int> rowid,
+    });
+typedef $$ReaderFontAssetRowsTableUpdateCompanionBuilder =
+    ReaderFontAssetRowsCompanion Function({
+      Value<String> fontId,
+      Value<String> contentHash,
+      Value<String> relativePath,
+      Value<String> format,
+      Value<String> familyNameSnapshot,
+      Value<String?> styleNameSnapshot,
+      Value<int?> faceIndex,
+      Value<int> fileSize,
+      Value<DateTime> createdAt,
+      Value<DateTime> lastUsedAt,
+      Value<String> availability,
+      Value<int> rowid,
+    });
+
+class $$ReaderFontAssetRowsTableFilterComposer
+    extends Composer<_$AppDatabase, $ReaderFontAssetRowsTable> {
+  $$ReaderFontAssetRowsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get fontId => $composableBuilder(
+    column: $table.fontId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get contentHash => $composableBuilder(
+    column: $table.contentHash,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get relativePath => $composableBuilder(
+    column: $table.relativePath,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get format => $composableBuilder(
+    column: $table.format,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get familyNameSnapshot => $composableBuilder(
+    column: $table.familyNameSnapshot,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get styleNameSnapshot => $composableBuilder(
+    column: $table.styleNameSnapshot,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get faceIndex => $composableBuilder(
+    column: $table.faceIndex,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get fileSize => $composableBuilder(
+    column: $table.fileSize,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get lastUsedAt => $composableBuilder(
+    column: $table.lastUsedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get availability => $composableBuilder(
+    column: $table.availability,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$ReaderFontAssetRowsTableOrderingComposer
+    extends Composer<_$AppDatabase, $ReaderFontAssetRowsTable> {
+  $$ReaderFontAssetRowsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get fontId => $composableBuilder(
+    column: $table.fontId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get contentHash => $composableBuilder(
+    column: $table.contentHash,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get relativePath => $composableBuilder(
+    column: $table.relativePath,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get format => $composableBuilder(
+    column: $table.format,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get familyNameSnapshot => $composableBuilder(
+    column: $table.familyNameSnapshot,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get styleNameSnapshot => $composableBuilder(
+    column: $table.styleNameSnapshot,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get faceIndex => $composableBuilder(
+    column: $table.faceIndex,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get fileSize => $composableBuilder(
+    column: $table.fileSize,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get lastUsedAt => $composableBuilder(
+    column: $table.lastUsedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get availability => $composableBuilder(
+    column: $table.availability,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$ReaderFontAssetRowsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ReaderFontAssetRowsTable> {
+  $$ReaderFontAssetRowsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get fontId =>
+      $composableBuilder(column: $table.fontId, builder: (column) => column);
+
+  GeneratedColumn<String> get contentHash => $composableBuilder(
+    column: $table.contentHash,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get relativePath => $composableBuilder(
+    column: $table.relativePath,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get format =>
+      $composableBuilder(column: $table.format, builder: (column) => column);
+
+  GeneratedColumn<String> get familyNameSnapshot => $composableBuilder(
+    column: $table.familyNameSnapshot,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get styleNameSnapshot => $composableBuilder(
+    column: $table.styleNameSnapshot,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get faceIndex =>
+      $composableBuilder(column: $table.faceIndex, builder: (column) => column);
+
+  GeneratedColumn<int> get fileSize =>
+      $composableBuilder(column: $table.fileSize, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get lastUsedAt => $composableBuilder(
+    column: $table.lastUsedAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get availability => $composableBuilder(
+    column: $table.availability,
+    builder: (column) => column,
+  );
+}
+
+class $$ReaderFontAssetRowsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ReaderFontAssetRowsTable,
+          ReaderFontAssetRow,
+          $$ReaderFontAssetRowsTableFilterComposer,
+          $$ReaderFontAssetRowsTableOrderingComposer,
+          $$ReaderFontAssetRowsTableAnnotationComposer,
+          $$ReaderFontAssetRowsTableCreateCompanionBuilder,
+          $$ReaderFontAssetRowsTableUpdateCompanionBuilder,
+          (
+            ReaderFontAssetRow,
+            BaseReferences<
+              _$AppDatabase,
+              $ReaderFontAssetRowsTable,
+              ReaderFontAssetRow
+            >,
+          ),
+          ReaderFontAssetRow,
+          PrefetchHooks Function()
+        > {
+  $$ReaderFontAssetRowsTableTableManager(
+    _$AppDatabase db,
+    $ReaderFontAssetRowsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ReaderFontAssetRowsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ReaderFontAssetRowsTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$ReaderFontAssetRowsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> fontId = const Value.absent(),
+                Value<String> contentHash = const Value.absent(),
+                Value<String> relativePath = const Value.absent(),
+                Value<String> format = const Value.absent(),
+                Value<String> familyNameSnapshot = const Value.absent(),
+                Value<String?> styleNameSnapshot = const Value.absent(),
+                Value<int?> faceIndex = const Value.absent(),
+                Value<int> fileSize = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> lastUsedAt = const Value.absent(),
+                Value<String> availability = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ReaderFontAssetRowsCompanion(
+                fontId: fontId,
+                contentHash: contentHash,
+                relativePath: relativePath,
+                format: format,
+                familyNameSnapshot: familyNameSnapshot,
+                styleNameSnapshot: styleNameSnapshot,
+                faceIndex: faceIndex,
+                fileSize: fileSize,
+                createdAt: createdAt,
+                lastUsedAt: lastUsedAt,
+                availability: availability,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String fontId,
+                required String contentHash,
+                required String relativePath,
+                required String format,
+                required String familyNameSnapshot,
+                Value<String?> styleNameSnapshot = const Value.absent(),
+                Value<int?> faceIndex = const Value.absent(),
+                required int fileSize,
+                required DateTime createdAt,
+                required DateTime lastUsedAt,
+                Value<String> availability = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ReaderFontAssetRowsCompanion.insert(
+                fontId: fontId,
+                contentHash: contentHash,
+                relativePath: relativePath,
+                format: format,
+                familyNameSnapshot: familyNameSnapshot,
+                styleNameSnapshot: styleNameSnapshot,
+                faceIndex: faceIndex,
+                fileSize: fileSize,
+                createdAt: createdAt,
+                lastUsedAt: lastUsedAt,
+                availability: availability,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$ReaderFontAssetRowsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ReaderFontAssetRowsTable,
+      ReaderFontAssetRow,
+      $$ReaderFontAssetRowsTableFilterComposer,
+      $$ReaderFontAssetRowsTableOrderingComposer,
+      $$ReaderFontAssetRowsTableAnnotationComposer,
+      $$ReaderFontAssetRowsTableCreateCompanionBuilder,
+      $$ReaderFontAssetRowsTableUpdateCompanionBuilder,
+      (
+        ReaderFontAssetRow,
+        BaseReferences<
+          _$AppDatabase,
+          $ReaderFontAssetRowsTable,
+          ReaderFontAssetRow
+        >,
+      ),
+      ReaderFontAssetRow,
+      PrefetchHooks Function()
     >;
 typedef $$ReaderBookmarksTableCreateCompanionBuilder =
     ReaderBookmarksCompanion Function({
@@ -13195,6 +14304,8 @@ class $AppDatabaseManager {
       $$AppSettingsTableTableManager(_db, _db.appSettings);
   $$ReaderPreferencesRowsTableTableManager get readerPreferencesRows =>
       $$ReaderPreferencesRowsTableTableManager(_db, _db.readerPreferencesRows);
+  $$ReaderFontAssetRowsTableTableManager get readerFontAssetRows =>
+      $$ReaderFontAssetRowsTableTableManager(_db, _db.readerFontAssetRows);
   $$ReaderBookmarksTableTableManager get readerBookmarks =>
       $$ReaderBookmarksTableTableManager(_db, _db.readerBookmarks);
   $$ReadingHistoryTableTableManager get readingHistory =>

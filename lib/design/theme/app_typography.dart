@@ -45,11 +45,13 @@ abstract final class ReaderTypography {
     required double lineHeight,
     required double letterSpacing,
     required Color color,
+    String? fontFamily,
   }) => TextStyle(
     fontSize: fontSize,
     height: lineHeight,
     letterSpacing: letterSpacing,
     color: color,
+    fontFamily: fontFamily,
     fontFamilyFallback: fontFamilyFallback,
   );
 

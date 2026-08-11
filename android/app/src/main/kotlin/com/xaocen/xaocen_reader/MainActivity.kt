@@ -7,14 +7,37 @@ import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
     private val channelName = "xaocen.reader/paged_input"
+    private val fontsChannelName = "xaocen.reader/fonts"
     private var pagedReaderActive = false
     private var inputCaptureActive = false
     private var volumeBindingActive = false
     private lateinit var inputChannel: MethodChannel
+    private lateinit var fontsChannel: MethodChannel
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         inputChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, channelName)
+        fontsChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, fontsChannelName)
+        fontsChannel.setMethodCallHandler { call, result ->
+            when (call.method) {
+                "listAvailableFonts" -> {
+                    // Android intentionally exposes only fonts that are visible
+                    // through the public system asset API.  If a vendor does
+                    // not expose that list, Dart safely falls back to the
+                    // platform default rather than guessing private paths.
+                    val names = resources.assets.list("fonts")
+                        ?.mapNotNull { file ->
+                            file.substringBeforeLast('.', missingDelimiterValue = "")
+                                .takeIf { it.isNotBlank() }
+                        }
+                        ?.distinct()
+                        ?.sorted()
+                        ?: emptyList()
+                    result.success(names)
+                }
+                else -> result.notImplemented()
+            }
+        }
         inputChannel.setMethodCallHandler { call, result ->
             when (call.method) {
                 "setPagedActive" -> {

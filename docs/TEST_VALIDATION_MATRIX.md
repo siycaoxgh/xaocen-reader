@@ -742,6 +742,22 @@ vertical A → paged → 不翻页 → 重开 = paged + A · vertical A → page
 | Android physical device | NOT-RUN (Windows-only change) |
 | Drift schema | 11, unchanged |
 
+## M5.6e Reader Font System
+
+| Area | Result |
+|---|---|
+| Per-book fontId defaults, save/load, restart | PASS |
+| TTF/OTF managed import and SHA-256 dedup | PASS |
+| TTC/deformed container rejection and deferred contract | PASS |
+| Delete/missing asset fallback to systemDefault | PASS |
+| Real SQLite schema 11→12 migration / progress preservation | PASS |
+| Vertical/paged/chapter-first/no-chapter logical location | PASS / 0 |
+| Full Flutter unit/contract/widget | 506/506 PASS |
+| Windows Release / Android Debug | PASS / PASS |
+| Four real TXT corpus | PASS |
+| Android physical device | NOT-RUN (deferred) |
+| Drift schema | 12 |
+
 ## M5.6c.3 Windows transparency spike
 
 | Area | Result |

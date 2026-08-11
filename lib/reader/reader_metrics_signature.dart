@@ -5,6 +5,7 @@ import '../domain/reader/reader_visible_range.dart';
 
 final class ReaderMetricsSignature {
   const ReaderMetricsSignature({
+    required this.fontId,
     required this.fontSize,
     required this.letterSpacing,
     required this.lineHeight,
@@ -18,6 +19,7 @@ final class ReaderMetricsSignature {
 
   factory ReaderMetricsSignature.fromPreferences(ReaderPreferences value) =>
       ReaderMetricsSignature(
+        fontId: value.fontId,
         fontSize: value.fontSize,
         letterSpacing: value.letterSpacing,
         lineHeight: value.lineHeight,
@@ -29,6 +31,7 @@ final class ReaderMetricsSignature {
         paddingRight: value.paddingRight,
       );
 
+  final String? fontId;
   final double fontSize;
   final double letterSpacing;
   final double lineHeight;
@@ -42,6 +45,7 @@ final class ReaderMetricsSignature {
   @override
   bool operator ==(Object other) =>
       other is ReaderMetricsSignature &&
+      fontId == other.fontId &&
       fontSize == other.fontSize &&
       letterSpacing == other.letterSpacing &&
       lineHeight == other.lineHeight &&
@@ -54,6 +58,7 @@ final class ReaderMetricsSignature {
 
   @override
   int get hashCode => Object.hash(
+    fontId,
     fontSize,
     letterSpacing,
     lineHeight,

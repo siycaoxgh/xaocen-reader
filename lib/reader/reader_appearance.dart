@@ -67,6 +67,7 @@ ReaderResolvedAppearance resolveReaderAppearance(
   int? darkTextColorArgb,
   int? darkBackgroundColorArgb,
   bool hasBackgroundImage = false,
+  String? fontFamily,
 }) {
   final scheme = (theme ?? Theme.of(context)).colorScheme;
   final dark = scheme.brightness == Brightness.dark;
@@ -110,6 +111,7 @@ ReaderResolvedAppearance resolveReaderAppearance(
       lineHeight: resolvedPreferences?.lineHeight ?? lineHeight,
       letterSpacing: resolvedPreferences?.letterSpacing ?? letterSpacing,
       color: textColor,
+      fontFamily: fontFamily,
     ),
     hasBackgroundImage: hasBackgroundImage,
   );

@@ -214,6 +214,9 @@ class ReaderPreferencesRows extends Table {
   TextColumn get collectionId => text().customConstraint(
     'NOT NULL REFERENCES content_collections (id) ON DELETE CASCADE',
   )();
+
+  /// Null means the per-book choice is the platform/system default.
+  TextColumn get fontId => text().nullable()();
   RealColumn get fontSize => real()();
   RealColumn get letterSpacing => real()();
   RealColumn get lineHeight => real()();
@@ -272,6 +275,26 @@ class ReaderPreferencesRows extends Table {
 
   @override
   Set<Column> get primaryKey => {collectionId};
+}
+
+/// App-managed imported font metadata. Bytes live under DataRoot/fonts;
+/// this table stores stable identity and root-relative reference data only.
+class ReaderFontAssetRows extends Table {
+  TextColumn get fontId => text()();
+  TextColumn get contentHash => text()();
+  TextColumn get relativePath => text()();
+  TextColumn get format => text()();
+  TextColumn get familyNameSnapshot => text()();
+  TextColumn get styleNameSnapshot => text().nullable()();
+  IntColumn get faceIndex => integer().nullable()();
+  IntColumn get fileSize => integer()();
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get lastUsedAt => dateTime()();
+  TextColumn get availability =>
+      text().withDefault(const Constant('available'))();
+
+  @override
+  Set<Column> get primaryKey => {fontId};
 }
 
 /// Bookmarks are anchored by the normalized UTF-16 offset.  The collection

@@ -1,7 +1,7 @@
 # ARCHITECTURE_CURRENT.md — XAOCEN Reader v4 当前架构与合同
-<!-- Current checkpoint: M5.6c.2 complete; Windows borderless Reader added, Drift schema 11. -->
+<!-- Current checkpoint: M5.6e complete; Reader Font System added, Drift schema 12. -->
 
-> 只描述当前代码与合同（`feat/m4-horizontal-reader`，M5.6c.1.2 完成点，Drift schema 11）。
+> 只描述当前代码与合同（`feat/m4-horizontal-reader`，M5.6e 完成点，Drift schema 12）。
 > 不记录历史故事（见 PROJECT_HISTORY.md）。
 > 代码位置均以本仓库实际文件为准。
 
@@ -1094,3 +1094,21 @@ database and library (including SQLite WAL/SHM sidecars) into the new root
 without clearing or re-importing user data. `DataRootBackupService` provides a
 manifest/hash verified export and a staged directory-swap restore; complete
 snapshots require the database to be closed. Drift schema remains 11.
+
+## M5.6e Reader Font System
+
+`ReaderPreferences.fontId` is a nullable per-book metrics preference. Null
+means systemDefault; imported font ids are SHA-256 content identities and
+platform families use namespaced stable ids. `ReaderFontAssetRows` stores only
+metadata and a DataRoot-relative managed path. TTF/OTF bytes are app-managed,
+deduplicated by a unique content-hash index, and loaded at runtime with
+`FontLoader`. TTC remains deferred until reliable face selection is available.
+
+Font changes participate in the existing metrics signature and relayout state
+machine, including active Locator capture, bounded pagination invalidation and
+visible confirmation. Missing/checksum-invalid assets resolve to systemDefault;
+deleting an asset clears all book references. Windows font families are exposed
+through the native registry channel and Android uses the public system asset
+capability with a safe systemDefault fallback. Drift schema is 12 (11→12
+migration adds font metadata and the nullable preference; reading progress,
+ReaderLocator, history/session and managed TXT are preserved).

@@ -12,6 +12,20 @@ Legend for validation columns:
 
 ---
 
+## M5.6e — Reader Font System (2026-08-12)
+
+- Added per-book `fontId` with system-default fallback and a schema 11→12
+  migration that preserves existing books, progress, history, sessions and
+  managed resources.
+- Added DataRoot-managed TTF/OTF import, SHA-256 deduplication, runtime
+  `FontLoader` registration, deletion/failure fallback, Windows installed-font
+  enumeration and Android public-capability enumeration. TTC remains deferred.
+- Added `Aa → 排版布局 → Font` selection/import/manage controls. Font changes
+  reuse the existing metrics relayout and exact ReaderLocator restore contract.
+- Validation: 506 Flutter tests, Windows Release and Android Debug PASS;
+  four-real-TXT logical-error contract remains 0. Android device validation
+  was deferred for this coding pass.
+
 ## M5.3.1 — vertical chapter progress (2026-08-10)
 
 - Added a shared UTF-16 `ChapterBoundaryResolver` with deterministic

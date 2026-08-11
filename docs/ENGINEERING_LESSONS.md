@@ -870,3 +870,14 @@ to be released first, hashes every staged relative file, and swaps only after
 manifest verification. DataRoot keeps all resource references relative so a
 restored or portable instance never reintroduces machine-specific absolute
 paths.
+
+## M5.6e lesson (2026-08-12)
+
+### Font capability probes must not block first layout
+
+Installed-font enumeration is a platform capability probe, not a prerequisite
+for opening a document. The Reader starts with systemDefault and updates the
+typed selector when the probe completes; only a saved non-default font waits
+for the same probe before its first metrics layout. Imported-font loading is
+validated by SHA-256 and uses the existing metrics generation/Locator restore
+path, so a missing asset cannot silently produce stale pagination.

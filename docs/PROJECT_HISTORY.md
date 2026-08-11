@@ -856,3 +856,18 @@ directory. Root IDs and exclusive leases isolate multiple instances. Legacy
 database/library paths migrate by verified copy, while existing `library/...`
 storage references remain relative. Manifest/SHA-256 export, staged atomic
 restore, and backup verification were added without a Drift schema change.
+
+## M5.6e Reader Font System (2026-08-12)
+
+The Reader now supports a per-book font choice. System/default families are
+represented by stable namespaced ids; imported TTF/OTF assets are copied under
+DataRoot/fonts and identified by SHA-256, with no absolute path or BLOB in the
+database. Windows uses a native installed-family registry channel, Android
+uses its public system-font asset capability and safely falls back to the
+system default when enumeration is unavailable. TTC face collections remain
+deferred.
+
+Schema 11→12 adds font metadata and nullable `ReaderPreferences.fontId` only.
+Font selection invalidates metrics/layout through the existing generation-safe
+freeze/capture/relayout/exact-Locator-restore flow; no position or normalized
+text contract changed. Four real TXT logical location checks remain zero.

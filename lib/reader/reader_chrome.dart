@@ -10,6 +10,8 @@ import '../domain/reader/auto_read_controller.dart';
 import '../domain/reader/auto_read_preferences.dart';
 import '../domain/reader/reader_palette.dart';
 import '../domain/reader/reader_preferences.dart';
+import '../domain/reader/reader_font.dart';
+import '../data/repositories/reader_system_font_repository.dart';
 import '../domain/reader/reader_search.dart';
 import 'reader_appearance.dart';
 import 'reader_mode.dart';
@@ -1121,6 +1123,10 @@ Future<void> showReaderSettings(
   required VoidCallback onResetPreferences,
   Future<String?> Function()? onPickBackgroundImage,
   Future<void> Function(String? path)? onDeleteBackgroundImage,
+  List<ReaderFontAsset> importedFonts = const [],
+  List<ReaderSystemFontChoice> systemFonts = const [],
+  Future<ReaderFontAsset?> Function()? onImportFont,
+  Future<void> Function(String fontId)? onDeleteFont,
 }) {
   final isDesktop = defaultTargetPlatform == TargetPlatform.windows;
   return showModalBottomSheet<void>(
@@ -1136,6 +1142,10 @@ Future<void> showReaderSettings(
       onResetPreferences: onResetPreferences,
       onPickBackgroundImage: onPickBackgroundImage,
       onDeleteBackgroundImage: onDeleteBackgroundImage,
+      importedFonts: importedFonts,
+      systemFonts: systemFonts,
+      onImportFont: onImportFont,
+      onDeleteFont: onDeleteFont,
     ),
   );
 }
@@ -1150,6 +1160,10 @@ class ReaderSettingsSheet extends StatefulWidget {
     required this.onResetPreferences,
     this.onPickBackgroundImage,
     this.onDeleteBackgroundImage,
+    this.importedFonts = const [],
+    this.systemFonts = const [],
+    this.onImportFont,
+    this.onDeleteFont,
   });
 
   final ReaderPreferences preferences;
@@ -1159,6 +1173,10 @@ class ReaderSettingsSheet extends StatefulWidget {
   final VoidCallback onResetPreferences;
   final Future<String?> Function()? onPickBackgroundImage;
   final Future<void> Function(String? path)? onDeleteBackgroundImage;
+  final List<ReaderFontAsset> importedFonts;
+  final List<ReaderSystemFontChoice> systemFonts;
+  final Future<ReaderFontAsset?> Function()? onImportFont;
+  final Future<void> Function(String fontId)? onDeleteFont;
 
   @override
   State<ReaderSettingsSheet> createState() => _ReaderSettingsSheetState();
@@ -1166,6 +1184,7 @@ class ReaderSettingsSheet extends StatefulWidget {
 
 class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
   late ReaderPreferences _draft = widget.preferences;
+  late List<ReaderFontAsset> _importedFonts = [...widget.importedFonts];
   late ReaderMode _mode = widget.mode;
   _ReaderSettingsCategory _category = _ReaderSettingsCategory.typography;
   late final TextEditingController _lightTextColorController =
@@ -1324,6 +1343,93 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
     return 0xff000000 | (channels[0] << 16) | (channels[1] << 8) | channels[2];
   }
 
+  Widget _buildFontSection(BuildContext context) {
+    final options = <DropdownMenuItem<String>>[
+      const DropdownMenuItem<String>(
+        value: 'systemDefault',
+        child: Text('System default'),
+      ),
+      ...widget.systemFonts
+          .where((font) => font.id != 'systemDefault')
+          .map(
+            (font) => DropdownMenuItem<String>(
+              value: font.id,
+              child: Text(font.familyName),
+            ),
+          ),
+      ..._importedFonts.map(
+        (font) => DropdownMenuItem<String>(
+          value: font.fontId,
+          child: Text('${font.familyNameSnapshot} (${font.format.name})'),
+        ),
+      ),
+    ];
+    final selected = options.any((item) => item.value == _draft.fontId)
+        ? _draft.fontId
+        : 'systemDefault';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Font', style: Theme.of(context).textTheme.titleSmall),
+        const SizedBox(height: 8),
+        DropdownButtonFormField<String>(
+          key: const ValueKey('reader-font-selector'),
+          initialValue: selected,
+          isExpanded: true,
+          decoration: const InputDecoration(labelText: 'Current font'),
+          items: options,
+          onChanged: (value) {
+            if (value != null) {
+              _commit(
+                _draft.copyWith(
+                  fontId: value == 'systemDefault' ? null : value,
+                ),
+              );
+            }
+          },
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            OutlinedButton.icon(
+              onPressed: widget.onImportFont == null
+                  ? null
+                  : () async {
+                      final asset = await widget.onImportFont!.call();
+                      if (!mounted || asset == null) return;
+                      setState(
+                        () => _importedFonts = [
+                          ..._importedFonts.where(
+                            (font) => font.fontId != asset.fontId,
+                          ),
+                          asset,
+                        ],
+                      );
+                      _commit(_draft.copyWith(fontId: asset.fontId));
+                    },
+              icon: const Icon(Icons.file_upload_outlined),
+              label: const Text('Import TTF / OTF'),
+            ),
+            if (_importedFonts.any((font) => font.fontId == _draft.fontId))
+              OutlinedButton.icon(
+                onPressed: widget.onDeleteFont == null || _draft.fontId == null
+                    ? null
+                    : () async {
+                        final id = _draft.fontId!;
+                        await widget.onDeleteFont!.call(id);
+                        if (mounted) _commit(_draft.copyWith(fontId: null));
+                      },
+                icon: const Icon(Icons.delete_outline),
+                label: const Text('Remove font'),
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+
   Widget _buildTypographyPanel(BuildContext context) {
     final isDesktop = defaultTargetPlatform == TargetPlatform.windows;
     final leftPadding = _PreferenceSlider(
@@ -1406,6 +1512,8 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text('排版布局', style: Theme.of(context).textTheme.titleSmall),
+        const SizedBox(height: _aaSectionGap),
+        _buildFontSection(context),
         const SizedBox(height: _aaSectionGap),
         _PreferenceSlider(
           key: readerFontSizeSliderKey,

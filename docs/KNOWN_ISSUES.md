@@ -379,3 +379,11 @@ manifest/hash backup validation are complete. Complete backup/restore requires
 the database to be closed so SQLite WAL state is captured consistently; the
 application-level restore coordinator/UI remains a future data-management
 surface. No new P0/P1/P2 issue was found.
+
+## M5.6e status
+
+TTF/OTF Reader font selection is complete. TTC collections remain deferred
+until a reliable cross-platform face-selection path is available. Android
+system-family enumeration is capability-based; devices that do not expose the
+public list intentionally offer systemDefault rather than guessing private
+font paths. No new Reader/DataRoot P0/P1/P2 issue was found.

@@ -327,7 +327,7 @@ void main() {
     expect(
       (await db.customSelect('PRAGMA user_version').getSingle())
           .data['user_version'],
-      11,
+      12,
     );
     await db.close();
     await dir.delete(recursive: true);
@@ -415,7 +415,7 @@ void main() {
     expect(
       (await db.customSelect('PRAGMA user_version').getSingle())
           .data['user_version'],
-      11,
+      12,
     );
     expect((await db.select(db.contentCollections).get()).single.id, a);
     await db.close();
@@ -509,7 +509,7 @@ void main() {
       expect(
         (await db.customSelect('PRAGMA user_version').getSingle())
             .data['user_version'],
-        11,
+        12,
       );
       await db.close();
       await dir.delete(recursive: true);
@@ -599,7 +599,7 @@ void main() {
       expect(
         (await db.customSelect('PRAGMA user_version').getSingle())
             .data['user_version'],
-        11,
+        12,
       );
       await db.close();
       await dir.delete(recursive: true);

@@ -32,6 +32,7 @@ final class ReaderPreferencesRepository {
     ReaderPreferences preferences,
   ) async {
     final safe = ReaderPreferences(
+      fontId: preferences.fontId,
       fontSize: preferences.fontSize,
       letterSpacing: preferences.letterSpacing,
       lineHeight: preferences.lineHeight,
@@ -72,6 +73,7 @@ final class ReaderPreferencesRepository {
         .insertOnConflictUpdate(
           ReaderPreferencesRowsCompanion(
             collectionId: Value(collectionId),
+            fontId: Value(safe.fontId),
             fontSize: Value(safe.fontSize),
             letterSpacing: Value(safe.letterSpacing),
             lineHeight: Value(safe.lineHeight),
@@ -126,6 +128,7 @@ final class ReaderPreferencesRepository {
   ReaderPreferences _decode(ReaderPreferencesRow? row) {
     if (row == null) return ReaderPreferences.defaults;
     return ReaderPreferences(
+      fontId: row.fontId,
       fontSize: row.fontSize,
       letterSpacing: row.letterSpacing,
       lineHeight: row.lineHeight,

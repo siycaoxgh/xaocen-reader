@@ -140,6 +140,7 @@ class _AppShellPageState extends ConsumerState<AppShellPage> {
         appearanceAssetRepository: ref.read(
           readerAppearanceAssetRepositoryProvider,
         ),
+        fontRepository: ref.read(readerFontRepositoryProvider),
         readingHistoryRepository: ref.read(readingHistoryRepositoryProvider),
         readingSessionRepository: ref.read(readingSessionRepositoryProvider),
         inputBindingsRepository: ref.read(

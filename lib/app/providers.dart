@@ -11,6 +11,7 @@ import '../data/repositories/reading_progress_repository.dart';
 import '../data/repositories/reader_bookmark_repository.dart';
 import '../data/repositories/reader_preferences_repository.dart';
 import '../data/repositories/reader_appearance_asset_repository.dart';
+import '../data/repositories/reader_font_repository.dart';
 import '../data/repositories/reader_input_bindings_repository.dart';
 import '../data/repositories/reading_history_repository.dart';
 import '../data/repositories/reading_session_repository.dart';
@@ -97,6 +98,19 @@ final readerAppearanceAssetRepositoryProvider =
         fileManager: ref.watch(fileManagerProvider),
       );
     });
+
+final readerFontRepositoryProvider = Provider<ReaderFontRepository?>((ref) {
+  try {
+    return ReaderFontRepository(
+      db: ref.watch(databaseProvider),
+      dataRoot: ref.watch(dataRootProvider),
+    );
+  } on UnimplementedError {
+    // Lightweight widget/integration harnesses may intentionally omit a
+    // filesystem DataRoot; Reader still works with systemDefault fonts.
+    return null;
+  }
+});
 
 final readerInputBindingsRepositoryProvider =
     Provider<ReaderInputBindingsRepository>((ref) {

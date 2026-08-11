@@ -28,6 +28,7 @@ enum ReaderPreferenceChangeKind { metrics, paint, display }
 
 final class ReaderPreferences {
   const ReaderPreferences._({
+    required this.fontId,
     required this.fontSize,
     required this.letterSpacing,
     required this.lineHeight,
@@ -65,6 +66,7 @@ final class ReaderPreferences {
   });
 
   static const double defaultFontSize = 17;
+  static const String? defaultFontId = null;
   static const double minFontSize = 12;
   static const double maxFontSize = 32;
   static const double fontSizeStep = 1;
@@ -129,6 +131,7 @@ final class ReaderPreferences {
   static const ReaderInfoSlot defaultInfoDividerSlot = ReaderInfoSlot.topCenter;
 
   static const ReaderPreferences defaults = ReaderPreferences._(
+    fontId: defaultFontId,
     fontSize: defaultFontSize,
     letterSpacing: defaultLetterSpacing,
     lineHeight: defaultLineHeight,
@@ -166,6 +169,7 @@ final class ReaderPreferences {
   );
 
   factory ReaderPreferences({
+    String? fontId = defaultFontId,
     double fontSize = defaultFontSize,
     double letterSpacing = defaultLetterSpacing,
     double lineHeight = defaultLineHeight,
@@ -203,6 +207,7 @@ final class ReaderPreferences {
     ReaderInfoSlot wholeBookProgressInfoSlot = defaultWholeBookProgressInfoSlot,
     ReaderInfoSlot infoDividerSlot = defaultInfoDividerSlot,
   }) => ReaderPreferences._(
+    fontId: _validFontId(fontId),
     fontSize: _valid(fontSize, minFontSize, maxFontSize, defaultFontSize),
     letterSpacing: _valid(
       letterSpacing,
@@ -302,6 +307,7 @@ final class ReaderPreferences {
     infoDividerSlot: infoDividerSlot,
   );
 
+  final String? fontId;
   final double fontSize;
   final double letterSpacing;
   final double lineHeight;
@@ -352,6 +358,7 @@ final class ReaderPreferences {
   static const Object _unset = Object();
 
   ReaderPreferences copyWith({
+    Object? fontId = _unset,
     double? fontSize,
     double? letterSpacing,
     double? lineHeight,
@@ -438,6 +445,7 @@ final class ReaderPreferences {
         showProgressInfo ??
         this.showWholeBookProgressInfo;
     return ReaderPreferences(
+      fontId: identical(fontId, _unset) ? this.fontId : fontId as String?,
       fontSize: fontSize ?? this.fontSize,
       letterSpacing: letterSpacing ?? this.letterSpacing,
       lineHeight: lineHeight ?? this.lineHeight,
@@ -484,7 +492,8 @@ final class ReaderPreferences {
 
   Set<ReaderPreferenceChangeKind> changesFrom(ReaderPreferences previous) {
     final result = <ReaderPreferenceChangeKind>{};
-    if (fontSize != previous.fontSize ||
+    if (fontId != previous.fontId ||
+        fontSize != previous.fontSize ||
         letterSpacing != previous.letterSpacing ||
         lineHeight != previous.lineHeight ||
         paragraphSpacing != previous.paragraphSpacing ||
@@ -539,9 +548,19 @@ final class ReaderPreferences {
     return path;
   }
 
+  static String? _validFontId(String? value) {
+    final id = value?.trim();
+    if (id == null || id.isEmpty) return null;
+    // Imported fonts use their SHA-256 id; platform/system fonts use a
+    // stable namespaced id.  Neither may contain path separators or traversal.
+    final valid = RegExp(r'^[A-Za-z0-9._:-]{1,160}$').hasMatch(id);
+    return valid && !id.contains('..') ? id : null;
+  }
+
   @override
   bool operator ==(Object other) =>
       other is ReaderPreferences &&
+      fontId == other.fontId &&
       fontSize == other.fontSize &&
       letterSpacing == other.letterSpacing &&
       lineHeight == other.lineHeight &&
@@ -579,6 +598,7 @@ final class ReaderPreferences {
 
   @override
   int get hashCode => Object.hashAll([
+    fontId,
     fontSize,
     letterSpacing,
     lineHeight,

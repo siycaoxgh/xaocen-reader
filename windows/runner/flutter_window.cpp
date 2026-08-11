@@ -1,9 +1,57 @@
 #include "flutter_window.h"
 
 #include <optional>
+#include <set>
+#include <string>
+#include <vector>
 
 #include "flutter/generated_plugin_registrant.h"
 #include <flutter/standard_method_codec.h>
+
+namespace {
+std::string Utf8FromWide(const std::wstring& value) {
+  if (value.empty()) return {};
+  const int size = WideCharToMultiByte(CP_UTF8, 0, value.data(),
+                                      static_cast<int>(value.size()), nullptr,
+                                      0, nullptr, nullptr);
+  std::string result(size, '\0');
+  WideCharToMultiByte(CP_UTF8, 0, value.data(),
+                      static_cast<int>(value.size()), result.data(), size,
+                      nullptr, nullptr);
+  return result;
+}
+
+flutter::EncodableList InstalledWindowsFonts() {
+  std::set<std::wstring> names;
+  const wchar_t* paths[] = {
+      L"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Fonts",
+  };
+  const HKEY roots[] = {HKEY_LOCAL_MACHINE, HKEY_CURRENT_USER};
+  for (const auto root : roots) {
+    HKEY key = nullptr;
+    if (RegOpenKeyExW(root, paths[0], 0, KEY_READ, &key) != ERROR_SUCCESS) {
+      continue;
+    }
+    DWORD index = 0;
+    wchar_t value_name[512];
+    DWORD value_name_size = std::size(value_name);
+    while (RegEnumValueW(key, index++, value_name, &value_name_size, nullptr,
+                         nullptr, nullptr, nullptr) == ERROR_SUCCESS) {
+      std::wstring name(value_name);
+      const auto suffix = name.find(L" (");
+      if (suffix != std::wstring::npos) name.resize(suffix);
+      if (!name.empty()) names.insert(name);
+      value_name_size = std::size(value_name);
+    }
+    RegCloseKey(key);
+  }
+  flutter::EncodableList result;
+  for (const auto& name : names) {
+    result.emplace_back(flutter::EncodableValue(Utf8FromWide(name)));
+  }
+  return result;
+}
+}  // namespace
 
 FlutterWindow::FlutterWindow(const flutter::DartProject& project)
     : project_(project) {}
@@ -95,6 +143,19 @@ bool FlutterWindow::OnCreate() {
         }
         result->NotImplemented();
       });
+  fonts_channel_ = std::make_unique<
+      flutter::MethodChannel<flutter::EncodableValue>>(
+      flutter_controller_->engine()->messenger(), "xaocen/windows_fonts",
+      &flutter::StandardMethodCodec::GetInstance());
+  fonts_channel_->SetMethodCallHandler(
+      [](const flutter::MethodCall<flutter::EncodableValue>& call,
+         std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result) {
+        if (call.method_name() == "listAvailableFonts") {
+          result->Success(InstalledWindowsFonts());
+          return;
+        }
+        result->NotImplemented();
+      });
   SetChildContent(flutter_controller_->view()->GetNativeWindow());
 
   flutter_controller_->engine()->SetNextFrameCallback([&]() {
@@ -113,6 +174,10 @@ void FlutterWindow::OnDestroy() {
   if (shell_channel_) {
     shell_channel_->SetMethodCallHandler(nullptr);
     shell_channel_.reset();
+  }
+  if (fonts_channel_) {
+    fonts_channel_->SetMethodCallHandler(nullptr);
+    fonts_channel_.reset();
   }
   if (flutter_controller_) {
     flutter_controller_ = nullptr;

@@ -220,6 +220,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
         appearanceAssetRepository: ref.read(
           readerAppearanceAssetRepositoryProvider,
         ),
+        fontRepository: ref.read(readerFontRepositoryProvider),
         readingHistoryRepository: ref.read(readingHistoryRepositoryProvider),
         readingSessionRepository: ref.read(readingSessionRepositoryProvider),
         inputBindingsRepository: ref.read(
@@ -432,6 +433,7 @@ class _CollectionTile extends ConsumerWidget {
           appearanceAssetRepository: ref.read(
             readerAppearanceAssetRepositoryProvider,
           ),
+          fontRepository: ref.read(readerFontRepositoryProvider),
           readingHistoryRepository: ref.read(readingHistoryRepositoryProvider),
           readingSessionRepository: ref.read(readingSessionRepositoryProvider),
           inputBindingsRepository: ref.read(

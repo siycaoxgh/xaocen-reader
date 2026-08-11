@@ -19,7 +19,7 @@ void main() {
   tearDown(() => db.close());
 
   test('defaults are platform-specific and schema remains stable', () async {
-    expect(db.schemaVersion, 11);
+    expect(db.schemaVersion, 12);
     final windows = await repository.load(ReaderInputPlatform.windows);
     final android = await repository.load(ReaderInputPlatform.android);
     expect(

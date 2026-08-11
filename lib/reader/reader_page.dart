@@ -25,6 +25,8 @@ import '../data/repositories/reading_progress_repository.dart';
 import '../data/repositories/reader_bookmark_repository.dart';
 import '../data/repositories/reader_preferences_repository.dart';
 import '../data/repositories/reader_appearance_asset_repository.dart';
+import '../data/repositories/reader_font_repository.dart';
+import '../data/repositories/reader_system_font_repository.dart';
 import '../data/repositories/reader_input_bindings_repository.dart';
 import '../data/repositories/reading_history_repository.dart';
 import '../data/repositories/reading_session_repository.dart';
@@ -40,6 +42,7 @@ import '../domain/reader/reader_locator.dart';
 import '../domain/reader/paged_text_range.dart';
 import '../domain/reader/reader_block.dart';
 import '../domain/reader/reader_preferences.dart';
+import '../domain/reader/reader_font.dart';
 import '../domain/reader/reader_search.dart';
 import '../domain/reader/reader_visible_range.dart';
 import 'normalized_document_loader.dart';
@@ -59,6 +62,7 @@ import 'reader_text_block.dart';
 import 'vertical_auto_read_driver.dart';
 import 'paged_auto_read_driver.dart';
 import 'reader_keep_awake.dart';
+import 'reader_font_runtime.dart';
 
 /// 打开 Reader 所需上下文（由书架页组装）。
 class ReaderLaunchContext {
@@ -76,6 +80,7 @@ class ReaderLaunchContext {
     this.readingSessionRepository,
     this.autoReadPreferencesRepository,
     this.appearanceAssetRepository,
+    this.fontRepository,
     this.repair,
   });
 
@@ -95,6 +100,7 @@ class ReaderLaunchContext {
   final ReadingSessionRepository? readingSessionRepository;
   final AutoReadPreferencesRepository? autoReadPreferencesRepository;
   final ReaderAppearanceAssetRepository? appearanceAssetRepository;
+  final ReaderFontRepository? fontRepository;
 
   /// 修复回调（由书架页注入）：返回 null 表示成功，否则返回错误信息。
   final Future<String?> Function()? repair;
@@ -184,6 +190,12 @@ class _ReaderPageState extends State<ReaderPage>
   StreamSubscription<AutoReadPreferences>? _autoReadPreferencesSubscription;
   Timer? _autoReadSpeedWriteTimer;
   int? _pendingAutoReadSpeedWrite;
+  final ReaderFontRuntime _fontRuntime = ReaderFontRuntime();
+  final ReaderSystemFontRepository _systemFontRepository =
+      ReaderSystemFontRepository();
+  List<ReaderFontAsset> _importedFonts = const [];
+  List<ReaderSystemFontChoice> _systemFonts = const [];
+  String? _fontFamily;
 
   /// Reader 视觉合同（P1：从 Theme 解析，禁止正文硬编码颜色）。
   late ReaderResolvedAppearance _appearance;
@@ -645,13 +657,51 @@ class _ReaderPageState extends State<ReaderPage>
     });
   }
 
+  Future<void> _prepareFontForPreferences(ReaderPreferences preferences) async {
+    final id = preferences.fontId;
+    if (id == null) {
+      _fontFamily = null;
+      return;
+    }
+    final system = _systemFonts.where((font) => font.id == id).firstOrNull;
+    if (system != null) {
+      _fontFamily = system.familyName;
+      return;
+    }
+    final repository = widget.launch.fontRepository;
+    if (repository == null) {
+      _fontFamily = null;
+      return;
+    }
+    final asset = await repository.markAvailability(id);
+    if (!mounted || asset == null) {
+      _fontFamily = null;
+      return;
+    }
+    _fontFamily = await _fontRuntime.load(asset, repository);
+  }
+
   Future<void> _initializePreferencesAndStart() async {
+    // Font enumeration is a capability probe and must never delay the first
+    // document layout.  The UI is populated when the probe completes.
+    final systemFontsFuture = _systemFontRepository.listAvailable();
+    unawaited(_applySystemFonts(systemFontsFuture));
+    if (widget.launch.fontRepository != null) {
+      _importedFonts = await widget.launch.fontRepository!.list();
+    }
     final repository = widget.launch.preferencesRepository;
     final collectionId = widget.launch.collection.id;
     if (widget.preferencesOverride case final override?) {
+      await _prepareFontForPreferences(_preferences);
       _preferencesSubscription = override.listen(_onPreferencesChanged);
     } else if (repository != null) {
       final saved = await repository.load(collectionId);
+      if (!mounted) return;
+      if (saved.fontId != null) {
+        _systemFonts = await systemFontsFuture;
+        if (!mounted) return;
+      }
+      await _prepareFontForPreferences(saved);
       if (!mounted) return;
       _preferences = saved;
       _metricsSignature = ReaderMetricsSignature.fromPreferences(saved);
@@ -676,6 +726,27 @@ class _ReaderPageState extends State<ReaderPage>
     await _start();
   }
 
+  Future<void> _applySystemFonts(
+    Future<List<ReaderSystemFontChoice>> future,
+  ) async {
+    final fonts = await future;
+    if (!mounted) return;
+    _systemFonts = fonts;
+    if (_preferences.fontId != null) {
+      final previousFamily = _fontFamily;
+      await _prepareFontForPreferences(_preferences);
+      if (!mounted) return;
+      if (_preferencesReady && previousFamily != _fontFamily) {
+        _pauseAutoRead(AutoReadPauseReason.relayout);
+        _inputRouter.invalidatePendingInput();
+        unawaited(_beginMetricsRelayout(_preferences));
+        return;
+      }
+      _resolveAppearance();
+    }
+    setState(() {});
+  }
+
   ThemeData _effectiveReaderTheme() => switch (_preferences.themeMode) {
     ReaderThemeMode.system => Theme.of(context),
     ReaderThemeMode.light => AppTheme.light(),
@@ -688,6 +759,7 @@ class _ReaderPageState extends State<ReaderPage>
       theme: _effectiveReaderTheme(),
       preferences: _preferences,
       hasBackgroundImage: _preferences.backgroundImagePath != null,
+      fontFamily: _fontFamily,
     );
     _bodyStyle = _appearance.baseTextStyle;
   }
@@ -903,7 +975,7 @@ class _ReaderPageState extends State<ReaderPage>
     _pauseAutoRead(AutoReadPauseReason.relayout);
     _inputRouter.invalidatePendingInput();
     _invalidateChapterNavigation();
-    _beginMetricsRelayout(next);
+    unawaited(_beginMetricsRelayout(next));
   }
 
   void _commitPreferences(ReaderPreferences next) {
@@ -976,6 +1048,39 @@ class _ReaderPageState extends State<ReaderPage>
     }
   }
 
+  Future<ReaderFontAsset?> _pickReaderFont() async {
+    final repository = widget.launch.fontRepository;
+    if (repository == null) return null;
+    final result = await FilePicker.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: const ['ttf', 'otf', 'ttc'],
+      dialogTitle: 'Import reader font',
+    );
+    final path = result?.files.single.path;
+    if (path == null || !mounted) return null;
+    try {
+      final asset = await repository.importFile(File(path));
+      _importedFonts = await repository.list();
+      if (mounted) setState(() {});
+      return asset;
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Font import failed: $error')));
+      }
+      return null;
+    }
+  }
+
+  Future<void> _deleteReaderFont(String fontId) async {
+    final repository = widget.launch.fontRepository;
+    if (repository == null) return;
+    await repository.delete(fontId);
+    _importedFonts = await repository.list();
+    if (mounted) setState(() {});
+  }
+
   Future<void> _deleteReaderBackgroundImage(String? path) =>
       widget.launch.appearanceAssetRepository?.deleteIfManaged(path) ??
       Future<void>.value();
@@ -1039,12 +1144,14 @@ class _ReaderPageState extends State<ReaderPage>
     _unfreezeMetricsWrites();
   }
 
-  void _beginMetricsRelayout(ReaderPreferences next) {
+  Future<void> _beginMetricsRelayout(ReaderPreferences next) async {
     _cancelModeRestore();
     final activeLocator = _mode == ReaderMode.paged
         ? _pagedController?.confirmedLocator
         : _controller.confirmedLocator;
     if (activeLocator == null) {
+      await _prepareFontForPreferences(next);
+      if (!mounted) return;
       _resolveAppearance();
       setState(() {});
       return;
@@ -1059,6 +1166,11 @@ class _ReaderPageState extends State<ReaderPage>
         ? _pagedController?.currentPage
         : null;
     _freezeMetricsWrites();
+    await _prepareFontForPreferences(next);
+    if (!mounted || generation != _metricsGeneration) {
+      if (generation == _metricsGeneration) _unfreezeMetricsWrites();
+      return;
+    }
     _resolveAppearance();
 
     if (_mode == ReaderMode.paged) {
@@ -2046,6 +2158,10 @@ class _ReaderPageState extends State<ReaderPage>
                   onResetPreferences: _resetPreferences,
                   onPickBackgroundImage: _pickReaderBackgroundImage,
                   onDeleteBackgroundImage: _deleteReaderBackgroundImage,
+                  importedFonts: _importedFonts,
+                  systemFonts: _systemFonts,
+                  onImportFont: _pickReaderFont,
+                  onDeleteFont: _deleteReaderFont,
                 ).whenComplete(_requestPagedInputFocus),
               );
             },
