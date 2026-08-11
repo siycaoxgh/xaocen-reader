@@ -346,7 +346,9 @@ class _PagedReaderViewState extends State<PagedReaderView> {
                 page.endCharacterOffset,
               );
               return ColoredBox(
-                color: appearance.backgroundColor,
+                color: appearance.hasBackgroundImage
+                    ? Colors.transparent
+                    : appearance.backgroundColor,
                 child: Padding(
                   padding: EdgeInsets.fromLTRB(
                     widget.controller.paddingLeft,

@@ -17,30 +17,34 @@ void main() {
 
   Future<void> seedCollection(AppDatabase db) async {
     final now = DateTime(2026, 8, 9);
-    await db.into(db.contentSources).insert(
-      ContentSourcesCompanion.insert(
-        id: sourceId,
-        type: 'localTxt',
-        displayName: 'M5.2a',
-        contentHash: 'm52a-hash',
-        managedSourcePath: 'managed/m52a/source.txt',
-        sourceSize: 10,
-        detectedEncoding: 'utf8',
-        createdAt: now,
-        updatedAt: now,
-      ),
-    );
-    await db.into(db.contentCollections).insert(
-      ContentCollectionsCompanion.insert(
-        id: collectionId,
-        sourceId: sourceId,
-        title: 'M5.2a Book',
-        itemCount: 2,
-        normalizedCharacterLength: 1000,
-        importedAt: now,
-        updatedAt: now,
-      ),
-    );
+    await db
+        .into(db.contentSources)
+        .insert(
+          ContentSourcesCompanion.insert(
+            id: sourceId,
+            type: 'localTxt',
+            displayName: 'M5.2a',
+            contentHash: 'm52a-hash',
+            managedSourcePath: 'managed/m52a/source.txt',
+            sourceSize: 10,
+            detectedEncoding: 'utf8',
+            createdAt: now,
+            updatedAt: now,
+          ),
+        );
+    await db
+        .into(db.contentCollections)
+        .insert(
+          ContentCollectionsCompanion.insert(
+            id: collectionId,
+            sourceId: sourceId,
+            title: 'M5.2a Book',
+            itemCount: 2,
+            normalizedCharacterLength: 1000,
+            importedAt: now,
+            updatedAt: now,
+          ),
+        );
   }
 
   Future<List<Map<String, Object?>>> pragmaRows(
@@ -62,7 +66,7 @@ void main() {
     tearDown(() => db.close());
 
     test('schema version and PRAGMA foreign keys are active', () async {
-      expect(db.schemaVersion, 6);
+      expect(db.schemaVersion, 7);
       final enabled = await db.customSelect('PRAGMA foreign_keys').getSingle();
       expect(enabled.data['foreign_keys'], 1);
 
@@ -98,46 +102,51 @@ void main() {
       );
     });
 
-    test('collection delete preserves history/bookmark as detached rows', () async {
-      final history = ReadingHistoryRepository(db: db);
-      final bookmarks = ReaderBookmarkRepository(db: db);
-      final sessions = ReadingSessionRepository(db: db);
-      final now = DateTime(2026, 8, 9, 10);
-      final entry = await history.ensureForCollection(
-        collectionId: collectionId,
-        bookTitleSnapshot: 'M5.2a Book',
-        normalizedHashSnapshot: 'normalized-hash',
-        now: now,
-      );
-      final bookmark = await bookmarks.create(
-        collectionId: collectionId,
-        absoluteCharacterOffset: 321,
-        normalizedHashAtCreation: 'normalized-hash',
-        bookTitleSnapshot: 'M5.2a Book',
-        now: now,
-      );
-      await sessions.start(historyEntryId: entry.id, startedAt: now);
+    test(
+      'collection delete preserves history/bookmark as detached rows',
+      () async {
+        final history = ReadingHistoryRepository(db: db);
+        final bookmarks = ReaderBookmarkRepository(db: db);
+        final sessions = ReadingSessionRepository(db: db);
+        final now = DateTime(2026, 8, 9, 10);
+        final entry = await history.ensureForCollection(
+          collectionId: collectionId,
+          bookTitleSnapshot: 'M5.2a Book',
+          normalizedHashSnapshot: 'normalized-hash',
+          now: now,
+        );
+        final bookmark = await bookmarks.create(
+          collectionId: collectionId,
+          absoluteCharacterOffset: 321,
+          normalizedHashAtCreation: 'normalized-hash',
+          bookTitleSnapshot: 'M5.2a Book',
+          now: now,
+        );
+        await sessions.start(historyEntryId: entry.id, startedAt: now);
 
-      await (db.delete(db.contentCollections)
-            ..where((t) => t.id.equals(collectionId)))
-          .go();
+        await (db.delete(
+          db.contentCollections,
+        )..where((t) => t.id.equals(collectionId))).go();
 
-      final detachedHistory = await history.loadById(entry.id);
-      final detachedBookmark = await bookmarks.get(bookmark.id);
-      expect(detachedHistory, isNotNull);
-      expect(detachedHistory!.collectionId, isNull);
-      expect(detachedBookmark, isNotNull);
-      expect(detachedBookmark!.collectionId, isNull);
-      expect((await sessions.loadForHistory(entry.id)), hasLength(1));
-      expect(
-        domain.deriveReaderBookmarkStatus(
-          detachedBookmark,
-          currentNormalizedHash: null,
-          normalizedCharacterLength: null,
-        ).reason,
-        domain.ReaderBookmarkOrphanReason.collectionRemoved,
-      );
-    });
+        final detachedHistory = await history.loadById(entry.id);
+        final detachedBookmark = await bookmarks.get(bookmark.id);
+        expect(detachedHistory, isNotNull);
+        expect(detachedHistory!.collectionId, isNull);
+        expect(detachedBookmark, isNotNull);
+        expect(detachedBookmark!.collectionId, isNull);
+        expect((await sessions.loadForHistory(entry.id)), hasLength(1));
+        expect(
+          domain
+              .deriveReaderBookmarkStatus(
+                detachedBookmark,
+                currentNormalizedHash: null,
+                normalizedCharacterLength: null,
+              )
+              .reason,
+          domain.ReaderBookmarkOrphanReason.collectionRemoved,
+        );
+      },
+    );
 
     test('deleting history cascades sessions but not the book', () async {
       final history = ReadingHistoryRepository(db: db);
@@ -152,54 +161,77 @@ void main() {
       expect(await history.loadById(entry.id), isNull);
       expect(await sessions.loadForHistory(entry.id), isEmpty);
       expect(
-        await (db.select(db.contentCollections)
-              ..where((t) => t.id.equals(collectionId)))
-            .getSingleOrNull(),
+        await (db.select(
+          db.contentCollections,
+        )..where((t) => t.id.equals(collectionId))).getSingleOrNull(),
         isNotNull,
       );
     });
 
-    test('schema 5 to 6 migration preserves progress and creates real FKs', () async {
-      final temp = await Directory.systemTemp.createTemp('xaocen-m52a-');
-      final file = File('${temp.path}\\migration.sqlite');
-      final oldDb = AppDatabase(NativeDatabase(file));
-      await seedCollection(oldDb);
-      await oldDb.into(oldDb.readingProgress).insert(
-        ReadingProgressCompanion.insert(
-          collectionId: collectionId,
-          absoluteCharacterOffset: 777,
-          readingMode: const drift.Value('paged'),
-          itemIdHint: const drift.Value(null),
-          updatedAt: DateTime(2026, 8, 9, 13),
-          locatorVersion: 1,
-          normalizationVersion: 'v1',
-        ),
-      );
-      // Simulate a real schema-5 file by removing only the schema-6 tables
-      // before reopening the same SQLite file with AppDatabase.
-      await oldDb.customStatement('DROP TABLE reading_sessions');
-      await oldDb.customStatement('DROP TABLE reader_bookmarks');
-      await oldDb.customStatement('DROP TABLE reading_history');
-      await oldDb.customStatement('PRAGMA user_version = 5');
-      await oldDb.close();
+    test(
+      'schema 5 to 6 migration preserves progress and creates real FKs',
+      () async {
+        final temp = await Directory.systemTemp.createTemp('xaocen-m52a-');
+        final file = File('${temp.path}\\migration.sqlite');
+        final oldDb = AppDatabase(NativeDatabase(file));
+        await seedCollection(oldDb);
+        await oldDb
+            .into(oldDb.readingProgress)
+            .insert(
+              ReadingProgressCompanion.insert(
+                collectionId: collectionId,
+                absoluteCharacterOffset: 777,
+                readingMode: const drift.Value('paged'),
+                itemIdHint: const drift.Value(null),
+                updatedAt: DateTime(2026, 8, 9, 13),
+                locatorVersion: 1,
+                normalizationVersion: 'v1',
+              ),
+            );
+        // Simulate a real schema-5 file by removing only the schema-6 tables
+        // before reopening the same SQLite file with AppDatabase.
+        await oldDb.customStatement('DROP TABLE reading_sessions');
+        await oldDb.customStatement('DROP TABLE reader_bookmarks');
+        await oldDb.customStatement('DROP TABLE reading_history');
+        await oldDb.customStatement('DROP TABLE reader_preferences');
+        await oldDb.customStatement('''
+        CREATE TABLE reader_preferences (
+          collection_id TEXT NOT NULL PRIMARY KEY
+            REFERENCES content_collections (id) ON DELETE CASCADE,
+          font_size REAL NOT NULL,
+          letter_spacing REAL NOT NULL,
+          line_height REAL NOT NULL,
+          paragraph_spacing REAL NOT NULL,
+          first_line_indent REAL NOT NULL,
+          padding_top REAL NOT NULL,
+          padding_bottom REAL NOT NULL,
+          padding_left REAL NOT NULL,
+          padding_right REAL NOT NULL,
+          theme_mode TEXT NOT NULL,
+          updated_at INTEGER NOT NULL
+        )
+      ''');
+        await oldDb.customStatement('PRAGMA user_version = 5');
+        await oldDb.close();
 
-      final migrated = AppDatabase(NativeDatabase(file));
-      final progress = await (migrated.select(migrated.readingProgress)
-            ..where((t) => t.collectionId.equals(collectionId)))
-          .getSingle();
-      expect(progress.absoluteCharacterOffset, 777);
-      expect(progress.readingMode, 'paged');
-      expect(
-        (await migrated.customSelect('PRAGMA user_version').getSingle())
-            .data['user_version'],
-        6,
-      );
-      expect((await pragmaRows(migrated, 'reading_history')).length, 1);
-      expect((await pragmaRows(migrated, 'reader_bookmarks')).length, 1);
-      expect((await pragmaRows(migrated, 'reading_sessions')).length, 1);
-      await migrated.close();
-      await temp.delete(recursive: true);
-    });
+        final migrated = AppDatabase(NativeDatabase(file));
+        final progress = await (migrated.select(
+          migrated.readingProgress,
+        )..where((t) => t.collectionId.equals(collectionId))).getSingle();
+        expect(progress.absoluteCharacterOffset, 777);
+        expect(progress.readingMode, 'paged');
+        expect(
+          (await migrated.customSelect('PRAGMA user_version').getSingle())
+              .data['user_version'],
+          7,
+        );
+        expect((await pragmaRows(migrated, 'reading_history')).length, 1);
+        expect((await pragmaRows(migrated, 'reader_bookmarks')).length, 1);
+        expect((await pragmaRows(migrated, 'reading_sessions')).length, 1);
+        await migrated.close();
+        await temp.delete(recursive: true);
+      },
+    );
   });
 
   group('M5.2a repositories and lifecycle', () {
@@ -254,53 +286,60 @@ void main() {
         updatedAt: DateTime(2026),
       );
       expect(
-        domain.deriveReaderBookmarkStatus(
-          bookmark,
-          currentNormalizedHash: 'new',
-          normalizedCharacterLength: 1000,
-        ).reason,
+        domain
+            .deriveReaderBookmarkStatus(
+              bookmark,
+              currentNormalizedHash: 'new',
+              normalizedCharacterLength: 1000,
+            )
+            .reason,
         domain.ReaderBookmarkOrphanReason.normalizedHashMismatch,
       );
       expect(
-        domain.deriveReaderBookmarkStatus(
-          bookmark,
-          currentNormalizedHash: 'old',
-          normalizedCharacterLength: 50,
-        ).reason,
+        domain
+            .deriveReaderBookmarkStatus(
+              bookmark,
+              currentNormalizedHash: 'old',
+              normalizedCharacterLength: 50,
+            )
+            .reason,
         domain.ReaderBookmarkOrphanReason.offsetOutOfBounds,
       );
     });
   });
 
-  test('CurrentChapterResolver ignores volumes and returns null for no chapters', () {
-    const toc = [
-      LibraryTocEntry(
-        id: 'v1',
-        collectionId: collectionId,
-        itemId: null,
-        parentId: null,
-        kind: 'volume',
-        level: 1,
-        title: 'Volume 1',
-        orderIndex: 0,
-        startCharacterOffset: 0,
-        endCharacterOffset: 500,
-      ),
-      LibraryTocEntry(
-        id: 'c1',
-        collectionId: collectionId,
-        itemId: 'item-c1',
-        parentId: 'v1',
-        kind: 'chapter',
-        level: 2,
-        title: 'Chapter 1',
-        orderIndex: 1,
-        startCharacterOffset: 100,
-        endCharacterOffset: 500,
-      ),
-    ];
-    expect(CurrentChapterResolver.resolve(50, toc), isNull);
-    expect(CurrentChapterResolver.resolve(100, toc)?.id, 'c1');
-    expect(CurrentChapterResolver.resolve(500, const []), isNull);
-  });
+  test(
+    'CurrentChapterResolver ignores volumes and returns null for no chapters',
+    () {
+      const toc = [
+        LibraryTocEntry(
+          id: 'v1',
+          collectionId: collectionId,
+          itemId: null,
+          parentId: null,
+          kind: 'volume',
+          level: 1,
+          title: 'Volume 1',
+          orderIndex: 0,
+          startCharacterOffset: 0,
+          endCharacterOffset: 500,
+        ),
+        LibraryTocEntry(
+          id: 'c1',
+          collectionId: collectionId,
+          itemId: 'item-c1',
+          parentId: 'v1',
+          kind: 'chapter',
+          level: 2,
+          title: 'Chapter 1',
+          orderIndex: 1,
+          startCharacterOffset: 100,
+          endCharacterOffset: 500,
+        ),
+      ];
+      expect(CurrentChapterResolver.resolve(50, toc), isNull);
+      expect(CurrentChapterResolver.resolve(100, toc)?.id, 'c1');
+      expect(CurrentChapterResolver.resolve(500, const []), isNull);
+    },
+  );
 }

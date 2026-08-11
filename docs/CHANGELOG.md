@@ -770,3 +770,11 @@ deferred.
 - Structured Me into reading information and application settings groups.
 - Added responsive bounded layouts and explicit empty state for Reading History.
 - Clarified per-book Aa appearance versus platform-specific application input settings.
+
+## M5.5e
+
+- Added per-book Reader text/background colors and theme-following reset behavior.
+- Added app-managed local image backgrounds with image opacity and readability scrim controls.
+- Kept all appearance changes paint-only: no relayout, repagination, Locator restore, or progress write.
+- Migrated Drift schema 6→7 by extending `reader_preferences`; old library and reading state are preserved.
+- 459 Flutter tests and 11 integration files / 14 scenarios passed; all four real TXT retained logical error 0.

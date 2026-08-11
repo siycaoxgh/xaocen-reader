@@ -25,6 +25,7 @@ class ReaderResolvedAppearance {
     required this.headingColor,
     required this.selectionColor,
     required this.baseTextStyle,
+    this.hasBackgroundImage = false,
   });
 
   final Color backgroundColor;
@@ -35,6 +36,7 @@ class ReaderResolvedAppearance {
 
   /// 正文基准样式（显示与测量使用同一实例，禁止两套）。
   final TextStyle baseTextStyle;
+  final bool hasBackgroundImage;
 }
 
 /// 从 [ThemeData] 解析 Reader 外观。
@@ -45,14 +47,28 @@ ReaderResolvedAppearance resolveReaderAppearance(
   double fontSize = 17,
   double lineHeight = 1.7,
   double letterSpacing = 0,
+  int? textColorArgb,
+  int? backgroundColorArgb,
+  bool hasBackgroundImage = false,
 }) {
   final scheme = Theme.of(context).colorScheme;
-  final textColor = scheme.onSurface;
+  final requestedTextColor = textColorArgb == null
+      ? scheme.onSurface
+      : Color(textColorArgb);
+  final backgroundColor = backgroundColorArgb == null
+      ? scheme.surface
+      : Color(backgroundColorArgb);
+  final textColor = ensureReadableTextColor(
+    requestedTextColor,
+    backgroundColor,
+  );
   return ReaderResolvedAppearance(
-    backgroundColor: scheme.surface,
+    backgroundColor: backgroundColor,
     textColor: textColor,
-    secondaryTextColor: scheme.onSurfaceVariant,
-    headingColor: scheme.onSurface,
+    secondaryTextColor: textColorArgb == null && backgroundColorArgb == null
+        ? scheme.onSurfaceVariant
+        : textColor.withValues(alpha: 0.72),
+    headingColor: textColor,
     selectionColor: scheme.primaryContainer,
     baseTextStyle: TextStyle(
       fontSize: fontSize,
@@ -60,6 +76,7 @@ ReaderResolvedAppearance resolveReaderAppearance(
       letterSpacing: letterSpacing,
       color: textColor,
     ),
+    hasBackgroundImage: hasBackgroundImage,
   );
 }
 
@@ -91,4 +108,17 @@ double contrastRatio(Color a, Color b) {
 /// 正文可读性验收：对比度不低于 [minimum]（默认 4.5:1）。
 bool isReadable(Color fg, Color bg, {double minimum = 4.5}) {
   return contrastRatio(fg, bg) >= minimum;
+}
+
+/// Keeps custom Reader colors readable without changing pagination metrics.
+Color ensureReadableTextColor(
+  Color requested,
+  Color background, {
+  double minimum = 4.5,
+}) {
+  if (isReadable(requested, background, minimum: minimum)) return requested;
+  return contrastRatio(Colors.black, background) >=
+          contrastRatio(Colors.white, background)
+      ? Colors.black
+      : Colors.white;
 }

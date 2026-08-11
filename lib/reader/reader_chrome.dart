@@ -35,6 +35,14 @@ const readerVerticalPaddingSliderKey = Key('reader-vertical-padding-slider');
 const readerPaddingRightSliderKey = Key('reader-padding-right-slider');
 const readerPaddingBottomSliderKey = Key('reader-padding-bottom-slider');
 const readerThemeControlKey = Key('reader-theme-control');
+const readerTextColorControlKey = Key('reader-text-color-control');
+const readerBackgroundColorControlKey = Key('reader-background-color-control');
+const readerBackgroundImageActionKey = Key('reader-background-image-action');
+const readerBackgroundImageOpacityKey = Key('reader-background-image-opacity');
+const readerBackgroundOverlayOpacityKey = Key(
+  'reader-background-overlay-opacity',
+);
+const readerResetAppearanceKey = Key('reader-reset-appearance');
 const readerSettingsModeControlKey = Key('reader-settings-mode-control');
 const readerResetPreferencesKey = Key('reader-reset-preferences');
 
@@ -653,6 +661,8 @@ Future<void> showReaderSettings(
   required ValueChanged<ReaderPreferences> onPreferencesCommitted,
   required ValueChanged<ReaderMode> onModeSelected,
   required VoidCallback onResetPreferences,
+  Future<String?> Function()? onPickBackgroundImage,
+  Future<void> Function(String? path)? onDeleteBackgroundImage,
 }) {
   final isDesktop = MediaQuery.sizeOf(context).width >= 720;
   return showModalBottomSheet<void>(
@@ -666,6 +676,8 @@ Future<void> showReaderSettings(
       onPreferencesCommitted: onPreferencesCommitted,
       onModeSelected: onModeSelected,
       onResetPreferences: onResetPreferences,
+      onPickBackgroundImage: onPickBackgroundImage,
+      onDeleteBackgroundImage: onDeleteBackgroundImage,
     ),
   );
 }
@@ -678,6 +690,8 @@ class ReaderSettingsSheet extends StatefulWidget {
     required this.onPreferencesCommitted,
     required this.onModeSelected,
     required this.onResetPreferences,
+    this.onPickBackgroundImage,
+    this.onDeleteBackgroundImage,
   });
 
   final ReaderPreferences preferences;
@@ -685,6 +699,8 @@ class ReaderSettingsSheet extends StatefulWidget {
   final ValueChanged<ReaderPreferences> onPreferencesCommitted;
   final ValueChanged<ReaderMode> onModeSelected;
   final VoidCallback onResetPreferences;
+  final Future<String?> Function()? onPickBackgroundImage;
+  final Future<void> Function(String? path)? onDeleteBackgroundImage;
 
   @override
   State<ReaderSettingsSheet> createState() => _ReaderSettingsSheetState();
@@ -855,6 +871,134 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
                   _commit(_draft.copyWith(themeMode: selection.single)),
             ),
             const SizedBox(height: 20),
+            Text('阅读外观', style: Theme.of(context).textTheme.titleSmall),
+            const SizedBox(height: 10),
+            _ReaderColorPalette(
+              key: readerTextColorControlKey,
+              label: '字体颜色',
+              selectedArgb: _draft.textColorArgb,
+              colors: const [
+                Color(0xff1c1b1f),
+                Color(0xff4b3425),
+                Color(0xfff5f2ea),
+                Color(0xffffffff),
+              ],
+              onChanged: (value) =>
+                  _commit(_draft.copyWith(textColorArgb: value)),
+            ),
+            const SizedBox(height: 12),
+            _ReaderColorPalette(
+              key: readerBackgroundColorControlKey,
+              label: '阅读背景颜色',
+              selectedArgb: _draft.backgroundColorArgb,
+              colors: const [
+                Color(0xffffffff),
+                Color(0xfffff8e7),
+                Color(0xffe8f0e8),
+                Color(0xff202124),
+                Color(0xff000000),
+              ],
+              onChanged: (value) =>
+                  _commit(_draft.copyWith(backgroundColorArgb: value)),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    _draft.backgroundImagePath == null
+                        ? '本地图片背景：未使用'
+                        : '本地图片背景：已导入',
+                  ),
+                ),
+                OutlinedButton.icon(
+                  key: readerBackgroundImageActionKey,
+                  onPressed: widget.onPickBackgroundImage == null
+                      ? null
+                      : () async {
+                          final previous = _draft.backgroundImagePath;
+                          final path = await widget.onPickBackgroundImage!();
+                          if (!mounted || path == null) return;
+                          _commit(_draft.copyWith(backgroundImagePath: path));
+                          if (previous != null && previous != path) {
+                            await widget.onDeleteBackgroundImage?.call(
+                              previous,
+                            );
+                          }
+                        },
+                  icon: const Icon(Icons.image_outlined),
+                  label: Text(
+                    _draft.backgroundImagePath == null ? '导入图片' : '更换图片',
+                  ),
+                ),
+                if (_draft.backgroundImagePath != null)
+                  IconButton(
+                    tooltip: '移除图片背景',
+                    onPressed: () async {
+                      final previous = _draft.backgroundImagePath;
+                      _commit(_draft.copyWith(backgroundImagePath: null));
+                      await widget.onDeleteBackgroundImage?.call(previous);
+                    },
+                    icon: const Icon(Icons.delete_outline_rounded),
+                  ),
+              ],
+            ),
+            if (_draft.backgroundImagePath != null) ...[
+              _PreferenceSlider(
+                key: readerBackgroundImageOpacityKey,
+                label: '图片透明度',
+                value: _draft.backgroundImageOpacity,
+                min: ReaderPreferences.minAppearanceOpacity,
+                max: ReaderPreferences.maxAppearanceOpacity,
+                divisions: 20,
+                step: 0.05,
+                valueLabel: '${(_draft.backgroundImageOpacity * 100).round()}%',
+                onDraftChanged: (value) => setState(
+                  () => _draft = _draft.copyWith(backgroundImageOpacity: value),
+                ),
+                onCommitted: (value) =>
+                    _commit(_draft.copyWith(backgroundImageOpacity: value)),
+              ),
+              _PreferenceSlider(
+                key: readerBackgroundOverlayOpacityKey,
+                label: '图片遮罩强度',
+                value: _draft.backgroundOverlayOpacity,
+                min: ReaderPreferences.minAppearanceOpacity,
+                max: ReaderPreferences.maxAppearanceOpacity,
+                divisions: 20,
+                step: 0.05,
+                valueLabel:
+                    '${(_draft.backgroundOverlayOpacity * 100).round()}%',
+                onDraftChanged: (value) => setState(
+                  () =>
+                      _draft = _draft.copyWith(backgroundOverlayOpacity: value),
+                ),
+                onCommitted: (value) =>
+                    _commit(_draft.copyWith(backgroundOverlayOpacity: value)),
+              ),
+            ],
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              key: readerResetAppearanceKey,
+              onPressed: () async {
+                final previous = _draft.backgroundImagePath;
+                _commit(
+                  _draft.copyWith(
+                    textColorArgb: null,
+                    backgroundColorArgb: null,
+                    backgroundImagePath: null,
+                    backgroundImageOpacity:
+                        ReaderPreferences.defaultBackgroundImageOpacity,
+                    backgroundOverlayOpacity:
+                        ReaderPreferences.defaultBackgroundOverlayOpacity,
+                  ),
+                );
+                await widget.onDeleteBackgroundImage?.call(previous);
+              },
+              icon: const Icon(Icons.format_color_reset_rounded),
+              label: const Text('恢复默认外观（跟随主题）'),
+            ),
+            const SizedBox(height: 20),
             Text('阅读模式（本书）', style: Theme.of(context).textTheme.titleSmall),
             const SizedBox(height: 8),
             SegmentedButton<ReaderMode>(
@@ -883,6 +1027,77 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _ReaderColorPalette extends StatelessWidget {
+  const _ReaderColorPalette({
+    super.key,
+    required this.label,
+    required this.selectedArgb,
+    required this.colors,
+    required this.onChanged,
+  });
+
+  final String label;
+  final int? selectedArgb;
+  final List<Color> colors;
+  final ValueChanged<int?> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 10,
+          runSpacing: 8,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            ChoiceChip(
+              label: const Text('跟随主题'),
+              selected: selectedArgb == null,
+              onSelected: (_) => onChanged(null),
+            ),
+            for (final color in colors)
+              Semantics(
+                button: true,
+                selected: selectedArgb == color.toARGB32(),
+                label: '$label #${color.toARGB32().toRadixString(16)}',
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(20),
+                  onTap: () => onChanged(color.toARGB32()),
+                  child: Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: color,
+                      border: Border.all(
+                        color: selectedArgb == color.toARGB32()
+                            ? scheme.primary
+                            : scheme.outlineVariant,
+                        width: selectedArgb == color.toARGB32() ? 3 : 1,
+                      ),
+                    ),
+                    child: selectedArgb == color.toARGB32()
+                        ? Icon(
+                            Icons.check_rounded,
+                            color: color.computeLuminance() > 0.5
+                                ? Colors.black
+                                : Colors.white,
+                          )
+                        : null,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ],
     );
   }
 }

@@ -36,7 +36,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting() : super(NativeDatabase.memory());
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   /// 打开应用数据库（support 目录下）。
   static Future<AppDatabase> open() async {
@@ -108,6 +108,30 @@ class AppDatabase extends _$AppDatabase {
         await m.createTable(readingHistory);
         await m.createTable(readingSessions);
         await _createM52Indexes(customStatement);
+      }
+      // schema <5 creates the current table definition above, so only real
+      // schema 5/6 databases need the five appearance columns added.
+      if (from >= 5 && from < 7) {
+        await m.addColumn(
+          readerPreferencesRows,
+          readerPreferencesRows.textColorArgb,
+        );
+        await m.addColumn(
+          readerPreferencesRows,
+          readerPreferencesRows.backgroundColorArgb,
+        );
+        await m.addColumn(
+          readerPreferencesRows,
+          readerPreferencesRows.backgroundImagePath,
+        );
+        await m.addColumn(
+          readerPreferencesRows,
+          readerPreferencesRows.backgroundImageOpacity,
+        );
+        await m.addColumn(
+          readerPreferencesRows,
+          readerPreferencesRows.backgroundOverlayOpacity,
+        );
       }
     },
     beforeOpen: (details) async {

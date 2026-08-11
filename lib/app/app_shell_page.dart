@@ -113,6 +113,9 @@ class _AppShellPageState extends ConsumerState<AppShellPage> {
         progressRepository: ref.read(readingProgressRepositoryProvider),
         bookmarkRepository: ref.read(readerBookmarkRepositoryProvider),
         preferencesRepository: ref.read(readerPreferencesRepositoryProvider),
+        appearanceAssetRepository: ref.read(
+          readerAppearanceAssetRepositoryProvider,
+        ),
         readingHistoryRepository: ref.read(readingHistoryRepositoryProvider),
         readingSessionRepository: ref.read(readingSessionRepositoryProvider),
         inputBindingsRepository: ref.read(

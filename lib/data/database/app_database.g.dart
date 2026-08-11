@@ -4233,6 +4233,62 @@ class $ReaderPreferencesRowsTable extends ReaderPreferencesRows
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _textColorArgbMeta = const VerificationMeta(
+    'textColorArgb',
+  );
+  @override
+  late final GeneratedColumn<int> textColorArgb = GeneratedColumn<int>(
+    'text_color_argb',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _backgroundColorArgbMeta =
+      const VerificationMeta('backgroundColorArgb');
+  @override
+  late final GeneratedColumn<int> backgroundColorArgb = GeneratedColumn<int>(
+    'background_color_argb',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _backgroundImagePathMeta =
+      const VerificationMeta('backgroundImagePath');
+  @override
+  late final GeneratedColumn<String> backgroundImagePath =
+      GeneratedColumn<String>(
+        'background_image_path',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _backgroundImageOpacityMeta =
+      const VerificationMeta('backgroundImageOpacity');
+  @override
+  late final GeneratedColumn<double> backgroundImageOpacity =
+      GeneratedColumn<double>(
+        'background_image_opacity',
+        aliasedName,
+        false,
+        type: DriftSqlType.double,
+        requiredDuringInsert: false,
+        defaultValue: const Constant(1.0),
+      );
+  static const VerificationMeta _backgroundOverlayOpacityMeta =
+      const VerificationMeta('backgroundOverlayOpacity');
+  @override
+  late final GeneratedColumn<double> backgroundOverlayOpacity =
+      GeneratedColumn<double>(
+        'background_overlay_opacity',
+        aliasedName,
+        false,
+        type: DriftSqlType.double,
+        requiredDuringInsert: false,
+        defaultValue: const Constant(0.45),
+      );
   static const VerificationMeta _updatedAtMeta = const VerificationMeta(
     'updatedAt',
   );
@@ -4257,6 +4313,11 @@ class $ReaderPreferencesRowsTable extends ReaderPreferencesRows
     paddingLeft,
     paddingRight,
     themeMode,
+    textColorArgb,
+    backgroundColorArgb,
+    backgroundImagePath,
+    backgroundImageOpacity,
+    backgroundOverlayOpacity,
     updatedAt,
   ];
   @override
@@ -4380,6 +4441,51 @@ class $ReaderPreferencesRowsTable extends ReaderPreferencesRows
     } else if (isInserting) {
       context.missing(_themeModeMeta);
     }
+    if (data.containsKey('text_color_argb')) {
+      context.handle(
+        _textColorArgbMeta,
+        textColorArgb.isAcceptableOrUnknown(
+          data['text_color_argb']!,
+          _textColorArgbMeta,
+        ),
+      );
+    }
+    if (data.containsKey('background_color_argb')) {
+      context.handle(
+        _backgroundColorArgbMeta,
+        backgroundColorArgb.isAcceptableOrUnknown(
+          data['background_color_argb']!,
+          _backgroundColorArgbMeta,
+        ),
+      );
+    }
+    if (data.containsKey('background_image_path')) {
+      context.handle(
+        _backgroundImagePathMeta,
+        backgroundImagePath.isAcceptableOrUnknown(
+          data['background_image_path']!,
+          _backgroundImagePathMeta,
+        ),
+      );
+    }
+    if (data.containsKey('background_image_opacity')) {
+      context.handle(
+        _backgroundImageOpacityMeta,
+        backgroundImageOpacity.isAcceptableOrUnknown(
+          data['background_image_opacity']!,
+          _backgroundImageOpacityMeta,
+        ),
+      );
+    }
+    if (data.containsKey('background_overlay_opacity')) {
+      context.handle(
+        _backgroundOverlayOpacityMeta,
+        backgroundOverlayOpacity.isAcceptableOrUnknown(
+          data['background_overlay_opacity']!,
+          _backgroundOverlayOpacityMeta,
+        ),
+      );
+    }
     if (data.containsKey('updated_at')) {
       context.handle(
         _updatedAtMeta,
@@ -4441,6 +4547,26 @@ class $ReaderPreferencesRowsTable extends ReaderPreferencesRows
         DriftSqlType.string,
         data['${effectivePrefix}theme_mode'],
       )!,
+      textColorArgb: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}text_color_argb'],
+      ),
+      backgroundColorArgb: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}background_color_argb'],
+      ),
+      backgroundImagePath: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}background_image_path'],
+      ),
+      backgroundImageOpacity: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}background_image_opacity'],
+      )!,
+      backgroundOverlayOpacity: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}background_overlay_opacity'],
+      )!,
       updatedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}updated_at'],
@@ -4467,6 +4593,11 @@ class ReaderPreferencesRow extends DataClass
   final double paddingLeft;
   final double paddingRight;
   final String themeMode;
+  final int? textColorArgb;
+  final int? backgroundColorArgb;
+  final String? backgroundImagePath;
+  final double backgroundImageOpacity;
+  final double backgroundOverlayOpacity;
   final DateTime updatedAt;
   const ReaderPreferencesRow({
     required this.collectionId,
@@ -4480,6 +4611,11 @@ class ReaderPreferencesRow extends DataClass
     required this.paddingLeft,
     required this.paddingRight,
     required this.themeMode,
+    this.textColorArgb,
+    this.backgroundColorArgb,
+    this.backgroundImagePath,
+    required this.backgroundImageOpacity,
+    required this.backgroundOverlayOpacity,
     required this.updatedAt,
   });
   @override
@@ -4496,6 +4632,19 @@ class ReaderPreferencesRow extends DataClass
     map['padding_left'] = Variable<double>(paddingLeft);
     map['padding_right'] = Variable<double>(paddingRight);
     map['theme_mode'] = Variable<String>(themeMode);
+    if (!nullToAbsent || textColorArgb != null) {
+      map['text_color_argb'] = Variable<int>(textColorArgb);
+    }
+    if (!nullToAbsent || backgroundColorArgb != null) {
+      map['background_color_argb'] = Variable<int>(backgroundColorArgb);
+    }
+    if (!nullToAbsent || backgroundImagePath != null) {
+      map['background_image_path'] = Variable<String>(backgroundImagePath);
+    }
+    map['background_image_opacity'] = Variable<double>(backgroundImageOpacity);
+    map['background_overlay_opacity'] = Variable<double>(
+      backgroundOverlayOpacity,
+    );
     map['updated_at'] = Variable<DateTime>(updatedAt);
     return map;
   }
@@ -4513,6 +4662,17 @@ class ReaderPreferencesRow extends DataClass
       paddingLeft: Value(paddingLeft),
       paddingRight: Value(paddingRight),
       themeMode: Value(themeMode),
+      textColorArgb: textColorArgb == null && nullToAbsent
+          ? const Value.absent()
+          : Value(textColorArgb),
+      backgroundColorArgb: backgroundColorArgb == null && nullToAbsent
+          ? const Value.absent()
+          : Value(backgroundColorArgb),
+      backgroundImagePath: backgroundImagePath == null && nullToAbsent
+          ? const Value.absent()
+          : Value(backgroundImagePath),
+      backgroundImageOpacity: Value(backgroundImageOpacity),
+      backgroundOverlayOpacity: Value(backgroundOverlayOpacity),
       updatedAt: Value(updatedAt),
     );
   }
@@ -4534,6 +4694,19 @@ class ReaderPreferencesRow extends DataClass
       paddingLeft: serializer.fromJson<double>(json['paddingLeft']),
       paddingRight: serializer.fromJson<double>(json['paddingRight']),
       themeMode: serializer.fromJson<String>(json['themeMode']),
+      textColorArgb: serializer.fromJson<int?>(json['textColorArgb']),
+      backgroundColorArgb: serializer.fromJson<int?>(
+        json['backgroundColorArgb'],
+      ),
+      backgroundImagePath: serializer.fromJson<String?>(
+        json['backgroundImagePath'],
+      ),
+      backgroundImageOpacity: serializer.fromJson<double>(
+        json['backgroundImageOpacity'],
+      ),
+      backgroundOverlayOpacity: serializer.fromJson<double>(
+        json['backgroundOverlayOpacity'],
+      ),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
     );
   }
@@ -4552,6 +4725,15 @@ class ReaderPreferencesRow extends DataClass
       'paddingLeft': serializer.toJson<double>(paddingLeft),
       'paddingRight': serializer.toJson<double>(paddingRight),
       'themeMode': serializer.toJson<String>(themeMode),
+      'textColorArgb': serializer.toJson<int?>(textColorArgb),
+      'backgroundColorArgb': serializer.toJson<int?>(backgroundColorArgb),
+      'backgroundImagePath': serializer.toJson<String?>(backgroundImagePath),
+      'backgroundImageOpacity': serializer.toJson<double>(
+        backgroundImageOpacity,
+      ),
+      'backgroundOverlayOpacity': serializer.toJson<double>(
+        backgroundOverlayOpacity,
+      ),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
     };
   }
@@ -4568,6 +4750,11 @@ class ReaderPreferencesRow extends DataClass
     double? paddingLeft,
     double? paddingRight,
     String? themeMode,
+    Value<int?> textColorArgb = const Value.absent(),
+    Value<int?> backgroundColorArgb = const Value.absent(),
+    Value<String?> backgroundImagePath = const Value.absent(),
+    double? backgroundImageOpacity,
+    double? backgroundOverlayOpacity,
     DateTime? updatedAt,
   }) => ReaderPreferencesRow(
     collectionId: collectionId ?? this.collectionId,
@@ -4581,6 +4768,19 @@ class ReaderPreferencesRow extends DataClass
     paddingLeft: paddingLeft ?? this.paddingLeft,
     paddingRight: paddingRight ?? this.paddingRight,
     themeMode: themeMode ?? this.themeMode,
+    textColorArgb: textColorArgb.present
+        ? textColorArgb.value
+        : this.textColorArgb,
+    backgroundColorArgb: backgroundColorArgb.present
+        ? backgroundColorArgb.value
+        : this.backgroundColorArgb,
+    backgroundImagePath: backgroundImagePath.present
+        ? backgroundImagePath.value
+        : this.backgroundImagePath,
+    backgroundImageOpacity:
+        backgroundImageOpacity ?? this.backgroundImageOpacity,
+    backgroundOverlayOpacity:
+        backgroundOverlayOpacity ?? this.backgroundOverlayOpacity,
     updatedAt: updatedAt ?? this.updatedAt,
   );
   ReaderPreferencesRow copyWithCompanion(ReaderPreferencesRowsCompanion data) {
@@ -4614,6 +4814,21 @@ class ReaderPreferencesRow extends DataClass
           ? data.paddingRight.value
           : this.paddingRight,
       themeMode: data.themeMode.present ? data.themeMode.value : this.themeMode,
+      textColorArgb: data.textColorArgb.present
+          ? data.textColorArgb.value
+          : this.textColorArgb,
+      backgroundColorArgb: data.backgroundColorArgb.present
+          ? data.backgroundColorArgb.value
+          : this.backgroundColorArgb,
+      backgroundImagePath: data.backgroundImagePath.present
+          ? data.backgroundImagePath.value
+          : this.backgroundImagePath,
+      backgroundImageOpacity: data.backgroundImageOpacity.present
+          ? data.backgroundImageOpacity.value
+          : this.backgroundImageOpacity,
+      backgroundOverlayOpacity: data.backgroundOverlayOpacity.present
+          ? data.backgroundOverlayOpacity.value
+          : this.backgroundOverlayOpacity,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
   }
@@ -4632,6 +4847,11 @@ class ReaderPreferencesRow extends DataClass
           ..write('paddingLeft: $paddingLeft, ')
           ..write('paddingRight: $paddingRight, ')
           ..write('themeMode: $themeMode, ')
+          ..write('textColorArgb: $textColorArgb, ')
+          ..write('backgroundColorArgb: $backgroundColorArgb, ')
+          ..write('backgroundImagePath: $backgroundImagePath, ')
+          ..write('backgroundImageOpacity: $backgroundImageOpacity, ')
+          ..write('backgroundOverlayOpacity: $backgroundOverlayOpacity, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
         .toString();
@@ -4650,6 +4870,11 @@ class ReaderPreferencesRow extends DataClass
     paddingLeft,
     paddingRight,
     themeMode,
+    textColorArgb,
+    backgroundColorArgb,
+    backgroundImagePath,
+    backgroundImageOpacity,
+    backgroundOverlayOpacity,
     updatedAt,
   );
   @override
@@ -4667,6 +4892,11 @@ class ReaderPreferencesRow extends DataClass
           other.paddingLeft == this.paddingLeft &&
           other.paddingRight == this.paddingRight &&
           other.themeMode == this.themeMode &&
+          other.textColorArgb == this.textColorArgb &&
+          other.backgroundColorArgb == this.backgroundColorArgb &&
+          other.backgroundImagePath == this.backgroundImagePath &&
+          other.backgroundImageOpacity == this.backgroundImageOpacity &&
+          other.backgroundOverlayOpacity == this.backgroundOverlayOpacity &&
           other.updatedAt == this.updatedAt);
 }
 
@@ -4683,6 +4913,11 @@ class ReaderPreferencesRowsCompanion
   final Value<double> paddingLeft;
   final Value<double> paddingRight;
   final Value<String> themeMode;
+  final Value<int?> textColorArgb;
+  final Value<int?> backgroundColorArgb;
+  final Value<String?> backgroundImagePath;
+  final Value<double> backgroundImageOpacity;
+  final Value<double> backgroundOverlayOpacity;
   final Value<DateTime> updatedAt;
   final Value<int> rowid;
   const ReaderPreferencesRowsCompanion({
@@ -4697,6 +4932,11 @@ class ReaderPreferencesRowsCompanion
     this.paddingLeft = const Value.absent(),
     this.paddingRight = const Value.absent(),
     this.themeMode = const Value.absent(),
+    this.textColorArgb = const Value.absent(),
+    this.backgroundColorArgb = const Value.absent(),
+    this.backgroundImagePath = const Value.absent(),
+    this.backgroundImageOpacity = const Value.absent(),
+    this.backgroundOverlayOpacity = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -4712,6 +4952,11 @@ class ReaderPreferencesRowsCompanion
     required double paddingLeft,
     required double paddingRight,
     required String themeMode,
+    this.textColorArgb = const Value.absent(),
+    this.backgroundColorArgb = const Value.absent(),
+    this.backgroundImagePath = const Value.absent(),
+    this.backgroundImageOpacity = const Value.absent(),
+    this.backgroundOverlayOpacity = const Value.absent(),
     required DateTime updatedAt,
     this.rowid = const Value.absent(),
   }) : collectionId = Value(collectionId),
@@ -4738,6 +4983,11 @@ class ReaderPreferencesRowsCompanion
     Expression<double>? paddingLeft,
     Expression<double>? paddingRight,
     Expression<String>? themeMode,
+    Expression<int>? textColorArgb,
+    Expression<int>? backgroundColorArgb,
+    Expression<String>? backgroundImagePath,
+    Expression<double>? backgroundImageOpacity,
+    Expression<double>? backgroundOverlayOpacity,
     Expression<DateTime>? updatedAt,
     Expression<int>? rowid,
   }) {
@@ -4753,6 +5003,15 @@ class ReaderPreferencesRowsCompanion
       if (paddingLeft != null) 'padding_left': paddingLeft,
       if (paddingRight != null) 'padding_right': paddingRight,
       if (themeMode != null) 'theme_mode': themeMode,
+      if (textColorArgb != null) 'text_color_argb': textColorArgb,
+      if (backgroundColorArgb != null)
+        'background_color_argb': backgroundColorArgb,
+      if (backgroundImagePath != null)
+        'background_image_path': backgroundImagePath,
+      if (backgroundImageOpacity != null)
+        'background_image_opacity': backgroundImageOpacity,
+      if (backgroundOverlayOpacity != null)
+        'background_overlay_opacity': backgroundOverlayOpacity,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (rowid != null) 'rowid': rowid,
     });
@@ -4770,6 +5029,11 @@ class ReaderPreferencesRowsCompanion
     Value<double>? paddingLeft,
     Value<double>? paddingRight,
     Value<String>? themeMode,
+    Value<int?>? textColorArgb,
+    Value<int?>? backgroundColorArgb,
+    Value<String?>? backgroundImagePath,
+    Value<double>? backgroundImageOpacity,
+    Value<double>? backgroundOverlayOpacity,
     Value<DateTime>? updatedAt,
     Value<int>? rowid,
   }) {
@@ -4785,6 +5049,13 @@ class ReaderPreferencesRowsCompanion
       paddingLeft: paddingLeft ?? this.paddingLeft,
       paddingRight: paddingRight ?? this.paddingRight,
       themeMode: themeMode ?? this.themeMode,
+      textColorArgb: textColorArgb ?? this.textColorArgb,
+      backgroundColorArgb: backgroundColorArgb ?? this.backgroundColorArgb,
+      backgroundImagePath: backgroundImagePath ?? this.backgroundImagePath,
+      backgroundImageOpacity:
+          backgroundImageOpacity ?? this.backgroundImageOpacity,
+      backgroundOverlayOpacity:
+          backgroundOverlayOpacity ?? this.backgroundOverlayOpacity,
       updatedAt: updatedAt ?? this.updatedAt,
       rowid: rowid ?? this.rowid,
     );
@@ -4826,6 +5097,27 @@ class ReaderPreferencesRowsCompanion
     if (themeMode.present) {
       map['theme_mode'] = Variable<String>(themeMode.value);
     }
+    if (textColorArgb.present) {
+      map['text_color_argb'] = Variable<int>(textColorArgb.value);
+    }
+    if (backgroundColorArgb.present) {
+      map['background_color_argb'] = Variable<int>(backgroundColorArgb.value);
+    }
+    if (backgroundImagePath.present) {
+      map['background_image_path'] = Variable<String>(
+        backgroundImagePath.value,
+      );
+    }
+    if (backgroundImageOpacity.present) {
+      map['background_image_opacity'] = Variable<double>(
+        backgroundImageOpacity.value,
+      );
+    }
+    if (backgroundOverlayOpacity.present) {
+      map['background_overlay_opacity'] = Variable<double>(
+        backgroundOverlayOpacity.value,
+      );
+    }
     if (updatedAt.present) {
       map['updated_at'] = Variable<DateTime>(updatedAt.value);
     }
@@ -4849,6 +5141,11 @@ class ReaderPreferencesRowsCompanion
           ..write('paddingLeft: $paddingLeft, ')
           ..write('paddingRight: $paddingRight, ')
           ..write('themeMode: $themeMode, ')
+          ..write('textColorArgb: $textColorArgb, ')
+          ..write('backgroundColorArgb: $backgroundColorArgb, ')
+          ..write('backgroundImagePath: $backgroundImagePath, ')
+          ..write('backgroundImageOpacity: $backgroundImageOpacity, ')
+          ..write('backgroundOverlayOpacity: $backgroundOverlayOpacity, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -9337,6 +9634,11 @@ typedef $$ReaderPreferencesRowsTableCreateCompanionBuilder =
       required double paddingLeft,
       required double paddingRight,
       required String themeMode,
+      Value<int?> textColorArgb,
+      Value<int?> backgroundColorArgb,
+      Value<String?> backgroundImagePath,
+      Value<double> backgroundImageOpacity,
+      Value<double> backgroundOverlayOpacity,
       required DateTime updatedAt,
       Value<int> rowid,
     });
@@ -9353,6 +9655,11 @@ typedef $$ReaderPreferencesRowsTableUpdateCompanionBuilder =
       Value<double> paddingLeft,
       Value<double> paddingRight,
       Value<String> themeMode,
+      Value<int?> textColorArgb,
+      Value<int?> backgroundColorArgb,
+      Value<String?> backgroundImagePath,
+      Value<double> backgroundImageOpacity,
+      Value<double> backgroundOverlayOpacity,
       Value<DateTime> updatedAt,
       Value<int> rowid,
     });
@@ -9452,6 +9759,31 @@ class $$ReaderPreferencesRowsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<int> get textColorArgb => $composableBuilder(
+    column: $table.textColorArgb,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get backgroundColorArgb => $composableBuilder(
+    column: $table.backgroundColorArgb,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get backgroundImagePath => $composableBuilder(
+    column: $table.backgroundImagePath,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get backgroundImageOpacity => $composableBuilder(
+    column: $table.backgroundImageOpacity,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get backgroundOverlayOpacity => $composableBuilder(
+    column: $table.backgroundOverlayOpacity,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<DateTime> get updatedAt => $composableBuilder(
     column: $table.updatedAt,
     builder: (column) => ColumnFilters(column),
@@ -9540,6 +9872,31 @@ class $$ReaderPreferencesRowsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get textColorArgb => $composableBuilder(
+    column: $table.textColorArgb,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get backgroundColorArgb => $composableBuilder(
+    column: $table.backgroundColorArgb,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get backgroundImagePath => $composableBuilder(
+    column: $table.backgroundImagePath,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get backgroundImageOpacity => $composableBuilder(
+    column: $table.backgroundImageOpacity,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get backgroundOverlayOpacity => $composableBuilder(
+    column: $table.backgroundOverlayOpacity,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
     column: $table.updatedAt,
     builder: (column) => ColumnOrderings(column),
@@ -9624,6 +9981,31 @@ class $$ReaderPreferencesRowsTableAnnotationComposer
   GeneratedColumn<String> get themeMode =>
       $composableBuilder(column: $table.themeMode, builder: (column) => column);
 
+  GeneratedColumn<int> get textColorArgb => $composableBuilder(
+    column: $table.textColorArgb,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get backgroundColorArgb => $composableBuilder(
+    column: $table.backgroundColorArgb,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get backgroundImagePath => $composableBuilder(
+    column: $table.backgroundImagePath,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get backgroundImageOpacity => $composableBuilder(
+    column: $table.backgroundImageOpacity,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get backgroundOverlayOpacity => $composableBuilder(
+    column: $table.backgroundOverlayOpacity,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<DateTime> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
 
@@ -9702,6 +10084,11 @@ class $$ReaderPreferencesRowsTableTableManager
                 Value<double> paddingLeft = const Value.absent(),
                 Value<double> paddingRight = const Value.absent(),
                 Value<String> themeMode = const Value.absent(),
+                Value<int?> textColorArgb = const Value.absent(),
+                Value<int?> backgroundColorArgb = const Value.absent(),
+                Value<String?> backgroundImagePath = const Value.absent(),
+                Value<double> backgroundImageOpacity = const Value.absent(),
+                Value<double> backgroundOverlayOpacity = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ReaderPreferencesRowsCompanion(
@@ -9716,6 +10103,11 @@ class $$ReaderPreferencesRowsTableTableManager
                 paddingLeft: paddingLeft,
                 paddingRight: paddingRight,
                 themeMode: themeMode,
+                textColorArgb: textColorArgb,
+                backgroundColorArgb: backgroundColorArgb,
+                backgroundImagePath: backgroundImagePath,
+                backgroundImageOpacity: backgroundImageOpacity,
+                backgroundOverlayOpacity: backgroundOverlayOpacity,
                 updatedAt: updatedAt,
                 rowid: rowid,
               ),
@@ -9732,6 +10124,11 @@ class $$ReaderPreferencesRowsTableTableManager
                 required double paddingLeft,
                 required double paddingRight,
                 required String themeMode,
+                Value<int?> textColorArgb = const Value.absent(),
+                Value<int?> backgroundColorArgb = const Value.absent(),
+                Value<String?> backgroundImagePath = const Value.absent(),
+                Value<double> backgroundImageOpacity = const Value.absent(),
+                Value<double> backgroundOverlayOpacity = const Value.absent(),
                 required DateTime updatedAt,
                 Value<int> rowid = const Value.absent(),
               }) => ReaderPreferencesRowsCompanion.insert(
@@ -9746,6 +10143,11 @@ class $$ReaderPreferencesRowsTableTableManager
                 paddingLeft: paddingLeft,
                 paddingRight: paddingRight,
                 themeMode: themeMode,
+                textColorArgb: textColorArgb,
+                backgroundColorArgb: backgroundColorArgb,
+                backgroundImagePath: backgroundImagePath,
+                backgroundImageOpacity: backgroundImageOpacity,
+                backgroundOverlayOpacity: backgroundOverlayOpacity,
                 updatedAt: updatedAt,
                 rowid: rowid,
               ),

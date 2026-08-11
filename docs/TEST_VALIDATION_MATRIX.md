@@ -55,6 +55,21 @@
 | Four real TXT corpus / logical error | PASS / 0 |
 | Windows Release / Android Debug | PASS / PASS |
 | Drift schema | 6, unchanged |
+
+## M5.5e Reader appearance
+
+| Area | Result |
+|---|---|
+| Per-book text/background color persistence | PASS |
+| Custom colors override theme; reset follows theme | PASS |
+| Paint-only: no metrics relayout/progress write | PASS |
+| Managed image survives source deletion | PASS |
+| Image opacity / overlay bounds and fallback | PASS |
+| Schema 6→7 real SQLite migration | PASS |
+| Full Flutter tests | 459/459 PASS |
+| Integration | 11 files / 14 scenarios PASS |
+| Four real TXT / logical error | PASS / 0 |
+| Windows Release / Android Debug | PASS / PASS |
 | Android targeted device test | NOT-RUN in this coding pass |
 
 ## A. 自动测试（当前全绿）

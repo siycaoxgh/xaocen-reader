@@ -711,3 +711,10 @@ Reader chrome 按 V3 分层：移动端底栏保留目录、模式、书签、Aa
 ## M5.5d — 我的 / 阅读历史 / 设置（2026-08-11）
 
 我的页面按阅读信息与应用设置分组；阅读历史保持独立并增强响应式空态/宽屏布局；阅读设置明确区分应用级按键与每书 Aa 排版设置。历史 orphan、删除书后保留、输入 profile persistence 和 schema 6 均保持。
+
+## M5.5e — Reader 阅读外观（2026-08-11）
+
+Aa 阅读外观正式支持每书字体色、阅读背景色、本地图片背景、图片透明度与遮罩。
+外部图片先复制到 app-managed library，偏好只保存相对引用；原文件移动或删除不影响
+已导入背景。外观变化保持 paint-only，ReaderLocator、分页 metrics、章节进度和
+ReadingSession 均不变。Drift 通过正式 migration 从 schema 6 升级到 7。

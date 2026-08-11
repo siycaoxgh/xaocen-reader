@@ -837,3 +837,19 @@ book/orphan status and delete-history behavior intact. ReaderSettingsPage groups
 application input settings separately from per-book Reader Aa appearance; the
 platform-specific ReaderInputSettingsPage and profile persistence are unchanged.
 All three surfaces use bounded desktop content and mobile-friendly spacing.
+
+## M5.5e Reader appearance and managed backgrounds
+
+Per-book `ReaderPreferences` now owns optional custom text/background ARGB
+colors, an app-managed background-image relative path, image opacity, and
+overlay opacity. Nullable colors/path mean “follow the resolved Reader theme”.
+All five appearance fields are paint-only and never participate in
+`ReaderMetricsSignature`, pagination, Locator restore, or progress writes.
+
+`ReaderAppearanceAssetRepository` copies selected images into
+`library/reader_backgrounds/<collection>/` before the preference is committed;
+Drift stores only the managed relative reference, never image bytes or the
+external source path. The visual image/scrim stack sits behind both vertical
+and paged content, so text geometry is unchanged. Schema 7 extends only the
+existing per-book `reader_preferences` table; ReaderLocator remains the sole
+position source.

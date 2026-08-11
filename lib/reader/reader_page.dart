@@ -11,7 +11,9 @@
 library;
 
 import 'dart:async';
+import 'dart:io';
 
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -21,6 +23,7 @@ import '../design/theme/app_theme.dart';
 import '../data/repositories/reading_progress_repository.dart';
 import '../data/repositories/reader_bookmark_repository.dart';
 import '../data/repositories/reader_preferences_repository.dart';
+import '../data/repositories/reader_appearance_asset_repository.dart';
 import '../data/repositories/reader_input_bindings_repository.dart';
 import '../data/repositories/reading_history_repository.dart';
 import '../data/repositories/reading_session_repository.dart';
@@ -71,6 +74,7 @@ class ReaderLaunchContext {
     this.readingHistoryRepository,
     this.readingSessionRepository,
     this.autoReadPreferencesRepository,
+    this.appearanceAssetRepository,
     this.repair,
   });
 
@@ -89,6 +93,7 @@ class ReaderLaunchContext {
   final ReadingHistoryRepository? readingHistoryRepository;
   final ReadingSessionRepository? readingSessionRepository;
   final AutoReadPreferencesRepository? autoReadPreferencesRepository;
+  final ReaderAppearanceAssetRepository? appearanceAssetRepository;
 
   /// 修复回调（由书架页注入）：返回 null 表示成功，否则返回错误信息。
   final Future<String?> Function()? repair;
@@ -609,18 +614,31 @@ class _ReaderPageState extends State<ReaderPage>
 
   void _resolveAppearance() {
     final scheme = _effectiveReaderTheme().colorScheme;
+    final backgroundColor = _preferences.backgroundColorArgb == null
+        ? scheme.surface
+        : Color(_preferences.backgroundColorArgb!);
+    final requestedTextColor = _preferences.textColorArgb == null
+        ? scheme.onSurface
+        : Color(_preferences.textColorArgb!);
+    final textColor = ensureReadableTextColor(
+      requestedTextColor,
+      backgroundColor,
+    );
     _appearance = ReaderResolvedAppearance(
-      backgroundColor: scheme.surface,
-      textColor: scheme.onSurface,
-      secondaryTextColor: scheme.onSurfaceVariant,
-      headingColor: scheme.onSurface,
+      backgroundColor: backgroundColor,
+      textColor: textColor,
+      secondaryTextColor: _preferences.textColorArgb == null
+          ? scheme.onSurfaceVariant
+          : textColor.withValues(alpha: 0.72),
+      headingColor: textColor,
       selectionColor: scheme.primaryContainer,
       baseTextStyle: TextStyle(
         fontSize: _preferences.fontSize,
         height: _preferences.lineHeight,
         letterSpacing: _preferences.letterSpacing,
-        color: scheme.onSurface,
+        color: textColor,
       ),
+      hasBackgroundImage: _preferences.backgroundImagePath != null,
     );
     _bodyStyle = _appearance.baseTextStyle;
   }
@@ -786,7 +804,9 @@ class _ReaderPageState extends State<ReaderPage>
     final nextSignature = ReaderMetricsSignature.fromPreferences(next);
     _preferences = next;
     if (nextSignature == _metricsSignature) {
-      if (next.themeMode != previous.themeMode) {
+      if (next
+          .changesFrom(previous)
+          .contains(ReaderPreferenceChangeKind.paint)) {
         _resolveAppearance();
         setState(() {});
       }
@@ -828,6 +848,7 @@ class _ReaderPageState extends State<ReaderPage>
   }
 
   void _resetPreferences() {
+    final previousImagePath = _preferences.backgroundImagePath;
     _onPreferencesChanged(ReaderPreferences.defaults);
     _pendingPreferencesWrite = null;
     _pendingPreferencesReset = true;
@@ -835,6 +856,75 @@ class _ReaderPageState extends State<ReaderPage>
     if (repository != null && !_preferencesWriteInFlight) {
       unawaited(_drainPreferencesWrites());
     }
+    unawaited(
+      widget.launch.appearanceAssetRepository?.deleteIfManaged(
+            previousImagePath,
+          ) ??
+          Future<void>.value(),
+    );
+  }
+
+  Future<String?> _pickReaderBackgroundImage() async {
+    final assets = widget.launch.appearanceAssetRepository;
+    if (assets == null) return null;
+    final result = await FilePicker.pickFiles(
+      type: FileType.image,
+      dialogTitle: '选择阅读背景图片',
+    );
+    final path = result?.files.single.path;
+    if (path == null || !mounted) return null;
+    try {
+      final managedPath = await assets.importBackground(
+        collectionId: widget.launch.collection.id,
+        source: File(path),
+      );
+      if (!mounted) return null;
+      return managedPath;
+    } catch (error) {
+      if (!mounted) return null;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('背景图片导入失败：$error')));
+      return null;
+    }
+  }
+
+  Future<void> _deleteReaderBackgroundImage(String? path) =>
+      widget.launch.appearanceAssetRepository?.deleteIfManaged(path) ??
+      Future<void>.value();
+
+  Widget _buildReaderBackground() {
+    final path = _preferences.backgroundImagePath;
+    final assets = widget.launch.appearanceAssetRepository;
+    File? image;
+    if (path != null && assets != null) {
+      try {
+        final candidate = assets.resolve(path);
+        if (candidate.existsSync()) image = candidate;
+      } catch (_) {
+        image = null;
+      }
+    }
+    final overlayBase = _appearance.textColor.computeLuminance() > 0.5
+        ? Colors.black
+        : Colors.white;
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        ColoredBox(color: _appearance.backgroundColor),
+        if (image != null)
+          Opacity(
+            opacity: _preferences.backgroundImageOpacity,
+            child: Image.file(image, fit: BoxFit.cover, gaplessPlayback: true),
+          ),
+        if (image != null && _preferences.backgroundOverlayOpacity > 0)
+          ColoredBox(
+            color: overlayBase.withValues(
+              alpha: _preferences.backgroundOverlayOpacity,
+            ),
+          ),
+      ],
+    );
   }
 
   void _freezeMetricsWrites() {
@@ -1801,6 +1891,7 @@ class _ReaderPageState extends State<ReaderPage>
       body: Stack(
         fit: StackFit.expand,
         children: [
+          _buildReaderBackground(),
           GestureDetector(
             key: readerChromeToggleKey,
             behavior: HitTestBehavior.translucent,
@@ -1844,6 +1935,8 @@ class _ReaderPageState extends State<ReaderPage>
                 onPreferencesCommitted: _commitPreferences,
                 onModeSelected: _selectMode,
                 onResetPreferences: _resetPreferences,
+                onPickBackgroundImage: _pickReaderBackgroundImage,
+                onDeleteBackgroundImage: _deleteReaderBackgroundImage,
               );
             },
             onMore: () {

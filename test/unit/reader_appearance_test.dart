@@ -18,6 +18,15 @@ void main() {
       expect(isReadable(Colors.black, Colors.white), isTrue);
       expect(isReadable(Colors.grey.shade400, Colors.white), isFalse);
     });
+
+    test('低对比自定义颜色安全回退为可读前景色', () {
+      final resolved = ensureReadableTextColor(
+        const Color(0xffeeeeee),
+        Colors.white,
+      );
+      expect(isReadable(resolved, Colors.white), isTrue);
+      expect(resolved, Colors.black);
+    });
   });
 
   group('P1 外观解析', () {

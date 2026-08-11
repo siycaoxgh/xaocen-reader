@@ -3,6 +3,8 @@ library;
 
 // ignore_for_file: prefer_initializing_formals
 
+import 'package:drift/drift.dart';
+
 import '../../domain/reader/reader_preferences.dart';
 import '../database/app_database.dart';
 
@@ -39,23 +41,33 @@ final class ReaderPreferencesRepository {
       paddingLeft: preferences.paddingLeft,
       paddingRight: preferences.paddingRight,
       themeMode: preferences.themeMode,
+      textColorArgb: preferences.textColorArgb,
+      backgroundColorArgb: preferences.backgroundColorArgb,
+      backgroundImagePath: preferences.backgroundImagePath,
+      backgroundImageOpacity: preferences.backgroundImageOpacity,
+      backgroundOverlayOpacity: preferences.backgroundOverlayOpacity,
     );
     await _db
         .into(_db.readerPreferencesRows)
         .insertOnConflictUpdate(
-          ReaderPreferencesRowsCompanion.insert(
-            collectionId: collectionId,
-            fontSize: safe.fontSize,
-            letterSpacing: safe.letterSpacing,
-            lineHeight: safe.lineHeight,
-            paragraphSpacing: safe.paragraphSpacing,
-            firstLineIndent: safe.firstLineIndent,
-            paddingTop: safe.paddingTop,
-            paddingBottom: safe.paddingBottom,
-            paddingLeft: safe.paddingLeft,
-            paddingRight: safe.paddingRight,
-            themeMode: safe.themeMode.name,
-            updatedAt: DateTime.now(),
+          ReaderPreferencesRowsCompanion(
+            collectionId: Value(collectionId),
+            fontSize: Value(safe.fontSize),
+            letterSpacing: Value(safe.letterSpacing),
+            lineHeight: Value(safe.lineHeight),
+            paragraphSpacing: Value(safe.paragraphSpacing),
+            firstLineIndent: Value(safe.firstLineIndent),
+            paddingTop: Value(safe.paddingTop),
+            paddingBottom: Value(safe.paddingBottom),
+            paddingLeft: Value(safe.paddingLeft),
+            paddingRight: Value(safe.paddingRight),
+            themeMode: Value(safe.themeMode.name),
+            textColorArgb: Value(safe.textColorArgb),
+            backgroundColorArgb: Value(safe.backgroundColorArgb),
+            backgroundImagePath: Value(safe.backgroundImagePath),
+            backgroundImageOpacity: Value(safe.backgroundImageOpacity),
+            backgroundOverlayOpacity: Value(safe.backgroundOverlayOpacity),
+            updatedAt: Value(DateTime.now()),
           ),
         );
   }
@@ -83,6 +95,11 @@ final class ReaderPreferencesRepository {
               .where((value) => value.name == row.themeMode)
               .firstOrNull ??
           ReaderPreferences.defaultThemeMode,
+      textColorArgb: row.textColorArgb,
+      backgroundColorArgb: row.backgroundColorArgb,
+      backgroundImagePath: row.backgroundImagePath,
+      backgroundImageOpacity: row.backgroundImageOpacity,
+      backgroundOverlayOpacity: row.backgroundOverlayOpacity,
     );
   }
 }

@@ -187,3 +187,10 @@ Windows 透明必须拆成两层，不能只在 Flutter widget 上设置颜色�
 
 - 我的按阅读信息与应用设置分组；阅读历史独立显示会话/时间/脱离书架状态。
 - 阅读设置明确区分应用级按键配置与 Reader Aa 的每书排版；Windows/Android 容器分别响应式适配。
+
+## M5.5e Reader 外观实施记录（2026-08-11）
+
+- Aa → 阅读外观已实现每书字体色、背景色、托管图片背景、图片透明度、遮罩和恢复默认外观。
+- 自定义颜色覆盖 Reader theme；恢复默认清空自定义值并重新跟随 system/light/dark。
+- 图片背景为 app-managed 文件引用，不存 BLOB，不依赖原文件，且不参与正文布局。
+- Windows 原生窗口透明与鼠标穿透仍保持独立后续项，本阶段没有混入 ReaderPreferences。

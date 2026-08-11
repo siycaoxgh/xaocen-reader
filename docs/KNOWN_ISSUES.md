@@ -232,6 +232,15 @@ navigation issue was introduced.
 Reader operation hierarchy is aligned and responsive. Remaining UI audit items
 are appearance and later Me/settings refinements; no new Reader contract issue
 was introduced.
+
+## M5.5e status
+
+Reader custom colors and managed image backgrounds are complete with schema 7
+migration and paint-only regression coverage. No new P0/P1/P2 Reader issue was
+found. Whole-book deletion does not yet garbage-collect every superseded image
+left in that book's managed background folder; current replacement/removal/reset
+paths do clean their referenced file. Windows native window transparency remains
+a separate later capability.
 ## M5.5d status
 
 Me, Reading History, Reader Settings, and platform input settings now have

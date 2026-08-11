@@ -92,6 +92,19 @@ void main() {
             .changesFrom(ReaderPreferences.defaults),
         {ReaderPreferenceChangeKind.paint},
       );
+      for (final value in <ReaderPreferences>[
+        ReaderPreferences.defaults.copyWith(textColorArgb: 0xff112233),
+        ReaderPreferences.defaults.copyWith(backgroundColorArgb: 0xfff5eddc),
+        ReaderPreferences.defaults.copyWith(
+          backgroundImagePath: 'library/reader_backgrounds/a/image.png',
+        ),
+        ReaderPreferences.defaults.copyWith(backgroundImageOpacity: .8),
+        ReaderPreferences.defaults.copyWith(backgroundOverlayOpacity: .6),
+      ]) {
+        expect(value.changesFrom(ReaderPreferences.defaults), {
+          ReaderPreferenceChangeKind.paint,
+        });
+      }
     });
   });
 
@@ -124,6 +137,12 @@ void main() {
         paddingLeft: 24,
         paddingRight: 30,
         themeMode: ReaderThemeMode.dark,
+        textColorArgb: 0xfff5f2ea,
+        backgroundColorArgb: 0xff202124,
+        backgroundImagePath:
+            'library/reader_backgrounds/local-txt_a/background.png',
+        backgroundImageOpacity: .8,
+        backgroundOverlayOpacity: .55,
       );
       final emissions = <ReaderPreferences>[];
       final sub = repo.watch(a).listen(emissions.add);
@@ -209,4 +228,66 @@ void main() {
     await db.close();
     await dir.delete(recursive: true);
   });
+
+  test(
+    'schema 6→7 preserves typography and adds appearance defaults',
+    () async {
+      final dir = await Directory.systemTemp.createTemp('m55e_migration');
+      final file = File('${dir.path}${Platform.pathSeparator}db.sqlite');
+      var db = AppDatabase(NativeDatabase(file));
+      await seedBook(db, a);
+      await ReaderPreferencesRepository(
+        db: db,
+      ).update(a, ReaderPreferences.defaults.copyWith(fontSize: 23));
+      await db.close();
+
+      final raw = sqlite3.open(file.path);
+      raw.execute(
+        'ALTER TABLE reader_preferences RENAME TO reader_preferences_v7',
+      );
+      raw.execute('''
+      CREATE TABLE reader_preferences (
+        collection_id TEXT NOT NULL PRIMARY KEY
+          REFERENCES content_collections (id) ON DELETE CASCADE,
+        font_size REAL NOT NULL,
+        letter_spacing REAL NOT NULL,
+        line_height REAL NOT NULL,
+        paragraph_spacing REAL NOT NULL,
+        first_line_indent REAL NOT NULL,
+        padding_top REAL NOT NULL,
+        padding_bottom REAL NOT NULL,
+        padding_left REAL NOT NULL,
+        padding_right REAL NOT NULL,
+        theme_mode TEXT NOT NULL,
+        updated_at INTEGER NOT NULL
+      )
+    ''');
+      raw.execute('''
+      INSERT INTO reader_preferences
+      SELECT collection_id, font_size, letter_spacing, line_height,
+        paragraph_spacing, first_line_indent, padding_top, padding_bottom,
+        padding_left, padding_right, theme_mode, updated_at
+      FROM reader_preferences_v7
+    ''');
+      raw.execute('DROP TABLE reader_preferences_v7');
+      raw.execute('PRAGMA user_version = 6');
+      raw.dispose();
+
+      db = AppDatabase(NativeDatabase(file));
+      final migrated = await ReaderPreferencesRepository(db: db).load(a);
+      expect(migrated.fontSize, 23);
+      expect(migrated.textColorArgb, isNull);
+      expect(migrated.backgroundColorArgb, isNull);
+      expect(migrated.backgroundImagePath, isNull);
+      expect(migrated.backgroundImageOpacity, 1);
+      expect(migrated.backgroundOverlayOpacity, .45);
+      expect(
+        (await db.customSelect('PRAGMA user_version').getSingle())
+            .data['user_version'],
+        7,
+      );
+      await db.close();
+      await dir.delete(recursive: true);
+    },
+  );
 }

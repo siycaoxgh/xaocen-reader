@@ -217,6 +217,9 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
         progressRepository: ref.read(readingProgressRepositoryProvider),
         bookmarkRepository: ref.read(readerBookmarkRepositoryProvider),
         preferencesRepository: ref.read(readerPreferencesRepositoryProvider),
+        appearanceAssetRepository: ref.read(
+          readerAppearanceAssetRepositoryProvider,
+        ),
         readingHistoryRepository: ref.read(readingHistoryRepositoryProvider),
         readingSessionRepository: ref.read(readingSessionRepositoryProvider),
         inputBindingsRepository: ref.read(
@@ -396,6 +399,9 @@ class _CollectionTile extends ConsumerWidget {
           progressRepository: progressRepo,
           bookmarkRepository: bookmarkRepo,
           preferencesRepository: preferencesRepo,
+          appearanceAssetRepository: ref.read(
+            readerAppearanceAssetRepositoryProvider,
+          ),
           readingHistoryRepository: ref.read(readingHistoryRepositoryProvider),
           readingSessionRepository: ref.read(readingSessionRepositoryProvider),
           inputBindingsRepository: ref.read(

@@ -223,6 +223,13 @@ class ReaderPreferencesRows extends Table {
   RealColumn get paddingLeft => real()();
   RealColumn get paddingRight => real()();
   TextColumn get themeMode => text()();
+  IntColumn get textColorArgb => integer().nullable()();
+  IntColumn get backgroundColorArgb => integer().nullable()();
+  TextColumn get backgroundImagePath => text().nullable()();
+  RealColumn get backgroundImageOpacity =>
+      real().withDefault(const Constant(1.0))();
+  RealColumn get backgroundOverlayOpacity =>
+      real().withDefault(const Constant(0.45))();
   DateTimeColumn get updatedAt => dateTime()();
 
   @override

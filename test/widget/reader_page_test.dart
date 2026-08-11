@@ -232,7 +232,7 @@ void main() {
     );
 
     testWidgets(
-      'theme-only preferences do not restore locator or write progress',
+      'paint-only appearance does not restore locator or write progress',
       (tester) async {
         final changes = StreamController<ReaderPreferences>(sync: true);
         final metricsReports = <ReaderMetricsRelayoutReport>[];
@@ -250,6 +250,17 @@ void main() {
         );
         await tester.pump();
         changes.add(ReaderPreferences.defaults);
+        await tester.pump();
+        changes.add(
+          ReaderPreferences.defaults.copyWith(
+            textColorArgb: 0xff4b3425,
+            backgroundColorArgb: 0xfffff8e7,
+            backgroundImagePath:
+                'library/reader_backgrounds/test/background.png',
+            backgroundImageOpacity: .8,
+            backgroundOverlayOpacity: .55,
+          ),
+        );
         await tester.pump();
 
         expect(
@@ -349,6 +360,11 @@ void main() {
         expect(find.byKey(readerHorizontalPaddingSliderKey), findsOneWidget);
         expect(find.byKey(readerVerticalPaddingSliderKey), findsOneWidget);
         expect(find.byKey(readerThemeControlKey), findsOneWidget);
+        await tester.ensureVisible(find.byKey(readerTextColorControlKey));
+        expect(find.byKey(readerTextColorControlKey), findsOneWidget);
+        expect(find.byKey(readerBackgroundColorControlKey), findsOneWidget);
+        expect(find.byKey(readerBackgroundImageActionKey), findsOneWidget);
+        expect(find.byKey(readerResetAppearanceKey), findsOneWidget);
         expect(find.byKey(readerSettingsModeControlKey), findsOneWidget);
         expect(find.byKey(readerResetPreferencesKey), findsOneWidget);
         expect(await progressRepo.getProgress('local-txt:abc'), isNull);

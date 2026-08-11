@@ -17,6 +17,11 @@ final class ReaderPreferences {
     required this.paddingLeft,
     required this.paddingRight,
     required this.themeMode,
+    required this.textColorArgb,
+    required this.backgroundColorArgb,
+    required this.backgroundImagePath,
+    required this.backgroundImageOpacity,
+    required this.backgroundOverlayOpacity,
   });
 
   static const double defaultFontSize = 17;
@@ -56,6 +61,10 @@ final class ReaderPreferences {
   static const double paddingStep = 2;
 
   static const ReaderThemeMode defaultThemeMode = ReaderThemeMode.system;
+  static const double defaultBackgroundImageOpacity = 1;
+  static const double defaultBackgroundOverlayOpacity = 0.45;
+  static const double minAppearanceOpacity = 0;
+  static const double maxAppearanceOpacity = 1;
 
   static const ReaderPreferences defaults = ReaderPreferences._(
     fontSize: defaultFontSize,
@@ -68,6 +77,11 @@ final class ReaderPreferences {
     paddingLeft: defaultPaddingLeft,
     paddingRight: defaultPaddingRight,
     themeMode: defaultThemeMode,
+    textColorArgb: null,
+    backgroundColorArgb: null,
+    backgroundImagePath: null,
+    backgroundImageOpacity: defaultBackgroundImageOpacity,
+    backgroundOverlayOpacity: defaultBackgroundOverlayOpacity,
   );
 
   factory ReaderPreferences({
@@ -81,6 +95,11 @@ final class ReaderPreferences {
     double paddingLeft = defaultPaddingLeft,
     double paddingRight = defaultPaddingRight,
     ReaderThemeMode themeMode = defaultThemeMode,
+    int? textColorArgb,
+    int? backgroundColorArgb,
+    String? backgroundImagePath,
+    double backgroundImageOpacity = defaultBackgroundImageOpacity,
+    double backgroundOverlayOpacity = defaultBackgroundOverlayOpacity,
   }) => ReaderPreferences._(
     fontSize: _valid(fontSize, minFontSize, maxFontSize, defaultFontSize),
     letterSpacing: _valid(
@@ -132,6 +151,21 @@ final class ReaderPreferences {
       defaultPaddingRight,
     ),
     themeMode: themeMode,
+    textColorArgb: _validArgb(textColorArgb),
+    backgroundColorArgb: _validArgb(backgroundColorArgb),
+    backgroundImagePath: _validManagedPath(backgroundImagePath),
+    backgroundImageOpacity: _valid(
+      backgroundImageOpacity,
+      minAppearanceOpacity,
+      maxAppearanceOpacity,
+      defaultBackgroundImageOpacity,
+    ),
+    backgroundOverlayOpacity: _valid(
+      backgroundOverlayOpacity,
+      minAppearanceOpacity,
+      maxAppearanceOpacity,
+      defaultBackgroundOverlayOpacity,
+    ),
   );
 
   final double fontSize;
@@ -144,6 +178,18 @@ final class ReaderPreferences {
   final double paddingLeft;
   final double paddingRight;
   final ReaderThemeMode themeMode;
+  final int? textColorArgb;
+  final int? backgroundColorArgb;
+  final String? backgroundImagePath;
+  final double backgroundImageOpacity;
+  final double backgroundOverlayOpacity;
+
+  bool get hasCustomAppearance =>
+      textColorArgb != null ||
+      backgroundColorArgb != null ||
+      backgroundImagePath != null;
+
+  static const Object _unset = Object();
 
   ReaderPreferences copyWith({
     double? fontSize,
@@ -156,6 +202,11 @@ final class ReaderPreferences {
     double? paddingLeft,
     double? paddingRight,
     ReaderThemeMode? themeMode,
+    Object? textColorArgb = _unset,
+    Object? backgroundColorArgb = _unset,
+    Object? backgroundImagePath = _unset,
+    double? backgroundImageOpacity,
+    double? backgroundOverlayOpacity,
   }) => ReaderPreferences(
     fontSize: fontSize ?? this.fontSize,
     letterSpacing: letterSpacing ?? this.letterSpacing,
@@ -167,6 +218,19 @@ final class ReaderPreferences {
     paddingLeft: paddingLeft ?? this.paddingLeft,
     paddingRight: paddingRight ?? this.paddingRight,
     themeMode: themeMode ?? this.themeMode,
+    textColorArgb: identical(textColorArgb, _unset)
+        ? this.textColorArgb
+        : textColorArgb as int?,
+    backgroundColorArgb: identical(backgroundColorArgb, _unset)
+        ? this.backgroundColorArgb
+        : backgroundColorArgb as int?,
+    backgroundImagePath: identical(backgroundImagePath, _unset)
+        ? this.backgroundImagePath
+        : backgroundImagePath as String?,
+    backgroundImageOpacity:
+        backgroundImageOpacity ?? this.backgroundImageOpacity,
+    backgroundOverlayOpacity:
+        backgroundOverlayOpacity ?? this.backgroundOverlayOpacity,
   );
 
   Set<ReaderPreferenceChangeKind> changesFrom(ReaderPreferences previous) {
@@ -182,7 +246,12 @@ final class ReaderPreferences {
         paddingRight != previous.paddingRight) {
       result.add(ReaderPreferenceChangeKind.metrics);
     }
-    if (themeMode != previous.themeMode) {
+    if (themeMode != previous.themeMode ||
+        textColorArgb != previous.textColorArgb ||
+        backgroundColorArgb != previous.backgroundColorArgb ||
+        backgroundImagePath != previous.backgroundImagePath ||
+        backgroundImageOpacity != previous.backgroundImageOpacity ||
+        backgroundOverlayOpacity != previous.backgroundOverlayOpacity) {
       result.add(ReaderPreferenceChangeKind.paint);
     }
     return result;
@@ -190,6 +259,15 @@ final class ReaderPreferences {
 
   static double _valid(double value, double min, double max, double fallback) =>
       value.isFinite && value >= min && value <= max ? value : fallback;
+
+  static int? _validArgb(int? value) =>
+      value != null && value >= 0 && value <= 0xffffffff ? value : null;
+
+  static String? _validManagedPath(String? value) {
+    final path = value?.trim();
+    if (path == null || path.isEmpty || path.contains('..')) return null;
+    return path;
+  }
 
   @override
   bool operator ==(Object other) =>
@@ -203,10 +281,15 @@ final class ReaderPreferences {
       paddingBottom == other.paddingBottom &&
       paddingLeft == other.paddingLeft &&
       paddingRight == other.paddingRight &&
-      themeMode == other.themeMode;
+      themeMode == other.themeMode &&
+      textColorArgb == other.textColorArgb &&
+      backgroundColorArgb == other.backgroundColorArgb &&
+      backgroundImagePath == other.backgroundImagePath &&
+      backgroundImageOpacity == other.backgroundImageOpacity &&
+      backgroundOverlayOpacity == other.backgroundOverlayOpacity;
 
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll([
     fontSize,
     letterSpacing,
     lineHeight,
@@ -217,5 +300,10 @@ final class ReaderPreferences {
     paddingLeft,
     paddingRight,
     themeMode,
-  );
+    textColorArgb,
+    backgroundColorArgb,
+    backgroundImagePath,
+    backgroundImageOpacity,
+    backgroundOverlayOpacity,
+  ]);
 }
