@@ -15,6 +15,7 @@ import '../reader/reader_input.dart';
 import '../reader/reader_input_router.dart';
 import 'windows_shell.dart';
 import 'providers.dart';
+import 'router.dart';
 
 class ReaderSettingsPage extends StatelessWidget {
   const ReaderSettingsPage({super.key});
@@ -46,6 +47,20 @@ class ReaderSettingsPage extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 24),
+              if (kDebugMode) ...[
+                Card(
+                  child: ListTile(
+                    leading: const Icon(Icons.analytics_outlined),
+                    title: const Text('平台能力诊断'),
+                    subtitle: const Text('查看当前平台、渲染器、显示与窗口能力'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => Navigator.of(context).pushNamed(
+                      AppRouter.platformDiagnostics,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+              ],
               _SettingsSectionLabel(label: '输入与操作'),
               Card(
                 child: ListTile(

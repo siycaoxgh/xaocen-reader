@@ -19,10 +19,12 @@ import '../data/repositories/auto_read_preferences_repository.dart';
 import '../data/repositories/windows_shell_preferences_repository.dart';
 import '../domain/library/library_entities.dart';
 import '../domain/library/library_import_models.dart';
+import '../domain/platform/platform_capabilities.dart';
 import '../domain/reader/reading_history.dart';
 import '../domain/local_txt/pipeline_progress.dart';
 import '../reader/normalized_document_loader.dart';
 import '../sources/local_txt/txt_cancellation.dart';
+import '../platform/platform_capabilities_adapter.dart';
 
 /// 数据库 Provider（懒加载）。
 final databaseProvider = Provider<AppDatabase>((ref) {
@@ -126,6 +128,17 @@ final windowsShellPreferencesRepositoryProvider =
     Provider<WindowsShellPreferencesRepository>((ref) {
       return WindowsShellPreferencesRepository(db: ref.watch(databaseProvider));
     });
+
+final platformCapabilitiesAdapterProvider =
+    Provider<PlatformCapabilitiesAdapter>((ref) {
+      return DefaultPlatformCapabilitiesAdapter();
+    });
+
+final platformCapabilitiesProvider = FutureProvider<PlatformCapabilities>((
+  ref,
+) async {
+  return ref.watch(platformCapabilitiesAdapterProvider).load();
+});
 
 final readingHistoryRepositoryProvider = Provider<ReadingHistoryRepository>((
   ref,
