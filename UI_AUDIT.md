@@ -9,11 +9,11 @@
 
 当前 Reader/App Shell 已具备 V3 的主要行为：正文为主体、顶部/底部控制区、
 Android 与 Windows 响应式导航、Flat TOC、Aa/Bookmark/Search/AutoRead 面板。
-M5.5a-g 已完成一级导航、首页/书架分工、Reader 操作层级、历史/设置分组、阅读外观、
+M5.5a-h 已完成一级导航、首页/书架分工、Reader 操作层级、历史/设置分组、阅读外观、
 字体体系和 Android edge-to-edge。本轮剩余差异主要是 Windows 面板容器的进一步宽屏化、
 原生透明窗口和系统字体导入等明确延后能力。
 
-本轮没有发现必须阻断日常阅读的 P0/P1 UI 问题。ReaderLocator、readingMode、
+M5.5 = COMPLETE。本轮没有发现必须阻断日常阅读的 P0/P1 UI 问题。ReaderLocator、readingMode、
 ReaderPreferences、Bookmark、Search、ReadingHistory 和 AutoRead 的数据/位置
 合同不应因 UI 审计而改变。
 
