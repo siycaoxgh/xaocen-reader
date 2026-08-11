@@ -9,6 +9,7 @@ class MainActivity : FlutterActivity() {
     private val channelName = "xaocen.reader/paged_input"
     private var pagedReaderActive = false
     private var inputCaptureActive = false
+    private var volumeBindingActive = false
     private lateinit var inputChannel: MethodChannel
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -22,6 +23,10 @@ class MainActivity : FlutterActivity() {
                 }
                 "setInputCaptureActive" -> {
                     inputCaptureActive = call.arguments as? Boolean ?: false
+                    result.success(null)
+                }
+                "setVolumeBindingActive" -> {
+                    volumeBindingActive = call.arguments as? Boolean ?: false
                     result.success(null)
                 }
                 "setKeepScreenOn" -> {
@@ -41,7 +46,7 @@ class MainActivity : FlutterActivity() {
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         val isVolume = event.keyCode == KeyEvent.KEYCODE_VOLUME_UP ||
             event.keyCode == KeyEvent.KEYCODE_VOLUME_DOWN
-        if ((pagedReaderActive || inputCaptureActive) && isVolume) {
+        if ((volumeBindingActive || inputCaptureActive) && isVolume) {
             if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
                 val input = if (event.keyCode == KeyEvent.KEYCODE_VOLUME_UP) {
                     "android.volumeUp"

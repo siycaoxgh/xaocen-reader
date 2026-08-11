@@ -201,4 +201,29 @@ void main() {
       await router.dispose();
     },
   );
+
+  test(
+    'Android volume toggleAutoRead uses the same semantic router action',
+    () async {
+      var toggles = 0;
+      final router = ReaderInputRouter(
+        platform: ReaderInputPlatform.android,
+        repository: repository,
+        onToggleAutoRead: () => toggles++,
+      );
+      await repository.bind(
+        ReaderInputPlatform.android,
+        PhysicalInputId.androidVolumeDown,
+        ReaderCommand.toggleAutoRead,
+      );
+      await router.start();
+      expect(
+        router.handlePhysicalInput(PhysicalInputId.androidVolumeDown),
+        isTrue,
+      );
+      await Future<void>.delayed(Duration.zero);
+      expect(toggles, 1);
+      await router.dispose();
+    },
+  );
 }

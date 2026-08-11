@@ -1,7 +1,16 @@
 # KNOWN_ISSUES.md — XAOCEN Reader v4 已知问题清单
 
-> 状态截至 M5.6b（`feat/m4-horizontal-reader`，Drift schema 10）。Android 真机按阶段策略另行复核。
+> 状态截至 M5.6c.1.2（`feat/m4-horizontal-reader`，Drift schema 11）。Android 真机按阶段策略另行复核。
 > 已解决的问题不在此列为 open；「Resolved but regression-sensitive」列出需要持续盯防的已修复项。
+
+## M5.6c.1.2 status (2026-08-12)
+
+- Unified AutoRead toggle and the Android Volume profile contract are covered
+  by the 495-test Flutter suite. Android physical-device volume behavior was
+  not run in this coding pass; it remains a targeted device-validation item.
+- Schema 10→11 migration for the per-book AutoRead minimal-information switch
+  passed. No new ReaderLocator, pagination, ReadingSession, or data-retention
+  issue was found.
 
 ---
 

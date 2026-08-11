@@ -230,6 +230,7 @@ final class ReaderInputProfile {
   static const androidSupportedCommands = <ReaderCommand>{
     ReaderCommand.previousPage,
     ReaderCommand.nextPage,
+    ReaderCommand.toggleAutoRead,
   };
 
   static bool supportsCommand(

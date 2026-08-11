@@ -36,7 +36,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting() : super(NativeDatabase.memory());
 
   @override
-  int get schemaVersion => 10;
+  int get schemaVersion => 11;
 
   /// 打开应用数据库（support 目录下）。
   static Future<AppDatabase> open() async {
@@ -245,6 +245,16 @@ class AppDatabase extends _$AppDatabase {
           SET show_chapter_progress_info = show_progress_info,
               show_whole_book_progress_info = show_progress_info
         ''');
+      }
+      // schema 10 → 11: per-book control for whether the transient minimal
+      // information layer remains visible while AutoRead hides the chrome.
+      // Existing books keep the enabled default; no position or session data
+      // is touched.
+      if (from >= 5 && from < 11) {
+        await m.addColumn(
+          readerPreferencesRows,
+          readerPreferencesRows.showAutoReadMinimalInfo,
+        );
       }
     },
     beforeOpen: (details) async {

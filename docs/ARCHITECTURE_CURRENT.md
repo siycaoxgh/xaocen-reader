@@ -1,6 +1,6 @@
 # ARCHITECTURE_CURRENT.md — XAOCEN Reader v4 当前架构与合同
 
-> 只描述当前代码与合同（`feat/m4-horizontal-reader`，M5.6b 完成点，Drift schema 10）。
+> 只描述当前代码与合同（`feat/m4-horizontal-reader`，M5.6c.1.2 完成点，Drift schema 11）。
 > 不记录历史故事（见 PROJECT_HISTORY.md）。
 > 代码位置均以本仓库实际文件为准。
 
@@ -21,7 +21,26 @@ Paged Reader keyboard input uses a route-owned `FocusNode` and the existing
 that focus before PageUp/PageDown/Arrow dispatch. No keyboard path bypasses the
 router or changes PageWindow, ReaderLocator, AutoRead state, or persistence.
 
-Drift schema is 10.
+Drift schema is 11.
+
+## M5.6c.1.2 unified AutoRead input contract
+
+`ReaderCommand.toggleAutoRead` is routed identically from Windows bindings and
+Android Volume bindings. Android's native bridge only reports volume input and
+receives a profile-derived `volumeBindingActive` gate: page commands are
+intercepted only in paged mode, `toggleAutoRead` is interceptable in either
+Reader mode, and disabled/vertical page bindings or Reader-external input stay
+with system volume handling. Capture remains an explicit temporary gate.
+
+Starting/resuming AutoRead shows Chrome and schedules a 2.5-second hide. The
+driver and `ReadingSession` continue independently while Chrome is hidden;
+manual navigation, pause, stop, and EOF restore Chrome. The per-book display
+field `showAutoReadMinimalInfo` controls whether the existing six-slot minimal
+information layer remains visible during the hidden running state. It is
+display-only and does not enter metrics, Locator, pagination, progress, or
+session persistence.
+
+Drift schema 10→11 adds this field with an enabled default for existing books.
 
 ## M5.6b minimal Reader information layer
 
@@ -1019,7 +1038,7 @@ migration described above.
 
 `WindowsShellPreferences` is an app-level typed contract stored through
 `WindowsShellPreferencesRepository` in `app_settings`; it is not a book
-ReaderPreference and does not affect schema 10. `showTaskbarIcon` and
+ReaderPreference and does not affect schema 11. `showTaskbarIcon` and
 `showTrayIcon` are validated as a pair: at least one must remain enabled.
 Missing, corrupt, future, or unsafe values resolve to the safe taskbar-enabled
 default.

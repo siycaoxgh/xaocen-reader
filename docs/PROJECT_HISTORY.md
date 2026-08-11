@@ -8,6 +8,20 @@
 
 ## M5.6a P1 regression fixes (2026-08-11)
 
+## M5.6c.1.2 — unified AutoRead toggle and Android volume contract
+
+The Reader now uses one `toggleAutoRead` command for Windows shortcuts and
+Android Volume Up/Down bindings. Android interception is profile- and mode
+aware: only actionable Reader bindings are consumed, while vertical page
+bindings, disabled bindings, and Reader-external volume input remain system
+volume behavior. Chrome auto-hides 2.5 seconds after start/resume and returns
+immediately on pause/manual navigation/stop/EOF; the running driver and
+ReadingSession are unaffected. A per-book minimal-info switch and schema
+10→11 migration were added without changing ReaderLocator or pagination.
+
+Validation: 495 Flutter tests passed; Windows Release and Android Debug build
+validation are recorded with the milestone result.
+
 This patch closed three existing regressions without changing schema 9 or any
 Reader position contract. AutoRead status actions now follow Chrome visibility;
 the clock settings panel explains the Reader-information-bar gate and both 12/24

@@ -50,6 +50,22 @@ Debug. Android targeted ADB was not run because no device was connected.
 
 ## Unreleased
 
+### M5.6c.1.2 — unified AutoRead toggle and Android volume bindings (2026-08-12)
+
+- Unified Windows and Android `toggleAutoRead` input dispatch through the
+  existing `PhysicalInput → ReaderCommand → AutoReadController` route.
+- Added the Android Volume Up/Down choices `上一页`, `下一页`, `自动阅读`, and
+  explicit `不使用`; native interception is gated by the active Reader profile,
+  so vertical page bindings and Reader-external volume behavior remain system
+  volume behavior.
+- Added the per-book `showAutoReadMinimalInfo` display preference. Running
+  AutoRead shows Chrome for 2.5 seconds, then hides it while optionally
+  retaining the existing fixed-slot minimal information layer; pause, stop,
+  EOF, and manual navigation restore Chrome.
+- Migrated Drift schema 10→11 with an explicit enabled default. Locator,
+  reading progress, ReadingSession, pagination, and AutoRead state contracts
+  are unchanged.
+
 ### M5.6b — Reader minimal information layer (2026-08-11)
 
 - Replaced the hidden-Chrome floating information cards with a transparent,

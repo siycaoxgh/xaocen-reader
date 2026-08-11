@@ -995,6 +995,10 @@ class _AndroidInputSection extends StatelessWidget {
               value: ReaderCommand.nextPage,
               child: Text('下一页'),
             ),
+            DropdownMenuItem<ReaderCommand?>(
+              value: ReaderCommand.toggleAutoRead,
+              child: Text('自动阅读'),
+            ),
             DropdownMenuItem<ReaderCommand?>(value: null, child: Text('不使用')),
           ],
         ),

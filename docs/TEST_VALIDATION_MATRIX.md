@@ -1,12 +1,27 @@
 # TEST_VALIDATION_MATRIX.md — XAOCEN Reader v4 验证矩阵
 
-> 状态：M5.6b COMPLETE（`feat/m4-horizontal-reader`，Drift schema 10）；Android 真机按阶段策略另行复核。
+> 状态：M5.6c.1.2 COMPLETE（`feat/m4-horizontal-reader`，Drift schema 11）；Android 真机按阶段策略另行复核。
 > 自动测试与真人测试分开记录。**Android Debug 构建 PASS ≠ Android 真机 PASS**，两者分别列出。
 > 真人环境：Windows（本机，用户 + 自动化集成测试）；Android 真机 Redmi K60（23013RK75C / mondrian，Android 15 / API 35，无线 adb）。
 
 图例：✅ 通过 · ✅* 通过（用户手动确认） · ➖ 不适用/未执行 · 🔒 回归敏感
 
 ## M5.6a — P1 regression fixes
+
+## M5.6c.1.2 — unified AutoRead and Android volume contract
+
+| Validation | Result |
+|---|---|
+| Shared `toggleAutoRead` routing | PASS: Windows and Android use ReaderInputRouter → ReaderCommand → AutoReadController |
+| Android profile choices | PASS: Volume Up/Down independently support previous page, next page, AutoRead, and explicit null |
+| Android interception gate | PASS in code/contract coverage: paged page bindings and toggle are actionable; vertical page/null and Reader-external paths remain system volume |
+| Chrome hide/show contract | PASS: start/resume schedules 2.5 s hide; pause/manual navigation/stop/EOF restores Chrome |
+| AutoRead minimal-info switch | PASS: running hidden state keeps or removes fixed-slot layer per per-book preference |
+| Schema 10→11 migration | PASS: existing books receive enabled default; Locator/progress/session data preserved |
+| Full Flutter unit/contract/widget | 495/495 PASS |
+| Integration | 11 files / 14 scenarios PASS |
+| Windows Release / Android Debug | PASS / PASS |
+| Android real device | NOT-RUN in this coding pass |
 
 | Validation | Result |
 |---|---|

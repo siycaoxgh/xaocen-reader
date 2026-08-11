@@ -185,6 +185,33 @@ void main() {
     );
   });
 
+  testWidgets(
+    'running AutoRead can hide minimal info without hiding the body',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: ReaderChrome(
+              visible: false,
+              title: 'Book',
+              mode: ReaderMode.vertical,
+              onBack: () {},
+              onToc: () {},
+              onAppearance: () {},
+              onMore: () {},
+              onBookmarks: () {},
+              onSearch: () {},
+              onModeSelected: (_) {},
+              autoReadState: AutoReadState.running,
+              showAutoReadMinimalInfo: false,
+            ),
+          ),
+        ),
+      );
+      expect(find.byType(ReaderMinimalInfoLayer), findsNothing);
+    },
+  );
+
   testWidgets('Reader info clock renders both 24-hour and 12-hour strings', (
     tester,
   ) async {

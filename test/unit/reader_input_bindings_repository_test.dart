@@ -18,8 +18,8 @@ void main() {
 
   tearDown(() => db.close());
 
-  test('defaults are platform-specific and schema remains 6', () async {
-    expect(db.schemaVersion, 10);
+  test('defaults are platform-specific and schema remains stable', () async {
+    expect(db.schemaVersion, 11);
     final windows = await repository.load(ReaderInputPlatform.windows);
     final android = await repository.load(ReaderInputPlatform.android);
     expect(
@@ -64,6 +64,32 @@ void main() {
       ReaderCommand.previousPage,
     );
   });
+
+  test(
+    'Android volume toggleAutoRead binding is independent per key',
+    () async {
+      await repository.bind(
+        ReaderInputPlatform.android,
+        PhysicalInputId.androidVolumeUp,
+        ReaderCommand.toggleAutoRead,
+      );
+      final profile = await repository.load(ReaderInputPlatform.android);
+      expect(
+        profile.commandFor(PhysicalInputId.androidVolumeUp),
+        ReaderCommand.toggleAutoRead,
+      );
+      expect(
+        profile.commandFor(PhysicalInputId.androidVolumeDown),
+        ReaderCommand.nextPage,
+      );
+      expect(
+        (await repository.load(
+          ReaderInputPlatform.windows,
+        )).commandFor(PhysicalInputId.keyboardArrowLeft),
+        ReaderCommand.previousPage,
+      );
+    },
+  );
 
   test(
     'update persists across repository recreation and isolates platforms',

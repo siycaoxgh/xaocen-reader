@@ -116,6 +116,7 @@ final class ReaderInputBridge {
   static Future<void> activate({
     required bool pagedActive,
     required bool inputCaptureActive,
+    bool volumeBindingActive = false,
     required void Function(PhysicalInputId input) onInput,
   }) async {
     _channel.setMethodCallHandler((call) async {
@@ -133,6 +134,7 @@ final class ReaderInputBridge {
     await setActiveState(
       pagedActive: pagedActive,
       inputCaptureActive: inputCaptureActive,
+      volumeBindingActive: volumeBindingActive,
     );
   }
 
@@ -156,12 +158,17 @@ final class ReaderInputBridge {
   static Future<void> setActiveState({
     required bool pagedActive,
     required bool inputCaptureActive,
+    bool volumeBindingActive = false,
   }) async {
     try {
       await _channel.invokeMethod<void>('setPagedActive', pagedActive);
       await _channel.invokeMethod<void>(
         'setInputCaptureActive',
         inputCaptureActive,
+      );
+      await _channel.invokeMethod<void>(
+        'setVolumeBindingActive',
+        volumeBindingActive,
       );
     } on MissingPluginException {
       // Desktop and test hosts have no Android bridge.
@@ -170,7 +177,11 @@ final class ReaderInputBridge {
 
   static Future<void> deactivatePaged() async {
     _channel.setMethodCallHandler(null);
-    await setActiveState(pagedActive: false, inputCaptureActive: false);
+    await setActiveState(
+      pagedActive: false,
+      inputCaptureActive: false,
+      volumeBindingActive: false,
+    );
   }
 
   static Future<void> deactivate() async {
@@ -178,6 +189,7 @@ final class ReaderInputBridge {
     try {
       await _channel.invokeMethod<void>('setPagedActive', false);
       await _channel.invokeMethod<void>('setInputCaptureActive', false);
+      await _channel.invokeMethod<void>('setVolumeBindingActive', false);
     } on MissingPluginException {
       // Desktop and test hosts have no Android bridge.
     }

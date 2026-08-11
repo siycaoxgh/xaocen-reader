@@ -256,6 +256,8 @@ class ReaderPreferencesRows extends Table {
       boolean().withDefault(const Constant(true))();
   BoolColumn get showInfoDivider =>
       boolean().withDefault(const Constant(false))();
+  BoolColumn get showAutoReadMinimalInfo =>
+      boolean().withDefault(const Constant(true))();
   TextColumn get chapterInfoSlot =>
       text().withDefault(const Constant('topLeft'))();
   TextColumn get chapterProgressInfoSlot =>

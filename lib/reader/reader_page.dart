@@ -224,6 +224,7 @@ class _ReaderPageState extends State<ReaderPage>
   int? _modeRestoreGeneration;
   bool _suppressProgrammaticScrollNotifications = false;
   bool _chromeVisible = true;
+  Timer? _autoReadChromeHideTimer;
   final FocusNode _pagedInputFocusNode = FocusNode(
     debugLabel: 'reader-paged-input',
   );
@@ -264,6 +265,7 @@ class _ReaderPageState extends State<ReaderPage>
     } else {
       startPagedAutoRead();
     }
+    _scheduleAutoReadChromeHide();
   }
 
   void _pauseAutoRead(AutoReadPauseReason reason) {
@@ -283,9 +285,11 @@ class _ReaderPageState extends State<ReaderPage>
     } else {
       _pagedAutoReadDriver?.resume();
     }
+    _scheduleAutoReadChromeHide();
   }
 
   void _stopAutoRead() {
+    _showChrome();
     if (_mode == ReaderMode.vertical) {
       stopVerticalAutoRead();
     } else {
@@ -306,7 +310,22 @@ class _ReaderPageState extends State<ReaderPage>
   }
 
   void _pauseAutoReadForManualNavigation() {
+    _showChrome();
     _pauseAutoRead(AutoReadPauseReason.manualNavigation);
+  }
+
+  void _scheduleAutoReadChromeHide() {
+    _autoReadChromeHideTimer?.cancel();
+    _autoReadChromeHideTimer = null;
+    if (!mounted || _autoReadController.state != AutoReadState.running) return;
+    _showChrome();
+    _autoReadChromeHideTimer = Timer(const Duration(milliseconds: 2500), () {
+      _autoReadChromeHideTimer = null;
+      if (!mounted || _autoReadController.state != AutoReadState.running) {
+        return;
+      }
+      setState(() => _chromeVisible = false);
+    });
   }
 
   void _openAutoReadControls() {
@@ -414,7 +433,32 @@ class _ReaderPageState extends State<ReaderPage>
       ReaderInputBridge.setActiveState(
         pagedActive: pagedActive,
         inputCaptureActive: captureActive,
+        volumeBindingActive: _androidVolumeBindingActive(),
       ),
+    );
+  }
+
+  bool _androidVolumeBindingActive() {
+    if (defaultTargetPlatform != TargetPlatform.android) return false;
+    for (final input in [
+      PhysicalInputId.androidVolumeUp,
+      PhysicalInputId.androidVolumeDown,
+    ]) {
+      final command = _inputRouter.profile.commandFor(input);
+      if (command == ReaderCommand.toggleAutoRead ||
+          (_mode == ReaderMode.paged &&
+              (command == ReaderCommand.previousPage ||
+                  command == ReaderCommand.nextPage))) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  void _onReaderInputProfileChanged(ReaderInputProfile profile) {
+    _onInputHostStateChanged(
+      pagedActive: _mode == ReaderMode.paged,
+      captureActive: _inputRouter.capture.isActive,
     );
   }
 
@@ -477,6 +521,8 @@ class _ReaderPageState extends State<ReaderPage>
   }
 
   void _showChrome() {
+    _autoReadChromeHideTimer?.cancel();
+    _autoReadChromeHideTimer = null;
     if (_chromeVisible) return;
     setState(() => _chromeVisible = true);
   }
@@ -535,6 +581,11 @@ class _ReaderPageState extends State<ReaderPage>
           _autoReadController.state == AutoReadState.running,
         ),
       );
+      if (_autoReadController.state == AutoReadState.paused ||
+          _autoReadController.state == AutoReadState.idle ||
+          _autoReadController.state == AutoReadState.stoppedAtEnd) {
+        _showChrome();
+      }
       if (mounted) setState(() {});
     });
     _searchService = ReaderSearchService();
@@ -550,6 +601,7 @@ class _ReaderPageState extends State<ReaderPage>
       onToggleReaderControls: _toggleChrome,
       onOpenToc: _openToc,
       onToggleAutoRead: _toggleAutoRead,
+      onProfileChanged: _onReaderInputProfileChanged,
       onHostStateChanged: _onInputHostStateChanged,
     );
     unawaited(_inputRouter.start());
@@ -557,6 +609,7 @@ class _ReaderPageState extends State<ReaderPage>
       ReaderInputBridge.activate(
         pagedActive: false,
         inputCaptureActive: false,
+        volumeBindingActive: _androidVolumeBindingActive(),
         onInput: _inputRouter.handlePhysicalInput,
       ),
     );
@@ -740,6 +793,8 @@ class _ReaderPageState extends State<ReaderPage>
 
   @override
   void dispose() {
+    _autoReadChromeHideTimer?.cancel();
+    _autoReadChromeHideTimer = null;
     _autoReadSpeedWriteTimer?.cancel();
     final pendingSpeed = _pendingAutoReadSpeedWrite;
     final autoReadRepository = widget.launch.autoReadPreferencesRepository;
@@ -1954,6 +2009,7 @@ class _ReaderPageState extends State<ReaderPage>
             showClockInfo: _preferences.showClockInfo,
             showWholeBookProgressInfo: _preferences.showWholeBookProgressInfo,
             showInfoDivider: _preferences.showInfoDivider,
+            showAutoReadMinimalInfo: _preferences.showAutoReadMinimalInfo,
             chapterInfoSlot: _preferences.chapterInfoSlot,
             chapterProgressInfoSlot: _preferences.chapterProgressInfoSlot,
             clockInfoSlot: _preferences.clockInfoSlot,

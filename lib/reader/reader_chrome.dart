@@ -54,6 +54,9 @@ const readerResetPreferencesKey = Key('reader-reset-preferences');
 const readerShowTopInfoKey = Key('reader-show-top-info');
 const readerShowBottomInfoKey = Key('reader-show-bottom-info');
 const readerShowProgressInfoKey = Key('reader-show-progress-info');
+const readerShowAutoReadMinimalInfoKey = Key(
+  'reader-show-auto-read-minimal-info',
+);
 const readerStatusBarModeKey = Key('reader-status-bar-mode');
 const readerTimeDisplayModeKey = Key('reader-time-display-mode');
 
@@ -104,6 +107,7 @@ class ReaderChrome extends StatelessWidget {
     this.showClockInfo = true,
     this.showWholeBookProgressInfo = true,
     this.showInfoDivider = false,
+    this.showAutoReadMinimalInfo = true,
     this.chapterInfoSlot = ReaderInfoSlot.topLeft,
     this.chapterProgressInfoSlot = ReaderInfoSlot.topRight,
     this.clockInfoSlot = ReaderInfoSlot.bottomLeft,
@@ -146,6 +150,7 @@ class ReaderChrome extends StatelessWidget {
   final bool showClockInfo;
   final bool showWholeBookProgressInfo;
   final bool showInfoDivider;
+  final bool showAutoReadMinimalInfo;
   final ReaderInfoSlot chapterInfoSlot;
   final ReaderInfoSlot chapterProgressInfoSlot;
   final ReaderInfoSlot clockInfoSlot;
@@ -383,7 +388,10 @@ class ReaderChrome extends StatelessWidget {
     return Stack(
       fit: StackFit.expand,
       children: [
-        if (!visible && (showTopInfoBar || showBottomInfoBar))
+        if (!visible &&
+            (autoReadState != AutoReadState.running ||
+                showAutoReadMinimalInfo) &&
+            (showTopInfoBar || showBottomInfoBar))
           ReaderMinimalInfoLayer(
             mode: mode,
             currentChapterTitle: currentChapterTitle,
@@ -1835,6 +1843,15 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
           value: _draft.showBottomInfoBar,
           onChanged: (value) =>
               _commit(_draft.copyWith(showBottomInfoBar: value)),
+        ),
+        SwitchListTile.adaptive(
+          key: readerShowAutoReadMinimalInfoKey,
+          contentPadding: EdgeInsets.zero,
+          title: const Text('自动阅读时显示极简信息'),
+          subtitle: const Text('自动隐藏菜单后保留章节、时间和进度信息'),
+          value: _draft.showAutoReadMinimalInfo,
+          onChanged: (value) =>
+              _commit(_draft.copyWith(showAutoReadMinimalInfo: value)),
         ),
         SwitchListTile.adaptive(
           key: readerShowProgressInfoKey,
