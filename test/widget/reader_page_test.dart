@@ -360,7 +360,7 @@ void main() {
         expect(find.byKey(readerLineHeightSliderKey), findsOneWidget);
         expect(find.byKey(readerHorizontalPaddingSliderKey), findsOneWidget);
         expect(find.byKey(readerVerticalPaddingSliderKey), findsOneWidget);
-        await tester.tap(find.text('外观'));
+        await tester.tap(find.text('阅读外观'));
         await tester.pumpAndSettle();
         expect(find.byKey(readerThemeControlKey), findsOneWidget);
         await tester.ensureVisible(find.byKey(readerTextColorControlKey));
@@ -371,7 +371,7 @@ void main() {
         await tester.tap(find.text('阅读行为'));
         await tester.pumpAndSettle();
         expect(find.byKey(readerSettingsModeControlKey), findsOneWidget);
-        await tester.tap(find.text('高级'));
+        await tester.tap(find.text('高级设置'));
         await tester.pumpAndSettle();
         expect(find.byKey(readerResetPreferencesKey), findsOneWidget);
         expect(await progressRepo.getProgress('local-txt:abc'), isNull);
@@ -439,7 +439,7 @@ void main() {
       );
       await tester.tap(find.byKey(readerAppearanceActionKey));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('外观'));
+      await tester.tap(find.text('阅读外观'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('墨黑'));
       await tester.pump();
@@ -474,7 +474,7 @@ void main() {
         const Offset(0, 1000),
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.text('排版'));
+      await tester.tap(find.text('排版布局'));
       await tester.pumpAndSettle();
       await tester.ensureVisible(find.byKey(readerFontSizeSliderKey));
       await tester.pump();
@@ -490,7 +490,7 @@ void main() {
         const Offset(0, 1000),
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.text('高级'));
+      await tester.tap(find.text('高级设置'));
       await tester.pumpAndSettle();
       await tester.ensureVisible(find.byKey(readerResetPreferencesKey));
       await tester.pump();

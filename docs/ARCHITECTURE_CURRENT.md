@@ -1,10 +1,21 @@
 # ARCHITECTURE_CURRENT.md — XAOCEN Reader v4 当前架构与合同
 
-> 只描述当前代码与合同（`feat/m4-horizontal-reader`，M5.5e.4.2 完成点，Drift schema 8）。
+> 只描述当前代码与合同（`feat/m4-horizontal-reader`，M5.5e.5 完成点，Drift schema 8）。
 > 不记录历史故事（见 PROJECT_HISTORY.md）。
 > 代码位置均以本仓库实际文件为准。
 
 ---
+
+## M5.5e.5 Aa appearance hierarchy contract
+
+The Aa sheet exposes four stable categories on both platforms: `排版布局`, `阅读外观`,
+`阅读行为`, and `高级设置`. Reader color mode is labeled `阅读色彩模式` with
+system/light/dark semantics; system mode reports the effective brightness. Palette presets
+are represented with light/dark swatches, while custom editing is explicitly split into
+`浅色方案` and `深色方案` and includes a preview of the currently effective text/background
+pair. Windows uses a bounded desktop rail and fixed content area; Android uses compact
+touch-friendly horizontal category navigation. This is presentation-only: schema 8,
+ReaderPaletteResolver, ReaderLocator, pagination, AutoRead, and ReadingSession are unchanged.
 
 ## M5.5e.4 Reader palette and theme contract
 

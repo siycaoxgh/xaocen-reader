@@ -51,6 +51,10 @@ const readerResetAppearanceKey = Key('reader-reset-appearance');
 const readerSettingsModeControlKey = Key('reader-settings-mode-control');
 const readerResetPreferencesKey = Key('reader-reset-preferences');
 
+const _aaSectionGap = 12.0;
+const _aaControlRadius = 12.0;
+const _aaControlHeight = 40.0;
+
 abstract final class ReaderProgressLabels {
   static const chapter = '本章';
   static const wholeBook = '全书';
@@ -834,6 +838,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
   late final TextEditingController _darkBackgroundColorController =
       TextEditingController(text: _hexColor(_draft.darkBackgroundColorArgb));
   Brightness _editingBrightness = Brightness.light;
+  bool _brightnessInitialized = false;
   String? _textColorError;
   String? _backgroundColorError;
 
@@ -869,6 +874,22 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
       brightness == Brightness.light
       ? _draft.lightBackgroundColorArgb
       : _draft.darkBackgroundColorArgb;
+
+  Brightness _effectiveBrightness(BuildContext context, ReaderThemeMode mode) =>
+      switch (mode) {
+        ReaderThemeMode.light => Brightness.light,
+        ReaderThemeMode.dark => Brightness.dark,
+        ReaderThemeMode.system => MediaQuery.platformBrightnessOf(context),
+      };
+
+  void _syncBrightnessControllers() {
+    _textColorController.text = _hexColor(_textColorFor(_editingBrightness));
+    _backgroundColorController.text = _hexColor(
+      _backgroundColorFor(_editingBrightness),
+    );
+    _textColorError = null;
+    _backgroundColorError = null;
+  }
 
   void _previewColor({required bool text, required String value}) {
     final parsed = _parseColor(value);
@@ -968,6 +989,8 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        Text('排版布局', style: Theme.of(context).textTheme.titleSmall),
+        const SizedBox(height: _aaSectionGap),
         _PreferenceSlider(
           key: readerFontSizeSliderKey,
           label: '字号',
@@ -1096,6 +1119,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
   }
 
   Widget _buildAppearancePanel(BuildContext context) {
+    final activeBrightness = _effectiveBrightness(context, _draft.themeMode);
     final textColor = _textColorFor(_editingBrightness) == null
         ? null
         : Color(_textColorFor(_editingBrightness)!);
@@ -1108,19 +1132,44 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('主题', style: Theme.of(context).textTheme.titleSmall),
+        Text('阅读色彩模式', style: Theme.of(context).textTheme.titleSmall),
         const SizedBox(height: 8),
         SegmentedButton<ReaderThemeMode>(
           key: readerThemeControlKey,
+          style: ButtonStyle(
+            minimumSize: const WidgetStatePropertyAll(
+              Size(0, _aaControlHeight),
+            ),
+            shape: WidgetStatePropertyAll(
+              RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(_aaControlRadius),
+              ),
+            ),
+          ),
           segments: const [
-            ButtonSegment(value: ReaderThemeMode.system, label: Text('系统')),
+            ButtonSegment(value: ReaderThemeMode.system, label: Text('跟随系统')),
             ButtonSegment(value: ReaderThemeMode.light, label: Text('浅色')),
             ButtonSegment(value: ReaderThemeMode.dark, label: Text('深色')),
           ],
           selected: {_draft.themeMode},
-          onSelectionChanged: (selection) =>
-              _commit(_draft.copyWith(themeMode: selection.single)),
+          onSelectionChanged: (selection) {
+            final nextMode = selection.single;
+            setState(() {
+              _editingBrightness = _effectiveBrightness(context, nextMode);
+              _syncBrightnessControllers();
+            });
+            _commit(_draft.copyWith(themeMode: nextMode));
+          },
         ),
+        const SizedBox(height: 6),
+        Text('决定当前使用浅色方案或深色方案', style: Theme.of(context).textTheme.bodySmall),
+        if (_draft.themeMode == ReaderThemeMode.system) ...[
+          const SizedBox(height: 4),
+          Text(
+            '当前：${_effectiveBrightness(context, _draft.themeMode) == Brightness.dark ? '深色' : '浅色'}',
+            style: Theme.of(context).textTheme.labelMedium,
+          ),
+        ],
         const SizedBox(height: 18),
         _ReaderPalettePresetGrid(
           key: readerPaletteControlKey,
@@ -1135,22 +1184,51 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
         Text('自定义配色', style: Theme.of(context).textTheme.titleSmall),
         const SizedBox(height: 8),
         SegmentedButton<Brightness>(
+          style: ButtonStyle(
+            minimumSize: const WidgetStatePropertyAll(
+              Size(0, _aaControlHeight),
+            ),
+            shape: WidgetStatePropertyAll(
+              RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(_aaControlRadius),
+              ),
+            ),
+          ),
           segments: const [
-            ButtonSegment(value: Brightness.light, label: Text('浅色配色')),
-            ButtonSegment(value: Brightness.dark, label: Text('深色配色')),
+            ButtonSegment(value: Brightness.light, label: Text('浅色方案')),
+            ButtonSegment(value: Brightness.dark, label: Text('深色方案')),
           ],
           selected: {_editingBrightness},
           onSelectionChanged: (selection) => setState(() {
             _editingBrightness = selection.single;
-            _textColorController.text = _hexColor(
-              _textColorFor(_editingBrightness),
-            );
-            _backgroundColorController.text = _hexColor(
-              _backgroundColorFor(_editingBrightness),
-            );
-            _textColorError = null;
-            _backgroundColorError = null;
+            _syncBrightnessControllers();
           }),
+        ),
+        const SizedBox(height: 4),
+        Row(
+          children: [
+            Text(
+              '当前使用',
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                color: Theme.of(context).colorScheme.primary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              activeBrightness == Brightness.dark ? '深色方案' : '浅色方案',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        _ReaderAppearancePreviewCard(
+          paletteId: _draft.paletteId,
+          dark: activeBrightness == Brightness.dark,
+          lightTextArgb: _draft.lightTextColorArgb,
+          lightBackgroundArgb: _draft.lightBackgroundColorArgb,
+          darkTextArgb: _draft.darkTextColorArgb,
+          darkBackgroundArgb: _draft.darkBackgroundColorArgb,
         ),
         const SizedBox(height: 8),
         _ReaderColorPalette(
@@ -1336,6 +1414,16 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
         const SizedBox(height: 8),
         SegmentedButton<ReaderMode>(
           key: readerSettingsModeControlKey,
+          style: ButtonStyle(
+            minimumSize: const WidgetStatePropertyAll(
+              Size(0, _aaControlHeight),
+            ),
+            shape: WidgetStatePropertyAll(
+              RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(_aaControlRadius),
+              ),
+            ),
+          ),
           segments: const [
             ButtonSegment(value: ReaderMode.vertical, label: Text('滚动')),
             ButtonSegment(value: ReaderMode.paged, label: Text('分页')),
@@ -1360,7 +1448,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('高级', style: Theme.of(context).textTheme.titleSmall),
+        Text('高级设置', style: Theme.of(context).textTheme.titleSmall),
         const SizedBox(height: 8),
         Text(
           '设置变化会保留当前 ReaderLocator；外观颜色属于即时预览，不会触发重新分页。',
@@ -1393,16 +1481,21 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
 
   @override
   Widget build(BuildContext context) {
+    if (!_brightnessInitialized) {
+      _editingBrightness = _effectiveBrightness(context, _draft.themeMode);
+      _syncBrightnessControllers();
+      _brightnessInitialized = true;
+    }
     final isDesktop = defaultTargetPlatform == TargetPlatform.windows;
     final availableWidth = MediaQuery.sizeOf(context).width;
     final panelWidth = isDesktop
         ? math.min(960.0, availableWidth)
         : availableWidth;
     final categories = [
-      (_ReaderSettingsCategory.typography, '排版', Icons.text_fields_rounded),
-      (_ReaderSettingsCategory.appearance, '外观', Icons.palette_outlined),
+      (_ReaderSettingsCategory.typography, '排版布局', Icons.text_fields_rounded),
+      (_ReaderSettingsCategory.appearance, '阅读外观', Icons.palette_outlined),
       (_ReaderSettingsCategory.paging, '阅读行为', Icons.menu_book_outlined),
-      (_ReaderSettingsCategory.advanced, '高级', Icons.tune_rounded),
+      (_ReaderSettingsCategory.advanced, '高级设置', Icons.tune_rounded),
     ];
     final content = _buildCategoryPanel(context);
     final navigation = isDesktop
@@ -1561,22 +1654,142 @@ class _ReaderPalettePresetGrid extends StatelessWidget {
             ChoiceChip(
               label: const Text('自定义'),
               selected: selected == ReaderPaletteId.custom,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(_aaControlRadius),
+              ),
               onSelected: (_) => onSelected(ReaderPaletteId.custom),
             ),
             for (final palette in ReaderPalette.presets)
-              ChoiceChip(
-                label: Text(palette.label),
-                selected: palette.id == selected,
-                avatar: CircleAvatar(
-                  backgroundColor: Color(palette.light.backgroundArgb),
-                  foregroundColor: Color(palette.light.textArgb),
-                  child: const Icon(Icons.text_fields_rounded, size: 14),
+              Tooltip(
+                message: '${palette.label} · 浅色/深色方案',
+                child: ChoiceChip(
+                  label: Text(palette.label),
+                  selected: palette.id == selected,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(_aaControlRadius),
+                  ),
+                  avatar: _DualPaletteSwatch(palette: palette),
+                  onSelected: (_) => onSelected(palette.id),
                 ),
-                onSelected: (_) => onSelected(palette.id),
               ),
           ],
         ),
       ],
+    );
+  }
+}
+
+class _DualPaletteSwatch extends StatelessWidget {
+  const _DualPaletteSwatch({required this.palette});
+
+  final ReaderPalette palette;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 28,
+      height: 20,
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: ColoredBox(
+              color: Color(palette.light.backgroundArgb),
+              child: Center(
+                child: Text(
+                  'A',
+                  style: TextStyle(
+                    color: Color(palette.light.textArgb),
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Expanded(
+            child: ColoredBox(
+              color: Color(palette.dark.backgroundArgb),
+              child: Center(
+                child: Text(
+                  'A',
+                  style: TextStyle(
+                    color: Color(palette.dark.textArgb),
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ReaderAppearancePreviewCard extends StatelessWidget {
+  const _ReaderAppearancePreviewCard({
+    required this.paletteId,
+    required this.dark,
+    required this.lightTextArgb,
+    required this.lightBackgroundArgb,
+    required this.darkTextArgb,
+    required this.darkBackgroundArgb,
+  });
+
+  final ReaderPaletteId paletteId;
+  final bool dark;
+  final int? lightTextArgb;
+  final int? lightBackgroundArgb;
+  final int? darkTextArgb;
+  final int? darkBackgroundArgb;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = ReaderPaletteResolver.resolve(
+      paletteId: paletteId,
+      dark: dark,
+      lightTextArgb: lightTextArgb,
+      lightBackgroundArgb: lightBackgroundArgb,
+      darkTextArgb: darkTextArgb,
+      darkBackgroundArgb: darkBackgroundArgb,
+    );
+    final background = Color(colors.backgroundArgb);
+    final text = Color(colors.textArgb);
+    return Container(
+      width: double.infinity,
+      constraints: const BoxConstraints(minHeight: 72),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(_aaControlRadius),
+        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+      ),
+      child: DefaultTextStyle(
+        style: TextStyle(color: text),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '当前方案预览',
+              style: TextStyle(
+                color: text.withValues(alpha: .72),
+                fontSize: 11,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              'Aa 读书正文示例 · 正文色 / 背景色',
+              style: TextStyle(color: text, fontSize: 17, height: 1.35),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
