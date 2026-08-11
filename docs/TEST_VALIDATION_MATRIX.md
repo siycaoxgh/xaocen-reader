@@ -16,7 +16,7 @@
 | Reader color mode wording and system brightness indicator | PASS |
 | Six palettes expose light/dark variants | PASS: dual swatch + tooltip |
 | Custom light/dark scheme labels and active preview | PASS |
-| Windows fixed rail/content width and compact controls | PASS |
+| Windows fixed rail/content width and compact controls | PASS: body margins use 2×2 grouping |
 | ReaderLocator/PageWindow/AutoRead/schema 8 regression | PASS, unchanged |
 | Full Flutter unit/contract/widget | 470/470 PASS |
 | Integration | 11 files / 14 scenarios PASS |

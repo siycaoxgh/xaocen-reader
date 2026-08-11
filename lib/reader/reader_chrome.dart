@@ -986,6 +986,83 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
   }
 
   Widget _buildTypographyPanel(BuildContext context) {
+    final isDesktop = defaultTargetPlatform == TargetPlatform.windows;
+    final leftPadding = _PreferenceSlider(
+      key: readerHorizontalPaddingSliderKey,
+      label: '左边距',
+      value: _draft.paddingLeft,
+      min: ReaderPreferences.minHorizontalPadding,
+      max: ReaderPreferences.maxHorizontalPadding,
+      divisions: 16,
+      step: ReaderPreferences.paddingStep,
+      valueLabel: _draft.paddingLeft.toStringAsFixed(0),
+      onDraftChanged: (value) =>
+          setState(() => _draft = _draft.copyWith(paddingLeft: value)),
+      onCommitted: (value) => _commit(_draft.copyWith(paddingLeft: value)),
+    );
+    final rightPadding = _PreferenceSlider(
+      key: readerPaddingRightSliderKey,
+      label: '右边距',
+      value: _draft.paddingRight,
+      min: ReaderPreferences.minHorizontalPadding,
+      max: ReaderPreferences.maxHorizontalPadding,
+      divisions: 16,
+      step: ReaderPreferences.paddingStep,
+      valueLabel: _draft.paddingRight.toStringAsFixed(0),
+      onDraftChanged: (value) =>
+          setState(() => _draft = _draft.copyWith(paddingRight: value)),
+      onCommitted: (value) => _commit(_draft.copyWith(paddingRight: value)),
+    );
+    final topPadding = _PreferenceSlider(
+      key: readerVerticalPaddingSliderKey,
+      label: '上边距',
+      value: _draft.paddingTop,
+      min: ReaderPreferences.minVerticalPadding,
+      max: ReaderPreferences.maxVerticalPadding,
+      divisions: 12,
+      step: ReaderPreferences.paddingStep,
+      valueLabel: _draft.paddingTop.toStringAsFixed(0),
+      onDraftChanged: (value) =>
+          setState(() => _draft = _draft.copyWith(paddingTop: value)),
+      onCommitted: (value) => _commit(_draft.copyWith(paddingTop: value)),
+    );
+    final bottomPadding = _PreferenceSlider(
+      key: readerPaddingBottomSliderKey,
+      label: '下边距',
+      value: _draft.paddingBottom,
+      min: ReaderPreferences.minVerticalPadding,
+      max: ReaderPreferences.maxVerticalPadding,
+      divisions: 12,
+      step: ReaderPreferences.paddingStep,
+      valueLabel: _draft.paddingBottom.toStringAsFixed(0),
+      onDraftChanged: (value) =>
+          setState(() => _draft = _draft.copyWith(paddingBottom: value)),
+      onCommitted: (value) => _commit(_draft.copyWith(paddingBottom: value)),
+    );
+    final paddingControls = isDesktop
+        ? Column(
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: leftPadding),
+                  const SizedBox(width: 16),
+                  Expanded(child: rightPadding),
+                ],
+              ),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: topPadding),
+                  const SizedBox(width: 16),
+                  Expanded(child: bottomPadding),
+                ],
+              ),
+            ],
+          )
+        : Column(
+            children: [leftPadding, rightPadding, topPadding, bottomPadding],
+          );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1059,61 +1136,9 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
           onCommitted: (value) =>
               _commit(_draft.copyWith(firstLineIndent: value)),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: _aaSectionGap),
         Text('正文边距', style: Theme.of(context).textTheme.titleSmall),
-        _PreferenceSlider(
-          key: readerHorizontalPaddingSliderKey,
-          label: '左边距',
-          value: _draft.paddingLeft,
-          min: ReaderPreferences.minHorizontalPadding,
-          max: ReaderPreferences.maxHorizontalPadding,
-          divisions: 16,
-          step: ReaderPreferences.paddingStep,
-          valueLabel: _draft.paddingLeft.toStringAsFixed(0),
-          onDraftChanged: (value) =>
-              setState(() => _draft = _draft.copyWith(paddingLeft: value)),
-          onCommitted: (value) => _commit(_draft.copyWith(paddingLeft: value)),
-        ),
-        _PreferenceSlider(
-          key: readerPaddingRightSliderKey,
-          label: '右边距',
-          value: _draft.paddingRight,
-          min: ReaderPreferences.minHorizontalPadding,
-          max: ReaderPreferences.maxHorizontalPadding,
-          divisions: 16,
-          step: ReaderPreferences.paddingStep,
-          valueLabel: _draft.paddingRight.toStringAsFixed(0),
-          onDraftChanged: (value) =>
-              setState(() => _draft = _draft.copyWith(paddingRight: value)),
-          onCommitted: (value) => _commit(_draft.copyWith(paddingRight: value)),
-        ),
-        _PreferenceSlider(
-          key: readerVerticalPaddingSliderKey,
-          label: '上边距',
-          value: _draft.paddingTop,
-          min: ReaderPreferences.minVerticalPadding,
-          max: ReaderPreferences.maxVerticalPadding,
-          divisions: 12,
-          step: ReaderPreferences.paddingStep,
-          valueLabel: _draft.paddingTop.toStringAsFixed(0),
-          onDraftChanged: (value) =>
-              setState(() => _draft = _draft.copyWith(paddingTop: value)),
-          onCommitted: (value) => _commit(_draft.copyWith(paddingTop: value)),
-        ),
-        _PreferenceSlider(
-          key: readerPaddingBottomSliderKey,
-          label: '下边距',
-          value: _draft.paddingBottom,
-          min: ReaderPreferences.minVerticalPadding,
-          max: ReaderPreferences.maxVerticalPadding,
-          divisions: 12,
-          step: ReaderPreferences.paddingStep,
-          valueLabel: _draft.paddingBottom.toStringAsFixed(0),
-          onDraftChanged: (value) =>
-              setState(() => _draft = _draft.copyWith(paddingBottom: value)),
-          onCommitted: (value) =>
-              _commit(_draft.copyWith(paddingBottom: value)),
-        ),
+        paddingControls,
       ],
     );
   }

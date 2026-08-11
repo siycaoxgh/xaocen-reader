@@ -14,7 +14,8 @@ system/light/dark semantics; system mode reports the effective brightness. Palet
 are represented with light/dark swatches, while custom editing is explicitly split into
 `浅色方案` and `深色方案` and includes a preview of the currently effective text/background
 pair. Windows uses a bounded desktop rail and fixed content area; Android uses compact
-touch-friendly horizontal category navigation. This is presentation-only: schema 8,
+touch-friendly horizontal category navigation. Desktop body margins are grouped as a compact
+left/right and top/bottom 2×2 grid, while Android keeps full-width vertical controls. This is presentation-only: schema 8,
 ReaderPaletteResolver, ReaderLocator, pagination, AutoRead, and ReadingSession are unchanged.
 
 ## M5.5e.4 Reader palette and theme contract

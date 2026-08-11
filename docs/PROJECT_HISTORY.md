@@ -767,6 +767,6 @@ integration 文件 / 14 个场景、4 个真实 TXT logical error 0、Windows Re
 
 Aa 四分类统一为排版布局、阅读外观、阅读行为、高级设置；阅读色彩模式明确区分跟随系统、浅色、
 深色及当前生效亮度。六套 Palette 以 Light/Dark 双态 swatch 表达，自定义区域显示当前方案和实际
-正文/背景预览。Windows 保持固定桌面分类栏与内容区，Android 使用触控友好分类栏。未改变
+正文/背景预览。Windows 保持固定桌面分类栏与内容区，正文边距使用 2×2 紧凑分组；Android 使用触控友好分类栏和纵向控件。未改变
 ReaderPaletteResolver、schema 8、ReaderLocator、分页、AutoRead 或 Session。470 项 Flutter 测试、
 11 个 integration 文件 / 14 个场景、四个真实 TXT logical error 0、Windows Release 和 Android Debug 全部通过。

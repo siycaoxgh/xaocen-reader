@@ -53,7 +53,8 @@ Debug. Android targeted ADB was not run because no device was connected.
 ### M5.5e.5 — Aa appearance hierarchy (2026-08-11)
 - Unified Aa categories as `排版布局 / 阅读外观 / 阅读行为 / 高级设置` on both platforms.
 - Clarified Reader color-mode wording, system brightness indicator, dual light/dark palette swatches,
-  active custom scheme labels, and an actual-color preview card.
+  active custom scheme labels, and an actual-color preview card. Windows body margins now use a
+  compact 2×2 control group while Android keeps touch-friendly vertical controls.
 - Kept preset/custom precedence, per-book preferences, ReaderPaletteResolver, schema 8,
   Locator, pagination, and AutoRead contracts unchanged. Validation: 470 Flutter tests,
   11 integration files / 14 scenarios, four real TXT logical-error-zero checks, Windows Release,
