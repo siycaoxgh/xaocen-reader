@@ -501,6 +501,22 @@ class _WindowsShellSettingsPageState
                           onChanged: (value) =>
                               unawaited(_setWindowBorder(value)),
                         ),
+                        const Divider(height: 1),
+                        const ListTile(
+                          title: Text('阅读背景/窗口透明度'),
+                          subtitle: Text(
+                            '当前 Flutter Windows surface 尚不支持安全的原生透明；功能 deferred。',
+                          ),
+                          trailing: Icon(Icons.info_outline),
+                        ),
+                        const Divider(height: 1),
+                        const ListTile(
+                          title: Text('正文文字透明度'),
+                          subtitle: Text(
+                            '独立文字 alpha 需要透明渲染合成；当前未启用，不会偷偷改变正文颜色。',
+                          ),
+                          trailing: Icon(Icons.info_outline),
+                        ),
                       ],
                     ),
                   ),

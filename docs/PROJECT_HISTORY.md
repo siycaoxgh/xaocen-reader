@@ -871,3 +871,14 @@ Schema 11→12 adds font metadata and nullable `ReaderPreferences.fontId` only.
 Font selection invalidates metrics/layout through the existing generation-safe
 freeze/capture/relayout/exact-Locator-restore flow; no position or normalized
 text contract changed. Four real TXT logical location checks remain zero.
+
+### M5.6e.1 Font UI and Windows shell closure
+
+Unified system/imported font presentation under `ReaderFontDescriptor` with
+localized display-name preference. The Aa font picker now uses a candidate,
+preview, Apply/Cancel workflow so browsing does not trigger Reader relayout;
+Apply alone commits the per-book font and uses the existing exact Locator
+restore contract. The existing native borderless window implementation was
+confirmed. Independent Windows background/text opacity remains deferred because
+the Flutter child surface is opaque and a whole-window alpha workaround would
+break the contract.

@@ -27,13 +27,24 @@ class MainActivity : FlutterActivity() {
                     // platform default rather than guessing private paths.
                     val names = resources.assets.list("fonts")
                         ?.mapNotNull { file ->
-                            file.substringBeforeLast('.', missingDelimiterValue = "")
-                                .takeIf { it.isNotBlank() }
+                            val family = file.substringBeforeLast(
+                                '.',
+                                missingDelimiterValue = "",
+                            ).replace('_', ' ').trim()
+                            family.takeIf { it.isNotBlank() }?.let {
+                                file to it
+                            }
                         }
-                        ?.distinct()
-                        ?.sorted()
+                        ?.distinctBy { it.first }
+                        ?.sortedBy { it.second }
                         ?: emptyList()
-                    result.success(names)
+                    result.success(names.map { (file, family) ->
+                        mapOf(
+                            "id" to "android.system.file.${file.lowercase()}",
+                            "familyName" to family,
+                            "displayName" to family,
+                        )
+                    })
                 }
                 else -> result.notImplemented()
             }

@@ -1112,3 +1112,17 @@ through the native registry channel and Android uses the public system asset
 capability with a safe systemDefault fallback. Drift schema is 12 (11→12
 migration adds font metadata and the nullable preference; reading progress,
 ReaderLocator, history/session and managed TXT are preserved).
+
+### M5.6e.1 font UI and Windows transparency status
+
+`ReaderFontDescriptor` is the shared display contract for system and imported
+fonts (`fontId`, localized `displayName`, runtime `familyName`, and source).
+The Aa font list is candidate-only: a candidate can load a preview family, but
+only Apply commits the per-book `fontId` and enters the existing metrics-safe
+relayout/Locator restore flow. Cancel leaves the persisted preference intact.
+
+The native Windows borderless frame is already shipped and remains exposed in
+the Windows shell settings. Independent background/window opacity and text
+opacity are explicitly deferred: the current Flutter child surface is opaque,
+and a whole-window alpha workaround would violate the independent alpha
+contract by fading text as well.

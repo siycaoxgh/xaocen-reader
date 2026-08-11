@@ -881,3 +881,11 @@ typed selector when the probe completes; only a saved non-default font waits
 for the same probe before its first metrics layout. Imported-font loading is
 validated by SHA-256 and uses the existing metrics generation/Locator restore
 path, so a missing asset cannot silently produce stale pagination.
+
+### Font picker must separate browsing from metrics commits
+
+Font enumeration and preview belong to the settings surface, but selecting a
+candidate must not immediately trigger a Reader relayout. Keep the list
+collapsed by default so existing Aa controls remain reachable on small viewports;
+only an explicit Apply enters the metrics generation path. A failed preview must
+also be visible rather than pretending the font was applied.

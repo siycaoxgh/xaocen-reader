@@ -1127,6 +1127,7 @@ Future<void> showReaderSettings(
   List<ReaderSystemFontChoice> systemFonts = const [],
   Future<ReaderFontAsset?> Function()? onImportFont,
   Future<void> Function(String fontId)? onDeleteFont,
+  Future<String?> Function(String? fontId)? onPreviewFont,
 }) {
   final isDesktop = defaultTargetPlatform == TargetPlatform.windows;
   return showModalBottomSheet<void>(
@@ -1146,6 +1147,7 @@ Future<void> showReaderSettings(
       systemFonts: systemFonts,
       onImportFont: onImportFont,
       onDeleteFont: onDeleteFont,
+      onPreviewFont: onPreviewFont,
     ),
   );
 }
@@ -1164,6 +1166,7 @@ class ReaderSettingsSheet extends StatefulWidget {
     this.systemFonts = const [],
     this.onImportFont,
     this.onDeleteFont,
+    this.onPreviewFont,
   });
 
   final ReaderPreferences preferences;
@@ -1177,6 +1180,7 @@ class ReaderSettingsSheet extends StatefulWidget {
   final List<ReaderSystemFontChoice> systemFonts;
   final Future<ReaderFontAsset?> Function()? onImportFont;
   final Future<void> Function(String fontId)? onDeleteFont;
+  final Future<String?> Function(String? fontId)? onPreviewFont;
 
   @override
   State<ReaderSettingsSheet> createState() => _ReaderSettingsSheetState();
@@ -1185,6 +1189,11 @@ class ReaderSettingsSheet extends StatefulWidget {
 class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
   late ReaderPreferences _draft = widget.preferences;
   late List<ReaderFontAsset> _importedFonts = [...widget.importedFonts];
+  String? _fontCandidateId;
+  bool _fontCandidateActive = false;
+  String? _fontPreviewFamily;
+  bool _fontPreviewLoading = false;
+  String? _fontPreviewError;
   late ReaderMode _mode = widget.mode;
   _ReaderSettingsCategory _category = _ReaderSettingsCategory.typography;
   late final TextEditingController _lightTextColorController =
@@ -1203,6 +1212,64 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
   void _commit(ReaderPreferences value) {
     setState(() => _draft = value);
     widget.onPreferencesCommitted(value);
+  }
+
+  String? get _selectedFontId =>
+      _fontCandidateActive ? _fontCandidateId : _draft.fontId;
+
+  bool get _fontCandidateChanged =>
+      _fontCandidateActive && _fontCandidateId != _draft.fontId;
+
+  Future<void> _selectFontCandidate(String? fontId) async {
+    setState(() {
+      _fontCandidateId = fontId;
+      _fontCandidateActive = true;
+      _fontPreviewFamily = null;
+      _fontPreviewError = null;
+      _fontPreviewLoading = true;
+    });
+    try {
+      final family = await widget.onPreviewFont?.call(fontId);
+      if (!mounted) return;
+      setState(() {
+        _fontPreviewFamily = family;
+        _fontPreviewLoading = false;
+        _fontPreviewError = family == null && fontId != null
+            ? '此字体无法加载，将回退为系统默认。'
+            : null;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _fontPreviewLoading = false;
+        _fontPreviewError = '此字体无法加载，将回退为系统默认。';
+      });
+    }
+  }
+
+  void _cancelFontCandidate() {
+    setState(() {
+      _fontCandidateId = null;
+      _fontCandidateActive = false;
+      _fontPreviewFamily = null;
+      _fontPreviewError = null;
+      _fontPreviewLoading = false;
+    });
+  }
+
+  void _applyFontCandidate() {
+    if (!_fontCandidateChanged ||
+        _fontPreviewLoading ||
+        _fontPreviewError != null) {
+      return;
+    }
+    final next = _draft.copyWith(fontId: _fontCandidateId);
+    _commit(next);
+    setState(() {
+      _fontCandidateId = null;
+      _fontCandidateActive = false;
+      _fontPreviewFamily = null;
+    });
   }
 
   @override
@@ -1344,49 +1411,112 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
   }
 
   Widget _buildFontSection(BuildContext context) {
-    final options = <DropdownMenuItem<String>>[
-      const DropdownMenuItem<String>(
-        value: 'systemDefault',
-        child: Text('System default'),
+    final descriptors = <ReaderFontDescriptor>[
+      const ReaderSystemFontChoice(
+        id: 'systemDefault',
+        familyName: '系统默认',
+        displayName: '系统默认',
       ),
-      ...widget.systemFonts
-          .where((font) => font.id != 'systemDefault')
-          .map(
-            (font) => DropdownMenuItem<String>(
-              value: font.id,
-              child: Text(font.familyName),
-            ),
-          ),
-      ..._importedFonts.map(
-        (font) => DropdownMenuItem<String>(
-          value: font.fontId,
-          child: Text('${font.familyNameSnapshot} (${font.format.name})'),
-        ),
-      ),
+      ...widget.systemFonts.where((font) => font.id != 'systemDefault'),
+      ..._importedFonts,
     ];
-    final selected = options.any((item) => item.value == _draft.fontId)
-        ? _draft.fontId
-        : 'systemDefault';
+    final selected = _selectedFontId;
+    final previewFamily =
+        _fontPreviewFamily ??
+        descriptors
+            .where((font) => font.fontId == selected)
+            .map(
+              (font) => font.source == ReaderFontSource.imported
+                  ? (font as ReaderFontAsset).runtimeFamily
+                  : font.familyName,
+            )
+            .firstOrNull;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Font', style: Theme.of(context).textTheme.titleSmall),
+        Text('字体', style: Theme.of(context).textTheme.titleSmall),
+        const SizedBox(height: 6),
+        Text(
+          '当前字体：${descriptors.where((font) => font.fontId == selected).map((font) => font.displayName).firstOrNull ?? '系统默认'}',
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
         const SizedBox(height: 8),
-        DropdownButtonFormField<String>(
-          key: const ValueKey('reader-font-selector'),
-          initialValue: selected,
-          isExpanded: true,
-          decoration: const InputDecoration(labelText: 'Current font'),
-          items: options,
-          onChanged: (value) {
-            if (value != null) {
-              _commit(
-                _draft.copyWith(
-                  fontId: value == 'systemDefault' ? null : value,
-                ),
-              );
-            }
-          },
+        ExpansionTile(
+          key: const ValueKey('reader-font-list'),
+          tilePadding: EdgeInsets.zero,
+          title: const Text('选择字体'),
+          subtitle: const Text('点击后仅预览，确认应用才会重新排版'),
+          children: [
+            SizedBox(
+              height: 190,
+              child: ListView(
+                children: [
+                  RadioGroup<String?>(
+                    groupValue: selected,
+                    onChanged: (value) =>
+                        unawaited(_selectFontCandidate(value)),
+                    child: Column(
+                      children: descriptors.map((font) {
+                        final value = font.fontId == 'systemDefault'
+                            ? null
+                            : font.fontId;
+                        return ListTile(
+                          dense: true,
+                          leading: Radio<String?>(value: value),
+                          title: Text(font.displayName),
+                          subtitle: font.source == ReaderFontSource.imported
+                              ? Text(
+                                  '已导入 · ${(font as ReaderFontAsset).format.name.toUpperCase()}',
+                                )
+                              : null,
+                          onTap: () => unawaited(_selectFontCandidate(value)),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        DecoratedBox(
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: DefaultTextStyle(
+              style: Theme.of(context).textTheme.bodyMedium!,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('中文阅读效果'),
+                  const SizedBox(height: 4),
+                  Text(
+                    'XAOCEN Reader  1234567890',
+                    style: TextStyle(fontFamily: previewFamily, fontSize: 16),
+                  ),
+                  if (_fontPreviewLoading)
+                    const Padding(
+                      padding: EdgeInsets.only(top: 6),
+                      child: LinearProgressIndicator(minHeight: 2),
+                    ),
+                  if (_fontPreviewError != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: Text(
+                        _fontPreviewError!,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
         ),
         const SizedBox(height: 8),
         Wrap(
@@ -1407,23 +1537,38 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
                           asset,
                         ],
                       );
-                      _commit(_draft.copyWith(fontId: asset.fontId));
+                      await _selectFontCandidate(asset.fontId);
                     },
               icon: const Icon(Icons.file_upload_outlined),
-              label: const Text('Import TTF / OTF'),
+              label: const Text('导入 TTF / OTF'),
             ),
-            if (_importedFonts.any((font) => font.fontId == _draft.fontId))
+            if (_importedFonts.any((font) => font.fontId == selected))
               OutlinedButton.icon(
-                onPressed: widget.onDeleteFont == null || _draft.fontId == null
+                onPressed: widget.onDeleteFont == null || selected == null
                     ? null
                     : () async {
-                        final id = _draft.fontId!;
+                        final id = selected;
                         await widget.onDeleteFont!.call(id);
-                        if (mounted) _commit(_draft.copyWith(fontId: null));
+                        if (mounted) {
+                          _cancelFontCandidate();
+                          if (_draft.fontId == id) {
+                            _commit(_draft.copyWith(fontId: null));
+                          }
+                        }
                       },
                 icon: const Icon(Icons.delete_outline),
-                label: const Text('Remove font'),
+                label: const Text('删除字体'),
               ),
+            if (_fontCandidateChanged) ...[
+              OutlinedButton(
+                onPressed: _cancelFontCandidate,
+                child: const Text('取消'),
+              ),
+              FilledButton(
+                onPressed: _applyFontCandidate,
+                child: const Text('应用字体'),
+              ),
+            ],
           ],
         ),
       ],

@@ -45,3 +45,20 @@ Status: complete.
 
 ReaderLocator, normalized TXT, PageWindow, chapter policy, AutoRead,
 ReadingSession, and reading-progress position storage remain unchanged.
+
+## M5.6e.1 Font UI and Windows shell closure
+
+- Windows borderless mode was confirmed as already implemented in the native
+  runner and existing Windows settings page (native drag/resize, maximize,
+  monitor/DPI recovery). The settings page now also states the independent
+  background/window opacity and text-opacity status explicitly.
+- The earlier M5.6c.3 transparency spike remains deferred: the current Flutter
+  Windows child surface is opaque, so a safe independent alpha path is not
+  available. No whole-window alpha workaround was shipped.
+- Platform and imported fonts now share `ReaderFontDescriptor` metadata. The
+  Windows/Android channels provide display/family names, while imported SFNT
+  name tables prefer Chinese localized family names and fall back to English
+  metadata or the source name.
+- Font browsing is candidate-only: preview sample → apply or cancel. Only
+  Apply commits the per-book `fontId` and starts the existing metrics-safe
+  relayout; browsing never changes Reader正文.

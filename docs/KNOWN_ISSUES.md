@@ -387,3 +387,11 @@ until a reliable cross-platform face-selection path is available. Android
 system-family enumeration is capability-based; devices that do not expose the
 public list intentionally offer systemDefault rather than guessing private
 font paths. No new Reader/DataRoot P0/P1/P2 issue was found.
+
+## M5.6e.1 status
+
+The native Windows borderless window is implemented and its settings entry is
+available. Independent background/window opacity and text opacity remain
+deferred under the M5.6c.3 opaque Flutter child-surface limitation; the Windows
+settings page reports this explicitly instead of exposing non-functional
+controls.

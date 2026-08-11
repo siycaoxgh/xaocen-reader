@@ -1,13 +1,28 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
+import '../../domain/reader/reader_font.dart';
+
 /// Platform font capability.  Runtime IDs are stable namespaced strings; the
 /// native channel only returns family names and never leaks platform objects.
-final class ReaderSystemFontChoice {
-  const ReaderSystemFontChoice({required this.id, required this.familyName});
+final class ReaderSystemFontChoice implements ReaderFontDescriptor {
+  const ReaderSystemFontChoice({
+    required this.id,
+    required this.familyName,
+    String? displayName,
+  }) : displayName = displayName ?? familyName;
 
   final String id;
+  @override
   final String familyName;
+  @override
+  final String displayName;
+
+  @override
+  String get fontId => id;
+
+  @override
+  ReaderFontSource get source => ReaderFontSource.system;
 }
 
 final class ReaderSystemFontRepository {
@@ -29,20 +44,14 @@ final class ReaderSystemFontRepository {
       final raw = await channel.invokeMethod<List<dynamic>>(
         'listAvailableFonts',
       );
-      final names =
-          (raw ?? const <dynamic>[])
-              .whereType<String>()
-              .map((name) => name.trim())
-              .where((name) => name.isNotEmpty)
-              .toSet()
-              .toList()
-            ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+      final descriptors = _decodeDescriptors(raw);
       return [
         const ReaderSystemFontChoice(id: 'systemDefault', familyName: '系统默认'),
-        ...names.map(
+        ...descriptors.map(
           (name) => ReaderSystemFontChoice(
-            id: _stableId(platform, name),
-            familyName: name,
+            id: name.id ?? _stableId(platform, name.familyName),
+            familyName: name.familyName,
+            displayName: name.displayName,
           ),
         ),
       ];
@@ -55,6 +64,43 @@ final class ReaderSystemFontRepository {
         ReaderSystemFontChoice(id: 'systemDefault', familyName: '系统默认'),
       ];
     }
+  }
+
+  static List<({String? id, String familyName, String displayName})>
+  _decodeDescriptors(List<dynamic>? raw) {
+    final values =
+        <String, ({String? id, String familyName, String displayName})>{};
+    for (final item in raw ?? const <dynamic>[]) {
+      String? id;
+      String? family;
+      String? display;
+      if (item is String) {
+        family = item.trim();
+        display = family;
+      } else if (item is Map) {
+        final idValue = item['id'];
+        final familyValue = item['familyName'];
+        final displayValue = item['displayName'];
+        if (idValue is String && idValue.trim().isNotEmpty) {
+          id = idValue.trim();
+        }
+        if (familyValue is String) family = familyValue.trim();
+        if (displayValue is String) display = displayValue.trim();
+        display ??= family;
+      }
+      if (family == null || family.isEmpty) continue;
+      values[family.toLowerCase()] = (
+        id: id,
+        displayName: display?.isNotEmpty == true ? display! : family,
+        familyName: family,
+      );
+    }
+    final result = values.values.toList()
+      ..sort(
+        (a, b) =>
+            a.displayName.toLowerCase().compareTo(b.displayName.toLowerCase()),
+      );
+    return result;
   }
 
   static String _stableId(TargetPlatform platform, String family) {

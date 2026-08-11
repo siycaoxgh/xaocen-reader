@@ -73,7 +73,10 @@ final class ReaderFontRepository {
             contentHash: hash,
             relativePath: relativePath,
             format: format.name,
-            familyNameSnapshot: p.basenameWithoutExtension(source.path),
+            familyNameSnapshot: _fontDisplayName(
+              bytes,
+              fallback: p.basenameWithoutExtension(source.path),
+            ),
             fileSize: bytes.length,
             createdAt: now,
             lastUsedAt: now,
@@ -180,6 +183,89 @@ final class ReaderFontRepository {
       );
     }
   }
+
+  /// Reads the OpenType family name without introducing a parser dependency.
+  /// Prefer a Chinese localized name when one is present; otherwise use the
+  /// first English/Unicode family name and finally the source file name.
+  static String _fontDisplayName(List<int> bytes, {required String fallback}) {
+    try {
+      if (bytes.length < 12) return fallback;
+      final tableCount = _u16(bytes, 4);
+      for (var index = 0; index < tableCount; index++) {
+        final record = 12 + index * 16;
+        if (record + 16 > bytes.length) break;
+        final tag = String.fromCharCodes(bytes.sublist(record, record + 4));
+        if (tag != 'name') continue;
+        final offset = _u32(bytes, record + 8);
+        final length = _u32(bytes, record + 12);
+        if (offset < 0 || length < 6 || offset + length > bytes.length) {
+          return fallback;
+        }
+        final count = _u16(bytes, offset + 2);
+        final strings = offset + _u16(bytes, offset + 4);
+        String? english;
+        String? chinese;
+        for (var item = 0; item < count; item++) {
+          final recordOffset = offset + 6 + item * 12;
+          if (recordOffset + 12 > bytes.length) break;
+          final platform = _u16(bytes, recordOffset);
+          final language = _u16(bytes, recordOffset + 4);
+          final nameId = _u16(bytes, recordOffset + 6);
+          if (nameId != 1) continue;
+          final itemLength = _u16(bytes, recordOffset + 8);
+          final itemOffset = _u16(bytes, recordOffset + 10);
+          final start = strings + itemOffset;
+          if (start < 0 || start + itemLength > bytes.length) continue;
+          final value = _decodeName(
+            bytes.sublist(start, start + itemLength),
+            unicode: platform == 0 || platform == 3,
+          );
+          if (value == null || value.trim().isEmpty) continue;
+          if (_isChineseLanguage(language) || _hasCjk(value)) {
+            chinese ??= value.trim();
+          } else {
+            english ??= value.trim();
+          }
+        }
+        return chinese ?? english ?? fallback;
+      }
+    } catch (_) {
+      // A malformed optional name table must not reject an otherwise valid
+      // font container.
+    }
+    return fallback;
+  }
+
+  static int _u16(List<int> bytes, int offset) =>
+      (bytes[offset] << 8) | bytes[offset + 1];
+
+  static int _u32(List<int> bytes, int offset) =>
+      (bytes[offset] << 24) |
+      (bytes[offset + 1] << 16) |
+      (bytes[offset + 2] << 8) |
+      bytes[offset + 3];
+
+  static String? _decodeName(List<int> bytes, {required bool unicode}) {
+    if (unicode) {
+      if (bytes.length.isOdd) return null;
+      final codeUnits = <int>[];
+      for (var i = 0; i < bytes.length; i += 2) {
+        codeUnits.add((bytes[i] << 8) | bytes[i + 1]);
+      }
+      return String.fromCharCodes(codeUnits);
+    }
+    return String.fromCharCodes(bytes);
+  }
+
+  static bool _isChineseLanguage(int language) =>
+      language == 0x0404 ||
+      language == 0x0804 ||
+      language == 0x0c04 ||
+      language == 0x1004 ||
+      language == 0x1404;
+
+  static bool _hasCjk(String value) =>
+      RegExp(r'[\u3400-\u9fff]').hasMatch(value);
 
   static Future<String> _sha256File(File file) async =>
       sha256.convert(await file.readAsBytes()).toString();

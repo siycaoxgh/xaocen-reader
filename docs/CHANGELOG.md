@@ -26,6 +26,16 @@ Legend for validation columns:
   four-real-TXT logical-error contract remains 0. Android device validation
   was deferred for this coding pass.
 
+### M5.6e.1 follow-up
+
+- Unified platform/imported font descriptors with localized display names and
+  a candidate-only Aa flow: preview first, Apply commits `fontId`, Cancel
+  leaves Reader metrics and persistence untouched.
+- Confirmed the existing Windows native borderless implementation and exposed
+  the prior transparency limitation in the Windows settings surface. Safe
+  independent background/text opacity remains deferred pending a transparent
+  Flutter compositor path.
+
 ## M5.3.1 — vertical chapter progress (2026-08-10)
 
 - Added a shared UTF-16 `ChapterBoundaryResolver` with deterministic

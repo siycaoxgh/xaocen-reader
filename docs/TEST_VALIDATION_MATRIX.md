@@ -758,6 +758,17 @@ vertical A → paged → 不翻页 → 重开 = paged + A · vertical A → page
 | Android physical device | NOT-RUN (deferred) |
 | Drift schema | 12 |
 
+## M5.6e.1 Font UI / Windows shell closure
+
+| Area | Result |
+|---|---|
+| Existing Windows borderless native behavior and settings entry | PASS |
+| Localized `ReaderFontDescriptor` display/family contract | PASS |
+| Font candidate preview without persistence | PASS |
+| Apply/Cancel and exact metrics relayout path | PASS |
+| Windows independent transparency | DEFERRED (opaque Flutter child surface) |
+| Drift schema | 12, unchanged |
+
 ## M5.6c.3 Windows transparency spike
 
 | Area | Result |

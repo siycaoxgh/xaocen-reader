@@ -681,6 +681,23 @@ class _ReaderPageState extends State<ReaderPage>
     _fontFamily = await _fontRuntime.load(asset, repository);
   }
 
+  /// Loads only the preview family. This never commits preferences and never
+  /// starts a Reader relayout; applying the candidate below is the operation
+  /// that enters the metrics generation state machine.
+  Future<String?> _previewReaderFont(String? fontId) async {
+    if (fontId == null) return null;
+    final system = _systemFonts.where((font) => font.id == fontId).firstOrNull;
+    if (system != null) return system.familyName;
+    final repository = widget.launch.fontRepository;
+    if (repository == null) return null;
+    final asset = await repository.markAvailability(fontId);
+    if (asset == null ||
+        asset.availability != ReaderFontAvailability.available) {
+      return null;
+    }
+    return _fontRuntime.load(asset, repository);
+  }
+
   Future<void> _initializePreferencesAndStart() async {
     // Font enumeration is a capability probe and must never delay the first
     // document layout.  The UI is populated when the probe completes.
@@ -2162,6 +2179,7 @@ class _ReaderPageState extends State<ReaderPage>
                   systemFonts: _systemFonts,
                   onImportFont: _pickReaderFont,
                   onDeleteFont: _deleteReaderFont,
+                  onPreviewFont: _previewReaderFont,
                 ).whenComplete(_requestPagedInputFocus),
               );
             },

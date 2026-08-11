@@ -1,7 +1,7 @@
 #include "flutter_window.h"
 
 #include <optional>
-#include <set>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -22,7 +22,7 @@ std::string Utf8FromWide(const std::wstring& value) {
 }
 
 flutter::EncodableList InstalledWindowsFonts() {
-  std::set<std::wstring> names;
+  std::map<std::string, std::wstring> fonts;
   const wchar_t* paths[] = {
       L"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Fonts",
   };
@@ -40,14 +40,54 @@ flutter::EncodableList InstalledWindowsFonts() {
       std::wstring name(value_name);
       const auto suffix = name.find(L" (");
       if (suffix != std::wstring::npos) name.resize(suffix);
-      if (!name.empty()) names.insert(name);
+      wchar_t data[1024] = {};
+      DWORD data_size = sizeof(data);
+      DWORD data_type = 0;
+      std::wstring file_name;
+      if (RegQueryValueExW(key, value_name, nullptr, &data_type,
+                           reinterpret_cast<LPBYTE>(data), &data_size) ==
+              ERROR_SUCCESS &&
+          (data_type == REG_SZ || data_type == REG_EXPAND_SZ)) {
+        file_name.assign(data, data_size / sizeof(wchar_t));
+        while (!file_name.empty() && file_name.back() == L'\0') {
+          file_name.pop_back();
+        }
+        const auto slash = file_name.find_last_of(L"\\/");
+        if (slash != std::wstring::npos) file_name = file_name.substr(slash + 1);
+      }
+      if (file_name.empty()) file_name = name;
+      for (auto& character : file_name) {
+        if (character >= L'A' && character <= L'Z') {
+          character = static_cast<wchar_t>(character - L'A' + L'a');
+        }
+        if (!((character >= L'a' && character <= L'z') ||
+              (character >= L'0' && character <= L'9'))) {
+          character = L'_';
+        }
+      }
+      if (!name.empty()) {
+        fonts["windows.system.file." + Utf8FromWide(file_name)] = name;
+      }
       value_name_size = std::size(value_name);
     }
     RegCloseKey(key);
   }
   flutter::EncodableList result;
-  for (const auto& name : names) {
-    result.emplace_back(flutter::EncodableValue(Utf8FromWide(name)));
+  for (const auto& entry : fonts) {
+    const auto& id = entry.first;
+    const auto& name = entry.second;
+    const auto utf8_name = Utf8FromWide(name);
+    flutter::EncodableMap descriptor;
+    descriptor[flutter::EncodableValue("id")] =
+        flutter::EncodableValue(id);
+    descriptor[flutter::EncodableValue("familyName")] =
+        flutter::EncodableValue(utf8_name);
+    // Registry display names are already localized by Windows when the
+    // current locale has a localized family name; keep the family as the
+    // stable runtime value and expose the localized value for UI.
+    descriptor[flutter::EncodableValue("displayName")] =
+        flutter::EncodableValue(utf8_name);
+    result.emplace_back(flutter::EncodableValue(descriptor));
   }
   return result;
 }
