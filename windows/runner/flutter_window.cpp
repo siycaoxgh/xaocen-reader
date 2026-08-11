@@ -61,6 +61,26 @@ bool FlutterWindow::OnCreate() {
               SetShellVisibility(taskbar, tray)));
           return;
         }
+        if (call.method_name() == "setWindowBorder") {
+          bool show_border = true;
+          const auto* args = call.arguments();
+          if (args != nullptr) {
+            const auto* map = std::get_if<flutter::EncodableMap>(args);
+            if (map != nullptr) {
+              const auto border_it =
+                  map->find(flutter::EncodableValue("show"));
+              if (border_it != map->end()) {
+                if (const auto* value =
+                        std::get_if<bool>(&border_it->second)) {
+                  show_border = *value;
+                }
+              }
+            }
+          }
+          result->Success(
+              flutter::EncodableValue(SetWindowBorder(show_border)));
+          return;
+        }
         if (call.method_name() == "hideWindow") {
           result->Success(flutter::EncodableValue(HideToTray()));
           return;
@@ -105,6 +125,12 @@ LRESULT
 FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
                               WPARAM const wparam,
                               LPARAM const lparam) noexcept {
+  // The Flutter child view covers the client area. Handle borderless hit
+  // testing before forwarding top-level messages so native drag/resize keeps
+  // working even when Flutter has focus.
+  if (message == WM_NCHITTEST && !IsWindowBorderVisible()) {
+    return Win32Window::MessageHandler(hwnd, message, wparam, lparam);
+  }
   // Persist shell geometry before Flutter/plugin close handling can consume
   // WM_CLOSE. Minimized state is filtered inside SaveCurrentState().
   if (message == WM_CLOSE) {

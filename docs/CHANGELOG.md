@@ -942,3 +942,14 @@ deferred.
   resume, and stop actions for both Reader modes.
 - Kept manual-navigation pause, Locator, pagination, session, and schema 7
   contracts unchanged.
+
+## M5.6c.2 Windows borderless Reader
+
+- Added a Windows-only “显示窗口边框” shell setting with typed app-settings
+  persistence and safe v2→v3 profile fallback; Drift remains schema 11.
+- Added native borderless presentation with edge/corner resize, drag, native
+  double-click maximize/restore, and the existing monitor/DPI/window-state
+  recovery behavior.
+- Kept taskbar/tray, Boss Key, ReaderLocator, PageWindow, AutoRead, and
+  ReadingSession contracts unchanged; no transparency or mouse-through was
+  added.

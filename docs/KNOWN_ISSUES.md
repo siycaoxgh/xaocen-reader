@@ -353,3 +353,12 @@ contract tests; interactive tray clicks and the two-button chord still benefit
 from a short Windows desktop manual pass. No new Reader, Locator, persistence,
 or Android issue was found. Android device validation was not required for this
 Windows-only change.
+
+## M5.6c.2 status
+
+Windows borderless Reader is implemented with native drag/resize hit testing and
+the existing monitor/DPI/window-state recovery path. The top drag band is a
+small native interaction area; a future shell polish pass may expose a richer
+explicit drag-region contract if the desktop chrome needs one. Transparency,
+mouse-through, and global hooks remain intentionally deferred. No new P0/P1/P2
+issue was found; Android physical-device validation was not required.

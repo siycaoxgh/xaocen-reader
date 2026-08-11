@@ -304,6 +304,13 @@ class _WindowsShellSettingsPageState
     }
   }
 
+  Future<void> _setWindowBorder(bool show) async {
+    final value = await _repository.updateWindowBorder(show);
+    if (!mounted) return;
+    setState(() => _preferences = value);
+    await WindowsShellBridge.apply(value);
+  }
+
   Future<void> _setBossEnabled(bool enabled) async {
     final value = await _repository.updateBossKey(
       enabled: enabled,
@@ -485,6 +492,14 @@ class _WindowsShellSettingsPageState
                           value: _preferences.showTrayIcon,
                           onChanged: (value) =>
                               unawaited(_setVisibility(tray: value)),
+                        ),
+                        const Divider(height: 1),
+                        SwitchListTile.adaptive(
+                          title: const Text('显示窗口边框'),
+                          subtitle: const Text('关闭后进入可拖动、可调整大小的无边框阅读模式'),
+                          value: _preferences.showWindowBorder,
+                          onChanged: (value) =>
+                              unawaited(_setWindowBorder(value)),
                         ),
                       ],
                     ),

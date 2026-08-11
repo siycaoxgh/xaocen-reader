@@ -4,18 +4,20 @@ final class WindowsShellPreferences {
   const WindowsShellPreferences({
     required this.showTaskbarIcon,
     required this.showTrayIcon,
+    required this.showWindowBorder,
     required this.bossKeyEnabled,
     required this.bossKeyGesture,
     required this.updatedAt,
     this.version = currentVersion,
   });
 
-  static const int currentVersion = 2;
+  static const int currentVersion = 3;
 
   /// The taskbar entry is the recovery fallback when no tray entry exists.
   static final WindowsShellPreferences defaults = WindowsShellPreferences(
     showTaskbarIcon: true,
     showTrayIcon: false,
+    showWindowBorder: true,
     bossKeyEnabled: true,
     bossKeyGesture: WindowsBossKeyGesture.mouseChord(),
     updatedAt: _defaultUpdatedAt,
@@ -27,6 +29,10 @@ final class WindowsShellPreferences {
 
   final bool showTaskbarIcon;
   final bool showTrayIcon;
+
+  /// Whether the native Windows frame is shown. This is a shell preference,
+  /// not a Reader appearance or layout setting.
+  final bool showWindowBorder;
   final bool bossKeyEnabled;
   final WindowsBossKeyGesture bossKeyGesture;
   final int version;
@@ -37,6 +43,7 @@ final class WindowsShellPreferences {
   WindowsShellPreferences copyWith({
     bool? showTaskbarIcon,
     bool? showTrayIcon,
+    bool? showWindowBorder,
     bool? bossKeyEnabled,
     WindowsBossKeyGesture? bossKeyGesture,
     int? version,
@@ -45,6 +52,7 @@ final class WindowsShellPreferences {
     return WindowsShellPreferences(
       showTaskbarIcon: showTaskbarIcon ?? this.showTaskbarIcon,
       showTrayIcon: showTrayIcon ?? this.showTrayIcon,
+      showWindowBorder: showWindowBorder ?? this.showWindowBorder,
       bossKeyEnabled: bossKeyEnabled ?? this.bossKeyEnabled,
       bossKeyGesture: bossKeyGesture ?? this.bossKeyGesture,
       version: version ?? this.version,
@@ -57,6 +65,7 @@ final class WindowsShellPreferences {
       other is WindowsShellPreferences &&
       other.showTaskbarIcon == showTaskbarIcon &&
       other.showTrayIcon == showTrayIcon &&
+      other.showWindowBorder == showWindowBorder &&
       other.bossKeyEnabled == bossKeyEnabled &&
       other.bossKeyGesture == bossKeyGesture &&
       other.version == version &&
@@ -66,6 +75,7 @@ final class WindowsShellPreferences {
   int get hashCode => Object.hash(
     showTaskbarIcon,
     showTrayIcon,
+    showWindowBorder,
     bossKeyEnabled,
     bossKeyGesture,
     version,

@@ -27,7 +27,12 @@ final class WindowsShellBridge {
         'taskbar': preferences.showTaskbarIcon,
         'tray': preferences.showTrayIcon,
       });
-      return result ?? false;
+      final visibilityApplied = result ?? false;
+      final borderApplied = await _channel.invokeMethod<bool>(
+        'setWindowBorder',
+        {'show': preferences.showWindowBorder},
+      );
+      return visibilityApplied && (borderApplied ?? false);
     } on MissingPluginException {
       return false;
     } on PlatformException {
@@ -50,6 +55,20 @@ final class WindowsShellBridge {
     if (!supported) return false;
     try {
       return await _channel.invokeMethod<bool>('showWindow') ?? false;
+    } on MissingPluginException {
+      return false;
+    } on PlatformException {
+      return false;
+    }
+  }
+
+  static Future<bool> setWindowBorder(bool show) async {
+    if (!supported) return false;
+    try {
+      return await _channel.invokeMethod<bool>('setWindowBorder', {
+            'show': show,
+          }) ??
+          false;
     } on MissingPluginException {
       return false;
     } on PlatformException {

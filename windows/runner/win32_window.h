@@ -66,6 +66,9 @@ class Win32Window {
   // Windows shell visibility and tray operations. These are native shell
   // concerns; Reader state remains in Flutter.
   bool SetShellVisibility(bool show_taskbar, bool show_tray);
+  // Toggle the native frame while retaining resize/maximize affordances.
+  bool SetWindowBorder(bool show_border);
+  bool IsWindowBorderVisible() const { return window_border_visible_; }
   bool HideToTray();
   bool ShowFromTray();
   bool QuitApplication();
@@ -115,6 +118,7 @@ class Win32Window {
   bool taskbar_enabled_ = true;
   bool tray_enabled_ = false;
   bool tray_icon_added_ = false;
+  bool window_border_visible_ = true;
 
   // window handle for top level window.
   HWND window_handle_ = nullptr;

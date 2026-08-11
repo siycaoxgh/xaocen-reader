@@ -3,6 +3,7 @@
 #include <dwmapi.h>
 #include <flutter_windows.h>
 #include <shellapi.h>
+#include <windowsx.h>
 
 #include <algorithm>
 
@@ -41,6 +42,14 @@ constexpr const wchar_t kNormalYValue[] = L"normalY";
 constexpr const wchar_t kNormalWidthValue[] = L"normalWidth";
 constexpr const wchar_t kNormalHeightValue[] = L"normalHeight";
 constexpr const wchar_t kMaximizedValue[] = L"maximized";
+
+// The popup style retains native resize, minimize, maximize and system-menu
+// behavior while removing only the caption/frame decoration.
+constexpr LONG_PTR kWindowFrameStyleBits =
+    WS_CAPTION | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_SYSMENU;
+constexpr LONG_PTR kBorderlessStyleBits =
+    WS_POPUP | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_SYSMENU;
+constexpr int kBorderlessDragBand = 36;
 
 // The number of Win32Window objects that currently exist.
 static int g_active_window_count = 0;
@@ -313,6 +322,39 @@ Win32Window::MessageHandler(HWND hwnd,
     return 0;
   }
   switch (message) {
+    case WM_NCHITTEST:
+      if (!window_border_visible_) {
+        POINT point{GET_X_LPARAM(lparam), GET_Y_LPARAM(lparam)};
+        RECT bounds{};
+        GetWindowRect(hwnd, &bounds);
+        if (!IsZoomed(hwnd)) {
+          const int resize_x = GetSystemMetrics(SM_CXSIZEFRAME);
+          const int resize_y = GetSystemMetrics(SM_CYSIZEFRAME);
+          const bool left = point.x >= bounds.left &&
+                            point.x < bounds.left + resize_x;
+          const bool right = point.x < bounds.right &&
+                             point.x >= bounds.right - resize_x;
+          const bool top = point.y >= bounds.top &&
+                           point.y < bounds.top + resize_y;
+          const bool bottom = point.y < bounds.bottom &&
+                              point.y >= bounds.bottom - resize_y;
+          if (top && left) return HTTOPLEFT;
+          if (top && right) return HTTOPRIGHT;
+          if (bottom && left) return HTBOTTOMLEFT;
+          if (bottom && right) return HTBOTTOMRIGHT;
+          if (left) return HTLEFT;
+          if (right) return HTRIGHT;
+          if (top) return HTTOP;
+          if (bottom) return HTBOTTOM;
+        }
+        if (point.y < bounds.top + kBorderlessDragBand) {
+          // HTCAPTION gives us native drag, double-click maximize/restore and
+          // the standard system drag behavior without a global mouse hook.
+          return HTCAPTION;
+        }
+      }
+      break;
+
     case WM_DESTROY:
       RemoveTrayIcon();
       window_handle_ = nullptr;
@@ -503,6 +545,30 @@ bool Win32Window::SetShellVisibility(bool show_taskbar, bool show_tray) {
                SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE |
                    SWP_FRAMECHANGED);
   if (was_visible) ShowWindow(window_handle_, SW_SHOW);
+  return true;
+}
+
+bool Win32Window::SetWindowBorder(bool show_border) {
+  if (window_handle_ == nullptr) return false;
+  if (window_border_visible_ == show_border) return true;
+
+  WINDOWPLACEMENT placement{sizeof(placement)};
+  const bool was_maximized =
+      GetWindowPlacement(window_handle_, &placement) &&
+      placement.showCmd == SW_SHOWMAXIMIZED;
+  if (was_maximized) ShowWindow(window_handle_, SW_RESTORE);
+
+  LONG_PTR style = GetWindowLongPtr(window_handle_, GWL_STYLE);
+  style &= ~kWindowFrameStyleBits;
+  style |= show_border ? static_cast<LONG_PTR>(WS_OVERLAPPEDWINDOW)
+                       : kBorderlessStyleBits;
+  SetWindowLongPtr(window_handle_, GWL_STYLE, style);
+  window_border_visible_ = show_border;
+
+  SetWindowPos(window_handle_, nullptr, 0, 0, 0, 0,
+               SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE |
+                   SWP_FRAMECHANGED);
+  if (was_maximized) ShowWindow(window_handle_, SW_MAXIMIZE);
   return true;
 }
 

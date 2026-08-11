@@ -1,4 +1,5 @@
 # ARCHITECTURE_CURRENT.md — XAOCEN Reader v4 当前架构与合同
+<!-- Current checkpoint: M5.6c.2 complete; Windows borderless Reader added, Drift schema 11. -->
 
 > 只描述当前代码与合同（`feat/m4-horizontal-reader`，M5.6c.1.2 完成点，Drift schema 11）。
 > 不记录历史故事（见 PROJECT_HISTORY.md）。
@@ -1051,3 +1052,18 @@ left+right mouse `WindowsShellGesture`; no global mouse hook is installed.
 Boss Key can hide only when a tray recovery entry is active. ReaderLocator,
 PageWindow, AutoRead, ReadingSession, and all Reader persistence contracts are
 unchanged.
+
+## M5.6c.2 Windows borderless Reader
+
+`WindowsShellPreferences.showWindowBorder` is an app-level shell preference
+stored in the existing `app_settings` JSON boundary (profile version 3); Drift
+schema remains 11. Missing legacy values migrate to the safe bordered default.
+The native runner switches between the normal overlapped frame and a popup style
+that retains thick-frame resizing, minimize/maximize/system-menu behavior. In
+borderless mode native hit testing provides four-edge/four-corner resize and a
+top drag band, including native double-click maximize/restore behavior.
+
+Window placement remains native registry state: normal bounds are clamped to a
+visible monitor, restored before a saved maximized presentation, and minimized
+state is not persisted. Taskbar/tray recovery and the app-local Boss Key remain
+unchanged; no transparency or mouse-through behavior is introduced.

@@ -26,6 +26,7 @@ final class WindowsShellPreferencesRepository {
   Future<WindowsShellPreferences> update({
     required bool showTaskbarIcon,
     required bool showTrayIcon,
+    bool? showWindowBorder,
     bool? bossKeyEnabled,
     WindowsBossKeyGesture? bossKeyGesture,
   }) async {
@@ -36,6 +37,7 @@ final class WindowsShellPreferencesRepository {
     final next = WindowsShellPreferences(
       showTaskbarIcon: showTaskbarIcon,
       showTrayIcon: showTrayIcon,
+      showWindowBorder: showWindowBorder ?? current.showWindowBorder,
       bossKeyEnabled: bossKeyEnabled ?? current.bossKeyEnabled,
       bossKeyGesture: bossKeyGesture ?? current.bossKeyGesture,
       version: WindowsShellPreferences.currentVersion,
@@ -53,6 +55,17 @@ final class WindowsShellPreferencesRepository {
       current.copyWith(
         bossKeyEnabled: enabled,
         bossKeyGesture: gesture,
+        version: WindowsShellPreferences.currentVersion,
+        updatedAt: DateTime.now().toUtc(),
+      ),
+    );
+  }
+
+  Future<WindowsShellPreferences> updateWindowBorder(bool show) async {
+    final current = await load();
+    return _write(
+      current.copyWith(
+        showWindowBorder: show,
         version: WindowsShellPreferences.currentVersion,
         updatedAt: DateTime.now().toUtc(),
       ),
@@ -81,6 +94,7 @@ final class WindowsShellPreferencesRepository {
     'version': preferences.version,
     'showTaskbarIcon': preferences.showTaskbarIcon,
     'showTrayIcon': preferences.showTrayIcon,
+    'showWindowBorder': preferences.showWindowBorder,
     'bossKeyEnabled': preferences.bossKeyEnabled,
     'bossKeyGesture': preferences.bossKeyGesture.toJson(),
     'updatedAt': preferences.updatedAt.toUtc().toIso8601String(),
@@ -109,6 +123,11 @@ final class WindowsShellPreferencesRepository {
       return WindowsShellPreferences(
         showTaskbarIcon: taskbar,
         showTrayIcon: tray,
+        // v2 profiles did not contain this field; bordered windows remain the
+        // safe, backwards-compatible default during the v2 -> v3 migration.
+        showWindowBorder: decoded['showWindowBorder'] is bool
+            ? decoded['showWindowBorder'] as bool
+            : true,
         bossKeyEnabled: bossEnabled is bool ? bossEnabled : true,
         bossKeyGesture: bossGesture ?? const WindowsBossKeyGesture.mouseChord(),
         version: WindowsShellPreferences.currentVersion,

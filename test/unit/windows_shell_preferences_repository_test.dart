@@ -21,6 +21,7 @@ void main() {
     final value = await repository.load();
     expect(value.showTaskbarIcon, isTrue);
     expect(value.showTrayIcon, isFalse);
+    expect(value.showWindowBorder, isTrue);
     expect(value.hasRecoveryEntry, isTrue);
     expect(value.bossKeyEnabled, isTrue);
     expect(value.bossKeyGesture.mouseChord, isTrue);
@@ -33,6 +34,17 @@ void main() {
     expect(reloaded.showTaskbarIcon, isFalse);
     expect(reloaded.showTrayIcon, isTrue);
   });
+
+  test(
+    'window border preference persists independently of shell entries',
+    () async {
+      await repository.updateWindowBorder(false);
+      final reloaded = await repository.load();
+      expect(reloaded.showWindowBorder, isFalse);
+      expect(reloaded.showTaskbarIcon, isTrue);
+      expect(reloaded.showTrayIcon, isFalse);
+    },
+  );
 
   test(
     'custom keyboard gesture and disabled state persist canonically',
@@ -72,7 +84,8 @@ void main() {
     expect(value.showTrayIcon, isTrue);
     expect(value.bossKeyEnabled, isTrue);
     expect(value.bossKeyGesture.mouseChord, isTrue);
-    expect(value.version, 2);
+    expect(value.version, WindowsShellPreferences.currentVersion);
+    expect(value.showWindowBorder, isTrue);
   });
 
   test(
@@ -100,6 +113,7 @@ void main() {
       final value = await repository.load();
       expect(value.showTrayIcon, isTrue);
       expect(value.bossKeyGesture.mouseChord, isTrue);
+      expect(value.showWindowBorder, isTrue);
     },
   );
 

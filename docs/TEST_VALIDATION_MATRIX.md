@@ -727,6 +727,21 @@ vertical A → paged → 不翻页 → 重开 = paged + A · vertical A → page
 | Android Debug regression build | PASS |
 | Drift schema | 10, unchanged |
 
+## M5.6c.2 Windows borderless Reader
+
+| Area | Result |
+|---|---|
+| Typed border preference persistence and legacy fallback | PASS |
+| Native bordered/borderless style switching | PASS (Windows Release build) |
+| Edge/corner resize and native drag/maximize path | PASS (runner build) |
+| Window placement, monitor/DPI clamp, minimized-state contract | PASS (existing native tests/build) |
+| Taskbar/tray/Boss Key recovery compatibility | PASS (existing regression) |
+| Full Flutter unit/contract/widget | 496/496 PASS |
+| Windows integration | 11 files / 14 scenarios PASS |
+| Windows Release / Android Debug | PASS / PASS |
+| Android physical device | NOT-RUN (Windows-only change) |
+| Drift schema | 11, unchanged |
+
 ## M5.5e.4.2 Palette visual contrast correction
 
 | Area | Result |

@@ -828,3 +828,13 @@ Boss Key 采用 Flutter 窗口内的左右键同时按下，不安装全局鼠�
 且无托盘恢复入口时拒绝隐藏。Drift schema 仍为 10，ReaderLocator、Reader 引擎、AutoRead
 和 ReadingSession 不变。488 项 Flutter 测试、11 个 Windows integration 文件、Windows Release
 和 Android Debug regression build 全部通过。
+## M5.6c.2 — Windows Borderless Reader
+
+- Added typed app-level `showWindowBorder` persistence through the existing
+  Windows shell `app_settings` repository; legacy profiles safely default to a
+  bordered window and Drift schema remains 11.
+- Added native borderless frame switching with edge/corner resize, top drag,
+  native double-click maximize/restore, and existing monitor/DPI placement
+  recovery. Taskbar/tray and Boss Key recovery contracts remain intact.
+- Automated validation: 496 Flutter tests, 11 Windows integration files / 14
+  scenarios, Windows Release, Android Debug, and `git diff --check` all pass.
