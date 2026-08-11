@@ -1077,3 +1077,20 @@ Flutter background, and any whole-surface alpha would fade Reader text together
 with its background. The requested independent background/text opacity contract
 is therefore blocked pending a dedicated native compositor design; no production
 transparency path or schema change was introduced.
+
+## M5.6d DataRoot and data management
+
+`DataRoot` is now the single typed owner of writable application storage.
+Standard mode uses an app-owned child of Application Support; portable mode is
+explicit and uses the supplied executable directory's `data/` child. Each root
+has a persisted root ID and an exclusive lease, so two processes cannot open the
+same database accidentally. The managed directories are database, books,
+normalized/index (under books), reader backgrounds (under books), fonts,
+settings, backup metadata, and temporary staging.
+
+Existing `library/...` storagePath values remain root-relative and resolve via
+the managed books directory. First standard startup copies the legacy support
+database and library (including SQLite WAL/SHM sidecars) into the new root
+without clearing or re-importing user data. `DataRootBackupService` provides a
+manifest/hash verified export and a staged directory-swap restore; complete
+snapshots require the database to be closed. Drift schema remains 11.

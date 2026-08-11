@@ -858,3 +858,15 @@ before the configured `ReaderInputRouter` sees them. A route-owned Reader
 `FocusNode`, explicit pointer focus request, and modal-completion restore keep
 all key commands on the semantic router boundary without bypassing the paging
 controller.
+
+## M5.6d lesson (2026-08-12)
+
+### File-level backups must treat SQLite as a live set
+
+A complete DataRoot snapshot is more than copying one `.sqlite` file: SQLite
+may have WAL/SHM sidecars, and copying while the database is open can produce an
+inconsistent restore. The backup contract therefore requires the database lease
+to be released first, hashes every staged relative file, and swaps only after
+manifest verification. DataRoot keeps all resource references relative so a
+restored or portable instance never reintroduces machine-specific absolute
+paths.

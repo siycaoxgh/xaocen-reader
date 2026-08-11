@@ -847,3 +847,12 @@ Whole-window alpha would fade text with the background, so production
 transparency was intentionally stopped and deferred to a future compositor
 design. No production code, schema, ReaderLocator, or Reader rendering contract
 was changed; the 496-test suite and Windows Release build remained green.
+
+## M5.6d — DataRoot and data management (2026-08-12)
+
+Unified writable storage under a typed DataRoot. Standard mode remains in
+Application Support; opt-in portable mode uses an executable-local `data/`
+directory. Root IDs and exclusive leases isolate multiple instances. Legacy
+database/library paths migrate by verified copy, while existing `library/...`
+storage references remain relative. Manifest/SHA-256 export, staged atomic
+restore, and backup verification were added without a Drift schema change.

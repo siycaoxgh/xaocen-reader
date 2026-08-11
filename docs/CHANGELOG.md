@@ -960,3 +960,13 @@ deferred.
 - The current Flutter child surface does not provide a safe independent
   background/text alpha path; whole-surface alpha would violate the opacity
   contract. Production transparency is deferred pending a compositor design.
+
+## M5.6d — DataRoot and data management
+
+- Added a typed Standard/explicit Portable DataRoot with per-instance root IDs
+  and an exclusive lease to prevent accidental database sharing.
+- Unified database, books/normalized files, managed backgrounds, fonts,
+  settings, backup metadata, and temporary staging under the root while keeping
+  existing `library/...` storage paths root-relative.
+- Added legacy Application Support migration, SHA-256 manifest export/verify,
+  and staged atomic restore. Drift schema remains 11.

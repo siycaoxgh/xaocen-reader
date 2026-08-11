@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/database/app_database.dart';
+import '../data/data_root.dart';
 import '../data/repositories/encoding_index_provider.dart';
 import '../data/repositories/library_file_manager.dart';
 import '../data/repositories/local_library_repository.dart';
@@ -27,6 +28,11 @@ final databaseProvider = Provider<AppDatabase>((ref) {
   final db = AppDatabase.forTesting();
   ref.onDispose(db.close);
   return db;
+});
+
+/// The initialized storage scope for the running application instance.
+final dataRootProvider = Provider<DataRoot>((ref) {
+  throw UnimplementedError('dataRootProvider must be overridden');
 });
 
 /// 文件管理 Provider（使用系统 support 目录下 library 根）。

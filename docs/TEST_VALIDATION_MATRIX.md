@@ -769,3 +769,19 @@ vertical A → paged → 不翻页 → 重开 = paged + A · vertical A → page
 | Windows Release / Android Debug | PASS / PASS |
 | Android real device | NOT-RUN (not requested in this coding pass) |
 | Drift schema | 8, unchanged |
+
+## M5.6d DataRoot and data management
+
+| Area | Result |
+|---|---|
+| Standard Application Support root and legacy copy migration | PASS |
+| Explicit Portable `executable/data` root | PASS |
+| Per-instance root ID and exclusive lease | PASS |
+| Root-relative book/background/font/settings paths | PASS |
+| Manifest + SHA-256 export and tamper rejection | PASS |
+| Staged atomic restore / rollback path | PASS |
+| Full Flutter unit/contract/widget | 501/501 PASS |
+| Windows integration | 11 files / 14 scenarios PASS |
+| Four real TXT corpus / logical error | PASS / 0 |
+| Windows Release / Android Debug | PASS / PASS |
+| Drift schema | 11, unchanged |

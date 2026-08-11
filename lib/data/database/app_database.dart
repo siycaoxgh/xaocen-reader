@@ -1,10 +1,6 @@
-import 'dart:io';
-
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
-import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
-
+import '../data_root.dart';
 import 'tables.dart';
 
 part 'app_database.g.dart';
@@ -30,20 +26,37 @@ part 'app_database.g.dart';
   ],
 )
 class AppDatabase extends _$AppDatabase {
-  AppDatabase(super.e);
+  AppDatabase(super.e, {this.dataRootLease});
+
+  final DataRootLease? dataRootLease;
 
   /// 内存测试库。
-  AppDatabase.forTesting() : super(NativeDatabase.memory());
+  AppDatabase.forTesting()
+    : dataRootLease = null,
+      super(NativeDatabase.memory());
 
   @override
   int get schemaVersion => 11;
 
   /// 打开应用数据库（support 目录下）。
-  static Future<AppDatabase> open() async {
-    final dir = await getApplicationSupportDirectory();
-    await dir.create(recursive: true);
-    final file = File(p.join(dir.path, 'xaocen_v4_local.sqlite'));
-    return AppDatabase(NativeDatabase(file));
+  static Future<AppDatabase> open({DataRoot? dataRoot}) async {
+    final root = dataRoot ?? await DataRoot.standard();
+    final lease = await root.acquireLease();
+    try {
+      return AppDatabase(
+        NativeDatabase(root.databaseFile),
+        dataRootLease: lease,
+      );
+    } catch (_) {
+      await lease.release();
+      rethrow;
+    }
+  }
+
+  @override
+  Future<void> close() async {
+    await super.close();
+    await dataRootLease?.release();
   }
 
   @override

@@ -1,11 +1,8 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
 
 import '../data/database/app_database.dart';
+import '../data/data_root.dart';
 import '../data/repositories/library_file_manager.dart';
 import 'app.dart';
 import 'providers.dart';
@@ -18,17 +15,17 @@ Future<void> bootstrap() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // 数据库（正式文件库）
-  final db = await AppDatabase.open();
+  final dataRoot = await DataRoot.standard();
+  final db = await AppDatabase.open(dataRoot: dataRoot);
   // 文件管理（library 根）
-  final supportDir = await getApplicationSupportDirectory();
-  final libraryRoot = Directory(p.join(supportDir.path, 'library'));
-  final fileManager = LibraryFileManager(libraryRoot: libraryRoot);
+  final fileManager = LibraryFileManager(libraryRoot: dataRoot.booksDirectory);
   // 启动时清理未完成导入 job（半成品不显示在书架）
   await fileManager.cleanupStaleImportingJobs();
 
   runApp(
     ProviderScope(
       overrides: [
+        dataRootProvider.overrideWithValue(dataRoot),
         databaseProvider.overrideWithValue(db),
         fileManagerProvider.overrideWithValue(fileManager),
       ],

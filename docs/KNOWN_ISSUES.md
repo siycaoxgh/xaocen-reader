@@ -371,3 +371,11 @@ small native interaction area; a future shell polish pass may expose a richer
 explicit drag-region contract if the desktop chrome needs one. Transparency,
 mouse-through, and global hooks remain intentionally deferred. No new P0/P1/P2
 issue was found; Android physical-device validation was not required.
+
+## M5.6d status
+
+DataRoot Standard/Portable separation, legacy copy migration, root locking, and
+manifest/hash backup validation are complete. Complete backup/restore requires
+the database to be closed so SQLite WAL state is captured consistently; the
+application-level restore coordinator/UI remains a future data-management
+surface. No new P0/P1/P2 issue was found.
