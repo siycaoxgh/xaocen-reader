@@ -26,6 +26,19 @@ void main() {
     }
   });
 
+  test('preset backgrounds remain visibly distinct in both brightnesses', () {
+    final lightBackgrounds = ReaderPalette.presets
+        .map((palette) => palette.light.backgroundArgb)
+        .toSet();
+    final darkBackgrounds = ReaderPalette.presets
+        .map((palette) => palette.dark.backgroundArgb)
+        .toSet();
+    expect(lightBackgrounds, hasLength(6));
+    expect(darkBackgrounds, hasLength(6));
+    expect(ReaderPalette.inkBlack.light.backgroundArgb, 0xff000000);
+    expect(ReaderPalette.inkBlack.dark.backgroundArgb, 0xff000000);
+  });
+
   test('resolver uses custom override only for the selected brightness', () {
     final light = ReaderPaletteResolver.resolve(
       paletteId: ReaderPaletteId.custom,
@@ -101,5 +114,41 @@ void main() {
       ),
     );
     expect(appearance!.textColor.toARGB32(), 0xffabcdef);
+  });
+
+  testWidgets('appearance resolver paints the selected preset variant', (
+    tester,
+  ) async {
+    ReaderResolvedAppearance? lightInk;
+    ReaderResolvedAppearance? darkGray;
+    final ink = ReaderPreferences.defaults.copyWith(
+      paletteId: ReaderPaletteId.inkBlack,
+    );
+    final gray = ReaderPreferences.defaults.copyWith(
+      paletteId: ReaderPaletteId.night,
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: Builder(
+          builder: (context) {
+            lightInk = resolveReaderAppearance(
+              context,
+              theme: AppTheme.light(),
+              preferences: ink,
+            );
+            darkGray = resolveReaderAppearance(
+              context,
+              theme: AppTheme.dark(),
+              preferences: gray,
+            );
+            return const SizedBox();
+          },
+        ),
+      ),
+    );
+    expect(lightInk!.backgroundColor.toARGB32(), 0xff000000);
+    expect(lightInk!.textColor.toARGB32(), 0xfff2f2f2);
+    expect(darkGray!.backgroundColor.toARGB32(), 0xff4a4a4a);
   });
 }

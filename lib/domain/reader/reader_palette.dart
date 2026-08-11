@@ -44,7 +44,7 @@ final class ReaderPalette {
     label: '纸白',
     light: ReaderPaletteColors(
       textArgb: 0xff1c1b1f,
-      backgroundArgb: 0xffffffff,
+      backgroundArgb: 0xfffffdf8,
     ),
     dark: ReaderPaletteColors(textArgb: 0xfff4f1ea, backgroundArgb: 0xff242424),
   );
@@ -52,44 +52,44 @@ final class ReaderPalette {
     id: ReaderPaletteId.warmYellow,
     label: '暖黄',
     light: ReaderPaletteColors(
-      textArgb: 0xff4b3425,
-      backgroundArgb: 0xfffff8e7,
+      textArgb: 0xff3b2a1b,
+      backgroundArgb: 0xfffff1c2,
     ),
-    dark: ReaderPaletteColors(textArgb: 0xfff5e8c8, backgroundArgb: 0xff2b251b),
+    dark: ReaderPaletteColors(textArgb: 0xfffff1c2, backgroundArgb: 0xff3b2d18),
   );
   static const tealGreen = ReaderPalette(
     id: ReaderPaletteId.tealGreen,
     label: '青绿',
     light: ReaderPaletteColors(
-      textArgb: 0xff19342a,
-      backgroundArgb: 0xffe8f2ec,
+      textArgb: 0xff17362a,
+      backgroundArgb: 0xffcbe8d8,
     ),
-    dark: ReaderPaletteColors(textArgb: 0xffd8f0e3, backgroundArgb: 0xff182823),
+    dark: ReaderPaletteColors(textArgb: 0xffcbe8d8, backgroundArgb: 0xff16372a),
   );
   static const cyanBlue = ReaderPalette(
     id: ReaderPaletteId.cyanBlue,
     label: '青蓝',
     light: ReaderPaletteColors(
       textArgb: 0xff17313a,
-      backgroundArgb: 0xffe9f3f8,
+      backgroundArgb: 0xffc7e7f2,
     ),
-    dark: ReaderPaletteColors(textArgb: 0xffd8eef5, backgroundArgb: 0xff17262c),
+    dark: ReaderPaletteColors(textArgb: 0xffc7e7f2, backgroundArgb: 0xff16323c),
   );
   static const night = ReaderPalette(
     id: ReaderPaletteId.night,
     label: '浅灰',
     light: ReaderPaletteColors(
       textArgb: 0xff303238,
-      backgroundArgb: 0xfff1f1f1,
+      backgroundArgb: 0xffd9d9d9,
     ),
-    dark: ReaderPaletteColors(textArgb: 0xffe6e6e6, backgroundArgb: 0xff202124),
+    dark: ReaderPaletteColors(textArgb: 0xfff0f0f0, backgroundArgb: 0xff4a4a4a),
   );
   static const inkBlack = ReaderPalette(
     id: ReaderPaletteId.inkBlack,
     label: '墨黑',
     light: ReaderPaletteColors(
-      textArgb: 0xff101010,
-      backgroundArgb: 0xfff5f5f5,
+      textArgb: 0xfff2f2f2,
+      backgroundArgb: 0xff000000,
     ),
     dark: ReaderPaletteColors(textArgb: 0xfff2f2f2, backgroundArgb: 0xff000000),
   );

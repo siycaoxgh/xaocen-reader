@@ -1,6 +1,6 @@
 # KNOWN_ISSUES.md — XAOCEN Reader v4 已知问题清单
 
-> 状态截至 M5.5e.4.1（`feat/m4-horizontal-reader`，Drift schema 8）。Android 真机按阶段策略另行复核。
+> 状态截至 M5.5e.4.2（`feat/m4-horizontal-reader`，Drift schema 8）。Android 真机按阶段策略另行复核。
 > 已解决的问题不在此列为 open；「Resolved but regression-sensitive」列出需要持续盯防的已修复项。
 
 ---
@@ -12,6 +12,13 @@
 - Preset/custom paint-source precedence and Windows Aa width were corrected. No new P1/P2
   issue was found; schema remains 8. Android Debug passed, while Android real-device validation
   was not run in this coding pass.
+
+## M5.5e.4.2 status (2026-08-11)
+
+- Palette selection and repaint flow were confirmed correct. Preset colors were strengthened
+  for visible contrast; `墨黑` is black in both brightnesses and `浅灰` is explicitly gray.
+  No new P1/P2 issue or icon/logo resource error was found. Android Debug passed; real-device
+  validation was not run in this coding pass.
 
 ## M5.5e.4 status (2026-08-11)
 

@@ -755,3 +755,10 @@ Debug all passed.
 旧 schema 7 颜色迁移为 custom，预设“夜间”更名为“浅灰”。Windows Aa 使用稳定的桌面
 外层宽度、分类栏和内容区；Drift schema 保持 8。468 项 Flutter 测试、11 个 integration
 文件 / 14 个场景、4 个真实 TXT logical error 0、Windows Release 与 Android Debug 全部通过。
+
+## M5.5e.4.2 — Palette visual contrast correction（2026-08-11）
+
+确认 Palette 点击、持久化、watch 和 Reader body 重绘链路正常；真人问题来自亮色变体过于接近白色，
+且“墨黑”浅色变体并非黑底。重新定义六组预设的亮/暗颜色，墨黑在两种亮度均为黑底浅字，浅灰
+使用明确灰阶。未修改 schema、ReaderLocator、分页或 AutoRead。470 项 Flutter 测试、11 个
+integration 文件 / 14 个场景、4 个真实 TXT logical error 0、Windows Release 与 Android Debug 全部通过。

@@ -11,6 +11,7 @@ import 'package:xaocen_reader/data/repositories/reader_preferences_repository.da
 import 'package:xaocen_reader/domain/library/library_entities.dart';
 import 'package:xaocen_reader/domain/local_txt/text_encoding.dart';
 import 'package:xaocen_reader/domain/reader/reader_locator.dart';
+import 'package:xaocen_reader/domain/reader/reader_palette.dart';
 import 'package:xaocen_reader/domain/reader/reader_preferences.dart';
 import 'package:xaocen_reader/domain/reader/reader_progress_state.dart';
 import 'package:xaocen_reader/domain/reader/reading_mode.dart';
@@ -440,6 +441,12 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('外观'));
       await tester.pumpAndSettle();
+      await tester.tap(find.text('墨黑'));
+      await tester.pump();
+      expect(
+        (await repository.load('local-txt:abc')).paletteId,
+        ReaderPaletteId.inkBlack,
+      );
       final colorFields = find.byType(TextField);
       expect(colorFields, findsNWidgets(2));
       await tester.enterText(colorFields.at(0), 'rgb(18, 52, 86)');

@@ -1,6 +1,6 @@
 # ARCHITECTURE_CURRENT.md — XAOCEN Reader v4 当前架构与合同
 
-> 只描述当前代码与合同（`feat/m4-horizontal-reader`，M5.5e.4.1 完成点，Drift schema 8）。
+> 只描述当前代码与合同（`feat/m4-horizontal-reader`，M5.5e.4.2 完成点，Drift schema 8）。
 > 不记录历史故事（见 PROJECT_HISTORY.md）。
 > 代码位置均以本仓库实际文件为准。
 
@@ -27,6 +27,11 @@ Drift schema is 8. Migration 7→8 adds palette identity and four nullable
 brightness-specific color columns. Legacy schema-7 single color values are
 copied to both brightness columns and marked `custom`, preserving books, typography, images,
 reading_progress, readingMode, and ReaderLocator.
+
+The bundled light/dark values are intentionally visually distinct. `浅灰` uses gray
+background variants; `墨黑` uses a black background and light text in both brightnesses,
+so its semantic name remains true even when Reader theme mode is light. Theme mode chooses
+the selected palette variant; it does not create a second palette source.
 
 ## M5.3.1 chapter boundary and vertical progress contract
 

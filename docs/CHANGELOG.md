@@ -50,6 +50,14 @@ Debug. Android targeted ADB was not run because no device was connected.
 
 ## Unreleased
 
+### M5.5e.4.2 — Palette visual contrast correction (2026-08-11)
+- Confirmed palette selection/watch/repaint flow and corrected the preset color pairs so each
+  palette has a visible result. `墨黑` is now black-background/light-text in both brightnesses;
+  `浅灰` uses explicit gray variants.
+- No Reader engine, Locator, AutoRead, or schema changes. Validation: 470 Flutter tests,
+  11 integration files / 14 scenarios, four real TXT logical-error-zero checks, Windows Release,
+  and Android Debug PASS.
+
 ### M5.5e.4.1 — Palette source and Windows Aa width correction (2026-08-11)
 - Made preset/custom Reader palette selection explicit and mutually exclusive. Presets now
   immediately paint their light/dark colors; retained custom overrides are inert until custom
