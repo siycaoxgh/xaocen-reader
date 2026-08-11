@@ -237,6 +237,16 @@ class ReaderPreferencesRows extends Table {
       real().withDefault(const Constant(1.0))();
   RealColumn get backgroundOverlayOpacity =>
       real().withDefault(const Constant(0.45))();
+  BoolColumn get showTopInfoBar =>
+      boolean().withDefault(const Constant(true))();
+  BoolColumn get showBottomInfoBar =>
+      boolean().withDefault(const Constant(true))();
+  BoolColumn get showProgressInfo =>
+      boolean().withDefault(const Constant(true))();
+  TextColumn get statusBarMode =>
+      text().withDefault(const Constant('system'))();
+  TextColumn get timeDisplayMode =>
+      text().withDefault(const Constant('twentyFourHour'))();
   DateTimeColumn get updatedAt => dateTime()();
 
   @override

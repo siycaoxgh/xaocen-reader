@@ -1,11 +1,21 @@
 # KNOWN_ISSUES.md — XAOCEN Reader v4 已知问题清单
 
-> 状态截至 M5.5e.6（`feat/m4-horizontal-reader`，Drift schema 8）。Android 真机按阶段策略另行复核。
+> 状态截至 M5.5g（`feat/m4-horizontal-reader`，Drift schema 9）。Android 真机按阶段策略另行复核。
 > 已解决的问题不在此列为 open；「Resolved but regression-sensitive」列出需要持续盯防的已修复项。
 
 ---
 
 ## Current open issues
+
+## M5.5g status (2026-08-11)
+
+- Android edge-to-edge and the Reader minimal information layer passed static, widget,
+  integration, Windows Release, and Android Debug validation. The four real TXT corpus kept
+  logical error at 0; no new Reader P1/P2 was found.
+- Physical Android cutout/gesture-navigation/manual palette and image-background validation was
+  not run in this coding pass; it remains a device-validation item, not a known engine defect.
+- Schema 8→9 migration passed with explicit display defaults; Locator, progress, pagination,
+  AutoRead, and ReadingSession contracts are unchanged.
 
 ## M5.5e.6 status (2026-08-11)
 

@@ -51,6 +51,11 @@ const readerBackgroundOverlayOpacityKey = Key(
 const readerResetAppearanceKey = Key('reader-reset-appearance');
 const readerSettingsModeControlKey = Key('reader-settings-mode-control');
 const readerResetPreferencesKey = Key('reader-reset-preferences');
+const readerShowTopInfoKey = Key('reader-show-top-info');
+const readerShowBottomInfoKey = Key('reader-show-bottom-info');
+const readerShowProgressInfoKey = Key('reader-show-progress-info');
+const readerStatusBarModeKey = Key('reader-status-bar-mode');
+const readerTimeDisplayModeKey = Key('reader-time-display-mode');
 
 const _aaSectionGap = 12.0;
 const _aaControlRadius = 12.0;
@@ -91,6 +96,11 @@ class ReaderChrome extends StatelessWidget {
     this.chapterPageNumber,
     this.chapterPageCount,
     this.progressPercent,
+    this.showTopInfoBar = true,
+    this.showBottomInfoBar = true,
+    this.showProgressInfo = true,
+    this.statusBarMode = ReaderStatusBarMode.system,
+    this.timeDisplayMode = ReaderTimeDisplayMode.twentyFourHour,
   });
 
   final bool visible;
@@ -116,6 +126,11 @@ class ReaderChrome extends StatelessWidget {
   final int? chapterPageNumber;
   final int? chapterPageCount;
   final double? progressPercent;
+  final bool showTopInfoBar;
+  final bool showBottomInfoBar;
+  final bool showProgressInfo;
+  final ReaderStatusBarMode statusBarMode;
+  final ReaderTimeDisplayMode timeDisplayMode;
 
   @override
   Widget build(BuildContext context) {
@@ -344,6 +359,21 @@ class ReaderChrome extends StatelessWidget {
     return Stack(
       fit: StackFit.expand,
       children: [
+        if (!visible && (showTopInfoBar || showBottomInfoBar))
+          ReaderMinimalInfoLayer(
+            mode: mode,
+            currentChapterTitle: currentChapterTitle,
+            currentChapterNumber: currentChapterNumber,
+            chapterProgressPercent: chapterProgressPercent,
+            chapterPageNumber: chapterPageNumber,
+            chapterPageCount: chapterPageCount,
+            progressPercent: progressPercent,
+            showTopInfoBar: showTopInfoBar,
+            showBottomInfoBar: showBottomInfoBar,
+            showProgressInfo: showProgressInfo,
+            statusBarMode: statusBarMode,
+            timeDisplayMode: timeDisplayMode,
+          ),
         chrome,
         if (autoReadState != AutoReadState.idle)
           ReaderAutoReadStatusBar(
@@ -358,6 +388,216 @@ class ReaderChrome extends StatelessWidget {
       ],
     );
   }
+}
+
+/// Minimal, non-interactive information layer shown only while Reader chrome
+/// is hidden.  It uses view insets rather than fixed status-bar dimensions so
+/// cutouts, rounded corners and gesture navigation remain safe on Android.
+class ReaderMinimalInfoLayer extends StatefulWidget {
+  const ReaderMinimalInfoLayer({
+    super.key,
+    required this.mode,
+    required this.currentChapterTitle,
+    required this.currentChapterNumber,
+    required this.chapterProgressPercent,
+    required this.chapterPageNumber,
+    required this.chapterPageCount,
+    required this.progressPercent,
+    required this.showTopInfoBar,
+    required this.showBottomInfoBar,
+    required this.showProgressInfo,
+    required this.statusBarMode,
+    required this.timeDisplayMode,
+  });
+
+  final ReaderMode mode;
+  final String? currentChapterTitle;
+  final int? currentChapterNumber;
+  final double? chapterProgressPercent;
+  final int? chapterPageNumber;
+  final int? chapterPageCount;
+  final double? progressPercent;
+  final bool showTopInfoBar;
+  final bool showBottomInfoBar;
+  final bool showProgressInfo;
+  final ReaderStatusBarMode statusBarMode;
+  final ReaderTimeDisplayMode timeDisplayMode;
+
+  @override
+  State<ReaderMinimalInfoLayer> createState() => _ReaderMinimalInfoLayerState();
+}
+
+class _ReaderMinimalInfoLayerState extends State<ReaderMinimalInfoLayer> {
+  Timer? _clockTimer;
+  DateTime _now = DateTime.now();
+
+  @override
+  void initState() {
+    super.initState();
+    _clockTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (mounted) setState(() => _now = DateTime.now());
+    });
+  }
+
+  @override
+  void dispose() {
+    _clockTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final viewPadding = MediaQuery.viewPaddingOf(context);
+    final horizontal = math.max(12.0, viewPadding.left + 12.0);
+    final right = math.max(12.0, viewPadding.right + 12.0);
+    final top = math.max(8.0, viewPadding.top + 8.0);
+    final bottom = math.max(10.0, viewPadding.bottom + 10.0);
+    final textColor = scheme.onSurface;
+    final background = scheme.surface.withValues(alpha: .72);
+
+    return IgnorePointer(
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          if (widget.showTopInfoBar)
+            Align(
+              alignment: Alignment.topCenter,
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(horizontal, top, right, 0),
+                child: _MinimalInfoCard(
+                  color: background,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          _chapterTitle(),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(
+                            context,
+                          ).textTheme.labelMedium?.copyWith(color: textColor),
+                        ),
+                      ),
+                      if (widget.showProgressInfo) ...[
+                        const SizedBox(width: 12),
+                        Text(
+                          _chapterProgressLabel(),
+                          style: Theme.of(context).textTheme.labelSmall
+                              ?.copyWith(
+                                color: textColor.withValues(alpha: .8),
+                              ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          if (widget.showBottomInfoBar)
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(horizontal, 0, right, bottom),
+                child: _MinimalInfoCard(
+                  color: background,
+                  child: Row(
+                    children: [
+                      if (_showReaderClock) ...[
+                        Text(
+                          _formatClock(_now, widget.timeDisplayMode),
+                          style: Theme.of(context).textTheme.labelSmall
+                              ?.copyWith(
+                                color: textColor.withValues(alpha: .8),
+                              ),
+                        ),
+                        const Spacer(),
+                      ],
+                      if (widget.showProgressInfo)
+                        Text(
+                          _wholeBookProgressLabel(),
+                          style: Theme.of(context).textTheme.labelSmall
+                              ?.copyWith(
+                                color: textColor.withValues(alpha: .8),
+                              ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  bool get _showReaderClock =>
+      widget.statusBarMode == ReaderStatusBarMode.readerInfo &&
+      widget.timeDisplayMode != ReaderTimeDisplayMode.hidden;
+
+  String _chapterTitle() {
+    final title = widget.currentChapterTitle;
+    if (title == null || title == ReaderProgressLabels.wholeDocument) {
+      return ReaderProgressLabels.wholeDocument;
+    }
+    final number = widget.currentChapterNumber;
+    return number == null ? title : '第 $number 章  $title';
+  }
+
+  String _chapterProgressLabel() {
+    final title = widget.currentChapterTitle;
+    if (title == null || title == ReaderProgressLabels.wholeDocument) {
+      return '';
+    }
+    if (widget.mode == ReaderMode.paged) {
+      final page = widget.chapterPageNumber;
+      final count = widget.chapterPageCount;
+      if (page != null && count != null) {
+        return '${ReaderProgressLabels.chapter} $page / $count ${ReaderProgressLabels.pages}';
+      }
+      return ReaderProgressLabels.chapter;
+    }
+    final percent = widget.chapterProgressPercent;
+    if (percent == null) {
+      return '';
+    }
+    return '${ReaderProgressLabels.chapter} ${(percent * 100).round()}%';
+  }
+
+  String _wholeBookProgressLabel() {
+    final percent = widget.progressPercent;
+    if (percent == null) return ReaderProgressLabels.wholeBook;
+    return '${ReaderProgressLabels.wholeBook} ${(percent * 100).round()}%';
+  }
+}
+
+class _MinimalInfoCard extends StatelessWidget {
+  const _MinimalInfoCard({required this.color, required this.child});
+
+  final Color color;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Material(
+    color: color,
+    elevation: 1,
+    borderRadius: BorderRadius.circular(12),
+    child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+      child: child,
+    ),
+  );
+}
+
+String _formatClock(DateTime value, ReaderTimeDisplayMode mode) {
+  final minute = value.minute.toString().padLeft(2, '0');
+  return switch (mode) {
+    ReaderTimeDisplayMode.twentyFourHour =>
+      '${value.hour.toString().padLeft(2, '0')}:$minute',
+    ReaderTimeDisplayMode.twelveHour =>
+      '${((value.hour % 12) == 0 ? 12 : value.hour % 12).toString().padLeft(2, '0')}:$minute ${value.hour >= 12 ? 'PM' : 'AM'}',
+    ReaderTimeDisplayMode.hidden => '',
+  };
 }
 
 String _readerModeLabel(ReaderMode mode) =>
@@ -1464,6 +1704,82 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
         Text(
           '阅读方式按本书保存；页面布局和翻页效果将在后续版本提供。',
           style: Theme.of(context).textTheme.bodySmall,
+        ),
+        const SizedBox(height: 20),
+        Text('阅读信息', style: Theme.of(context).textTheme.titleSmall),
+        const SizedBox(height: 4),
+        SwitchListTile.adaptive(
+          key: readerShowTopInfoKey,
+          contentPadding: EdgeInsets.zero,
+          title: const Text('顶部阅读信息'),
+          subtitle: const Text('菜单隐藏时显示章节标题和本章进度'),
+          value: _draft.showTopInfoBar,
+          onChanged: (value) => _commit(_draft.copyWith(showTopInfoBar: value)),
+        ),
+        SwitchListTile.adaptive(
+          key: readerShowBottomInfoKey,
+          contentPadding: EdgeInsets.zero,
+          title: const Text('底部阅读信息'),
+          subtitle: const Text('菜单隐藏时显示时间和全书进度'),
+          value: _draft.showBottomInfoBar,
+          onChanged: (value) =>
+              _commit(_draft.copyWith(showBottomInfoBar: value)),
+        ),
+        SwitchListTile.adaptive(
+          key: readerShowProgressInfoKey,
+          contentPadding: EdgeInsets.zero,
+          title: const Text('显示阅读进度'),
+          value: _draft.showProgressInfo,
+          onChanged: (value) =>
+              _commit(_draft.copyWith(showProgressInfo: value)),
+        ),
+        if (defaultTargetPlatform == TargetPlatform.android) ...[
+          const SizedBox(height: 8),
+          Text('系统栏模式', style: Theme.of(context).textTheme.labelLarge),
+          const SizedBox(height: 6),
+          SegmentedButton<ReaderStatusBarMode>(
+            key: readerStatusBarModeKey,
+            segments: const [
+              ButtonSegment(
+                value: ReaderStatusBarMode.system,
+                label: Text('系统状态栏'),
+              ),
+              ButtonSegment(
+                value: ReaderStatusBarMode.readerInfo,
+                label: Text('阅读器信息栏'),
+              ),
+              ButtonSegment(
+                value: ReaderStatusBarMode.hidden,
+                label: Text('隐藏'),
+              ),
+            ],
+            selected: {_draft.statusBarMode},
+            onSelectionChanged: (selection) =>
+                _commit(_draft.copyWith(statusBarMode: selection.single)),
+          ),
+        ],
+        const SizedBox(height: 12),
+        Text('时间显示方式', style: Theme.of(context).textTheme.labelLarge),
+        const SizedBox(height: 6),
+        SegmentedButton<ReaderTimeDisplayMode>(
+          key: readerTimeDisplayModeKey,
+          segments: const [
+            ButtonSegment(
+              value: ReaderTimeDisplayMode.twentyFourHour,
+              label: Text('24 小时'),
+            ),
+            ButtonSegment(
+              value: ReaderTimeDisplayMode.twelveHour,
+              label: Text('12 小时'),
+            ),
+            ButtonSegment(
+              value: ReaderTimeDisplayMode.hidden,
+              label: Text('不显示'),
+            ),
+          ],
+          selected: {_draft.timeDisplayMode},
+          onSelectionChanged: (selection) =>
+              _commit(_draft.copyWith(timeDisplayMode: selection.single)),
         ),
       ],
     );

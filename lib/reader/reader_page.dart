@@ -603,6 +603,7 @@ class _ReaderPageState extends State<ReaderPage>
     if (!mounted) return;
     _preferencesReady = true;
     _resolveAppearance();
+    _syncAndroidSystemUi();
     setState(() {});
     await _start();
   }
@@ -623,6 +624,32 @@ class _ReaderPageState extends State<ReaderPage>
     _bodyStyle = _appearance.baseTextStyle;
   }
 
+  void _syncAndroidSystemUi() {
+    if (defaultTargetPlatform != TargetPlatform.android) return;
+    final brightness = _effectiveReaderTheme().brightness;
+    final darkIcons = brightness == Brightness.light;
+    final barsVisible =
+        _preferences.statusBarMode == ReaderStatusBarMode.system;
+    unawaited(
+      SystemChrome.setEnabledSystemUIMode(
+        barsVisible ? SystemUiMode.edgeToEdge : SystemUiMode.immersiveSticky,
+      ),
+    );
+    SystemChrome.setSystemUIOverlayStyle(
+      SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        systemNavigationBarColor: Colors.transparent,
+        systemNavigationBarDividerColor: Colors.transparent,
+        statusBarIconBrightness: darkIcons ? Brightness.dark : Brightness.light,
+        systemNavigationBarIconBrightness: darkIcons
+            ? Brightness.dark
+            : Brightness.light,
+        systemStatusBarContrastEnforced: false,
+        systemNavigationBarContrastEnforced: false,
+      ),
+    );
+  }
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -633,6 +660,7 @@ class _ReaderPageState extends State<ReaderPage>
       // （RenderReaderTextBlock.style setter 区分度量/颜色），
       // 不重建 block 索引、不写进度、阅读 offset 保持不变。
       _resolveAppearance();
+      _syncAndroidSystemUi();
       if (mounted) setState(() {});
     }
   }
@@ -720,6 +748,9 @@ class _ReaderPageState extends State<ReaderPage>
     _pagedAutoReadDriver = null;
     _autoReadController.dispose();
     unawaited(ReaderKeepAwake.release());
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      unawaited(SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge));
+    }
     _modeGeneration++;
     _invalidateChapterNavigation();
     _searchService.cancel();
@@ -774,6 +805,7 @@ class _ReaderPageState extends State<ReaderPage>
         _controller.flush(source: ReaderPositionEventSource.lifecycleFlush);
       }
     } else if (state == AppLifecycleState.resumed) {
+      _syncAndroidSystemUi();
       unawaited(_readingSession?.resume() ?? Future<void>.value());
     }
   }
@@ -783,10 +815,14 @@ class _ReaderPageState extends State<ReaderPage>
     final previous = _preferences;
     final nextSignature = ReaderMetricsSignature.fromPreferences(next);
     _preferences = next;
+    if (next.statusBarMode != previous.statusBarMode ||
+        next.themeMode != previous.themeMode) {
+      _syncAndroidSystemUi();
+    }
     if (nextSignature == _metricsSignature) {
-      if (next
-          .changesFrom(previous)
-          .contains(ReaderPreferenceChangeKind.paint)) {
+      final changes = next.changesFrom(previous);
+      if (changes.contains(ReaderPreferenceChangeKind.paint) ||
+          changes.contains(ReaderPreferenceChangeKind.display)) {
         _resolveAppearance();
         setState(() {});
       }
@@ -1894,6 +1930,11 @@ class _ReaderPageState extends State<ReaderPage>
             chapterPageNumber: _chapterPageMetrics?.currentPageNumber,
             chapterPageCount: _chapterPageMetrics?.totalPageCount,
             progressPercent: _progressPercent,
+            showTopInfoBar: _preferences.showTopInfoBar,
+            showBottomInfoBar: _preferences.showBottomInfoBar,
+            showProgressInfo: _preferences.showProgressInfo,
+            statusBarMode: _preferences.statusBarMode,
+            timeDisplayMode: _preferences.timeDisplayMode,
             autoReadState: _autoReadController.state,
             autoReadSpeedPixelsPerSecond:
                 _autoReadController.preferences.verticalVelocityPixelsPerSecond,

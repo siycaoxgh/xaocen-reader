@@ -50,6 +50,19 @@ Debug. Android targeted ADB was not run because no device was connected.
 
 ## Unreleased
 
+### M5.5g — Android edge-to-edge and Reader information layer (2026-08-11)
+- Reader now uses Android edge-to-edge system UI modes with transparent system bars and
+  brightness-aware icon styling; Reader content and managed background images extend to the
+  window edges while chrome and minimal information cards use real `MediaQuery` insets.
+- Added optional hidden-chrome information layers for chapter/whole-book progress and reader
+  time, plus per-book display preferences for top/bottom information, progress visibility,
+  status-bar mode, and clock format.
+- Added schema 8→9 migration with explicit defaults; books, palettes, typography, images,
+  `reading_progress`, ReaderLocator, and reading modes are preserved. No Reader engine,
+  pagination, AutoRead, or ReadingSession contract changed.
+- Validation: 477 Flutter tests, 11 integration files / 14 scenarios, four real TXT logical
+  error 0, Windows Release PASS, Android Debug PASS; Android device validation deferred.
+
 ### M5.5e.6 — Typography system (2026-08-11)
 - Added shared `AppTypography` and `ReaderTypography` contracts with a unified Material 3 type scale,
   semantic weights, and Windows/Android fallback policy.

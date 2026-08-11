@@ -108,6 +108,22 @@ void main() {
         });
       }
     });
+
+    test('information-layer preferences are display-only and typed', () {
+      final next = ReaderPreferences.defaults.copyWith(
+        showTopInfoBar: false,
+        showBottomInfoBar: false,
+        showProgressInfo: false,
+        statusBarMode: ReaderStatusBarMode.readerInfo,
+        timeDisplayMode: ReaderTimeDisplayMode.twelveHour,
+      );
+      expect(next.changesFrom(ReaderPreferences.defaults), {
+        ReaderPreferenceChangeKind.display,
+      });
+      expect(next.showTopInfoBar, isFalse);
+      expect(next.statusBarMode, ReaderStatusBarMode.readerInfo);
+      expect(next.timeDisplayMode, ReaderTimeDisplayMode.twelveHour);
+    });
   });
 
   group('per-book repository', () {
@@ -145,6 +161,11 @@ void main() {
             'library/reader_backgrounds/local-txt_a/background.png',
         backgroundImageOpacity: .8,
         backgroundOverlayOpacity: .55,
+        showTopInfoBar: false,
+        showBottomInfoBar: false,
+        showProgressInfo: false,
+        statusBarMode: ReaderStatusBarMode.readerInfo,
+        timeDisplayMode: ReaderTimeDisplayMode.twelveHour,
       );
       final emissions = <ReaderPreferences>[];
       final sub = repo.watch(a).listen(emissions.add);
@@ -303,7 +324,7 @@ void main() {
     expect(
       (await db.customSelect('PRAGMA user_version').getSingle())
           .data['user_version'],
-      8,
+      9,
     );
     await db.close();
     await dir.delete(recursive: true);
@@ -391,10 +412,95 @@ void main() {
     expect(
       (await db.customSelect('PRAGMA user_version').getSingle())
           .data['user_version'],
-      8,
+      9,
     );
     expect((await db.select(db.contentCollections).get()).single.id, a);
     await db.close();
     await dir.delete(recursive: true);
   });
+
+  test(
+    'schema 8→9 adds display defaults without changing book preferences',
+    () async {
+      final dir = await Directory.systemTemp.createTemp(
+        'm55g_display_migration',
+      );
+      final file = File('${dir.path}${Platform.pathSeparator}db.sqlite');
+      var db = AppDatabase(NativeDatabase(file));
+      await seedBook(db, a);
+      await ReaderPreferencesRepository(
+        db: db,
+      ).update(a, ReaderPreferences.defaults.copyWith(fontSize: 23));
+      await db.close();
+
+      final raw = sqlite3.open(file.path);
+      raw.execute(
+        'ALTER TABLE reader_preferences RENAME TO reader_preferences_v9',
+      );
+      raw.execute('''
+      CREATE TABLE reader_preferences (
+        collection_id TEXT NOT NULL PRIMARY KEY
+          REFERENCES content_collections (id) ON DELETE CASCADE,
+        font_size REAL NOT NULL,
+        letter_spacing REAL NOT NULL,
+        line_height REAL NOT NULL,
+        paragraph_spacing REAL NOT NULL,
+        first_line_indent REAL NOT NULL,
+        padding_top REAL NOT NULL,
+        padding_bottom REAL NOT NULL,
+        padding_left REAL NOT NULL,
+        padding_right REAL NOT NULL,
+        theme_mode TEXT NOT NULL,
+        palette_id TEXT NOT NULL DEFAULT 'paperWhite',
+        text_color_argb INTEGER,
+        background_color_argb INTEGER,
+        light_text_color_argb INTEGER,
+        light_background_color_argb INTEGER,
+        dark_text_color_argb INTEGER,
+        dark_background_color_argb INTEGER,
+        background_image_path TEXT,
+        background_image_opacity REAL NOT NULL DEFAULT 1.0,
+        background_overlay_opacity REAL NOT NULL DEFAULT 0.45,
+        updated_at INTEGER NOT NULL
+      )
+    ''');
+      raw.execute('''
+      INSERT INTO reader_preferences (
+        collection_id, font_size, letter_spacing, line_height,
+        paragraph_spacing, first_line_indent, padding_top, padding_bottom,
+        padding_left, padding_right, theme_mode, palette_id, text_color_argb,
+        background_color_argb, light_text_color_argb,
+        light_background_color_argb, dark_text_color_argb,
+        dark_background_color_argb, background_image_path,
+        background_image_opacity, background_overlay_opacity, updated_at
+      )
+      SELECT collection_id, font_size, letter_spacing, line_height,
+        paragraph_spacing, first_line_indent, padding_top, padding_bottom,
+        padding_left, padding_right, theme_mode, palette_id, text_color_argb,
+        background_color_argb, light_text_color_argb,
+        light_background_color_argb, dark_text_color_argb,
+        dark_background_color_argb, background_image_path,
+        background_image_opacity, background_overlay_opacity, updated_at
+      FROM reader_preferences_v9
+    ''');
+      raw.execute('DROP TABLE reader_preferences_v9');
+      raw.execute('PRAGMA user_version = 8');
+      raw.dispose();
+
+      db = AppDatabase(NativeDatabase(file));
+      final migrated = await ReaderPreferencesRepository(db: db).load(a);
+      expect(migrated.fontSize, 23);
+      expect(migrated.showTopInfoBar, isTrue);
+      expect(migrated.showBottomInfoBar, isTrue);
+      expect(migrated.showProgressInfo, isTrue);
+      expect(migrated.statusBarMode, ReaderStatusBarMode.system);
+      expect(
+        (await db.customSelect('PRAGMA user_version').getSingle())
+            .data['user_version'],
+        9,
+      );
+      await db.close();
+      await dir.delete(recursive: true);
+    },
+  );
 }

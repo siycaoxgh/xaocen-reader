@@ -25,6 +25,7 @@
 | M5.1c | 三态主题 + paint-only | feat/m4-horizontal-reader | `e37e593` → 本阶段提交 | 1 | 0.1.0-dev.4+4 | 346 测试；9 integration；双端构建 |
 | M5.1d | V3 日常 Reader 壳层 | feat/m4-horizontal-reader | `651c7e0` → 本阶段提交 | 1 | 0.1.0-dev.4+4 | 352 测试；9 integration 文件 / 12 场景；双端构建 |
 | M5.1e | 可用阅读设置面板 | feat/m4-horizontal-reader | `3030ee1` → 本阶段提交 | 1 | 0.1.0-dev.4+4 | 356 测试；9 integration 文件 / 12 场景；4 TXT error 0 |
+| M5.5g | Android edge-to-edge + Reader 信息栏 | feat/m4-horizontal-reader | `fd743da` → 本阶段提交 | 1 | 0.1.0-dev.4+4 | 476 测试；11 integration 文件 / 14 场景；4 TXT error 0；schema 8→9 |
 
 本阶段提交后合计：67 commits（M0 以来，HEAD 链）；当前分支
 `feat/m4-horizontal-reader`。最终 HEAD 以本阶段提交结果为准。

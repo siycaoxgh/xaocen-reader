@@ -50,6 +50,11 @@ final class ReaderPreferencesRepository {
       backgroundImagePath: preferences.backgroundImagePath,
       backgroundImageOpacity: preferences.backgroundImageOpacity,
       backgroundOverlayOpacity: preferences.backgroundOverlayOpacity,
+      showTopInfoBar: preferences.showTopInfoBar,
+      showBottomInfoBar: preferences.showBottomInfoBar,
+      showProgressInfo: preferences.showProgressInfo,
+      statusBarMode: preferences.statusBarMode,
+      timeDisplayMode: preferences.timeDisplayMode,
     );
     await _db
         .into(_db.readerPreferencesRows)
@@ -78,6 +83,11 @@ final class ReaderPreferencesRepository {
             backgroundImagePath: Value(safe.backgroundImagePath),
             backgroundImageOpacity: Value(safe.backgroundImageOpacity),
             backgroundOverlayOpacity: Value(safe.backgroundOverlayOpacity),
+            showTopInfoBar: Value(safe.showTopInfoBar),
+            showBottomInfoBar: Value(safe.showBottomInfoBar),
+            showProgressInfo: Value(safe.showProgressInfo),
+            statusBarMode: Value(safe.statusBarMode.name),
+            timeDisplayMode: Value(safe.timeDisplayMode.name),
             updatedAt: Value(DateTime.now()),
           ),
         );
@@ -120,6 +130,19 @@ final class ReaderPreferencesRepository {
       backgroundImagePath: row.backgroundImagePath,
       backgroundImageOpacity: row.backgroundImageOpacity,
       backgroundOverlayOpacity: row.backgroundOverlayOpacity,
+      showTopInfoBar: row.showTopInfoBar,
+      showBottomInfoBar: row.showBottomInfoBar,
+      showProgressInfo: row.showProgressInfo,
+      statusBarMode:
+          ReaderStatusBarMode.values
+              .where((value) => value.name == row.statusBarMode)
+              .firstOrNull ??
+          ReaderPreferences.defaultStatusBarMode,
+      timeDisplayMode:
+          ReaderTimeDisplayMode.values
+              .where((value) => value.name == row.timeDisplayMode)
+              .firstOrNull ??
+          ReaderPreferences.defaultTimeDisplayMode,
     );
   }
 }

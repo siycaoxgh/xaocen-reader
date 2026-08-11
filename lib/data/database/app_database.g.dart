@@ -4344,6 +4344,75 @@ class $ReaderPreferencesRowsTable extends ReaderPreferencesRows
         requiredDuringInsert: false,
         defaultValue: const Constant(0.45),
       );
+  static const VerificationMeta _showTopInfoBarMeta = const VerificationMeta(
+    'showTopInfoBar',
+  );
+  @override
+  late final GeneratedColumn<bool> showTopInfoBar = GeneratedColumn<bool>(
+    'show_top_info_bar',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("show_top_info_bar" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  static const VerificationMeta _showBottomInfoBarMeta = const VerificationMeta(
+    'showBottomInfoBar',
+  );
+  @override
+  late final GeneratedColumn<bool> showBottomInfoBar = GeneratedColumn<bool>(
+    'show_bottom_info_bar',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("show_bottom_info_bar" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  static const VerificationMeta _showProgressInfoMeta = const VerificationMeta(
+    'showProgressInfo',
+  );
+  @override
+  late final GeneratedColumn<bool> showProgressInfo = GeneratedColumn<bool>(
+    'show_progress_info',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("show_progress_info" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  static const VerificationMeta _statusBarModeMeta = const VerificationMeta(
+    'statusBarMode',
+  );
+  @override
+  late final GeneratedColumn<String> statusBarMode = GeneratedColumn<String>(
+    'status_bar_mode',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('system'),
+  );
+  static const VerificationMeta _timeDisplayModeMeta = const VerificationMeta(
+    'timeDisplayMode',
+  );
+  @override
+  late final GeneratedColumn<String> timeDisplayMode = GeneratedColumn<String>(
+    'time_display_mode',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('twentyFourHour'),
+  );
   static const VerificationMeta _updatedAtMeta = const VerificationMeta(
     'updatedAt',
   );
@@ -4378,6 +4447,11 @@ class $ReaderPreferencesRowsTable extends ReaderPreferencesRows
     backgroundImagePath,
     backgroundImageOpacity,
     backgroundOverlayOpacity,
+    showTopInfoBar,
+    showBottomInfoBar,
+    showProgressInfo,
+    statusBarMode,
+    timeDisplayMode,
     updatedAt,
   ];
   @override
@@ -4588,6 +4662,51 @@ class $ReaderPreferencesRowsTable extends ReaderPreferencesRows
         ),
       );
     }
+    if (data.containsKey('show_top_info_bar')) {
+      context.handle(
+        _showTopInfoBarMeta,
+        showTopInfoBar.isAcceptableOrUnknown(
+          data['show_top_info_bar']!,
+          _showTopInfoBarMeta,
+        ),
+      );
+    }
+    if (data.containsKey('show_bottom_info_bar')) {
+      context.handle(
+        _showBottomInfoBarMeta,
+        showBottomInfoBar.isAcceptableOrUnknown(
+          data['show_bottom_info_bar']!,
+          _showBottomInfoBarMeta,
+        ),
+      );
+    }
+    if (data.containsKey('show_progress_info')) {
+      context.handle(
+        _showProgressInfoMeta,
+        showProgressInfo.isAcceptableOrUnknown(
+          data['show_progress_info']!,
+          _showProgressInfoMeta,
+        ),
+      );
+    }
+    if (data.containsKey('status_bar_mode')) {
+      context.handle(
+        _statusBarModeMeta,
+        statusBarMode.isAcceptableOrUnknown(
+          data['status_bar_mode']!,
+          _statusBarModeMeta,
+        ),
+      );
+    }
+    if (data.containsKey('time_display_mode')) {
+      context.handle(
+        _timeDisplayModeMeta,
+        timeDisplayMode.isAcceptableOrUnknown(
+          data['time_display_mode']!,
+          _timeDisplayModeMeta,
+        ),
+      );
+    }
     if (data.containsKey('updated_at')) {
       context.handle(
         _updatedAtMeta,
@@ -4689,6 +4808,26 @@ class $ReaderPreferencesRowsTable extends ReaderPreferencesRows
         DriftSqlType.double,
         data['${effectivePrefix}background_overlay_opacity'],
       )!,
+      showTopInfoBar: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}show_top_info_bar'],
+      )!,
+      showBottomInfoBar: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}show_bottom_info_bar'],
+      )!,
+      showProgressInfo: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}show_progress_info'],
+      )!,
+      statusBarMode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}status_bar_mode'],
+      )!,
+      timeDisplayMode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}time_display_mode'],
+      )!,
       updatedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}updated_at'],
@@ -4725,6 +4864,11 @@ class ReaderPreferencesRow extends DataClass
   final String? backgroundImagePath;
   final double backgroundImageOpacity;
   final double backgroundOverlayOpacity;
+  final bool showTopInfoBar;
+  final bool showBottomInfoBar;
+  final bool showProgressInfo;
+  final String statusBarMode;
+  final String timeDisplayMode;
   final DateTime updatedAt;
   const ReaderPreferencesRow({
     required this.collectionId,
@@ -4748,6 +4892,11 @@ class ReaderPreferencesRow extends DataClass
     this.backgroundImagePath,
     required this.backgroundImageOpacity,
     required this.backgroundOverlayOpacity,
+    required this.showTopInfoBar,
+    required this.showBottomInfoBar,
+    required this.showProgressInfo,
+    required this.statusBarMode,
+    required this.timeDisplayMode,
     required this.updatedAt,
   });
   @override
@@ -4794,6 +4943,11 @@ class ReaderPreferencesRow extends DataClass
     map['background_overlay_opacity'] = Variable<double>(
       backgroundOverlayOpacity,
     );
+    map['show_top_info_bar'] = Variable<bool>(showTopInfoBar);
+    map['show_bottom_info_bar'] = Variable<bool>(showBottomInfoBar);
+    map['show_progress_info'] = Variable<bool>(showProgressInfo);
+    map['status_bar_mode'] = Variable<String>(statusBarMode);
+    map['time_display_mode'] = Variable<String>(timeDisplayMode);
     map['updated_at'] = Variable<DateTime>(updatedAt);
     return map;
   }
@@ -4835,6 +4989,11 @@ class ReaderPreferencesRow extends DataClass
           : Value(backgroundImagePath),
       backgroundImageOpacity: Value(backgroundImageOpacity),
       backgroundOverlayOpacity: Value(backgroundOverlayOpacity),
+      showTopInfoBar: Value(showTopInfoBar),
+      showBottomInfoBar: Value(showBottomInfoBar),
+      showProgressInfo: Value(showProgressInfo),
+      statusBarMode: Value(statusBarMode),
+      timeDisplayMode: Value(timeDisplayMode),
       updatedAt: Value(updatedAt),
     );
   }
@@ -4878,6 +5037,11 @@ class ReaderPreferencesRow extends DataClass
       backgroundOverlayOpacity: serializer.fromJson<double>(
         json['backgroundOverlayOpacity'],
       ),
+      showTopInfoBar: serializer.fromJson<bool>(json['showTopInfoBar']),
+      showBottomInfoBar: serializer.fromJson<bool>(json['showBottomInfoBar']),
+      showProgressInfo: serializer.fromJson<bool>(json['showProgressInfo']),
+      statusBarMode: serializer.fromJson<String>(json['statusBarMode']),
+      timeDisplayMode: serializer.fromJson<String>(json['timeDisplayMode']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
     );
   }
@@ -4914,6 +5078,11 @@ class ReaderPreferencesRow extends DataClass
       'backgroundOverlayOpacity': serializer.toJson<double>(
         backgroundOverlayOpacity,
       ),
+      'showTopInfoBar': serializer.toJson<bool>(showTopInfoBar),
+      'showBottomInfoBar': serializer.toJson<bool>(showBottomInfoBar),
+      'showProgressInfo': serializer.toJson<bool>(showProgressInfo),
+      'statusBarMode': serializer.toJson<String>(statusBarMode),
+      'timeDisplayMode': serializer.toJson<String>(timeDisplayMode),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
     };
   }
@@ -4940,6 +5109,11 @@ class ReaderPreferencesRow extends DataClass
     Value<String?> backgroundImagePath = const Value.absent(),
     double? backgroundImageOpacity,
     double? backgroundOverlayOpacity,
+    bool? showTopInfoBar,
+    bool? showBottomInfoBar,
+    bool? showProgressInfo,
+    String? statusBarMode,
+    String? timeDisplayMode,
     DateTime? updatedAt,
   }) => ReaderPreferencesRow(
     collectionId: collectionId ?? this.collectionId,
@@ -4979,6 +5153,11 @@ class ReaderPreferencesRow extends DataClass
         backgroundImageOpacity ?? this.backgroundImageOpacity,
     backgroundOverlayOpacity:
         backgroundOverlayOpacity ?? this.backgroundOverlayOpacity,
+    showTopInfoBar: showTopInfoBar ?? this.showTopInfoBar,
+    showBottomInfoBar: showBottomInfoBar ?? this.showBottomInfoBar,
+    showProgressInfo: showProgressInfo ?? this.showProgressInfo,
+    statusBarMode: statusBarMode ?? this.statusBarMode,
+    timeDisplayMode: timeDisplayMode ?? this.timeDisplayMode,
     updatedAt: updatedAt ?? this.updatedAt,
   );
   ReaderPreferencesRow copyWithCompanion(ReaderPreferencesRowsCompanion data) {
@@ -5040,6 +5219,21 @@ class ReaderPreferencesRow extends DataClass
       backgroundOverlayOpacity: data.backgroundOverlayOpacity.present
           ? data.backgroundOverlayOpacity.value
           : this.backgroundOverlayOpacity,
+      showTopInfoBar: data.showTopInfoBar.present
+          ? data.showTopInfoBar.value
+          : this.showTopInfoBar,
+      showBottomInfoBar: data.showBottomInfoBar.present
+          ? data.showBottomInfoBar.value
+          : this.showBottomInfoBar,
+      showProgressInfo: data.showProgressInfo.present
+          ? data.showProgressInfo.value
+          : this.showProgressInfo,
+      statusBarMode: data.statusBarMode.present
+          ? data.statusBarMode.value
+          : this.statusBarMode,
+      timeDisplayMode: data.timeDisplayMode.present
+          ? data.timeDisplayMode.value
+          : this.timeDisplayMode,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
   }
@@ -5068,6 +5262,11 @@ class ReaderPreferencesRow extends DataClass
           ..write('backgroundImagePath: $backgroundImagePath, ')
           ..write('backgroundImageOpacity: $backgroundImageOpacity, ')
           ..write('backgroundOverlayOpacity: $backgroundOverlayOpacity, ')
+          ..write('showTopInfoBar: $showTopInfoBar, ')
+          ..write('showBottomInfoBar: $showBottomInfoBar, ')
+          ..write('showProgressInfo: $showProgressInfo, ')
+          ..write('statusBarMode: $statusBarMode, ')
+          ..write('timeDisplayMode: $timeDisplayMode, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
         .toString();
@@ -5096,6 +5295,11 @@ class ReaderPreferencesRow extends DataClass
     backgroundImagePath,
     backgroundImageOpacity,
     backgroundOverlayOpacity,
+    showTopInfoBar,
+    showBottomInfoBar,
+    showProgressInfo,
+    statusBarMode,
+    timeDisplayMode,
     updatedAt,
   ]);
   @override
@@ -5123,6 +5327,11 @@ class ReaderPreferencesRow extends DataClass
           other.backgroundImagePath == this.backgroundImagePath &&
           other.backgroundImageOpacity == this.backgroundImageOpacity &&
           other.backgroundOverlayOpacity == this.backgroundOverlayOpacity &&
+          other.showTopInfoBar == this.showTopInfoBar &&
+          other.showBottomInfoBar == this.showBottomInfoBar &&
+          other.showProgressInfo == this.showProgressInfo &&
+          other.statusBarMode == this.statusBarMode &&
+          other.timeDisplayMode == this.timeDisplayMode &&
           other.updatedAt == this.updatedAt);
 }
 
@@ -5149,6 +5358,11 @@ class ReaderPreferencesRowsCompanion
   final Value<String?> backgroundImagePath;
   final Value<double> backgroundImageOpacity;
   final Value<double> backgroundOverlayOpacity;
+  final Value<bool> showTopInfoBar;
+  final Value<bool> showBottomInfoBar;
+  final Value<bool> showProgressInfo;
+  final Value<String> statusBarMode;
+  final Value<String> timeDisplayMode;
   final Value<DateTime> updatedAt;
   final Value<int> rowid;
   const ReaderPreferencesRowsCompanion({
@@ -5173,6 +5387,11 @@ class ReaderPreferencesRowsCompanion
     this.backgroundImagePath = const Value.absent(),
     this.backgroundImageOpacity = const Value.absent(),
     this.backgroundOverlayOpacity = const Value.absent(),
+    this.showTopInfoBar = const Value.absent(),
+    this.showBottomInfoBar = const Value.absent(),
+    this.showProgressInfo = const Value.absent(),
+    this.statusBarMode = const Value.absent(),
+    this.timeDisplayMode = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -5198,6 +5417,11 @@ class ReaderPreferencesRowsCompanion
     this.backgroundImagePath = const Value.absent(),
     this.backgroundImageOpacity = const Value.absent(),
     this.backgroundOverlayOpacity = const Value.absent(),
+    this.showTopInfoBar = const Value.absent(),
+    this.showBottomInfoBar = const Value.absent(),
+    this.showProgressInfo = const Value.absent(),
+    this.statusBarMode = const Value.absent(),
+    this.timeDisplayMode = const Value.absent(),
     required DateTime updatedAt,
     this.rowid = const Value.absent(),
   }) : collectionId = Value(collectionId),
@@ -5234,6 +5458,11 @@ class ReaderPreferencesRowsCompanion
     Expression<String>? backgroundImagePath,
     Expression<double>? backgroundImageOpacity,
     Expression<double>? backgroundOverlayOpacity,
+    Expression<bool>? showTopInfoBar,
+    Expression<bool>? showBottomInfoBar,
+    Expression<bool>? showProgressInfo,
+    Expression<String>? statusBarMode,
+    Expression<String>? timeDisplayMode,
     Expression<DateTime>? updatedAt,
     Expression<int>? rowid,
   }) {
@@ -5266,6 +5495,11 @@ class ReaderPreferencesRowsCompanion
         'background_image_opacity': backgroundImageOpacity,
       if (backgroundOverlayOpacity != null)
         'background_overlay_opacity': backgroundOverlayOpacity,
+      if (showTopInfoBar != null) 'show_top_info_bar': showTopInfoBar,
+      if (showBottomInfoBar != null) 'show_bottom_info_bar': showBottomInfoBar,
+      if (showProgressInfo != null) 'show_progress_info': showProgressInfo,
+      if (statusBarMode != null) 'status_bar_mode': statusBarMode,
+      if (timeDisplayMode != null) 'time_display_mode': timeDisplayMode,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (rowid != null) 'rowid': rowid,
     });
@@ -5293,6 +5527,11 @@ class ReaderPreferencesRowsCompanion
     Value<String?>? backgroundImagePath,
     Value<double>? backgroundImageOpacity,
     Value<double>? backgroundOverlayOpacity,
+    Value<bool>? showTopInfoBar,
+    Value<bool>? showBottomInfoBar,
+    Value<bool>? showProgressInfo,
+    Value<String>? statusBarMode,
+    Value<String>? timeDisplayMode,
     Value<DateTime>? updatedAt,
     Value<int>? rowid,
   }) {
@@ -5322,6 +5561,11 @@ class ReaderPreferencesRowsCompanion
           backgroundImageOpacity ?? this.backgroundImageOpacity,
       backgroundOverlayOpacity:
           backgroundOverlayOpacity ?? this.backgroundOverlayOpacity,
+      showTopInfoBar: showTopInfoBar ?? this.showTopInfoBar,
+      showBottomInfoBar: showBottomInfoBar ?? this.showBottomInfoBar,
+      showProgressInfo: showProgressInfo ?? this.showProgressInfo,
+      statusBarMode: statusBarMode ?? this.statusBarMode,
+      timeDisplayMode: timeDisplayMode ?? this.timeDisplayMode,
       updatedAt: updatedAt ?? this.updatedAt,
       rowid: rowid ?? this.rowid,
     );
@@ -5403,6 +5647,21 @@ class ReaderPreferencesRowsCompanion
         backgroundOverlayOpacity.value,
       );
     }
+    if (showTopInfoBar.present) {
+      map['show_top_info_bar'] = Variable<bool>(showTopInfoBar.value);
+    }
+    if (showBottomInfoBar.present) {
+      map['show_bottom_info_bar'] = Variable<bool>(showBottomInfoBar.value);
+    }
+    if (showProgressInfo.present) {
+      map['show_progress_info'] = Variable<bool>(showProgressInfo.value);
+    }
+    if (statusBarMode.present) {
+      map['status_bar_mode'] = Variable<String>(statusBarMode.value);
+    }
+    if (timeDisplayMode.present) {
+      map['time_display_mode'] = Variable<String>(timeDisplayMode.value);
+    }
     if (updatedAt.present) {
       map['updated_at'] = Variable<DateTime>(updatedAt.value);
     }
@@ -5436,6 +5695,11 @@ class ReaderPreferencesRowsCompanion
           ..write('backgroundImagePath: $backgroundImagePath, ')
           ..write('backgroundImageOpacity: $backgroundImageOpacity, ')
           ..write('backgroundOverlayOpacity: $backgroundOverlayOpacity, ')
+          ..write('showTopInfoBar: $showTopInfoBar, ')
+          ..write('showBottomInfoBar: $showBottomInfoBar, ')
+          ..write('showProgressInfo: $showProgressInfo, ')
+          ..write('statusBarMode: $statusBarMode, ')
+          ..write('timeDisplayMode: $timeDisplayMode, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -9934,6 +10198,11 @@ typedef $$ReaderPreferencesRowsTableCreateCompanionBuilder =
       Value<String?> backgroundImagePath,
       Value<double> backgroundImageOpacity,
       Value<double> backgroundOverlayOpacity,
+      Value<bool> showTopInfoBar,
+      Value<bool> showBottomInfoBar,
+      Value<bool> showProgressInfo,
+      Value<String> statusBarMode,
+      Value<String> timeDisplayMode,
       required DateTime updatedAt,
       Value<int> rowid,
     });
@@ -9960,6 +10229,11 @@ typedef $$ReaderPreferencesRowsTableUpdateCompanionBuilder =
       Value<String?> backgroundImagePath,
       Value<double> backgroundImageOpacity,
       Value<double> backgroundOverlayOpacity,
+      Value<bool> showTopInfoBar,
+      Value<bool> showBottomInfoBar,
+      Value<bool> showProgressInfo,
+      Value<String> statusBarMode,
+      Value<String> timeDisplayMode,
       Value<DateTime> updatedAt,
       Value<int> rowid,
     });
@@ -10109,6 +10383,31 @@ class $$ReaderPreferencesRowsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<bool> get showTopInfoBar => $composableBuilder(
+    column: $table.showTopInfoBar,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get showBottomInfoBar => $composableBuilder(
+    column: $table.showBottomInfoBar,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get showProgressInfo => $composableBuilder(
+    column: $table.showProgressInfo,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get statusBarMode => $composableBuilder(
+    column: $table.statusBarMode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get timeDisplayMode => $composableBuilder(
+    column: $table.timeDisplayMode,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<DateTime> get updatedAt => $composableBuilder(
     column: $table.updatedAt,
     builder: (column) => ColumnFilters(column),
@@ -10247,6 +10546,31 @@ class $$ReaderPreferencesRowsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get showTopInfoBar => $composableBuilder(
+    column: $table.showTopInfoBar,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get showBottomInfoBar => $composableBuilder(
+    column: $table.showBottomInfoBar,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get showProgressInfo => $composableBuilder(
+    column: $table.showProgressInfo,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get statusBarMode => $composableBuilder(
+    column: $table.statusBarMode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get timeDisplayMode => $composableBuilder(
+    column: $table.timeDisplayMode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
     column: $table.updatedAt,
     builder: (column) => ColumnOrderings(column),
@@ -10379,6 +10703,31 @@ class $$ReaderPreferencesRowsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<bool> get showTopInfoBar => $composableBuilder(
+    column: $table.showTopInfoBar,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get showBottomInfoBar => $composableBuilder(
+    column: $table.showBottomInfoBar,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get showProgressInfo => $composableBuilder(
+    column: $table.showProgressInfo,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get statusBarMode => $composableBuilder(
+    column: $table.statusBarMode,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get timeDisplayMode => $composableBuilder(
+    column: $table.timeDisplayMode,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<DateTime> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
 
@@ -10467,6 +10816,11 @@ class $$ReaderPreferencesRowsTableTableManager
                 Value<String?> backgroundImagePath = const Value.absent(),
                 Value<double> backgroundImageOpacity = const Value.absent(),
                 Value<double> backgroundOverlayOpacity = const Value.absent(),
+                Value<bool> showTopInfoBar = const Value.absent(),
+                Value<bool> showBottomInfoBar = const Value.absent(),
+                Value<bool> showProgressInfo = const Value.absent(),
+                Value<String> statusBarMode = const Value.absent(),
+                Value<String> timeDisplayMode = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ReaderPreferencesRowsCompanion(
@@ -10491,6 +10845,11 @@ class $$ReaderPreferencesRowsTableTableManager
                 backgroundImagePath: backgroundImagePath,
                 backgroundImageOpacity: backgroundImageOpacity,
                 backgroundOverlayOpacity: backgroundOverlayOpacity,
+                showTopInfoBar: showTopInfoBar,
+                showBottomInfoBar: showBottomInfoBar,
+                showProgressInfo: showProgressInfo,
+                statusBarMode: statusBarMode,
+                timeDisplayMode: timeDisplayMode,
                 updatedAt: updatedAt,
                 rowid: rowid,
               ),
@@ -10517,6 +10876,11 @@ class $$ReaderPreferencesRowsTableTableManager
                 Value<String?> backgroundImagePath = const Value.absent(),
                 Value<double> backgroundImageOpacity = const Value.absent(),
                 Value<double> backgroundOverlayOpacity = const Value.absent(),
+                Value<bool> showTopInfoBar = const Value.absent(),
+                Value<bool> showBottomInfoBar = const Value.absent(),
+                Value<bool> showProgressInfo = const Value.absent(),
+                Value<String> statusBarMode = const Value.absent(),
+                Value<String> timeDisplayMode = const Value.absent(),
                 required DateTime updatedAt,
                 Value<int> rowid = const Value.absent(),
               }) => ReaderPreferencesRowsCompanion.insert(
@@ -10541,6 +10905,11 @@ class $$ReaderPreferencesRowsTableTableManager
                 backgroundImagePath: backgroundImagePath,
                 backgroundImageOpacity: backgroundImageOpacity,
                 backgroundOverlayOpacity: backgroundOverlayOpacity,
+                showTopInfoBar: showTopInfoBar,
+                showBottomInfoBar: showBottomInfoBar,
+                showProgressInfo: showProgressInfo,
+                statusBarMode: statusBarMode,
+                timeDisplayMode: timeDisplayMode,
                 updatedAt: updatedAt,
                 rowid: rowid,
               ),

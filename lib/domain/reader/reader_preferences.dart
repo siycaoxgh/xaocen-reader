@@ -5,7 +5,14 @@ import 'reader_palette.dart';
 
 enum ReaderThemeMode { system, light, dark }
 
-enum ReaderPreferenceChangeKind { metrics, paint }
+/// Android system-bar presentation for the Reader route.  The preference is
+/// display-only: it never participates in metrics or Locator persistence.
+enum ReaderStatusBarMode { system, readerInfo, hidden }
+
+/// Clock presentation used by the optional Reader information layer.
+enum ReaderTimeDisplayMode { twentyFourHour, twelveHour, hidden }
+
+enum ReaderPreferenceChangeKind { metrics, paint, display }
 
 final class ReaderPreferences {
   const ReaderPreferences._({
@@ -27,6 +34,11 @@ final class ReaderPreferences {
     required this.backgroundImagePath,
     required this.backgroundImageOpacity,
     required this.backgroundOverlayOpacity,
+    required this.showTopInfoBar,
+    required this.showBottomInfoBar,
+    required this.showProgressInfo,
+    required this.statusBarMode,
+    required this.timeDisplayMode,
   });
 
   static const double defaultFontSize = 17;
@@ -72,6 +84,14 @@ final class ReaderPreferences {
   static const double minAppearanceOpacity = 0;
   static const double maxAppearanceOpacity = 1;
 
+  static const bool defaultShowTopInfoBar = true;
+  static const bool defaultShowBottomInfoBar = true;
+  static const bool defaultShowProgressInfo = true;
+  static const ReaderStatusBarMode defaultStatusBarMode =
+      ReaderStatusBarMode.system;
+  static const ReaderTimeDisplayMode defaultTimeDisplayMode =
+      ReaderTimeDisplayMode.twentyFourHour;
+
   static const ReaderPreferences defaults = ReaderPreferences._(
     fontSize: defaultFontSize,
     letterSpacing: defaultLetterSpacing,
@@ -91,6 +111,11 @@ final class ReaderPreferences {
     backgroundImagePath: null,
     backgroundImageOpacity: defaultBackgroundImageOpacity,
     backgroundOverlayOpacity: defaultBackgroundOverlayOpacity,
+    showTopInfoBar: defaultShowTopInfoBar,
+    showBottomInfoBar: defaultShowBottomInfoBar,
+    showProgressInfo: defaultShowProgressInfo,
+    statusBarMode: defaultStatusBarMode,
+    timeDisplayMode: defaultTimeDisplayMode,
   );
 
   factory ReaderPreferences({
@@ -114,6 +139,11 @@ final class ReaderPreferences {
     String? backgroundImagePath,
     double backgroundImageOpacity = defaultBackgroundImageOpacity,
     double backgroundOverlayOpacity = defaultBackgroundOverlayOpacity,
+    bool showTopInfoBar = defaultShowTopInfoBar,
+    bool showBottomInfoBar = defaultShowBottomInfoBar,
+    bool showProgressInfo = defaultShowProgressInfo,
+    ReaderStatusBarMode statusBarMode = defaultStatusBarMode,
+    ReaderTimeDisplayMode timeDisplayMode = defaultTimeDisplayMode,
   }) => ReaderPreferences._(
     fontSize: _valid(fontSize, minFontSize, maxFontSize, defaultFontSize),
     letterSpacing: _valid(
@@ -194,6 +224,11 @@ final class ReaderPreferences {
       maxAppearanceOpacity,
       defaultBackgroundOverlayOpacity,
     ),
+    showTopInfoBar: showTopInfoBar,
+    showBottomInfoBar: showBottomInfoBar,
+    showProgressInfo: showProgressInfo,
+    statusBarMode: statusBarMode,
+    timeDisplayMode: timeDisplayMode,
   );
 
   final double fontSize;
@@ -214,6 +249,11 @@ final class ReaderPreferences {
   final String? backgroundImagePath;
   final double backgroundImageOpacity;
   final double backgroundOverlayOpacity;
+  final bool showTopInfoBar;
+  final bool showBottomInfoBar;
+  final bool showProgressInfo;
+  final ReaderStatusBarMode statusBarMode;
+  final ReaderTimeDisplayMode timeDisplayMode;
 
   /// Legacy aliases retained for callers from schema 7. They represent the
   /// light override; canonical storage keeps separate light/dark values.
@@ -250,6 +290,11 @@ final class ReaderPreferences {
     Object? backgroundImagePath = _unset,
     double? backgroundImageOpacity,
     double? backgroundOverlayOpacity,
+    bool? showTopInfoBar,
+    bool? showBottomInfoBar,
+    bool? showProgressInfo,
+    ReaderStatusBarMode? statusBarMode,
+    ReaderTimeDisplayMode? timeDisplayMode,
   }) {
     final legacyText = identical(textColorArgb, _unset)
         ? null
@@ -313,6 +358,11 @@ final class ReaderPreferences {
           backgroundImageOpacity ?? this.backgroundImageOpacity,
       backgroundOverlayOpacity:
           backgroundOverlayOpacity ?? this.backgroundOverlayOpacity,
+      showTopInfoBar: showTopInfoBar ?? this.showTopInfoBar,
+      showBottomInfoBar: showBottomInfoBar ?? this.showBottomInfoBar,
+      showProgressInfo: showProgressInfo ?? this.showProgressInfo,
+      statusBarMode: statusBarMode ?? this.statusBarMode,
+      timeDisplayMode: timeDisplayMode ?? this.timeDisplayMode,
     );
   }
 
@@ -339,6 +389,13 @@ final class ReaderPreferences {
         backgroundImageOpacity != previous.backgroundImageOpacity ||
         backgroundOverlayOpacity != previous.backgroundOverlayOpacity) {
       result.add(ReaderPreferenceChangeKind.paint);
+    }
+    if (showTopInfoBar != previous.showTopInfoBar ||
+        showBottomInfoBar != previous.showBottomInfoBar ||
+        showProgressInfo != previous.showProgressInfo ||
+        statusBarMode != previous.statusBarMode ||
+        timeDisplayMode != previous.timeDisplayMode) {
+      result.add(ReaderPreferenceChangeKind.display);
     }
     return result;
   }
@@ -375,7 +432,12 @@ final class ReaderPreferences {
       darkBackgroundColorArgb == other.darkBackgroundColorArgb &&
       backgroundImagePath == other.backgroundImagePath &&
       backgroundImageOpacity == other.backgroundImageOpacity &&
-      backgroundOverlayOpacity == other.backgroundOverlayOpacity;
+      backgroundOverlayOpacity == other.backgroundOverlayOpacity &&
+      showTopInfoBar == other.showTopInfoBar &&
+      showBottomInfoBar == other.showBottomInfoBar &&
+      showProgressInfo == other.showProgressInfo &&
+      statusBarMode == other.statusBarMode &&
+      timeDisplayMode == other.timeDisplayMode;
 
   @override
   int get hashCode => Object.hashAll([
@@ -397,5 +459,10 @@ final class ReaderPreferences {
     backgroundImagePath,
     backgroundImageOpacity,
     backgroundOverlayOpacity,
+    showTopInfoBar,
+    showBottomInfoBar,
+    showProgressInfo,
+    statusBarMode,
+    timeDisplayMode,
   ]);
 }

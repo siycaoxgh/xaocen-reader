@@ -36,7 +36,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting() : super(NativeDatabase.memory());
 
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 9;
 
   /// 打开应用数据库（support 目录下）。
   static Future<AppDatabase> open() async {
@@ -170,6 +170,31 @@ class AppDatabase extends _$AppDatabase {
                 ELSE palette_id
               END
         ''');
+      }
+      // schema 8 → 9: per-book Reader display preferences.  These values are
+      // transient presentation choices only; no Locator/progress columns are
+      // changed and all existing books receive the explicit defaults.
+      if (from >= 5 && from < 9) {
+        await m.addColumn(
+          readerPreferencesRows,
+          readerPreferencesRows.showTopInfoBar,
+        );
+        await m.addColumn(
+          readerPreferencesRows,
+          readerPreferencesRows.showBottomInfoBar,
+        );
+        await m.addColumn(
+          readerPreferencesRows,
+          readerPreferencesRows.showProgressInfo,
+        );
+        await m.addColumn(
+          readerPreferencesRows,
+          readerPreferencesRows.statusBarMode,
+        );
+        await m.addColumn(
+          readerPreferencesRows,
+          readerPreferencesRows.timeDisplayMode,
+        );
       }
     },
     beforeOpen: (details) async {

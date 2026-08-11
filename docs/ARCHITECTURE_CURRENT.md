@@ -1,10 +1,31 @@
 # ARCHITECTURE_CURRENT.md — XAOCEN Reader v4 当前架构与合同
 
-> 只描述当前代码与合同（`feat/m4-horizontal-reader`，M5.5e.6 完成点，Drift schema 8）。
+> 只描述当前代码与合同（`feat/m4-horizontal-reader`，M5.5g 完成点，Drift schema 9）。
 > 不记录历史故事（见 PROJECT_HISTORY.md）。
 > 代码位置均以本仓库实际文件为准。
 
 ---
+
+## M5.5g Android edge-to-edge and Reader information contract
+
+The Reader route uses Flutter's `SystemUiMode.edgeToEdge` for the system-bar presentation
+mode and transparent status/navigation colors. Reader content and managed image backgrounds are
+painted by the full-screen route; top/bottom chrome and the hidden-chrome minimal information
+layer consume `MediaQuery.viewPadding` rather than fixed status-bar heights, covering cutouts,
+rounded corners, portrait/landscape, gesture navigation, and three-button navigation.
+
+Per-book `ReaderPreferences` now carries display-only fields: `showTopInfoBar`,
+`showBottomInfoBar`, `showProgressInfo`, `statusBarMode` (`system`, `readerInfo`, `hidden`), and
+`timeDisplayMode` (`twentyFourHour`, `twelveHour`, `hidden`). They are presentation state only;
+they do not participate in metrics signatures, ReaderLocator, progress writes, PageWindow,
+AutoRead, or ReadingSession. With chrome hidden, the optional minimal layer derives chapter
+title/chapter progress at the top and time/whole-book progress at the bottom. No-chapter books
+show `全文` and never invent a chapter progress value. The full chrome remains the sole
+interactive layer when visible, and the AutoRead status bar remains independent.
+
+Drift schema 8→9 adds these five per-book columns with explicit defaults and preserves all
+existing books, palettes, typography, managed image references, reading progress, readingMode,
+and ReaderLocator values.
 
 ## M5.5e.6 typography contract
 
