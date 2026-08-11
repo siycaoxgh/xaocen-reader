@@ -17,10 +17,11 @@ Status: complete. Drift schema remains 10.
 - Tray actions are Show/Hide window and Exit application. With tray enabled,
   normal close hides instead of terminating; explicit tray exit terminates
   normally and preserves existing window geometry handling.
-- Boss Key is an app-local left+right mouse chord in the Flutter shell. It is
-  edge-triggered, resets on release/cancel/focus loss, and only hides when a
-  tray recovery entry is enabled. Reader engine, Locator, PageWindow,
-  AutoRead, and ReadingSession are untouched.
+- Boss Key is an app-local left+right mouse chord in a root Flutter host, so it
+  also works while Reader/settings routes are on top. It is edge-triggered,
+  resets on release/cancel/focus loss, and only hides when a tray recovery
+  entry is enabled. Reader engine, Locator, PageWindow, AutoRead, and
+  ReadingSession are untouched.
 
 ## Validation
 

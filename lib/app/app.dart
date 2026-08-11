@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../design/theme/app_theme.dart';
 import 'router.dart';
+import 'windows_shell.dart';
 
 /// 应用根 Widget —— 主题 + 路由装配。
 class XaocenApp extends ConsumerWidget {
@@ -12,14 +13,16 @@ class XaocenApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return MaterialApp(
-      title: 'XAOCEN Reader',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.light(),
-      darkTheme: AppTheme.dark(),
-      themeMode: appThemeMode,
-      initialRoute: AppRouter.root,
-      routes: AppRouter.routes,
+    return WindowsShellHost(
+      child: MaterialApp(
+        title: 'XAOCEN Reader',
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.light(),
+        darkTheme: AppTheme.dark(),
+        themeMode: appThemeMode,
+        initialRoute: AppRouter.root,
+        routes: AppRouter.routes,
+      ),
     );
   }
 }

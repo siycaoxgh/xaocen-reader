@@ -1,9 +1,13 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/gestures.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../domain/windows_shell_preferences.dart';
+import 'providers.dart';
 
 /// Flutter side of the Windows shell boundary. Calls are no-ops on Android.
 final class WindowsShellBridge {
@@ -91,3 +95,66 @@ final class BossKeyTracker {
 }
 
 void unawaitedShell(Future<void> future) => unawaited(future);
+
+/// Root-level app-local Boss Key host. It wraps MaterialApp so the chord also
+/// works while a Reader or settings route is on top of the shell.
+class WindowsShellHost extends ConsumerStatefulWidget {
+  const WindowsShellHost({required this.child, super.key});
+
+  final Widget child;
+
+  @override
+  ConsumerState<WindowsShellHost> createState() => _WindowsShellHostState();
+}
+
+class _WindowsShellHostState extends ConsumerState<WindowsShellHost> {
+  final BossKeyTracker _tracker = BossKeyTracker();
+  WindowsShellPreferences? _preferences;
+
+  @override
+  void initState() {
+    super.initState();
+    if (Platform.isWindows) unawaited(_load());
+  }
+
+  Future<void> _load() async {
+    final repository = ref.read(windowsShellPreferencesRepositoryProvider);
+    final value = await repository.load();
+    if (!mounted) return;
+    setState(() => _preferences = value);
+    unawaited(WindowsShellBridge.apply(value));
+  }
+
+  void _onPointer(PointerEvent event) {
+    if (!Platform.isWindows) return;
+    final buttons = event.buttons;
+    final left = buttons & kPrimaryMouseButton != 0;
+    final right = buttons & kSecondaryMouseButton != 0;
+    if (!_tracker.update(left: left, right: right)) return;
+    final preferences = WindowsShellBridge.currentPreferences ?? _preferences;
+    if (preferences?.showTrayIcon == true) {
+      unawaited(WindowsShellBridge.hideWindow());
+    }
+  }
+
+  @override
+  void dispose() {
+    _tracker.clear();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!Platform.isWindows) return widget.child;
+    return Focus(
+      canRequestFocus: false,
+      child: Listener(
+        behavior: HitTestBehavior.translucent,
+        onPointerDown: _onPointer,
+        onPointerUp: _onPointer,
+        onPointerCancel: _onPointer,
+        child: widget.child,
+      ),
+    );
+  }
+}
