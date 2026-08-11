@@ -23,6 +23,7 @@ import 'package:xaocen_reader/data/repositories/library_file_manager.dart';
 import 'package:xaocen_reader/domain/library/library_import_models.dart';
 import 'package:xaocen_reader/domain/reader/reader_progress_state.dart';
 import 'package:xaocen_reader/reader/paged_reader_view.dart';
+import 'package:xaocen_reader/reader/reader_chrome.dart';
 import 'package:xaocen_reader/reader/reader_page.dart';
 import 'package:xaocen_reader/reader/reader_mode.dart';
 
@@ -78,11 +79,15 @@ void main() {
     );
   }
 
-  void selectMode(WidgetTester tester, ReaderMode mode) {
-    final menu = tester.widget<PopupMenuButton<ReaderMode>>(
-      find.byType(PopupMenuButton<ReaderMode>),
-    );
-    menu.onSelected!(mode);
+  Future<void> selectMode(WidgetTester tester, ReaderMode mode) async {
+    await tester.tap(find.byKey(readerAppearanceActionKey));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('阅读行为'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(mode == ReaderMode.paged ? '分页' : '滚动').last);
+    await tester.pump();
+    Navigator.of(tester.element(find.byKey(readerSettingsSheetKey))).pop();
+    await tester.pumpAndSettle();
   }
 
   testWidgets('切换不丢位置：v→p→v 保精确 anchor + 零写入', (tester) async {
@@ -133,7 +138,7 @@ void main() {
     expect(x, greaterThan(0), reason: '核心模式切换验收必须使用非零 Locator X');
 
     // v → p
-    selectMode(tester, ReaderMode.paged);
+    await selectMode(tester, ReaderMode.paged);
     await tester.pumpAndSettle();
     expect(find.byType(PagedReaderView), findsOneWidget);
 
@@ -149,7 +154,7 @@ void main() {
     );
 
     // p → v（未翻页）
-    selectMode(tester, ReaderMode.vertical);
+    await selectMode(tester, ReaderMode.vertical);
     for (var i = 0; i < 20; i++) {
       await tester.pump(const Duration(milliseconds: 100));
     }
@@ -206,7 +211,7 @@ void main() {
     }
 
     // v → p
-    selectMode(tester, ReaderMode.paged);
+    await selectMode(tester, ReaderMode.paged);
     await tester.pumpAndSettle();
 
     // 翻两页

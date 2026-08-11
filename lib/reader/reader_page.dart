@@ -1919,6 +1919,9 @@ class _ReaderPageState extends State<ReaderPage>
                 _autoReadController.preferences.verticalVelocityPixelsPerSecond,
             autoReadPagedIntervalSeconds:
                 _autoReadController.preferences.pagedIntervalSeconds,
+            onPauseAutoRead: _pauseAutoReadForManualNavigation,
+            onResumeAutoRead: _resumeAutoRead,
+            onStopAutoRead: _stopAutoRead,
             onBack: () => Navigator.of(context).pop(),
             onToc: () {
               _showChrome();
@@ -1945,7 +1948,6 @@ class _ReaderPageState extends State<ReaderPage>
               showReaderMorePreview(
                 context,
                 onSearch: _openSearch,
-                onAutoRead: _openAutoReadControls,
               );
             },
             onBookmarks: _openBookmarks,

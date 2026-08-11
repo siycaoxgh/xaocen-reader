@@ -718,6 +718,13 @@ Aa 阅读外观正式支持每书字体色、阅读背景色、本地图片背�
 外部图片先复制到 app-managed library，偏好只保存相对引用；原文件移动或删除不影响
 已导入背景。外观变化保持 paint-only，ReaderLocator、分页 metrics、章节进度和
 ReadingSession 均不变。Drift 通过正式 migration 从 schema 6 升级到 7。
+
+## M5.5e.3 — Reader 操作层级与 AutoRead 状态（2026-08-11）
+
+顶部阅读模式改为只读状态提示，Aa → 阅读行为成为滚动/分页的唯一可写入口。
+底栏收敛为目录、自动阅读、书签、Aa、更多，AutoRead 不再在更多中重复出现。
+运行中或暂停时显示轻量状态条，允许直接暂停、继续和停止；所有手动导航仍先暂停
+AutoRead。未改变 ReaderLocator、分页引擎、AutoRead driver、ReadingSession 或 schema 7。
 ## M5.5e.1 Reader settings experience
 
 Reader Aa settings now use four stable categories: Typography, Appearance,

@@ -12,6 +12,7 @@ import 'package:xaocen_reader/domain/reader/reader_locator.dart';
 import 'package:xaocen_reader/domain/reader/reader_progress_state.dart';
 import 'package:xaocen_reader/reader/normalized_document_loader.dart';
 import 'package:xaocen_reader/reader/paged_reader_view.dart';
+import 'package:xaocen_reader/reader/reader_chrome.dart';
 import 'package:xaocen_reader/reader/reader_page.dart';
 import 'package:xaocen_reader/reader/reader_mode.dart';
 
@@ -125,11 +126,22 @@ void main() {
     }
   }
 
-  void selectMode(WidgetTester tester, ReaderMode mode) {
-    final menu = tester.widget<PopupMenuButton<ReaderMode>>(
-      find.byType(PopupMenuButton<ReaderMode>),
-    );
-    menu.onSelected!(mode);
+  Future<void> selectMode(WidgetTester tester, ReaderMode mode) async {
+    await tester.tap(find.byKey(readerAppearanceActionKey));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('阅读行为'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(mode == ReaderMode.paged ? '分页' : '滚动').last);
+    await tester.pump();
+    Navigator.of(tester.element(find.byKey(readerSettingsSheetKey))).pop();
+    await tester.pumpAndSettle();
+  }
+
+  // Exercise the same ReaderPage mode callback without waiting between
+  // transitions; this keeps the generation/cancellation regression test
+  // genuinely rapid while the user-facing entry remains Aa → 阅读行为.
+  void selectModeImmediately(WidgetTester tester, ReaderMode mode) {
+    tester.widget<ReaderChrome>(find.byType(ReaderChrome)).onModeSelected(mode);
   }
 
   testWidgets('P1 regression: non-zero v -> p -> v confirms exact locator', (
@@ -147,9 +159,9 @@ void main() {
       onModeRestore: (value) => report = value,
     );
 
-    selectMode(tester, ReaderMode.paged);
+    await selectMode(tester, ReaderMode.paged);
     await tester.pump();
-    selectMode(tester, ReaderMode.vertical);
+    await selectMode(tester, ReaderMode.vertical);
     for (var i = 0; i < 20 && report == null; i++) {
       await tester.pump(const Duration(milliseconds: 50));
     }
@@ -175,10 +187,10 @@ void main() {
       onModeRestore: reports.add,
     );
 
-    selectMode(tester, ReaderMode.paged);
-    selectMode(tester, ReaderMode.vertical);
-    selectMode(tester, ReaderMode.paged);
-    selectMode(tester, ReaderMode.vertical);
+    selectModeImmediately(tester, ReaderMode.paged);
+    selectModeImmediately(tester, ReaderMode.vertical);
+    selectModeImmediately(tester, ReaderMode.paged);
+    selectModeImmediately(tester, ReaderMode.vertical);
     for (var i = 0; i < 30 && reports.isEmpty; i++) {
       await tester.pump(const Duration(milliseconds: 50));
     }
@@ -203,12 +215,12 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    selectMode(tester, ReaderMode.vertical);
+    await selectMode(tester, ReaderMode.vertical);
     for (var i = 0; i < 20 && reports.isEmpty; i++) {
       await tester.pump(const Duration(milliseconds: 50));
     }
-    selectMode(tester, ReaderMode.paged);
-    selectMode(tester, ReaderMode.vertical);
+    await selectMode(tester, ReaderMode.paged);
+    await selectMode(tester, ReaderMode.vertical);
     for (var i = 0; i < 20 && reports.length < 2; i++) {
       await tester.pump(const Duration(milliseconds: 50));
     }
@@ -233,7 +245,7 @@ void main() {
     );
 
     // 切分页（菜单 → 分页）
-    selectMode(tester, ReaderMode.paged);
+    await selectMode(tester, ReaderMode.paged);
     await tester.pumpAndSettle();
     expect(find.byType(PagedReaderView), findsOneWidget, reason: '已切分页');
 

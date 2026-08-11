@@ -248,6 +248,12 @@ The Reader settings surface and primary action hierarchy are complete. No new
 P0/P1/P2 issue was found. The remaining known follow-up is the previously
 documented managed-background garbage collection for superseded assets after
 whole-book deletion; it does not affect current appearance or Reader data.
+
+## M5.5e.3 status
+
+Reader operation hierarchy and AutoRead status controls are complete with no new
+P0/P1/P2 issue found. Android real-device validation for this UI change was not
+run in this phase; existing Android validation records remain authoritative.
 ## M5.5d status
 
 Me, Reading History, Reader Settings, and platform input settings now have

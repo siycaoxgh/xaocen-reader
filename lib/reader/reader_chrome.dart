@@ -67,6 +67,9 @@ class ReaderChrome extends StatelessWidget {
     required this.onSearch,
     required this.onModeSelected,
     this.onAutoRead,
+    this.onPauseAutoRead,
+    this.onResumeAutoRead,
+    this.onStopAutoRead,
     this.autoReadState = AutoReadState.idle,
     this.autoReadSpeedPixelsPerSecond =
         AutoReadPreferences.defaultVerticalVelocityPixelsPerSecond,
@@ -91,6 +94,9 @@ class ReaderChrome extends StatelessWidget {
   final VoidCallback onSearch;
   final ValueChanged<ReaderMode> onModeSelected;
   final VoidCallback? onAutoRead;
+  final VoidCallback? onPauseAutoRead;
+  final VoidCallback? onResumeAutoRead;
+  final VoidCallback? onStopAutoRead;
   final AutoReadState autoReadState;
   final int autoReadSpeedPixelsPerSecond;
   final int autoReadPagedIntervalSeconds;
@@ -105,7 +111,7 @@ class ReaderChrome extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final isDesktop = MediaQuery.sizeOf(context).width >= 720;
-    return IgnorePointer(
+    final chrome = IgnorePointer(
       ignoring: !visible,
       child: AnimatedOpacity(
         opacity: visible ? 1 : 0,
@@ -241,27 +247,22 @@ class ReaderChrome extends StatelessWidget {
                           ],
                         ),
                       ),
-                      PopupMenuButton<ReaderMode>(
-                        key: readerModeActionKey,
-                        tooltip: '阅读模式',
-                        onSelected: onModeSelected,
-                        icon: Icon(
-                          mode == ReaderMode.paged
-                              ? Icons.menu_book_rounded
-                              : Icons.view_stream_rounded,
+                      Semantics(
+                        button: false,
+                        label: '当前阅读方式：${_readerModeLabel(mode)}',
+                        child: Tooltip(
+                          message: '当前阅读方式：${_readerModeLabel(mode)}',
+                          child: Padding(
+                            key: readerModeActionKey,
+                            padding: const EdgeInsets.all(12),
+                            child: Icon(
+                              mode == ReaderMode.paged
+                                  ? Icons.menu_book_rounded
+                                  : Icons.view_stream_rounded,
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                          ),
                         ),
-                        itemBuilder: (context) => [
-                          CheckedPopupMenuItem(
-                            value: ReaderMode.vertical,
-                            checked: mode == ReaderMode.vertical,
-                            child: const Text('滚动'),
-                          ),
-                          CheckedPopupMenuItem(
-                            value: ReaderMode.paged,
-                            checked: mode == ReaderMode.paged,
-                            child: const Text('分页'),
-                          ),
-                        ],
                       ),
                     ],
                   ),
@@ -292,18 +293,16 @@ class ReaderChrome extends StatelessWidget {
                           label: '目录',
                           onPressed: onToc,
                         ),
-                        _ChromeAction(
-                          icon: mode == ReaderMode.paged
-                              ? Icons.menu_book_rounded
-                              : Icons.view_stream_rounded,
-                          label: mode == ReaderMode.paged ? '分页' : '滚动',
-                          selected: true,
-                          onPressed: () => onModeSelected(
-                            mode == ReaderMode.paged
-                                ? ReaderMode.vertical
-                                : ReaderMode.paged,
+                        if (onAutoRead != null)
+                          _ChromeAction(
+                            key: readerAutoReadActionKey,
+                            icon: autoReadState == AutoReadState.running
+                                ? Icons.pause_circle_outline
+                                : Icons.auto_stories_outlined,
+                            label: '自动阅读',
+                            selected: autoReadState == AutoReadState.running,
+                            onPressed: onAutoRead!,
                           ),
-                        ),
                         _ChromeAction(
                           key: readerBookmarksActionKey,
                           icon: Icons.bookmark_outline,
@@ -329,6 +328,121 @@ class ReaderChrome extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        chrome,
+        if (autoReadState != AutoReadState.idle)
+          ReaderAutoReadStatusBar(
+            mode: mode,
+            state: autoReadState,
+            speedPixelsPerSecond: autoReadSpeedPixelsPerSecond,
+            pagedIntervalSeconds: autoReadPagedIntervalSeconds,
+            onPause: onAutoRead == null ? null : onPauseAutoRead,
+            onResume: onAutoRead == null ? null : onResumeAutoRead,
+            onStop: onAutoRead == null ? null : onStopAutoRead,
+          ),
+      ],
+    );
+  }
+}
+
+String _readerModeLabel(ReaderMode mode) =>
+    mode == ReaderMode.paged ? '分页' : '滚动';
+
+/// A small, non-modal control strip for the active AutoRead session.
+///
+/// It deliberately lives outside the hideable Reader chrome so that a user
+/// can pause or stop automatic movement without reopening a panel.
+class ReaderAutoReadStatusBar extends StatelessWidget {
+  const ReaderAutoReadStatusBar({
+    super.key,
+    required this.mode,
+    required this.state,
+    required this.speedPixelsPerSecond,
+    required this.pagedIntervalSeconds,
+    this.onPause,
+    this.onResume,
+    this.onStop,
+  });
+
+  final ReaderMode mode;
+  final AutoReadState state;
+  final int speedPixelsPerSecond;
+  final int pagedIntervalSeconds;
+  final VoidCallback? onPause;
+  final VoidCallback? onResume;
+  final VoidCallback? onStop;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDesktop = MediaQuery.sizeOf(context).width >= 720;
+    final colorScheme = Theme.of(context).colorScheme;
+    final running = state == AutoReadState.running;
+    final paused = state == AutoReadState.paused;
+    final label = _autoReadStatusBarLabel(
+      mode,
+      state,
+      speedPixelsPerSecond,
+      pagedIntervalSeconds,
+    );
+    return Align(
+      alignment: Alignment.bottomCenter,
+      child: SafeArea(
+        top: false,
+        minimum: const EdgeInsets.fromLTRB(12, 0, 12, 74),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: isDesktop ? 520 : double.infinity),
+          child: Material(
+            color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.98),
+            elevation: 3,
+            borderRadius: BorderRadius.circular(isDesktop ? 14 : 12),
+            clipBehavior: Clip.antiAlias,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(14, 4, 6, 4),
+              child: Row(
+                children: [
+                  Icon(
+                    running
+                        ? Icons.play_circle_outline
+                        : Icons.pause_circle_outline,
+                    size: 19,
+                    color: colorScheme.primary,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.labelLarge,
+                    ),
+                  ),
+                  if (running && onPause != null)
+                    TextButton(
+                      key: const Key('reader-auto-read-status-pause'),
+                      onPressed: onPause,
+                      child: const Text('暂停'),
+                    ),
+                  if (paused && onResume != null)
+                    TextButton(
+                      key: const Key('reader-auto-read-status-resume'),
+                      onPressed: onResume,
+                      child: const Text('继续'),
+                    ),
+                  if ((running || paused) && onStop != null)
+                    TextButton(
+                      key: const Key('reader-auto-read-status-stop'),
+                      onPressed: onStop,
+                      child: const Text('停止'),
+                    ),
+                ],
+              ),
+            ),
+          ),
         ),
       ),
     );
@@ -359,7 +473,22 @@ String _autoReadStatusLabel(
   AutoReadState.running =>
     mode == ReaderMode.vertical
         ? '\u81ea\u52a8\u9605\u8bfb\u4e2d \u00b7 ${_autoReadSpeedLabel(speedPixelsPerSecond)}'
-        : '\u81ea\u52a8\u9605\u8bfb\u4e2d \u00b7 \u6bcf $pagedIntervalSeconds \u79d2\u7ffb\u9875',
+        : '\u81ea\u52a8\u7ffb\u9875\u4e2d \u00b7 $pagedIntervalSeconds \u79d2/\u9875',
+  AutoReadState.paused => '\u81ea\u52a8\u9605\u8bfb\u5df2\u6682\u505c',
+  AutoReadState.stoppedAtEnd => '\u5df2\u8bfb\u5230\u672c\u4e66\u672b\u5c3e',
+  AutoReadState.idle => '\u81ea\u52a8\u9605\u8bfb',
+};
+
+String _autoReadStatusBarLabel(
+  ReaderMode mode,
+  AutoReadState state,
+  int speedPixelsPerSecond,
+  int pagedIntervalSeconds,
+) => switch (state) {
+  AutoReadState.running =>
+    mode == ReaderMode.vertical
+        ? '\u81ea\u52a8\u9605\u8bfb\u4e2d \u00b7 $speedPixelsPerSecond px/s'
+        : '\u81ea\u52a8\u7ffb\u9875\u4e2d \u00b7 $pagedIntervalSeconds \u79d2/\u9875',
   AutoReadState.paused => '\u81ea\u52a8\u9605\u8bfb\u5df2\u6682\u505c',
   AutoReadState.stoppedAtEnd => '\u5df2\u8bfb\u5230\u672c\u4e66\u672b\u5c3e',
   AutoReadState.idle => '\u81ea\u52a8\u9605\u8bfb',
@@ -1074,13 +1203,13 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('翻页方式', style: Theme.of(context).textTheme.titleSmall),
+        Text('阅读行为', style: Theme.of(context).textTheme.titleSmall),
         const SizedBox(height: 8),
         SegmentedButton<ReaderMode>(
           key: readerSettingsModeControlKey,
           segments: const [
             ButtonSegment(value: ReaderMode.vertical, label: Text('滚动')),
-            ButtonSegment(value: ReaderMode.paged, label: Text('左右翻页')),
+            ButtonSegment(value: ReaderMode.paged, label: Text('分页')),
           ],
           selected: {_mode},
           onSelectionChanged: (selection) {
@@ -1091,7 +1220,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
         ),
         const SizedBox(height: 16),
         Text(
-          '阅读模式按本书保存；分页章节边界和位置恢复由 Reader 引擎负责。',
+          '阅读方式按本书保存；页面布局和翻页效果将在后续版本提供。',
           style: Theme.of(context).textTheme.bodySmall,
         ),
       ],
@@ -1137,7 +1266,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
     final categories = [
       (_ReaderSettingsCategory.typography, '排版', Icons.text_fields_rounded),
       (_ReaderSettingsCategory.appearance, '外观', Icons.palette_outlined),
-      (_ReaderSettingsCategory.paging, '翻页', Icons.menu_book_outlined),
+      (_ReaderSettingsCategory.paging, '阅读行为', Icons.menu_book_outlined),
       (_ReaderSettingsCategory.advanced, '高级', Icons.tune_rounded),
     ];
     final content = _buildCategoryPanel(context);
@@ -2052,7 +2181,6 @@ String _orphanReasonLabel(ReaderBookmarkOrphanReason reason) =>
 Future<void> showReaderMorePreview(
   BuildContext context, {
   VoidCallback? onSearch,
-  VoidCallback? onAutoRead,
 }) {
   return showModalBottomSheet<void>(
     context: context,
@@ -2078,16 +2206,6 @@ Future<void> showReaderMorePreview(
                   onTap: () {
                     Navigator.of(context).pop();
                     onSearch();
-                  },
-                ),
-              if (onAutoRead != null)
-                ListTile(
-                  key: readerAutoReadActionKey,
-                  leading: const Icon(Icons.auto_stories_outlined),
-                  title: const Text('自动阅读'),
-                  onTap: () {
-                    Navigator.of(context).pop();
-                    onAutoRead();
                   },
                 ),
               const ListTile(

@@ -24,6 +24,7 @@ import 'package:xaocen_reader/data/repositories/library_file_manager.dart';
 import 'package:xaocen_reader/data/repositories/reading_progress_repository.dart';
 import 'package:xaocen_reader/domain/library/library_import_models.dart';
 import 'package:xaocen_reader/reader/paged_reader_view.dart';
+import 'package:xaocen_reader/reader/reader_chrome.dart';
 import 'package:xaocen_reader/reader/reader_page.dart';
 import 'package:xaocen_reader/reader/reader_mode.dart';
 
@@ -49,11 +50,15 @@ String _buildFixture() {
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  void selectMode(WidgetTester tester, ReaderMode mode) {
-    final menu = tester.widget<PopupMenuButton<ReaderMode>>(
-      find.byType(PopupMenuButton<ReaderMode>),
-    );
-    menu.onSelected!(mode);
+  Future<void> selectMode(WidgetTester tester, ReaderMode mode) async {
+    await tester.tap(find.byKey(readerAppearanceActionKey));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('阅读行为'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(mode == ReaderMode.paged ? '分页' : '滚动').last);
+    await tester.pump();
+    Navigator.of(tester.element(find.byKey(readerSettingsSheetKey))).pop();
+    await tester.pumpAndSettle();
   }
 
   late AppDatabase db;
@@ -130,7 +135,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // ---- 切分页（菜单：滚动 → 分页）----
-    selectMode(tester, ReaderMode.paged);
+    await selectMode(tester, ReaderMode.paged);
     await tester.pumpAndSettle();
     expect(
       find.byType(PagedReaderView),
@@ -147,7 +152,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // ---- 切回纵向 ----
-    selectMode(tester, ReaderMode.vertical);
+    await selectMode(tester, ReaderMode.vertical);
     for (var i = 0; i < 20; i++) {
       await tester.pump(const Duration(milliseconds: 100));
     }
@@ -170,7 +175,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // ---- 切分页 + TOC 远跳 ----
-    selectMode(tester, ReaderMode.paged);
+    await selectMode(tester, ReaderMode.paged);
     await tester.pumpAndSettle();
     expect(find.byType(PagedReaderView), findsOneWidget);
 

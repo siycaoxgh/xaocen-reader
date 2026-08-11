@@ -791,3 +791,14 @@ deferred.
   `#RRGGBB` and `rgb(r,g,b)` input with live preview and validation feedback.
 - Appearance remains per-book and paint-only; schema remains 7 and no Reader
   engine, Locator, pagination, or AutoRead contract changed.
+
+## M5.5e.3 Reader operation hierarchy and AutoRead status
+
+- Made the Reader top mode indicator read-only; mode changes now have one
+  writable entry under Aa → 阅读行为 (scrolling/paged only).
+- Promoted AutoRead to the primary bottom bar and removed its duplicate More
+  entry.
+- Added a lightweight running/paused AutoRead status strip with direct pause,
+  resume, and stop actions for both Reader modes.
+- Kept manual-navigation pause, Locator, pagination, session, and schema 7
+  contracts unchanged.

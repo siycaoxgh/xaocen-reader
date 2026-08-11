@@ -367,7 +367,7 @@ void main() {
         expect(find.byKey(readerBackgroundColorControlKey), findsOneWidget);
         expect(find.byKey(readerBackgroundImageActionKey), findsOneWidget);
         expect(find.byKey(readerResetAppearanceKey), findsOneWidget);
-        await tester.tap(find.text('翻页'));
+        await tester.tap(find.text('阅读行为'));
         await tester.pumpAndSettle();
         expect(find.byKey(readerSettingsModeControlKey), findsOneWidget);
         await tester.tap(find.text('高级'));

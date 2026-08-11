@@ -865,3 +865,14 @@ per-book ReaderPreferences repository. Invalid input is surfaced without
 changing the saved value; valid input previews immediately and stays
 paint-only. No pagination, Locator, progress, session, or schema contract
 changed.
+
+## M5.5e.3 Reader operation hierarchy
+
+`ReaderChrome` exposes a read-only mode indicator at the top. The only writable
+mode surface is Aa → 阅读行为, currently limited to the existing vertical and
+paged modes; future page layout and page-turn effects remain separate planned
+capabilities. The primary bottom actions are TOC, AutoRead, Bookmarks, Aa, and
+More. AutoRead's status strip is outside the hideable chrome and delegates pause,
+resume, and stop to the existing controller. More no longer owns an AutoRead
+entry. This is a presentation-layer change only: Locator, PageWindow,
+pagination, AutoRead drivers, ReadingSession, and schema 7 are unchanged.

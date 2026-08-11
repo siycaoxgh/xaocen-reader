@@ -25,7 +25,6 @@ void main() {
                   await showReaderMorePreview(
                     tester.element(find.byType(ReaderChrome)),
                     onSearch: () => searchOpened = true,
-                    onAutoRead: () => autoReadOpened = true,
                   );
                 },
                 onBookmarks: () {},
@@ -44,16 +43,20 @@ void main() {
       expect(find.byKey(readerAppearanceActionKey), findsOneWidget);
       expect(find.byKey(readerMoreActionKey), findsOneWidget);
       expect(find.byKey(readerSearchActionKey), findsNothing);
-      expect(find.byKey(readerAutoReadActionKey), findsNothing);
+      expect(find.byKey(readerAutoReadActionKey), findsOneWidget);
+
+      await tester.tap(find.byKey(readerAutoReadActionKey));
+      expect(autoReadOpened, isTrue);
 
       await tester.tap(find.byKey(readerMoreActionKey));
       await tester.pumpAndSettle();
       expect(find.byKey(readerSearchActionKey), findsOneWidget);
+      // The primary AutoRead action remains in the underlying bottom bar;
+      // the More sheet must only avoid adding a second AutoRead entry.
       expect(find.byKey(readerAutoReadActionKey), findsOneWidget);
       await tester.tap(find.byKey(readerSearchActionKey));
       await tester.pumpAndSettle();
       expect(searchOpened, isTrue);
-      expect(autoReadOpened, isFalse);
     },
   );
 }

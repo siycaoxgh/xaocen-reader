@@ -75,7 +75,7 @@ void main() {
     controller.dispose();
   });
 
-  testWidgets('ReaderChrome keeps AutoRead in the More action group', (
+  testWidgets('ReaderChrome exposes AutoRead as a primary bottom action', (
     tester,
   ) async {
     var tapped = false;
@@ -92,7 +92,6 @@ void main() {
             onMore: () async {
               await showReaderMorePreview(
                 tester.element(find.byType(ReaderChrome)),
-                onAutoRead: () => tapped = true,
               );
             },
             onBookmarks: () {},
@@ -103,12 +102,48 @@ void main() {
         ),
       ),
     );
-    expect(find.byKey(readerAutoReadActionKey), findsNothing);
-    await tester.tap(find.byKey(readerMoreActionKey));
-    await tester.pumpAndSettle();
     expect(find.byKey(readerAutoReadActionKey), findsOneWidget);
     await tester.tap(find.byKey(readerAutoReadActionKey));
     expect(tapped, isTrue);
+    tapped = false;
+    await tester.tap(find.byKey(readerMoreActionKey));
+    await tester.pumpAndSettle();
+    expect(find.byKey(readerSearchActionKey), findsNothing);
+    // More no longer owns AutoRead; the one primary action remains visible
+    // behind the modal sheet.
+    expect(find.byKey(readerAutoReadActionKey), findsOneWidget);
+  });
+
+  testWidgets('ReaderChrome status bar keeps pause and stop actions visible', (
+    tester,
+  ) async {
+    var paused = false;
+    var stopped = false;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Stack(
+            fit: StackFit.expand,
+            children: [
+              ReaderAutoReadStatusBar(
+                mode: ReaderMode.vertical,
+                state: AutoReadState.running,
+                speedPixelsPerSecond: 28,
+                pagedIntervalSeconds: 5,
+                onPause: () => paused = true,
+                onStop: () => stopped = true,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('自动阅读中 · 28 px/s'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('reader-auto-read-status-pause')));
+    await tester.tap(find.byKey(const Key('reader-auto-read-status-stop')));
+    expect(paused, isTrue);
+    expect(stopped, isTrue);
   });
 
   testWidgets('paged AutoRead sheet exposes interval controls and status', (
@@ -153,7 +188,7 @@ void main() {
     await tester.pump();
     expect(
       find.text(
-        '\u81ea\u52a8\u9605\u8bfb\u4e2d \u00b7 \u6bcf 5 \u79d2\u7ffb\u9875',
+        '\u81ea\u52a8\u7ffb\u9875\u4e2d \u00b7 5 \u79d2/\u9875',
       ),
       findsOneWidget,
     );
@@ -163,7 +198,7 @@ void main() {
     expect(interval, 15);
     expect(
       find.text(
-        '\u81ea\u52a8\u9605\u8bfb\u4e2d \u00b7 \u6bcf 15 \u79d2\u7ffb\u9875',
+        '\u81ea\u52a8\u7ffb\u9875\u4e2d \u00b7 15 \u79d2/\u9875',
       ),
       findsOneWidget,
     );

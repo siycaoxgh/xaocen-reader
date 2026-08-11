@@ -549,3 +549,18 @@ vertical A → paged → 不翻页 → 重开 = paged + A · vertical A → page
 | Invalid color feedback and no invalid persistence | PASS |
 | Paint-only appearance / Locator and pagination invariants | PASS (regression) |
 | Drift schema | 7, unchanged |
+
+## M5.5e.3 Reader operation hierarchy and AutoRead status
+
+| Area | Result |
+|---|---|
+| Read-only top mode indicator | PASS |
+| Aa → 阅读行为 sole writable mode entry | PASS |
+| Primary bottom actions include AutoRead exactly once | PASS |
+| More panel has no duplicate AutoRead entry | PASS |
+| Running/paused status strip and direct controls | PASS |
+| Manual navigation pauses AutoRead (regression) | PASS |
+| 460 Flutter tests | PASS |
+| 11 integration files / 14 scenarios | PASS |
+| Windows Release / Android Debug | PASS |
+| Drift schema | 7, unchanged |
