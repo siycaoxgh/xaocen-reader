@@ -778,3 +778,16 @@ deferred.
 - Kept all appearance changes paint-only: no relayout, repagination, Locator restore, or progress write.
 - Migrated Drift schema 6→7 by extending `reader_preferences`; old library and reading state are preserved.
 - 459 Flutter tests and 11 integration files / 14 scenarios passed; all four real TXT retained logical error 0.
+
+## M5.5e.1 Reader settings experience
+
+- Removed duplicate desktop Reader actions: Search and AutoRead now have one
+  primary entry in the More panel; the compact action bar stays focused on
+  frequent actions.
+- Reorganized Aa into Typography, Appearance, Paging, and Advanced categories.
+  Desktop uses a bounded wide sheet with a category rail; mobile uses compact
+  touch-friendly category chips and sub-panels.
+- Added reading-friendly text/background color presets plus custom
+  `#RRGGBB` and `rgb(r,g,b)` input with live preview and validation feedback.
+- Appearance remains per-book and paint-only; schema remains 7 and no Reader
+  engine, Locator, pagination, or AutoRead contract changed.

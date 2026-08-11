@@ -75,7 +75,9 @@ void main() {
     controller.dispose();
   });
 
-  testWidgets('ReaderChrome exposes an AutoRead bottom action', (tester) async {
+  testWidgets('ReaderChrome keeps AutoRead in the More action group', (
+    tester,
+  ) async {
     var tapped = false;
     await tester.pumpWidget(
       MaterialApp(
@@ -87,7 +89,12 @@ void main() {
             onBack: () {},
             onToc: () {},
             onAppearance: () {},
-            onMore: () {},
+            onMore: () async {
+              await showReaderMorePreview(
+                tester.element(find.byType(ReaderChrome)),
+                onAutoRead: () => tapped = true,
+              );
+            },
             onBookmarks: () {},
             onSearch: () {},
             onModeSelected: (_) {},
@@ -96,6 +103,9 @@ void main() {
         ),
       ),
     );
+    expect(find.byKey(readerAutoReadActionKey), findsNothing);
+    await tester.tap(find.byKey(readerMoreActionKey));
+    await tester.pumpAndSettle();
     expect(find.byKey(readerAutoReadActionKey), findsOneWidget);
     await tester.tap(find.byKey(readerAutoReadActionKey));
     expect(tapped, isTrue);

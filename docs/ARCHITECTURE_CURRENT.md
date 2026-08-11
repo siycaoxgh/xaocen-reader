@@ -853,3 +853,15 @@ external source path. The visual image/scrim stack sits behind both vertical
 and paged content, so text geometry is unchanged. Schema 7 extends only the
 existing per-book `reader_preferences` table; ReaderLocator remains the sole
 position source.
+
+## M5.5e.1 Reader settings surface
+
+`ReaderSettingsSheet` is categorized into Typography, Appearance, Paging, and
+Advanced. Desktop uses a bounded wide sheet with a category rail; Android uses
+compact category chips and touch-sized sub-panels. Search and AutoRead are not
+duplicated in the desktop primary chrome and remain reachable from More.
+Color presets and custom text fields resolve to ARGB values in the existing
+per-book ReaderPreferences repository. Invalid input is surfaced without
+changing the saved value; valid input previews immediately and stays
+paint-only. No pagination, Locator, progress, session, or schema contract
+changed.

@@ -194,3 +194,13 @@ Windows 透明必须拆成两层，不能只在 Flutter widget 上设置颜色�
 - 自定义颜色覆盖 Reader theme；恢复默认清空自定义值并重新跟随 system/light/dark。
 - 图片背景为 app-managed 文件引用，不存 BLOB，不依赖原文件，且不参与正文布局。
 - Windows 原生窗口透明与鼠标穿透仍保持独立后续项，本阶段没有混入 ReaderPreferences。
+## M5.5e.1 implementation record
+
+- Reader Aa was split into Typography, Appearance, Paging, and Advanced.
+- Desktop uses a wide bounded sheet with a category rail; Android uses compact
+  category chips and touch-friendly sub-panels.
+- Search and AutoRead no longer appear twice on Windows; More is their single
+  low-frequency entry.
+- Added reading color presets and validated custom `#RRGGBB` / `rgb(r,g,b)`
+  fields with immediate paint preview. Appearance remains per-book and
+  paint-only.

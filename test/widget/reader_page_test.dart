@@ -354,18 +354,24 @@ void main() {
         await pumpReader(tester);
         await tester.tap(find.byKey(readerAppearanceActionKey));
         await tester.pumpAndSettle();
-        expect(find.text('阅读界面'), findsOneWidget);
+        expect(find.text('阅读设置'), findsOneWidget);
         expect(find.byKey(readerFontSizeSliderKey), findsOneWidget);
         expect(find.byKey(readerLineHeightSliderKey), findsOneWidget);
         expect(find.byKey(readerHorizontalPaddingSliderKey), findsOneWidget);
         expect(find.byKey(readerVerticalPaddingSliderKey), findsOneWidget);
+        await tester.tap(find.text('外观'));
+        await tester.pumpAndSettle();
         expect(find.byKey(readerThemeControlKey), findsOneWidget);
         await tester.ensureVisible(find.byKey(readerTextColorControlKey));
         expect(find.byKey(readerTextColorControlKey), findsOneWidget);
         expect(find.byKey(readerBackgroundColorControlKey), findsOneWidget);
         expect(find.byKey(readerBackgroundImageActionKey), findsOneWidget);
         expect(find.byKey(readerResetAppearanceKey), findsOneWidget);
+        await tester.tap(find.text('翻页'));
+        await tester.pumpAndSettle();
         expect(find.byKey(readerSettingsModeControlKey), findsOneWidget);
+        await tester.tap(find.text('高级'));
+        await tester.pumpAndSettle();
         expect(find.byKey(readerResetPreferencesKey), findsOneWidget);
         expect(await progressRepo.getProgress('local-txt:abc'), isNull);
         await tester.tapAt(const Offset(10, 10));
@@ -432,6 +438,19 @@ void main() {
       );
       await tester.tap(find.byKey(readerAppearanceActionKey));
       await tester.pumpAndSettle();
+      await tester.tap(find.text('外观'));
+      await tester.pumpAndSettle();
+      final colorFields = find.byType(TextField);
+      expect(colorFields, findsNWidgets(2));
+      await tester.enterText(colorFields.at(0), 'rgb(18, 52, 86)');
+      await tester.pump();
+      expect(
+        (await repository.load('local-txt:abc')).textColorArgb,
+        0xff123456,
+      );
+      await tester.enterText(colorFields.at(1), 'not-a-color');
+      await tester.pump();
+      expect(find.text('请输入 #RRGGBB 或 rgb(r,g,b)'), findsOneWidget);
       await tester.ensureVisible(find.text('深色'));
       await tester.pump();
       await tester.tap(find.text('深色'));
@@ -443,6 +462,13 @@ void main() {
       expect(reports, isEmpty);
       expect(await progressRepo.getProgress('local-txt:abc'), isNull);
 
+      await tester.drag(
+        find.byKey(readerSettingsSheetKey),
+        const Offset(0, 1000),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('排版'));
+      await tester.pumpAndSettle();
       await tester.ensureVisible(find.byKey(readerFontSizeSliderKey));
       await tester.pump();
       await tester.drag(
@@ -452,6 +478,13 @@ void main() {
       for (var i = 0; i < 12; i++) {
         await tester.pump();
       }
+      await tester.drag(
+        find.byKey(readerSettingsSheetKey),
+        const Offset(0, 1000),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('高级'));
+      await tester.pumpAndSettle();
       await tester.ensureVisible(find.byKey(readerResetPreferencesKey));
       await tester.pump();
       await tester.tap(find.byKey(readerResetPreferencesKey));

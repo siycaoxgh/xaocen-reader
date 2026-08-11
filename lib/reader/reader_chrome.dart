@@ -310,30 +310,6 @@ class ReaderChrome extends StatelessWidget {
                           label: '书签',
                           onPressed: onBookmarks,
                         ),
-                        if (isDesktop)
-                          _ChromeAction(
-                            key: readerSearchActionKey,
-                            icon: Icons.search,
-                            label: '搜索',
-                            onPressed: onSearch,
-                          ),
-                        if (isDesktop && onAutoRead != null)
-                          _ChromeAction(
-                            key: readerAutoReadActionKey,
-                            icon: autoReadState == AutoReadState.running
-                                ? Icons.pause_circle_outline
-                                : Icons.auto_stories_outlined,
-                            label: autoReadState == AutoReadState.idle
-                                ? '\u81ea\u52a8\u9605\u8bfb'
-                                : _autoReadStatusLabel(
-                                    mode,
-                                    autoReadState,
-                                    autoReadSpeedPixelsPerSecond,
-                                    autoReadPagedIntervalSeconds,
-                                  ),
-                            selected: autoReadState == AutoReadState.running,
-                            onPressed: onAutoRead!,
-                          ),
                         _ChromeAction(
                           key: readerAppearanceActionKey,
                           icon: Icons.text_fields_rounded,
@@ -408,7 +384,10 @@ Future<void> showReaderAutoReadControls(
     context: context,
     isScrollControlled: true,
     showDragHandle: true,
-    constraints: BoxConstraints(maxWidth: isDesktop ? 560 : double.infinity),
+    constraints: BoxConstraints(
+      maxWidth: isDesktop ? 900 : double.infinity,
+      maxHeight: isDesktop ? 760 : double.infinity,
+    ),
     builder: (context) => StreamBuilder<AutoReadEvent>(
       stream: events,
       builder: (context, _) => ReaderAutoReadSheet(
@@ -709,12 +688,582 @@ class ReaderSettingsSheet extends StatefulWidget {
 class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
   late ReaderPreferences _draft = widget.preferences;
   late ReaderMode _mode = widget.mode;
+  _ReaderSettingsCategory _category = _ReaderSettingsCategory.typography;
+  late final TextEditingController _textColorController = TextEditingController(
+    text: _hexColor(_draft.textColorArgb),
+  );
+  late final TextEditingController _backgroundColorController =
+      TextEditingController(text: _hexColor(_draft.backgroundColorArgb));
+  String? _textColorError;
+  String? _backgroundColorError;
 
   void _commit(ReaderPreferences value) {
     setState(() => _draft = value);
     widget.onPreferencesCommitted(value);
   }
 
+  @override
+  void dispose() {
+    _textColorController.dispose();
+    _backgroundColorController.dispose();
+    super.dispose();
+  }
+
+  void _previewColor({required bool text, required String value}) {
+    final parsed = _parseColor(value);
+    if (value.trim().isEmpty) {
+      final next = text
+          ? _draft.copyWith(textColorArgb: null)
+          : _draft.copyWith(backgroundColorArgb: null);
+      setState(() {
+        _draft = next;
+        if (text) {
+          _textColorError = null;
+        } else {
+          _backgroundColorError = null;
+        }
+      });
+      widget.onPreferencesCommitted(next);
+      return;
+    }
+    setState(() {
+      if (text) {
+        _textColorError = value.trim().isEmpty || parsed != null
+            ? null
+            : '请输入 #RRGGBB 或 rgb(r,g,b)';
+        if (parsed != null) {
+          _draft = _draft.copyWith(textColorArgb: parsed);
+        }
+      } else {
+        _backgroundColorError = value.trim().isEmpty || parsed != null
+            ? null
+            : '请输入 #RRGGBB 或 rgb(r,g,b)';
+        if (parsed != null) {
+          _draft = _draft.copyWith(backgroundColorArgb: parsed);
+        }
+      }
+    });
+    if (parsed != null) {
+      widget.onPreferencesCommitted(_draft);
+    }
+  }
+
+  static String _hexColor(int? value) => value == null
+      ? ''
+      : '#${(value & 0xffffff).toRadixString(16).padLeft(6, '0')}';
+
+  static int? _parseColor(String raw) {
+    final value = raw.trim();
+    final hex = RegExp(r'^#?([0-9a-fA-F]{6})$').firstMatch(value);
+    if (hex != null) return int.parse('ff${hex.group(1)}', radix: 16);
+    final rgb = RegExp(
+      r'^rgb\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*\)$',
+      caseSensitive: false,
+    ).firstMatch(value);
+    if (rgb == null) return null;
+    final channels = [
+      int.parse(rgb.group(1)!),
+      int.parse(rgb.group(2)!),
+      int.parse(rgb.group(3)!),
+    ];
+    if (channels.any((channel) => channel > 255)) return null;
+    return 0xff000000 | (channels[0] << 16) | (channels[1] << 8) | channels[2];
+  }
+
+  Widget _buildTypographyPanel(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _PreferenceSlider(
+          key: readerFontSizeSliderKey,
+          label: '字号',
+          value: _draft.fontSize,
+          min: ReaderPreferences.minFontSize,
+          max: ReaderPreferences.maxFontSize,
+          divisions: 20,
+          step: ReaderPreferences.fontSizeStep,
+          valueLabel: _draft.fontSize.toStringAsFixed(0),
+          onDraftChanged: (value) =>
+              setState(() => _draft = _draft.copyWith(fontSize: value)),
+          onCommitted: (value) => _commit(_draft.copyWith(fontSize: value)),
+        ),
+        _PreferenceSlider(
+          key: readerLetterSpacingSliderKey,
+          label: '字距',
+          value: _draft.letterSpacing,
+          min: ReaderPreferences.minLetterSpacing,
+          max: ReaderPreferences.maxLetterSpacing,
+          divisions: 30,
+          step: ReaderPreferences.letterSpacingStep,
+          valueLabel: _draft.letterSpacing.toStringAsFixed(2),
+          onDraftChanged: (value) =>
+              setState(() => _draft = _draft.copyWith(letterSpacing: value)),
+          onCommitted: (value) =>
+              _commit(_draft.copyWith(letterSpacing: value)),
+        ),
+        _PreferenceSlider(
+          key: readerLineHeightSliderKey,
+          label: '行距',
+          value: _draft.lineHeight,
+          min: ReaderPreferences.minLineHeight,
+          max: ReaderPreferences.maxLineHeight,
+          divisions: 12,
+          step: ReaderPreferences.lineHeightStep,
+          valueLabel: _draft.lineHeight.toStringAsFixed(1),
+          onDraftChanged: (value) =>
+              setState(() => _draft = _draft.copyWith(lineHeight: value)),
+          onCommitted: (value) => _commit(_draft.copyWith(lineHeight: value)),
+        ),
+        _PreferenceSlider(
+          key: readerParagraphSpacingSliderKey,
+          label: '段距',
+          value: _draft.paragraphSpacing,
+          min: ReaderPreferences.minParagraphSpacing,
+          max: ReaderPreferences.maxParagraphSpacing,
+          divisions: 32,
+          step: ReaderPreferences.paragraphSpacingStep,
+          valueLabel: _draft.paragraphSpacing.toStringAsFixed(0),
+          onDraftChanged: (value) =>
+              setState(() => _draft = _draft.copyWith(paragraphSpacing: value)),
+          onCommitted: (value) =>
+              _commit(_draft.copyWith(paragraphSpacing: value)),
+        ),
+        _PreferenceSlider(
+          key: readerFirstLineIndentSliderKey,
+          label: '首行缩进（字宽）',
+          value: _draft.firstLineIndent,
+          min: ReaderPreferences.minFirstLineIndent,
+          max: ReaderPreferences.maxFirstLineIndent,
+          divisions: 8,
+          step: ReaderPreferences.firstLineIndentStep,
+          valueLabel: _draft.firstLineIndent.toStringAsFixed(1),
+          onDraftChanged: (value) =>
+              setState(() => _draft = _draft.copyWith(firstLineIndent: value)),
+          onCommitted: (value) =>
+              _commit(_draft.copyWith(firstLineIndent: value)),
+        ),
+        const SizedBox(height: 8),
+        Text('正文边距', style: Theme.of(context).textTheme.titleSmall),
+        _PreferenceSlider(
+          key: readerHorizontalPaddingSliderKey,
+          label: '左边距',
+          value: _draft.paddingLeft,
+          min: ReaderPreferences.minHorizontalPadding,
+          max: ReaderPreferences.maxHorizontalPadding,
+          divisions: 16,
+          step: ReaderPreferences.paddingStep,
+          valueLabel: _draft.paddingLeft.toStringAsFixed(0),
+          onDraftChanged: (value) =>
+              setState(() => _draft = _draft.copyWith(paddingLeft: value)),
+          onCommitted: (value) => _commit(_draft.copyWith(paddingLeft: value)),
+        ),
+        _PreferenceSlider(
+          key: readerPaddingRightSliderKey,
+          label: '右边距',
+          value: _draft.paddingRight,
+          min: ReaderPreferences.minHorizontalPadding,
+          max: ReaderPreferences.maxHorizontalPadding,
+          divisions: 16,
+          step: ReaderPreferences.paddingStep,
+          valueLabel: _draft.paddingRight.toStringAsFixed(0),
+          onDraftChanged: (value) =>
+              setState(() => _draft = _draft.copyWith(paddingRight: value)),
+          onCommitted: (value) => _commit(_draft.copyWith(paddingRight: value)),
+        ),
+        _PreferenceSlider(
+          key: readerVerticalPaddingSliderKey,
+          label: '上边距',
+          value: _draft.paddingTop,
+          min: ReaderPreferences.minVerticalPadding,
+          max: ReaderPreferences.maxVerticalPadding,
+          divisions: 12,
+          step: ReaderPreferences.paddingStep,
+          valueLabel: _draft.paddingTop.toStringAsFixed(0),
+          onDraftChanged: (value) =>
+              setState(() => _draft = _draft.copyWith(paddingTop: value)),
+          onCommitted: (value) => _commit(_draft.copyWith(paddingTop: value)),
+        ),
+        _PreferenceSlider(
+          key: readerPaddingBottomSliderKey,
+          label: '下边距',
+          value: _draft.paddingBottom,
+          min: ReaderPreferences.minVerticalPadding,
+          max: ReaderPreferences.maxVerticalPadding,
+          divisions: 12,
+          step: ReaderPreferences.paddingStep,
+          valueLabel: _draft.paddingBottom.toStringAsFixed(0),
+          onDraftChanged: (value) =>
+              setState(() => _draft = _draft.copyWith(paddingBottom: value)),
+          onCommitted: (value) =>
+              _commit(_draft.copyWith(paddingBottom: value)),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAppearancePanel(BuildContext context) {
+    final textColor = _draft.textColorArgb == null
+        ? null
+        : Color(_draft.textColorArgb!);
+    final backgroundColor = _draft.backgroundColorArgb == null
+        ? null
+        : Color(_draft.backgroundColorArgb!);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('主题', style: Theme.of(context).textTheme.titleSmall),
+        const SizedBox(height: 8),
+        SegmentedButton<ReaderThemeMode>(
+          key: readerThemeControlKey,
+          segments: const [
+            ButtonSegment(value: ReaderThemeMode.system, label: Text('系统')),
+            ButtonSegment(value: ReaderThemeMode.light, label: Text('浅色')),
+            ButtonSegment(value: ReaderThemeMode.dark, label: Text('深色')),
+          ],
+          selected: {_draft.themeMode},
+          onSelectionChanged: (selection) =>
+              _commit(_draft.copyWith(themeMode: selection.single)),
+        ),
+        const SizedBox(height: 18),
+        _ReaderColorPalette(
+          key: readerTextColorControlKey,
+          label: '字体颜色预设',
+          selectedArgb: _draft.textColorArgb,
+          colors: const [
+            Color(0xff1c1b1f),
+            Color(0xff4b3425),
+            Color(0xfff5f2ea),
+            Color(0xffffffff),
+          ],
+          onChanged: (value) {
+            _textColorController.text = _hexColor(value);
+            _commit(_draft.copyWith(textColorArgb: value));
+          },
+        ),
+        _ColorInput(
+          controller: _textColorController,
+          label: '字体颜色',
+          preview: textColor,
+          errorText: _textColorError,
+          onChanged: (value) => _previewColor(text: true, value: value),
+          onSubmitted: (value) => _previewColor(text: true, value: value),
+        ),
+        const SizedBox(height: 14),
+        _ReaderColorPalette(
+          key: readerBackgroundColorControlKey,
+          label: '背景颜色预设',
+          selectedArgb: _draft.backgroundColorArgb,
+          colors: const [
+            Color(0xffffffff),
+            Color(0xfffff8e7),
+            Color(0xffe8f0e8),
+            Color(0xff202124),
+            Color(0xff000000),
+          ],
+          onChanged: (value) {
+            _backgroundColorController.text = _hexColor(value);
+            _commit(_draft.copyWith(backgroundColorArgb: value));
+          },
+        ),
+        _ColorInput(
+          controller: _backgroundColorController,
+          label: '阅读背景颜色',
+          preview: backgroundColor,
+          errorText: _backgroundColorError,
+          onChanged: (value) => _previewColor(text: false, value: value),
+          onSubmitted: (value) => _previewColor(text: false, value: value),
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                _draft.backgroundImagePath == null
+                    ? '本地图片背景：未使用'
+                    : '本地图片背景：已导入',
+              ),
+            ),
+            OutlinedButton.icon(
+              key: readerBackgroundImageActionKey,
+              onPressed: widget.onPickBackgroundImage == null
+                  ? null
+                  : () async {
+                      final previous = _draft.backgroundImagePath;
+                      final path = await widget.onPickBackgroundImage!();
+                      if (!mounted || path == null) return;
+                      _commit(_draft.copyWith(backgroundImagePath: path));
+                      if (previous != null && previous != path) {
+                        await widget.onDeleteBackgroundImage?.call(previous);
+                      }
+                    },
+              icon: const Icon(Icons.image_outlined),
+              label: Text(_draft.backgroundImagePath == null ? '导入图片' : '更换图片'),
+            ),
+            if (_draft.backgroundImagePath != null)
+              IconButton(
+                tooltip: '移除图片背景',
+                onPressed: () async {
+                  final previous = _draft.backgroundImagePath;
+                  _commit(_draft.copyWith(backgroundImagePath: null));
+                  await widget.onDeleteBackgroundImage?.call(previous);
+                },
+                icon: const Icon(Icons.delete_outline_rounded),
+              ),
+          ],
+        ),
+        if (_draft.backgroundImagePath != null) ...[
+          _PreferenceSlider(
+            key: readerBackgroundImageOpacityKey,
+            label: '图片透明度',
+            value: _draft.backgroundImageOpacity,
+            min: ReaderPreferences.minAppearanceOpacity,
+            max: ReaderPreferences.maxAppearanceOpacity,
+            divisions: 20,
+            step: 0.05,
+            valueLabel: '${(_draft.backgroundImageOpacity * 100).round()}%',
+            onDraftChanged: (value) => setState(
+              () => _draft = _draft.copyWith(backgroundImageOpacity: value),
+            ),
+            onCommitted: (value) =>
+                _commit(_draft.copyWith(backgroundImageOpacity: value)),
+          ),
+          _PreferenceSlider(
+            key: readerBackgroundOverlayOpacityKey,
+            label: '图片遮罩强度',
+            value: _draft.backgroundOverlayOpacity,
+            min: ReaderPreferences.minAppearanceOpacity,
+            max: ReaderPreferences.maxAppearanceOpacity,
+            divisions: 20,
+            step: 0.05,
+            valueLabel: '${(_draft.backgroundOverlayOpacity * 100).round()}%',
+            onDraftChanged: (value) => setState(
+              () => _draft = _draft.copyWith(backgroundOverlayOpacity: value),
+            ),
+            onCommitted: (value) =>
+                _commit(_draft.copyWith(backgroundOverlayOpacity: value)),
+          ),
+        ],
+        const SizedBox(height: 8),
+        OutlinedButton.icon(
+          key: readerResetAppearanceKey,
+          onPressed: () async {
+            final previous = _draft.backgroundImagePath;
+            _textColorController.clear();
+            _backgroundColorController.clear();
+            _commit(
+              _draft.copyWith(
+                textColorArgb: null,
+                backgroundColorArgb: null,
+                backgroundImagePath: null,
+                backgroundImageOpacity:
+                    ReaderPreferences.defaultBackgroundImageOpacity,
+                backgroundOverlayOpacity:
+                    ReaderPreferences.defaultBackgroundOverlayOpacity,
+              ),
+            );
+            await widget.onDeleteBackgroundImage?.call(previous);
+          },
+          icon: const Icon(Icons.format_color_reset_rounded),
+          label: const Text('恢复默认外观（跟随主题）'),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPagingPanel(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('翻页方式', style: Theme.of(context).textTheme.titleSmall),
+        const SizedBox(height: 8),
+        SegmentedButton<ReaderMode>(
+          key: readerSettingsModeControlKey,
+          segments: const [
+            ButtonSegment(value: ReaderMode.vertical, label: Text('滚动')),
+            ButtonSegment(value: ReaderMode.paged, label: Text('左右翻页')),
+          ],
+          selected: {_mode},
+          onSelectionChanged: (selection) {
+            final next = selection.single;
+            setState(() => _mode = next);
+            widget.onModeSelected(next);
+          },
+        ),
+        const SizedBox(height: 16),
+        Text(
+          '阅读模式按本书保存；分页章节边界和位置恢复由 Reader 引擎负责。',
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAdvancedPanel(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('高级', style: Theme.of(context).textTheme.titleSmall),
+        const SizedBox(height: 8),
+        Text(
+          '设置变化会保留当前 ReaderLocator；外观颜色属于即时预览，不会触发重新分页。',
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+        const SizedBox(height: 20),
+        OutlinedButton.icon(
+          key: readerResetPreferencesKey,
+          onPressed: () {
+            _textColorController.clear();
+            _backgroundColorController.clear();
+            setState(() => _draft = ReaderPreferences.defaults);
+            widget.onResetPreferences();
+          },
+          icon: const Icon(Icons.restart_alt_rounded),
+          label: const Text('恢复全部阅读设置'),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCategoryPanel(BuildContext context) => switch (_category) {
+    _ReaderSettingsCategory.typography => _buildTypographyPanel(context),
+    _ReaderSettingsCategory.appearance => _buildAppearancePanel(context),
+    _ReaderSettingsCategory.paging => _buildPagingPanel(context),
+    _ReaderSettingsCategory.advanced => _buildAdvancedPanel(context),
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final isDesktop = MediaQuery.sizeOf(context).width >= 720;
+    final categories = [
+      (_ReaderSettingsCategory.typography, '排版', Icons.text_fields_rounded),
+      (_ReaderSettingsCategory.appearance, '外观', Icons.palette_outlined),
+      (_ReaderSettingsCategory.paging, '翻页', Icons.menu_book_outlined),
+      (_ReaderSettingsCategory.advanced, '高级', Icons.tune_rounded),
+    ];
+    final content = _buildCategoryPanel(context);
+    return SafeArea(
+      child: SingleChildScrollView(
+        key: readerSettingsSheetKey,
+        padding: EdgeInsets.fromLTRB(
+          isDesktop ? 28 : 20,
+          0,
+          isDesktop ? 28 : 20,
+          24,
+        ),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minWidth: isDesktop ? 720 : 0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('阅读设置', style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: 16),
+              if (isDesktop)
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      width: 132,
+                      child: Column(
+                        children: [
+                          for (final item in categories)
+                            ListTile(
+                              dense: true,
+                              selected: _category == item.$1,
+                              leading: Icon(item.$3),
+                              title: Text(item.$2),
+                              onTap: () => setState(() => _category = item.$1),
+                            ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 24),
+                    const VerticalDivider(width: 1),
+                    const SizedBox(width: 24),
+                    Expanded(child: content),
+                  ],
+                )
+              else ...[
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      for (final item in categories) ...[
+                        ChoiceChip(
+                          selected: _category == item.$1,
+                          label: Text(item.$2),
+                          avatar: Icon(item.$3, size: 17),
+                          onSelected: (_) =>
+                              setState(() => _category = item.$1),
+                        ),
+                        const SizedBox(width: 8),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 18),
+                content,
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+enum _ReaderSettingsCategory { typography, appearance, paging, advanced }
+
+class _ColorInput extends StatelessWidget {
+  const _ColorInput({
+    required this.controller,
+    required this.label,
+    required this.preview,
+    required this.errorText,
+    required this.onChanged,
+    required this.onSubmitted,
+  });
+
+  final TextEditingController controller;
+  final String label;
+  final Color? preview;
+  final String? errorText;
+  final ValueChanged<String> onChanged;
+  final ValueChanged<String> onSubmitted;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: TextField(
+        controller: controller,
+        decoration: InputDecoration(
+          labelText: label,
+          hintText: '#RRGGBB 或 rgb(255,255,255)',
+          errorText: errorText,
+          prefixIcon: Padding(
+            padding: const EdgeInsets.all(12),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: preview ?? Theme.of(context).colorScheme.surface,
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: Theme.of(context).colorScheme.outlineVariant,
+                ),
+              ),
+              child: const SizedBox(width: 18, height: 18),
+            ),
+          ),
+        ),
+        textInputAction: TextInputAction.done,
+        onChanged: onChanged,
+        onSubmitted: onSubmitted,
+      ),
+    );
+  }
+}
+
+/* legacy inline Aa layout retained in history; category panels above replace it.
   @override
   Widget build(BuildContext context) {
     return SafeArea(
@@ -1030,6 +1579,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
     );
   }
 }
+*/
 
 class _ReaderColorPalette extends StatelessWidget {
   const _ReaderColorPalette({

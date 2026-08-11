@@ -535,3 +535,17 @@ vertical A → paged → 不翻页 → 重开 = paged + A · vertical A → page
 | Mobile history/settings layout | PASS |
 | Input profile platform isolation/persistence | PASS (regression) |
 | Drift schema | 6, unchanged |
+
+## M5.5e.1 Reader settings experience
+
+| Area | Result |
+|---|---|
+| Desktop primary action de-duplication | PASS |
+| Aa Typography / Appearance / Paging / Advanced categories | PASS |
+| Desktop bounded category rail + compact content | PASS |
+| Android touch-friendly category sub-panels | PASS (widget) |
+| Preset text/background colors | PASS |
+| `#RRGGBB` and `rgb(r,g,b)` parsing/live preview | PASS |
+| Invalid color feedback and no invalid persistence | PASS |
+| Paint-only appearance / Locator and pagination invariants | PASS (regression) |
+| Drift schema | 7, unchanged |

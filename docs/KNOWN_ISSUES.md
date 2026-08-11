@@ -241,6 +241,13 @@ found. Whole-book deletion does not yet garbage-collect every superseded image
 left in that book's managed background folder; current replacement/removal/reset
 paths do clean their referenced file. Windows native window transparency remains
 a separate later capability.
+
+## M5.5e.1 status
+
+The Reader settings surface and primary action hierarchy are complete. No new
+P0/P1/P2 issue was found. The remaining known follow-up is the previously
+documented managed-background garbage collection for superseded assets after
+whole-book deletion; it does not affect current appearance or Reader data.
 ## M5.5d status
 
 Me, Reading History, Reader Settings, and platform input settings now have

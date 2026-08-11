@@ -718,3 +718,13 @@ Aa 阅读外观正式支持每书字体色、阅读背景色、本地图片背�
 外部图片先复制到 app-managed library，偏好只保存相对引用；原文件移动或删除不影响
 已导入背景。外观变化保持 paint-only，ReaderLocator、分页 metrics、章节进度和
 ReadingSession 均不变。Drift 通过正式 migration 从 schema 6 升级到 7。
+## M5.5e.1 Reader settings experience
+
+Reader Aa settings now use four stable categories: Typography, Appearance,
+Paging, and Advanced. Desktop presents a bounded wide sheet with a category
+rail, while Android presents compact touch-friendly category navigation.
+Desktop duplicate Search/AutoRead actions were removed from the primary bar;
+the More panel is their single entry. Per-book appearance now also exposes
+reading-friendly presets and validated custom color input (`#RRGGBB` and
+`rgb(r,g,b)`) with immediate paint preview. No data or Reader position
+contract changed.
