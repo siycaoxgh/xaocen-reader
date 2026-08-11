@@ -1,7 +1,7 @@
 # M5.6a Result — P1 regression fixes
 
 Status: COMPLETE
-HEAD: fcc52d4e5a9cc98f41262e29176ab4140c876429
+HEAD: see final commit
 Drift schema: 9
 
 ## Fixes
