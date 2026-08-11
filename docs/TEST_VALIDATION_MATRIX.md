@@ -742,6 +742,17 @@ vertical A → paged → 不翻页 → 重开 = paged + A · vertical A → page
 | Android physical device | NOT-RUN (Windows-only change) |
 | Drift schema | 11, unchanged |
 
+## M5.6c.3 Windows transparency spike
+
+| Area | Result |
+|---|---|
+| Native layered-window probe | PASS (reversible probe) |
+| Independent background/text alpha path | BLOCKED by current Flutter surface |
+| Production transparency implementation | NOT-SHIPPED (unsafe to hack) |
+| Full Flutter unit/contract/widget | 496/496 PASS |
+| Windows Release | PASS |
+| Drift schema | 11, unchanged |
+
 ## M5.5e.4.2 Palette visual contrast correction
 
 | Area | Result |

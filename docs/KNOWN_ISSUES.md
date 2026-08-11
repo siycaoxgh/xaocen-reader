@@ -354,6 +354,15 @@ from a short Windows desktop manual pass. No new Reader, Locator, persistence,
 or Android issue was found. Android device validation was not required for this
 Windows-only change.
 
+## M5.6c.3 status
+
+Windows transparency is blocked after a native rendering spike. The current
+Flutter child surface is opaque and the available layered-window probe cannot
+separate Reader background alpha from text alpha. Do not ship a whole-window
+alpha or color-key workaround; it would fade text and risk Palette/image/GPU
+rendering. A dedicated transparent Flutter surface/native compositor spike is a
+future prerequisite.
+
 ## M5.6c.2 status
 
 Windows borderless Reader is implemented with native drag/resize hit testing and

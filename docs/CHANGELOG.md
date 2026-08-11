@@ -953,3 +953,10 @@ deferred.
 - Kept taskbar/tray, Boss Key, ReaderLocator, PageWindow, AutoRead, and
   ReadingSession contracts unchanged; no transparency or mouse-through was
   added.
+
+## M5.6c.3 Windows transparency spike
+
+- Ran a reversible native layered-window probe against the Release runner.
+- The current Flutter child surface does not provide a safe independent
+  background/text alpha path; whole-surface alpha would violate the opacity
+  contract. Production transparency is deferred pending a compositor design.

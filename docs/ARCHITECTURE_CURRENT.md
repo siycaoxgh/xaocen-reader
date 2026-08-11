@@ -1067,3 +1067,13 @@ Window placement remains native registry state: normal bounds are clamped to a
 visible monitor, restored before a saved maximized presentation, and minimized
 state is not persisted. Taskbar/tray recovery and the app-local Boss Key remain
 unchanged; no transparency or mouse-through behavior is introduced.
+
+## M5.6c.3 Windows transparency spike
+
+The Windows Flutter embedder currently exposes an opaque child surface without a
+transparent-surface/compositor configuration. A reversible `WS_EX_LAYERED` /
+`SetLayeredWindowAttributes` probe did not yield a selectively transparent
+Flutter background, and any whole-surface alpha would fade Reader text together
+with its background. The requested independent background/text opacity contract
+is therefore blocked pending a dedicated native compositor design; no production
+transparency path or schema change was introduced.

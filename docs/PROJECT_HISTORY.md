@@ -838,3 +838,12 @@ Boss Key 采用 Flutter 窗口内的左右键同时按下，不安装全局鼠�
   recovery. Taskbar/tray and Boss Key recovery contracts remain intact.
 - Automated validation: 496 Flutter tests, 11 Windows integration files / 14
   scenarios, Windows Release, Android Debug, and `git diff --check` all pass.
+
+## M5.6c.3 — Windows transparency spike
+
+A reversible layered-window probe confirmed that the current Flutter Windows
+child surface does not expose a safe independent background/text alpha channel.
+Whole-window alpha would fade text with the background, so production
+transparency was intentionally stopped and deferred to a future compositor
+design. No production code, schema, ReaderLocator, or Reader rendering contract
+was changed; the 496-test suite and Windows Release build remained green.
