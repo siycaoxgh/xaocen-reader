@@ -846,3 +846,15 @@ The existing Vertical labels were valid UTF-8, but the first Paged-only labels
 were committed as mojibake. Compile success and numeric page tests did not
 catch this. Shared label constants plus exact rendered-string widget tests are
 now required for every new progress presentation.
+
+## M5.6a lessons (2026-08-11)
+
+### PageView focus must be restored after modal controls
+
+`PageView` can keep a text/control focus owner after Aa or TOC closes, and a
+pointer tap on the page does not reliably move focus back to the Reader route.
+In that state Scrollable/default keyboard actions consume PageUp/PageDown/Arrow
+before the configured `ReaderInputRouter` sees them. A route-owned Reader
+`FocusNode`, explicit pointer focus request, and modal-completion restore keep
+all key commands on the semantic router boundary without bypassing the paging
+controller.

@@ -375,7 +375,7 @@ class ReaderChrome extends StatelessWidget {
             timeDisplayMode: timeDisplayMode,
           ),
         chrome,
-        if (autoReadState != AutoReadState.idle)
+        if (visible && autoReadState != AutoReadState.idle)
           ReaderAutoReadStatusBar(
             mode: mode,
             state: autoReadState,
@@ -1786,6 +1786,20 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
           onSelectionChanged: (selection) =>
               _commit(_draft.copyWith(timeDisplayMode: selection.single)),
         ),
+        const SizedBox(height: 6),
+        Text(
+          '时间仅在“阅读器信息栏”模式且底部阅读信息开启时显示。',
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+        if (_draft.timeDisplayMode != ReaderTimeDisplayMode.hidden &&
+            (_draft.statusBarMode != ReaderStatusBarMode.readerInfo ||
+                !_draft.showBottomInfoBar))
+          Text(
+            '当前设置不会显示应用内时间。',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: Theme.of(context).colorScheme.error,
+            ),
+          ),
       ],
     );
   }

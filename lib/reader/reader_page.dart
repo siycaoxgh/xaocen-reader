@@ -224,6 +224,9 @@ class _ReaderPageState extends State<ReaderPage>
   int? _modeRestoreGeneration;
   bool _suppressProgrammaticScrollNotifications = false;
   bool _chromeVisible = true;
+  final FocusNode _pagedInputFocusNode = FocusNode(
+    debugLabel: 'reader-paged-input',
+  );
   ReadingSessionLifecycle? _readingSession;
   bool _sessionStartInFlight = false;
   String? _historyEntryId;
@@ -476,6 +479,18 @@ class _ReaderPageState extends State<ReaderPage>
   void _showChrome() {
     if (_chromeVisible) return;
     setState(() => _chromeVisible = true);
+  }
+
+  /// Restore the Reader-owned keyboard focus after an operation panel closes.
+  /// This keeps Windows bindings on the ReaderInputRouter boundary instead of
+  /// allowing the last modal/text control to retain PageView keyboard focus.
+  void _requestPagedInputFocus() {
+    if (!mounted || _mode != ReaderMode.paged) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _mode == ReaderMode.paged) {
+        _pagedInputFocusNode.requestFocus();
+      }
+    });
   }
 
   void _traceModeTransition(
@@ -778,6 +793,7 @@ class _ReaderPageState extends State<ReaderPage>
     _pagedController = null;
     _controller.dispose();
     _scroll.dispose();
+    _pagedInputFocusNode.dispose();
     unawaited(_inputRouter.dispose());
     unawaited(ReaderInputBridge.deactivate());
     super.dispose();
@@ -1947,20 +1963,22 @@ class _ReaderPageState extends State<ReaderPage>
             onToc: () {
               _showChrome();
               _pauseAutoRead(AutoReadPauseReason.toc);
-              _openToc();
+              unawaited(_openToc());
             },
             onAppearance: () {
               _showChrome();
               _pauseAutoRead(AutoReadPauseReason.settingsPanel);
-              showReaderSettings(
-                context,
-                preferences: _preferences,
-                mode: _mode,
-                onPreferencesCommitted: _commitPreferences,
-                onModeSelected: _selectMode,
-                onResetPreferences: _resetPreferences,
-                onPickBackgroundImage: _pickReaderBackgroundImage,
-                onDeleteBackgroundImage: _deleteReaderBackgroundImage,
+              unawaited(
+                showReaderSettings(
+                  context,
+                  preferences: _preferences,
+                  mode: _mode,
+                  onPreferencesCommitted: _commitPreferences,
+                  onModeSelected: _selectMode,
+                  onResetPreferences: _resetPreferences,
+                  onPickBackgroundImage: _pickReaderBackgroundImage,
+                  onDeleteBackgroundImage: _deleteReaderBackgroundImage,
+                ).whenComplete(_requestPagedInputFocus),
               );
             },
             onMore: () {
@@ -2083,6 +2101,7 @@ class _ReaderPageState extends State<ReaderPage>
           appearance: _appearance,
           inputRouter: _inputRouter,
           onUserNavigation: _pauseAutoReadForManualNavigation,
+          focusNode: _pagedInputFocusNode,
         );
       },
     );
@@ -2353,14 +2372,14 @@ class _ReaderPageState extends State<ReaderPage>
     _scheduleJumpToPendingTarget();
   }
 
-  void _openToc() {
+  Future<void> _openToc() async {
     _pauseAutoRead(AutoReadPauseReason.toc);
     // 当前章节高亮基于真实可见范围顶部（§十一），非上次点击/恢复位置。
     // M4：分页模式基于 confirmed locator（精确 anchor / 翻页后 page.start）。
     final currentTop = _mode == ReaderMode.paged
         ? (_pagedController?.confirmedLocator?.absoluteCharacterOffset ?? 0)
         : _topVisibleCharacterOffset();
-    showModalBottomSheet<void>(
+    await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       builder: (ctx) => _TocSheet(
@@ -2371,6 +2390,7 @@ class _ReaderPageState extends State<ReaderPage>
         onJump: _jumpToChapter,
       ),
     );
+    _requestPagedInputFocus();
   }
 
   Future<void> _jumpToChapter(LibraryTocEntry entry) async {

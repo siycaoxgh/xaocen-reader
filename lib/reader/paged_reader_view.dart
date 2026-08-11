@@ -34,12 +34,17 @@ class PagedReaderView extends StatefulWidget {
     required this.appearance,
     this.inputRouter,
     this.onUserNavigation,
+    this.focusNode,
   });
 
   final PagedReaderController controller;
   final ReaderResolvedAppearance appearance;
   final ReaderInputRouter? inputRouter;
   final VoidCallback? onUserNavigation;
+
+  /// Optional route-owned focus node.  ReaderPage uses this to restore
+  /// shortcut focus after Aa/TOC (or another modal) closes.
+  final FocusNode? focusNode;
 
   @override
   State<PagedReaderView> createState() => _PagedReaderViewState();
@@ -48,7 +53,8 @@ class PagedReaderView extends StatefulWidget {
 class _PagedReaderViewState extends State<PagedReaderView> {
   /// 单一 PageController：整个视图生命周期内只创建/释放一次，绝不重建。
   late PageController _pageController;
-  final FocusNode _focusNode = FocusNode();
+  late FocusNode _focusNode;
+  bool _ownsFocusNode = false;
   final InputBinding _inputBinding = InputBinding.defaults;
   DateTime? _lastWheelTurn;
   bool _userGestureActive = false;
@@ -62,6 +68,9 @@ class _PagedReaderViewState extends State<PagedReaderView> {
   @override
   void initState() {
     super.initState();
+    _focusNode =
+        widget.focusNode ?? FocusNode(debugLabel: 'paged-reader-input');
+    _ownsFocusNode = widget.focusNode == null;
     widget.controller.addListener(_onControllerChanged);
     _pageController = PageController(
       initialPage: widget.controller.window.currentIndex,
@@ -72,8 +81,18 @@ class _PagedReaderViewState extends State<PagedReaderView> {
   void dispose() {
     widget.controller.removeListener(_onControllerChanged);
     _pageController.dispose();
-    _focusNode.dispose();
+    if (_ownsFocusNode) _focusNode.dispose();
     super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(covariant PagedReaderView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.focusNode == widget.focusNode) return;
+    if (_ownsFocusNode) _focusNode.dispose();
+    _focusNode =
+        widget.focusNode ?? FocusNode(debugLabel: 'paged-reader-input');
+    _ownsFocusNode = widget.focusNode == null;
   }
 
   /// 窗口变化（generation++ / select / extend）后保持视觉页：
@@ -161,6 +180,12 @@ class _PagedReaderViewState extends State<PagedReaderView> {
   }
 
   void _onPointerDown(PointerDownEvent event) {
+    // Keep keyboard shortcuts owned by the Reader after a panel/control has
+    // previously taken focus.  PageView itself does not reliably request this
+    // node on a pointer tap, so without an explicit request the next
+    // PageUp/PageDown/arrow event can be consumed by the former control (or
+    // by Scrollable's default actions) instead of reaching ReaderInputRouter.
+    _focusNode.requestFocus();
     widget.onUserNavigation?.call();
     _pointerDownPosition = event.position;
     _userGestureActive = true;

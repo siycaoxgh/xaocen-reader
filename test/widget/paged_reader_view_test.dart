@@ -3,15 +3,19 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:xaocen_reader/data/database/app_database.dart';
 import 'package:xaocen_reader/data/repositories/reading_progress_repository.dart';
+import 'package:xaocen_reader/data/repositories/reader_input_bindings_repository.dart';
 import 'package:xaocen_reader/domain/reader/reader_block.dart';
+import 'package:xaocen_reader/domain/reader/reader_input_bindings.dart';
 import 'package:xaocen_reader/domain/reader/reader_locator.dart';
 import 'package:xaocen_reader/reader/normalized_document_loader.dart';
 import 'package:xaocen_reader/reader/paged_reader_controller.dart';
 import 'package:xaocen_reader/reader/paged_reader_view.dart';
 import 'package:xaocen_reader/reader/reader_appearance.dart';
+import 'package:xaocen_reader/reader/reader_input_router.dart';
 import 'package:xaocen_reader/reader/reader_text_block.dart';
 
 const _style = TextStyle(fontSize: 10, height: 1.0);
@@ -116,6 +120,81 @@ void main() {
     expect(c.currentPage, isNotNull);
     c.dispose();
   });
+
+  testWidgets(
+    'Reader shortcut focus receives bound paging keys before PageView',
+    (tester) async {
+      final c = makeController();
+      c.open(
+        const ReaderLocator(collectionId: 'c1', absoluteCharacterOffset: 0),
+      );
+      final inputRepository = ReaderInputBindingsRepository(db: db);
+      final profile = ReaderInputProfile.defaults(ReaderInputPlatform.windows)
+          .copyWith(
+            bindings: {
+              ReaderInputGesture.single(PhysicalInputId.keyboardPageDown):
+                  ReaderCommand.openToc,
+              ReaderInputGesture.single(PhysicalInputId.keyboardPageUp):
+                  ReaderCommand.openToc,
+              ReaderInputGesture.single(PhysicalInputId.keyboardArrowLeft):
+                  ReaderCommand.openToc,
+              ReaderInputGesture.single(PhysicalInputId.keyboardArrowRight):
+                  ReaderCommand.openToc,
+            },
+            updatedAt: DateTime.now(),
+          );
+      await inputRepository.update(ReaderInputPlatform.windows, profile);
+      var openTocCount = 0;
+      final router = ReaderInputRouter(
+        platform: ReaderInputPlatform.windows,
+        repository: inputRepository,
+        onOpenToc: () => openTocCount++,
+      );
+      await router.start();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 400,
+              height: 600,
+              child: Column(
+                children: [
+                  const SizedBox(
+                    height: 40,
+                    child: TextField(key: Key('steal-focus')),
+                  ),
+                  Expanded(
+                    child: PagedReaderView(
+                      controller: c,
+                      appearance: appearance(),
+                      inputRouter: router,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.tap(find.byKey(const Key('steal-focus')));
+      await tester.tap(find.byType(PageView));
+      for (final key in [
+        LogicalKeyboardKey.pageDown,
+        LogicalKeyboardKey.pageUp,
+        LogicalKeyboardKey.arrowLeft,
+        LogicalKeyboardKey.arrowRight,
+      ]) {
+        await tester.sendKeyEvent(key);
+        await tester.pump();
+      }
+      expect(openTocCount, 4);
+
+      // The repository stream is closed with the test database.
+      c.dispose();
+    },
+  );
 
   testWidgets('2. next：左滑翻到下一页并更新 confirmed', (tester) async {
     final c = makeController();

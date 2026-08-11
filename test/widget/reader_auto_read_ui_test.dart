@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:xaocen_reader/domain/reader/auto_read_controller.dart';
 import 'package:xaocen_reader/domain/reader/auto_read_preferences.dart';
+import 'package:xaocen_reader/domain/reader/reader_preferences.dart';
 import 'package:xaocen_reader/reader/reader_chrome.dart';
 import 'package:xaocen_reader/reader/reader_mode.dart';
 
@@ -146,6 +147,87 @@ void main() {
     expect(stopped, isTrue);
   });
 
+  testWidgets('AutoRead status bar follows Reader Chrome visibility', (
+    tester,
+  ) async {
+    Widget chrome(bool visible) => MaterialApp(
+      home: Scaffold(
+        body: ReaderChrome(
+          visible: visible,
+          title: 'Book',
+          mode: ReaderMode.vertical,
+          onBack: () {},
+          onToc: () {},
+          onAppearance: () {},
+          onMore: () {},
+          onBookmarks: () {},
+          onSearch: () {},
+          onModeSelected: (_) {},
+          onAutoRead: () {},
+          autoReadState: AutoReadState.running,
+          autoReadSpeedPixelsPerSecond: 28,
+          onPauseAutoRead: () {},
+          onStopAutoRead: () {},
+        ),
+      ),
+    );
+
+    await tester.pumpWidget(chrome(false));
+    expect(
+      find.byKey(const Key('reader-auto-read-status-pause')),
+      findsNothing,
+    );
+    await tester.pumpWidget(chrome(true));
+    await tester.pump();
+    expect(
+      find.byKey(const Key('reader-auto-read-status-pause')),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('Reader info clock renders both 24-hour and 12-hour strings', (
+    tester,
+  ) async {
+    Widget info(ReaderTimeDisplayMode mode) => MaterialApp(
+      home: Scaffold(
+        body: ReaderMinimalInfoLayer(
+          mode: ReaderMode.vertical,
+          currentChapterTitle: null,
+          currentChapterNumber: null,
+          chapterProgressPercent: null,
+          chapterPageNumber: null,
+          chapterPageCount: null,
+          progressPercent: .37,
+          showTopInfoBar: false,
+          showBottomInfoBar: true,
+          showProgressInfo: true,
+          statusBarMode: ReaderStatusBarMode.readerInfo,
+          timeDisplayMode: mode,
+        ),
+      ),
+    );
+
+    await tester.pumpWidget(info(ReaderTimeDisplayMode.twentyFourHour));
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is Text &&
+            RegExp(r'^\d{2}:\d{2}$').hasMatch(widget.data ?? ''),
+      ),
+      findsOneWidget,
+    );
+
+    await tester.pumpWidget(info(ReaderTimeDisplayMode.twelveHour));
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is Text &&
+            RegExp(r'^\d{2}:\d{2} (AM|PM)$').hasMatch(widget.data ?? ''),
+      ),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('paged AutoRead sheet exposes interval controls and status', (
     tester,
   ) async {
@@ -187,9 +269,7 @@ void main() {
     await tester.tap(find.byKey(const Key('reader-auto-read-start')));
     await tester.pump();
     expect(
-      find.text(
-        '\u81ea\u52a8\u7ffb\u9875\u4e2d \u00b7 5 \u79d2/\u9875',
-      ),
+      find.text('\u81ea\u52a8\u7ffb\u9875\u4e2d \u00b7 5 \u79d2/\u9875'),
       findsOneWidget,
     );
 
@@ -197,9 +277,7 @@ void main() {
     await tester.pump();
     expect(interval, 15);
     expect(
-      find.text(
-        '\u81ea\u52a8\u7ffb\u9875\u4e2d \u00b7 15 \u79d2/\u9875',
-      ),
+      find.text('\u81ea\u52a8\u7ffb\u9875\u4e2d \u00b7 15 \u79d2/\u9875'),
       findsOneWidget,
     );
 

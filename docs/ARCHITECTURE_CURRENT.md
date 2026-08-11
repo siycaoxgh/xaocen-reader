@@ -1,10 +1,28 @@
 # ARCHITECTURE_CURRENT.md — XAOCEN Reader v4 当前架构与合同
 
-> 只描述当前代码与合同（`feat/m4-horizontal-reader`，M5.5g 完成点，Drift schema 9）。
+> 只描述当前代码与合同（`feat/m4-horizontal-reader`，M5.6a 完成点，Drift schema 9）。
 > 不记录历史故事（见 PROJECT_HISTORY.md）。
 > 代码位置均以本仓库实际文件为准。
 
 ---
+
+## M5.6a P1 regression contracts
+
+`ReaderChrome` renders the AutoRead status actions only while Reader Chrome is
+visible. This is a presentation gate: the AutoRead controller, its generation,
+ReaderLocator, and ReadingSession continue independently while Chrome is hidden.
+
+The Reader info clock keeps the existing `HH:mm` / `hh:mm AM/PM` formatter. It
+is intentionally gated by the Reader information-bar mode and bottom info layer;
+the settings panel now states that dependency and warns when a selected 12/24-hour
+format is not currently visible.
+
+Paged Reader keyboard input uses a route-owned `FocusNode` and the existing
+`ReaderInputRouter`. Pointer entry and completion of Aa/TOC modal routes restore
+that focus before PageUp/PageDown/Arrow dispatch. No keyboard path bypasses the
+router or changes PageWindow, ReaderLocator, AutoRead state, or persistence.
+
+Drift schema remains 9.
 
 ## M5.5g Android edge-to-edge and Reader information contract
 

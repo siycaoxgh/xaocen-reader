@@ -50,6 +50,20 @@ Debug. Android targeted ADB was not run because no device was connected.
 
 ## Unreleased
 
+### M5.6a — P1 regression fixes (2026-08-11)
+
+- AutoRead status actions now follow Reader Chrome visibility; hiding Chrome
+  hides only the status UI while the driver continues running.
+- Added explicit clock visibility guidance for the 12/24-hour Reader info
+  display and rendered coverage for both formats; the existing formatter is
+  unchanged.
+- Restored a Reader-owned paged focus after pointer entry and Aa/TOC modal
+  completion so PageUp/PageDown/Arrow bindings consistently reach
+  `ReaderInputRouter` after controls take focus.
+- Validation: 480 Flutter tests, 14 Windows integration scenarios across the
+  four real TXT corpus (logical error 0), Windows Release, Android Debug, and
+  `git diff --check` all PASS. Drift schema remains 9.
+
 ### M5.5h — Visual polish + final UI audit (2026-08-11)
 - Added shared visual geometry tokens and Material component defaults for cards, dividers,
   buttons, navigation indicators, radius, control height, and touch targets.

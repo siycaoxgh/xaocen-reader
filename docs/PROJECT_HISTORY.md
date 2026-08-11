@@ -6,6 +6,17 @@
 
 ---
 
+## M5.6a P1 regression fixes (2026-08-11)
+
+This patch closed three existing regressions without changing schema 9 or any
+Reader position contract. AutoRead status actions now follow Chrome visibility;
+the clock settings panel explains the Reader-information-bar gate and both 12/24
+rendered formats are covered; and a route-owned paged focus is restored after
+pointer entry and Aa/TOC modal completion so PageUp/PageDown/Arrow bindings reach
+the existing ReaderInputRouter. Full Flutter tests (480), 14 Windows integration
+scenarios, all four real TXT logical-error checks (0), Windows Release, and
+Android Debug passed.
+
 ## 阶段总览
 
 | 阶段 | 目标 | 分支 | Start → End commit | Commits | 版本 | 验证 |
