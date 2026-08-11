@@ -50,6 +50,15 @@ Debug. Android targeted ADB was not run because no device was connected.
 
 ## Unreleased
 
+### M5.5e.6 — Typography system (2026-08-11)
+- Added shared `AppTypography` and `ReaderTypography` contracts with a unified Material 3 type scale,
+  semantic weights, and Windows/Android fallback policy.
+- Reader body keeps the platform default primary font; fallback is shared and included in metrics
+  comparison so future font changes cannot bypass relayout/Locator restore.
+- Removed active shell/Reader UI font-weight/size drift without changing schema or pagination.
+  Validation: 472 Flutter tests, 11 integration files / 14 scenarios, four real TXT logical-error-zero
+  checks, Windows Release, and Android Debug PASS.
+
 ### M5.5e.5 — Aa appearance hierarchy (2026-08-11)
 - Unified Aa categories as `排版布局 / 阅读外观 / 阅读行为 / 高级设置` on both platforms.
 - Clarified Reader color-mode wording, system brightness indicator, dual light/dark palette swatches,

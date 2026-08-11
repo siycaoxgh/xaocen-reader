@@ -16,6 +16,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../design/theme/app_typography.dart';
 import '../domain/reader/reader_palette.dart';
 import '../domain/reader/reader_preferences.dart';
 
@@ -104,9 +105,9 @@ ReaderResolvedAppearance resolveReaderAppearance(
     paletteId: resolvedPreferences?.paletteId ?? paletteId,
     textContrastRatio: textContrast,
     hasLowContrastWarning: textContrast < 4.5,
-    baseTextStyle: TextStyle(
+    baseTextStyle: ReaderTypography.body(
       fontSize: resolvedPreferences?.fontSize ?? fontSize,
-      height: resolvedPreferences?.lineHeight ?? lineHeight,
+      lineHeight: resolvedPreferences?.lineHeight ?? lineHeight,
       letterSpacing: resolvedPreferences?.letterSpacing ?? letterSpacing,
       color: textColor,
     ),

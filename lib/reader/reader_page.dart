@@ -20,6 +20,7 @@ import 'package:flutter/services.dart';
 import 'package:super_sliver_list/super_sliver_list.dart';
 
 import '../design/theme/app_theme.dart';
+import '../design/theme/app_typography.dart';
 import '../data/repositories/reading_progress_repository.dart';
 import '../data/repositories/reader_bookmark_repository.dart';
 import '../data/repositories/reader_preferences_repository.dart';
@@ -2737,7 +2738,7 @@ class _DebugBar extends StatelessWidget {
         '${range?.endCharacterOffset ?? '-'} '
         'phase=${controller.restorePhase.name} '
         'blocks=${controller.blockIndex?.blockCount ?? 0}',
-        style: const TextStyle(fontSize: 11, fontFamily: 'monospace'),
+        style: ReaderTypography.debug,
       ),
     );
   }

@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../design/theme/app_typography.dart';
 import '../domain/reader/reader_bookmark.dart';
 import '../domain/reader/auto_read_controller.dart';
 import '../domain/reader/auto_read_preferences.dart';
@@ -605,7 +606,6 @@ class ReaderAutoReadSheet extends StatelessWidget {
               key: const Key('reader-auto-read-status'),
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                 color: running ? colorScheme.primary : colorScheme.onSurface,
-                fontWeight: FontWeight.w600,
               ),
             ),
             const SizedBox(height: 16),
@@ -1727,10 +1727,8 @@ class _DualPaletteSwatch extends StatelessWidget {
               child: Center(
                 child: Text(
                   'A',
-                  style: TextStyle(
+                  style: ReaderTypography.paletteSwatch(
                     color: Color(palette.light.textArgb),
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ),
@@ -1742,10 +1740,8 @@ class _DualPaletteSwatch extends StatelessWidget {
               child: Center(
                 child: Text(
                   'A',
-                  style: TextStyle(
+                  style: ReaderTypography.paletteSwatch(
                     color: Color(palette.dark.textArgb),
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ),
@@ -1802,15 +1798,14 @@ class _ReaderAppearancePreviewCard extends StatelessWidget {
           children: [
             Text(
               '当前方案预览',
-              style: TextStyle(
+              style: ReaderTypography.previewLabel(
                 color: text.withValues(alpha: .72),
-                fontSize: 11,
               ),
             ),
             const SizedBox(height: 2),
             Text(
               'Aa 读书正文示例 · 正文色 / 背景色',
-              style: TextStyle(color: text, fontSize: 17, height: 1.35),
+              style: ReaderTypography.previewBody(color: text),
             ),
           ],
         ),

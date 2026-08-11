@@ -87,7 +87,6 @@ class _SettingsSectionLabel extends StatelessWidget {
       label,
       style: Theme.of(context).textTheme.labelLarge?.copyWith(
         color: Theme.of(context).colorScheme.primary,
-        fontWeight: FontWeight.w700,
       ),
     ),
   );

@@ -263,11 +263,11 @@ class RecentReadingSection extends ConsumerWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Padding(
+            Padding(
               padding: EdgeInsets.fromLTRB(16, 8, 16, 4),
               child: Text(
                 '最近阅读',
-                style: TextStyle(fontWeight: FontWeight.bold),
+                style: Theme.of(context).textTheme.titleSmall,
               ),
             ),
             ...entries.map(

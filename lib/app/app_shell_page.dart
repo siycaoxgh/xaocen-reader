@@ -271,7 +271,6 @@ class _MeSectionLabel extends StatelessWidget {
       label,
       style: Theme.of(context).textTheme.labelLarge?.copyWith(
         color: Theme.of(context).colorScheme.primary,
-        fontWeight: FontWeight.w700,
       ),
     ),
   );
@@ -293,12 +292,7 @@ class _ShellHeader extends StatelessWidget {
           padding: EdgeInsets.symmetric(horizontal: isDesktop ? 28 : 20),
           child: Align(
             alignment: Alignment.centerLeft,
-            child: Text(
-              title,
-              style: Theme.of(
-                context,
-              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
-            ),
+            child: Text(title, style: Theme.of(context).textTheme.titleLarge),
           ),
         ),
       ),
@@ -326,9 +320,7 @@ class _DesktopSidebar extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(24, 26, 20, 28),
               child: Text(
                 'XAOCEN Reader',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                style: Theme.of(context).textTheme.titleMedium,
               ),
             ),
             for (

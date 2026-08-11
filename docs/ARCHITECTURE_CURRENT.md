@@ -1,10 +1,19 @@
 # ARCHITECTURE_CURRENT.md — XAOCEN Reader v4 当前架构与合同
 
-> 只描述当前代码与合同（`feat/m4-horizontal-reader`，M5.5e.5 完成点，Drift schema 8）。
+> 只描述当前代码与合同（`feat/m4-horizontal-reader`，M5.5e.6 完成点，Drift schema 8）。
 > 不记录历史故事（见 PROJECT_HISTORY.md）。
 > 代码位置均以本仓库实际文件为准。
 
 ---
+
+## M5.5e.6 typography contract
+
+`AppTypography` is the single app-shell type-scale and fallback policy. `ReaderTypography` keeps
+the Reader body primary `fontFamily` unset (platform default) while applying the shared fallback
+list for mixed Chinese/Latin content. Reader text measurement and paint use the same style, and
+`ReaderTextBlock` compares fallback lists as metrics; any future font change therefore follows
+the existing freeze → relayout/repaginate → exact Locator restore contract. No font import,
+system-font enumeration, pagination algorithm change, or schema change is part of this contract.
 
 ## M5.5e.5 Aa appearance hierarchy contract
 

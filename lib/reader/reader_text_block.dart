@@ -131,12 +131,25 @@ class RenderReaderTextBlock extends RenderBox {
       a.fontSize == b.fontSize &&
       a.height == b.height &&
       a.fontFamily == b.fontFamily &&
+      _sameFallback(a.fontFamilyFallback, b.fontFamilyFallback) &&
       a.fontWeight == b.fontWeight &&
       a.fontStyle == b.fontStyle &&
       a.letterSpacing == b.letterSpacing &&
       a.wordSpacing == b.wordSpacing &&
       a.textBaseline == b.textBaseline &&
       a.inherit == b.inherit;
+
+  static bool _sameFallback(List<String>? a, List<String>? b) =>
+      a == null && b == null || a != null && b != null && _sameStrings(a, b);
+
+  static bool _sameStrings(List<String> a, List<String> b) {
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
+  }
+
   int get styleVersion => _styleVersion;
   set styleVersion(int value) {
     if (value != _styleVersion) {

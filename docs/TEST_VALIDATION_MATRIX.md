@@ -1,12 +1,26 @@
 # TEST_VALIDATION_MATRIX.md — XAOCEN Reader v4 验证矩阵
 
-> 状态：M5.5e.5 COMPLETE（`feat/m4-horizontal-reader`，Drift schema 8）；Android 真机按阶段策略另行复核。
+> 状态：M5.5e.6 COMPLETE（`feat/m4-horizontal-reader`，Drift schema 8）；Android 真机按阶段策略另行复核。
 > 自动测试与真人测试分开记录。**Android Debug 构建 PASS ≠ Android 真机 PASS**，两者分别列出。
 > 真人环境：Windows（本机，用户 + 自动化集成测试）；Android 真机 Redmi K60（23013RK75C / mondrian，Android 15 / API 35，无线 adb）。
 
 图例：✅ 通过 · ✅* 通过（用户手动确认） · ➖ 不适用/未执行 · 🔒 回归敏感
 
 ---
+
+## M5.5e.6 — typography consistency
+
+| Validation | Result |
+|---|---|
+| AppTypography shared type scale and semantic weights | PASS |
+| ReaderTypography default primary font + shared fallback | PASS |
+| Reader fallback included in metrics comparison | PASS |
+| App shell / Library / Mine / Settings / Reader Chrome consistency | PASS |
+| Four real TXT pagination logical error | PASS / 0 |
+| Full Flutter unit/contract/widget | 472/472 PASS |
+| Integration | 11 files / 14 scenarios PASS |
+| Windows Release / Android Debug | PASS / PASS |
+| Android real device | NOT-RUN in this coding pass |
 
 ## M5.5e.5 — Aa appearance hierarchy
 

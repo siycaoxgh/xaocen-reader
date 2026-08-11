@@ -770,3 +770,11 @@ Aa 四分类统一为排版布局、阅读外观、阅读行为、高级设置�
 正文/背景预览。Windows 保持固定桌面分类栏与内容区，正文边距使用 2×2 紧凑分组；Android 使用触控友好分类栏和纵向控件。未改变
 ReaderPaletteResolver、schema 8、ReaderLocator、分页、AutoRead 或 Session。470 项 Flutter 测试、
 11 个 integration 文件 / 14 个场景、四个真实 TXT logical error 0、Windows Release 和 Android Debug 全部通过。
+
+## M5.5e.6 — 现有字体体系统一（2026-08-11）
+
+新增 AppTypography / ReaderTypography，统一 App shell、首页、书架、我的、设置与 Reader Chrome 的
+Material 3 type scale、语义权重和跨平台 fallback。Reader 正文仍使用系统默认主字体，fallback 纳入
+ReaderTextBlock metrics 比较，未来字体变化必须经过既有精确保位流程。未改变 schema、分页算法或
+ReaderLocator。472 项 Flutter 测试、11 个 integration 文件 / 14 个场景、4 个真实 TXT logical error 0、
+Windows Release 与 Android Debug 全部通过。

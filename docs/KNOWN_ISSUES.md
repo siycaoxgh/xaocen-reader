@@ -1,11 +1,17 @@
 # KNOWN_ISSUES.md — XAOCEN Reader v4 已知问题清单
 
-> 状态截至 M5.5e.5（`feat/m4-horizontal-reader`，Drift schema 8）。Android 真机按阶段策略另行复核。
+> 状态截至 M5.5e.6（`feat/m4-horizontal-reader`，Drift schema 8）。Android 真机按阶段策略另行复核。
 > 已解决的问题不在此列为 open；「Resolved but regression-sensitive」列出需要持续盯防的已修复项。
 
 ---
 
 ## Current open issues
+
+## M5.5e.6 status (2026-08-11)
+
+- App and Reader typography now use shared type-scale/fallback contracts; Reader primary font remains
+  platform default. No new P1/P2 or pagination regression was found; schema remains 8.
+- Android real-device validation was not run in this coding pass; Android Debug build passed.
 
 ## M5.5e.5 status (2026-08-11)
 

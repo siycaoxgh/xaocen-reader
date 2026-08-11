@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../tokens/app_tokens.dart';
+import 'app_typography.dart';
 
 /// 应用主题入口 —— M0 建立基础主题，V3 统一 UI 原型后续单独落地。
 ///
@@ -15,11 +16,13 @@ abstract final class AppTheme {
       onSurface: AppTokens.onSurface,
       outline: AppTokens.outline,
     );
-    return ThemeData(
+    final theme = ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
       scaffoldBackgroundColor: AppTokens.background,
+      fontFamilyFallback: AppTypography.fontFamilyFallback,
     );
+    return theme.copyWith(textTheme: AppTypography.textTheme(theme.textTheme));
   }
 
   static ThemeData light() {
@@ -31,10 +34,12 @@ abstract final class AppTheme {
       onSurface: AppTokens.lightOnSurface,
       outline: AppTokens.lightOutline,
     );
-    return ThemeData(
+    final theme = ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
       scaffoldBackgroundColor: AppTokens.lightBackground,
+      fontFamilyFallback: AppTypography.fontFamilyFallback,
     );
+    return theme.copyWith(textTheme: AppTypography.textTheme(theme.textTheme));
   }
 }
