@@ -95,16 +95,16 @@ class ReaderSettingsPage extends StatelessWidget {
   }
 }
 
-class WindowsShellSettingsPage extends ConsumerStatefulWidget {
-  const WindowsShellSettingsPage({super.key});
+class LegacyWindowsShellSettingsPage extends ConsumerStatefulWidget {
+  const LegacyWindowsShellSettingsPage({super.key});
 
   @override
-  ConsumerState<WindowsShellSettingsPage> createState() =>
-      _WindowsShellSettingsPageState();
+  ConsumerState<LegacyWindowsShellSettingsPage> createState() =>
+      _LegacyWindowsShellSettingsPageState();
 }
 
-class _WindowsShellSettingsPageState
-    extends ConsumerState<WindowsShellSettingsPage> {
+class _LegacyWindowsShellSettingsPageState
+    extends ConsumerState<LegacyWindowsShellSettingsPage> {
   late final WindowsShellPreferencesRepository _repository = ref.read(
     windowsShellPreferencesRepositoryProvider,
   );
@@ -233,6 +233,357 @@ class _WindowsShellSettingsPageState
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class WindowsShellSettingsPage extends ConsumerStatefulWidget {
+  const WindowsShellSettingsPage({super.key});
+
+  @override
+  ConsumerState<WindowsShellSettingsPage> createState() =>
+      _WindowsShellSettingsPageState();
+}
+
+class _WindowsShellSettingsPageState
+    extends ConsumerState<WindowsShellSettingsPage> {
+  late final WindowsShellPreferencesRepository _repository = ref.read(
+    windowsShellPreferencesRepositoryProvider,
+  );
+  WindowsShellPreferences _preferences = WindowsShellPreferences.defaults;
+  StreamSubscription<WindowsShellPreferences>? _subscription;
+  late final FocusNode _captureFocus = FocusNode(
+    debugLabel: 'boss-key-capture',
+  );
+  bool _capturing = false;
+  WindowsBossKeyGesture? _candidate;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_load());
+    _subscription = _repository.watch().listen((value) {
+      if (mounted) setState(() => _preferences = value);
+      unawaited(WindowsShellBridge.apply(value));
+    });
+  }
+
+  Future<void> _load() async {
+    final value = await _repository.load();
+    if (!mounted) return;
+    setState(() => _preferences = value);
+    unawaited(WindowsShellBridge.apply(value));
+  }
+
+  @override
+  void dispose() {
+    final subscription = _subscription;
+    if (subscription != null) unawaited(subscription.cancel());
+    WindowsShellBridge.setCaptureActive(false);
+    _captureFocus.dispose();
+    super.dispose();
+  }
+
+  Future<void> _setVisibility({bool? taskbar, bool? tray}) async {
+    final nextTaskbar = taskbar ?? _preferences.showTaskbarIcon;
+    final nextTray = tray ?? _preferences.showTrayIcon;
+    try {
+      final value = await _repository.update(
+        showTaskbarIcon: nextTaskbar,
+        showTrayIcon: nextTray,
+      );
+      if (mounted) setState(() => _preferences = value);
+      await WindowsShellBridge.apply(value);
+    } on WindowsShellVisibilityException {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('至少保留任务栏或托盘中的一个入口。')));
+    }
+  }
+
+  Future<void> _setBossEnabled(bool enabled) async {
+    final value = await _repository.updateBossKey(
+      enabled: enabled,
+      gesture: _preferences.bossKeyGesture,
+    );
+    if (!mounted) return;
+    setState(() => _preferences = value);
+    await WindowsShellBridge.apply(value);
+  }
+
+  void _startCapture() {
+    setState(() {
+      _capturing = true;
+      _candidate = null;
+    });
+    WindowsShellBridge.setCaptureActive(true);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _capturing) _captureFocus.requestFocus();
+    });
+  }
+
+  void _cancelCapture() {
+    WindowsShellBridge.setCaptureActive(false);
+    if (!mounted) return;
+    setState(() {
+      _capturing = false;
+      _candidate = null;
+    });
+  }
+
+  void _retryCapture() {
+    if (!mounted) return;
+    setState(() => _candidate = null);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _capturing) _captureFocus.requestFocus();
+    });
+  }
+
+  KeyEventResult _captureKey(FocusNode node, KeyEvent event) {
+    if (!_capturing) return KeyEventResult.ignored;
+    if (event is KeyUpEvent || event is KeyRepeatEvent) {
+      return KeyEventResult.handled;
+    }
+    if (event is! KeyDownEvent) return KeyEventResult.handled;
+    if (event.logicalKey == LogicalKeyboardKey.escape) {
+      _cancelCapture();
+      return KeyEventResult.handled;
+    }
+    final key = windowsShellKeyForLogicalKey(event.logicalKey);
+    if (key == null) return KeyEventResult.handled;
+    final modifiers = <WindowsShellModifier>{
+      if (HardwareKeyboard.instance.isControlPressed) WindowsShellModifier.ctrl,
+      if (HardwareKeyboard.instance.isAltPressed) WindowsShellModifier.alt,
+      if (HardwareKeyboard.instance.isShiftPressed) WindowsShellModifier.shift,
+    };
+    setState(
+      () => _candidate = WindowsBossKeyGesture.keyboard(
+        key,
+        modifiers: modifiers,
+      ),
+    );
+    return KeyEventResult.handled;
+  }
+
+  void _capturePointer(PointerEvent event) {
+    if (!_capturing || event is! PointerDownEvent) return;
+    final left = event.buttons & kPrimaryMouseButton != 0;
+    final right = event.buttons & kSecondaryMouseButton != 0;
+    if (left && right) {
+      setState(() => _candidate = const WindowsBossKeyGesture.mouseChord());
+    }
+  }
+
+  Future<void> _confirmCapture() async {
+    final candidate = _candidate;
+    if (candidate == null) return;
+    if (candidate.isKeyboard && candidate.primaryKey != null) {
+      final input = PhysicalInputId.parse(candidate.primaryKey!.id);
+      if (input != null) {
+        final profile = await ref
+            .read(readerInputBindingsRepositoryProvider)
+            .load(ReaderInputPlatform.windows);
+        final readerGesture = ReaderInputGesture(
+          primaryInput: input,
+          modifiers: candidate.modifiers.map(
+            (modifier) => switch (modifier) {
+              WindowsShellModifier.ctrl => ReaderInputModifier.ctrl,
+              WindowsShellModifier.alt => ReaderInputModifier.alt,
+              WindowsShellModifier.shift => ReaderInputModifier.shift,
+            },
+          ),
+        );
+        final conflicting = profile.commandFor(readerGesture);
+        if (conflicting != null) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('该按键已绑定阅读操作：${commandLabel(conflicting)}'),
+              ),
+            );
+          }
+          return;
+        }
+      }
+    }
+    final value = await _repository.updateBossKey(
+      enabled: true,
+      gesture: candidate,
+    );
+    if (!mounted) return;
+    setState(() => _preferences = value);
+    await WindowsShellBridge.apply(value);
+    _cancelCapture();
+    if (!mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('\u2713 老板键已保存：${candidate.label}')));
+  }
+
+  Future<void> _reset() async {
+    final value = await _repository.resetToDefaults();
+    if (!mounted) return;
+    setState(() => _preferences = value);
+    await WindowsShellBridge.apply(value);
+    if (!mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('已恢复 Windows 默认设置。')));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final desktop = MediaQuery.sizeOf(context).width >= 720;
+    return Scaffold(
+      appBar: AppBar(title: const Text('窗口、托盘与老板键')),
+      body: Focus(
+        focusNode: _captureFocus,
+        onKeyEvent: _captureKey,
+        child: Listener(
+          onPointerDown: _capturePointer,
+          child: Center(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: desktop ? 720 : double.infinity,
+              ),
+              child: ListView(
+                padding: EdgeInsets.fromLTRB(
+                  desktop ? 32 : 16,
+                  20,
+                  desktop ? 32 : 16,
+                  32,
+                ),
+                children: [
+                  Text(
+                    'Windows 窗口入口',
+                    style: Theme.of(context).textTheme.headlineSmall,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '至少保留任务栏或托盘中的一个入口，避免隐藏窗口后无法找回。',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Card(
+                    child: Column(
+                      children: [
+                        SwitchListTile.adaptive(
+                          title: const Text('显示任务栏图标'),
+                          value: _preferences.showTaskbarIcon,
+                          onChanged: (value) =>
+                              unawaited(_setVisibility(taskbar: value)),
+                        ),
+                        const Divider(height: 1),
+                        SwitchListTile.adaptive(
+                          title: const Text('显示托盘图标'),
+                          subtitle: const Text('关闭窗口时可隐藏到托盘'),
+                          value: _preferences.showTrayIcon,
+                          onChanged: (value) =>
+                              unawaited(_setVisibility(tray: value)),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Card(
+                    child: Column(
+                      children: [
+                        SwitchListTile.adaptive(
+                          title: const Text('启用老板键'),
+                          subtitle: Text(
+                            '当前绑定：${_preferences.bossKeyGesture.label}',
+                          ),
+                          value: _preferences.bossKeyEnabled,
+                          onChanged: (value) =>
+                              unawaited(_setBossEnabled(value)),
+                        ),
+                        const Divider(height: 1),
+                        ListTile(
+                          title: const Text('当前绑定'),
+                          subtitle: Text(_preferences.bossKeyGesture.label),
+                          trailing: OutlinedButton(
+                            onPressed: _capturing ? null : _startCapture,
+                            child: const Text('修改绑定'),
+                          ),
+                        ),
+                        if (_capturing)
+                          _BossKeyCapturePanel(
+                            candidate: _candidate,
+                            onConfirm: _confirmCapture,
+                            onRetry: _retryCapture,
+                            onCancel: _cancelCapture,
+                          ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  OutlinedButton.icon(
+                    onPressed: () => unawaited(_reset()),
+                    icon: const Icon(Icons.restore),
+                    label: const Text('恢复 Windows 默认设置'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _BossKeyCapturePanel extends StatelessWidget {
+  const _BossKeyCapturePanel({
+    required this.candidate,
+    required this.onConfirm,
+    required this.onRetry,
+    required this.onCancel,
+  });
+  final WindowsBossKeyGesture? candidate;
+  final VoidCallback onConfirm;
+  final VoidCallback onRetry;
+  final VoidCallback onCancel;
+
+  @override
+  Widget build(BuildContext context) {
+    final waiting = candidate == null;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          border: Border.all(
+            color: Theme.of(context).colorScheme.primary,
+            width: 2,
+          ),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              waiting ? '正在等待输入……' : '检测到：${candidate!.label}',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 6),
+            Text(waiting ? '请按一个键或同时按下鼠标左右键。Esc 取消。' : '确认后才会保存老板键绑定。'),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              children: [
+                if (!waiting)
+                  FilledButton(onPressed: onConfirm, child: const Text('确认绑定')),
+                OutlinedButton(onPressed: onRetry, child: const Text('重新输入')),
+                TextButton(onPressed: onCancel, child: const Text('取消')),
+              ],
+            ),
+          ],
         ),
       ),
     );
@@ -509,6 +860,25 @@ class _ReaderInputSettingsPageState
                       children: [
                         _PlatformHeader(platform: _platform),
                         const SizedBox(height: 12),
+                        if (_platform == ReaderInputPlatform.windows)
+                          Card(
+                            child: ListTile(
+                              leading: const Icon(
+                                Icons.visibility_off_outlined,
+                              ),
+                              title: const Text('老板键'),
+                              subtitle: const Text('窗口与托盘设置中的应用内隐藏窗口快捷键'),
+                              trailing: const Icon(Icons.chevron_right),
+                              onTap: () => Navigator.of(context).push(
+                                MaterialPageRoute<void>(
+                                  builder: (_) =>
+                                      const WindowsShellSettingsPage(),
+                                ),
+                              ),
+                            ),
+                          ),
+                        if (_platform == ReaderInputPlatform.windows)
+                          const SizedBox(height: 8),
                         if (_platform == ReaderInputPlatform.android)
                           for (final input in PhysicalInputId.androidInputs)
                             _AndroidInputSection(

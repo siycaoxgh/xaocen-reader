@@ -15,6 +15,7 @@ final class WindowsShellBridge {
 
   static const MethodChannel _channel = MethodChannel('xaocen/windows_shell');
   static WindowsShellPreferences? currentPreferences;
+  static bool captureActive = false;
 
   static bool get supported => Platform.isWindows;
 
@@ -66,6 +67,8 @@ final class WindowsShellBridge {
       return false;
     }
   }
+
+  static void setCaptureActive(bool value) => captureActive = value;
 }
 
 /// App-local left+right mouse chord recognizer. It is intentionally scoped to
@@ -81,11 +84,43 @@ final class BossKeyTracker {
     _triggered = false;
   }
 
-  bool update({required bool left, required bool right}) {
+  bool updateMouse(
+    WindowsBossKeyGesture gesture, {
+    required bool left,
+    required bool right,
+  }) {
+    if (!gesture.mouseChord) {
+      clear();
+      return false;
+    }
     _leftDown = left;
     _rightDown = right;
     if (!_leftDown || !_rightDown) {
       _triggered = false;
+      return false;
+    }
+    if (_triggered) return false;
+    _triggered = true;
+    return true;
+  }
+
+  /// Compatibility helper for existing shell contract tests. Runtime code
+  /// always supplies the persisted gesture to [updateMouse].
+  bool update({required bool left, required bool right}) => updateMouse(
+    const WindowsBossKeyGesture.mouseChord(),
+    left: left,
+    right: right,
+  );
+
+  bool updateKeyboard(
+    WindowsBossKeyGesture gesture, {
+    required WindowsShellKey key,
+    required Set<WindowsShellModifier> modifiers,
+  }) {
+    if (!gesture.isKeyboard ||
+        gesture.primaryKey != key ||
+        gesture.modifiers.length != modifiers.length ||
+        !gesture.modifiers.containsAll(modifiers)) {
       return false;
     }
     if (_triggered) return false;
@@ -127,14 +162,51 @@ class _WindowsShellHostState extends ConsumerState<WindowsShellHost> {
 
   void _onPointer(PointerEvent event) {
     if (!Platform.isWindows) return;
+    if (WindowsShellBridge.captureActive) return;
     final buttons = event.buttons;
     final left = buttons & kPrimaryMouseButton != 0;
     final right = buttons & kSecondaryMouseButton != 0;
-    if (!_tracker.update(left: left, right: right)) return;
     final preferences = WindowsShellBridge.currentPreferences ?? _preferences;
+    final gesture = preferences?.bossKeyGesture;
+    if (preferences?.bossKeyEnabled != true || gesture == null) return;
+    if (!_tracker.updateMouse(gesture, left: left, right: right)) return;
     if (preferences?.showTrayIcon == true) {
       unawaited(WindowsShellBridge.hideWindow());
     }
+  }
+
+  KeyEventResult _onKeyEvent(FocusNode node, KeyEvent event) {
+    if (!Platform.isWindows || WindowsShellBridge.captureActive) {
+      return KeyEventResult.ignored;
+    }
+    if (event is KeyUpEvent || event is KeyRepeatEvent) {
+      _tracker.clear();
+      return KeyEventResult.ignored;
+    }
+    if (event is! KeyDownEvent) return KeyEventResult.ignored;
+    final preferences = WindowsShellBridge.currentPreferences ?? _preferences;
+    if (preferences?.bossKeyEnabled != true) return KeyEventResult.ignored;
+    final key = windowsShellKeyForLogicalKey(event.logicalKey);
+    if (key == null) return KeyEventResult.ignored;
+    final modifiers = <WindowsShellModifier>{
+      if (HardwareKeyboard.instance.isControlPressed) WindowsShellModifier.ctrl,
+      if (HardwareKeyboard.instance.isAltPressed) WindowsShellModifier.alt,
+      if (HardwareKeyboard.instance.isShiftPressed) WindowsShellModifier.shift,
+    };
+    if (!_tracker.updateKeyboard(
+      preferences!.bossKeyGesture,
+      key: key,
+      modifiers: modifiers,
+    )) {
+      return KeyEventResult.ignored;
+    }
+    // Native hide-to-tray is the only recovery-safe hidden state. A visible
+    // taskbar entry cannot recover a window after SW_HIDE removes it.
+    if (preferences.showTrayIcon) {
+      unawaited(WindowsShellBridge.hideWindow());
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
   }
 
   @override
@@ -148,6 +220,10 @@ class _WindowsShellHostState extends ConsumerState<WindowsShellHost> {
     if (!Platform.isWindows) return widget.child;
     return Focus(
       canRequestFocus: false,
+      onKeyEvent: _onKeyEvent,
+      onFocusChange: (focused) {
+        if (!focused) _tracker.clear();
+      },
       child: Listener(
         behavior: HitTestBehavior.translucent,
         onPointerDown: _onPointer,
@@ -158,3 +234,54 @@ class _WindowsShellHostState extends ConsumerState<WindowsShellHost> {
     );
   }
 }
+
+WindowsShellKey? windowsShellKeyForLogicalKey(LogicalKeyboardKey key) =>
+    switch (key) {
+      LogicalKeyboardKey.keyA => WindowsShellKey.keyA,
+      LogicalKeyboardKey.keyB => WindowsShellKey.keyB,
+      LogicalKeyboardKey.keyC => WindowsShellKey.keyC,
+      LogicalKeyboardKey.keyD => WindowsShellKey.keyD,
+      LogicalKeyboardKey.keyE => WindowsShellKey.keyE,
+      LogicalKeyboardKey.keyF => WindowsShellKey.keyF,
+      LogicalKeyboardKey.keyG => WindowsShellKey.keyG,
+      LogicalKeyboardKey.keyH => WindowsShellKey.keyH,
+      LogicalKeyboardKey.keyI => WindowsShellKey.keyI,
+      LogicalKeyboardKey.keyJ => WindowsShellKey.keyJ,
+      LogicalKeyboardKey.keyK => WindowsShellKey.keyK,
+      LogicalKeyboardKey.keyL => WindowsShellKey.keyL,
+      LogicalKeyboardKey.keyM => WindowsShellKey.keyM,
+      LogicalKeyboardKey.keyN => WindowsShellKey.keyN,
+      LogicalKeyboardKey.keyO => WindowsShellKey.keyO,
+      LogicalKeyboardKey.keyP => WindowsShellKey.keyP,
+      LogicalKeyboardKey.keyQ => WindowsShellKey.keyQ,
+      LogicalKeyboardKey.keyR => WindowsShellKey.keyR,
+      LogicalKeyboardKey.keyS => WindowsShellKey.keyS,
+      LogicalKeyboardKey.keyT => WindowsShellKey.keyT,
+      LogicalKeyboardKey.keyU => WindowsShellKey.keyU,
+      LogicalKeyboardKey.keyV => WindowsShellKey.keyV,
+      LogicalKeyboardKey.keyW => WindowsShellKey.keyW,
+      LogicalKeyboardKey.keyX => WindowsShellKey.keyX,
+      LogicalKeyboardKey.keyY => WindowsShellKey.keyY,
+      LogicalKeyboardKey.keyZ => WindowsShellKey.keyZ,
+      LogicalKeyboardKey.digit0 => WindowsShellKey.digit0,
+      LogicalKeyboardKey.digit1 => WindowsShellKey.digit1,
+      LogicalKeyboardKey.digit2 => WindowsShellKey.digit2,
+      LogicalKeyboardKey.digit3 => WindowsShellKey.digit3,
+      LogicalKeyboardKey.digit4 => WindowsShellKey.digit4,
+      LogicalKeyboardKey.digit5 => WindowsShellKey.digit5,
+      LogicalKeyboardKey.digit6 => WindowsShellKey.digit6,
+      LogicalKeyboardKey.digit7 => WindowsShellKey.digit7,
+      LogicalKeyboardKey.digit8 => WindowsShellKey.digit8,
+      LogicalKeyboardKey.digit9 => WindowsShellKey.digit9,
+      LogicalKeyboardKey.arrowUp => WindowsShellKey.arrowUp,
+      LogicalKeyboardKey.arrowDown => WindowsShellKey.arrowDown,
+      LogicalKeyboardKey.arrowLeft => WindowsShellKey.arrowLeft,
+      LogicalKeyboardKey.arrowRight => WindowsShellKey.arrowRight,
+      LogicalKeyboardKey.pageUp => WindowsShellKey.pageUp,
+      LogicalKeyboardKey.pageDown => WindowsShellKey.pageDown,
+      LogicalKeyboardKey.home => WindowsShellKey.home,
+      LogicalKeyboardKey.end => WindowsShellKey.end,
+      LogicalKeyboardKey.space => WindowsShellKey.space,
+      LogicalKeyboardKey.enter => WindowsShellKey.enter,
+      _ => null,
+    };

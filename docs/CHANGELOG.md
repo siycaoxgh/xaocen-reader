@@ -95,6 +95,15 @@ Debug. Android targeted ADB was not run because no device was connected.
   four real TXT corpus (logical error 0), Windows Release, Android Debug, and
   `git diff --check` all PASS. Drift schema remains 9.
 
+## M5.6c.1.1 Windows Boss Key customization
+
+- Added a typed Windows shell Boss Key profile in `app_settings`, with explicit
+  enable/disable state and canonical keyboard or left+right mouse gestures.
+- Added focused capture with candidate/confirm/retry/cancel states and conflict
+  rejection against existing Windows Reader bindings.
+- Version-1 shell settings migrate without dropping taskbar/tray values; schema
+  remains 10 and Reader contracts are unchanged.
+
 ### M5.5h — Visual polish + final UI audit (2026-08-11)
 - Added shared visual geometry tokens and Material component defaults for cards, dividers,
   buttons, navigation indicators, radius, control height, and touch targets.

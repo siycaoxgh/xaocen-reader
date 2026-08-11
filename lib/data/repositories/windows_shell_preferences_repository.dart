@@ -26,16 +26,40 @@ final class WindowsShellPreferencesRepository {
   Future<WindowsShellPreferences> update({
     required bool showTaskbarIcon,
     required bool showTrayIcon,
+    bool? bossKeyEnabled,
+    WindowsBossKeyGesture? bossKeyGesture,
   }) async {
     if (!showTaskbarIcon && !showTrayIcon) {
       throw const WindowsShellVisibilityException();
     }
+    final current = await load();
     final next = WindowsShellPreferences(
       showTaskbarIcon: showTaskbarIcon,
       showTrayIcon: showTrayIcon,
+      bossKeyEnabled: bossKeyEnabled ?? current.bossKeyEnabled,
+      bossKeyGesture: bossKeyGesture ?? current.bossKeyGesture,
       version: WindowsShellPreferences.currentVersion,
       updatedAt: DateTime.now().toUtc(),
     );
+    return _write(next);
+  }
+
+  Future<WindowsShellPreferences> updateBossKey({
+    required bool enabled,
+    required WindowsBossKeyGesture gesture,
+  }) async {
+    final current = await load();
+    return _write(
+      current.copyWith(
+        bossKeyEnabled: enabled,
+        bossKeyGesture: gesture,
+        version: WindowsShellPreferences.currentVersion,
+        updatedAt: DateTime.now().toUtc(),
+      ),
+    );
+  }
+
+  Future<WindowsShellPreferences> _write(WindowsShellPreferences next) async {
     await _db
         .into(_db.appSettings)
         .insertOnConflictUpdate(
@@ -57,6 +81,8 @@ final class WindowsShellPreferencesRepository {
     'version': preferences.version,
     'showTaskbarIcon': preferences.showTaskbarIcon,
     'showTrayIcon': preferences.showTrayIcon,
+    'bossKeyEnabled': preferences.bossKeyEnabled,
+    'bossKeyGesture': preferences.bossKeyGesture.toJson(),
     'updatedAt': preferences.updatedAt.toUtc().toIso8601String(),
   };
 
@@ -74,10 +100,18 @@ final class WindowsShellPreferencesRepository {
       if (taskbar is! bool || tray is! bool || (!taskbar && !tray)) {
         return WindowsShellPreferences.defaults;
       }
+      // Version 1 did not have Boss Key fields. Preserve visibility settings
+      // and migrate the previous fixed left+right chord deterministically.
+      final bossEnabled = decoded['bossKeyEnabled'];
+      final bossGesture = WindowsBossKeyGesture.parse(
+        decoded['bossKeyGesture'],
+      );
       return WindowsShellPreferences(
         showTaskbarIcon: taskbar,
         showTrayIcon: tray,
-        version: version,
+        bossKeyEnabled: bossEnabled is bool ? bossEnabled : true,
+        bossKeyGesture: bossGesture ?? const WindowsBossKeyGesture.mouseChord(),
+        version: WindowsShellPreferences.currentVersion,
         updatedAt: _parseDate(decoded['updatedAt']) ?? DateTime.now().toUtc(),
       );
     } catch (_) {

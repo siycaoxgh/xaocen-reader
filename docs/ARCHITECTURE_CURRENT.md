@@ -136,6 +136,16 @@ chapter title/number, chapter percentage, and the existing whole-book
 percentage. No-chapter documents show `全文`; paged layout and schema 6 are
 unchanged.
 
+## M5.6c.1.1 Windows Boss Key customization
+
+`WindowsBossKeyGesture` is a typed, app-local Windows shell gesture, separate
+from `ReaderCommand`. `WindowsShellPreferencesRepository` persists its
+canonical keyboard or left+right mouse representation alongside taskbar/tray
+settings in `app_settings`; schema remains 10. Capture is focused and
+candidate-based, and Reader shortcut conflicts are rejected before persistence.
+Boss Key hiding remains tray-recovery guarded, with no global hook and no
+changes to ReaderLocator, pagination, AutoRead, or ReadingSession.
+
 ## 1. Runtime content chain
 
 ```

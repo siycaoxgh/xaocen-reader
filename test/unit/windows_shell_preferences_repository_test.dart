@@ -22,6 +22,9 @@ void main() {
     expect(value.showTaskbarIcon, isTrue);
     expect(value.showTrayIcon, isFalse);
     expect(value.hasRecoveryEntry, isTrue);
+    expect(value.bossKeyEnabled, isTrue);
+    expect(value.bossKeyGesture.mouseChord, isTrue);
+    expect(value.version, WindowsShellPreferences.currentVersion);
   });
 
   test('updates and reloads typed shell preferences', () async {
@@ -30,6 +33,75 @@ void main() {
     expect(reloaded.showTaskbarIcon, isFalse);
     expect(reloaded.showTrayIcon, isTrue);
   });
+
+  test(
+    'custom keyboard gesture and disabled state persist canonically',
+    () async {
+      final gesture = WindowsBossKeyGesture.keyboard(
+        WindowsShellKey.pageDown,
+        modifiers: [WindowsShellModifier.ctrl, WindowsShellModifier.shift],
+      );
+      await repository.updateBossKey(enabled: true, gesture: gesture);
+      expect((await repository.load()).bossKeyGesture, gesture);
+      await repository.updateBossKey(enabled: false, gesture: gesture);
+      final disabled = await repository.load();
+      expect(disabled.bossKeyEnabled, isFalse);
+      expect(
+        disabled.bossKeyGesture.canonicalKey,
+        'ctrl+shift+keyboard.pageDown',
+      );
+    },
+  );
+
+  test('version one shell JSON migrates to default mouse chord', () async {
+    await db
+        .into(db.appSettings)
+        .insertOnConflictUpdate(
+          AppSettingsCompanion.insert(
+            key: 'windows.shell.preferences.v1',
+            value: jsonEncode({
+              'version': 1,
+              'showTaskbarIcon': false,
+              'showTrayIcon': true,
+            }),
+            updatedAt: DateTime.now(),
+          ),
+        );
+    final value = await repository.load();
+    expect(value.showTaskbarIcon, isFalse);
+    expect(value.showTrayIcon, isTrue);
+    expect(value.bossKeyEnabled, isTrue);
+    expect(value.bossKeyGesture.mouseChord, isTrue);
+    expect(value.version, 2);
+  });
+
+  test(
+    'invalid gesture falls back without dropping visibility settings',
+    () async {
+      await db
+          .into(db.appSettings)
+          .insertOnConflictUpdate(
+            AppSettingsCompanion.insert(
+              key: 'windows.shell.preferences.v1',
+              value: jsonEncode({
+                'version': 2,
+                'showTaskbarIcon': false,
+                'showTrayIcon': true,
+                'bossKeyEnabled': true,
+                'bossKeyGesture': {
+                  'type': 'keyboard',
+                  'primary': 'keyboard.winKey',
+                  'modifiers': [],
+                },
+              }),
+              updatedAt: DateTime.now(),
+            ),
+          );
+      final value = await repository.load();
+      expect(value.showTrayIcon, isTrue);
+      expect(value.bossKeyGesture.mouseChord, isTrue);
+    },
+  );
 
   test('rejects disabling both recovery entries', () async {
     expect(
@@ -79,5 +151,42 @@ void main() {
     expect(tracker.update(left: true, right: true), isTrue);
     tracker.clear();
     expect(tracker.update(left: true, right: true), isTrue);
+  });
+
+  test('boss key keyboard gesture requires primary and exact modifiers', () {
+    final tracker = BossKeyTracker();
+    final gesture = WindowsBossKeyGesture.keyboard(
+      WindowsShellKey.keyB,
+      modifiers: [WindowsShellModifier.ctrl],
+    );
+    expect(
+      tracker.updateKeyboard(
+        gesture,
+        key: WindowsShellKey.keyB,
+        modifiers: {WindowsShellModifier.shift},
+      ),
+      isFalse,
+    );
+    expect(
+      tracker.updateKeyboard(
+        gesture,
+        key: WindowsShellKey.keyB,
+        modifiers: {WindowsShellModifier.ctrl},
+      ),
+      isTrue,
+    );
+    expect(
+      tracker.updateKeyboard(
+        gesture,
+        key: WindowsShellKey.keyB,
+        modifiers: {WindowsShellModifier.ctrl},
+      ),
+      isFalse,
+    );
+    tracker.clear();
+    expect(
+      tracker.updateKeyboard(gesture, key: WindowsShellKey.keyB, modifiers: {}),
+      isFalse,
+    );
   });
 }
