@@ -52,6 +52,13 @@ void main() {
 
   tearDown(() => db.close());
 
+  for (final interval in <int>[5, 30, 120]) {
+    test('paged auto-read accepts ${interval}s/page preference', () {
+      final preferences = AutoReadPreferences(pagedIntervalSeconds: interval);
+      expect(preferences.pagedIntervalSeconds, interval);
+    });
+  }
+
   PagedReaderController makeReader({int characters = 60000}) {
     final text = ('一段用于分页自动阅读验证的正文。' * characters);
     final document = NormalizedDocument(

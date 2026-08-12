@@ -8,6 +8,7 @@ Widget _host({
   required bool top,
   required bool bottom,
   required bool divider,
+  bool showInfoContent = true,
   bool? topDivider,
   bool? bottomDivider,
   EdgeInsets padding = EdgeInsets.zero,
@@ -33,6 +34,7 @@ Widget _host({
           showClockInfo: false,
           showWholeBookProgressInfo: true,
           showInfoDivider: divider,
+          showInfoContent: showInfoContent,
           showTopInfoDivider: topDivider,
           showBottomInfoDivider: bottomDivider,
           chapterInfoSlot: ReaderInfoSlot.topLeft,
@@ -85,6 +87,20 @@ void main() {
     expect(hidden, shown);
   });
 
+  testWidgets('Chrome visibility does not change reserved body geometry', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _host(top: true, bottom: true, divider: true, showInfoContent: true),
+    );
+    final shown = tester.getRect(find.byKey(const Key('reader-body')));
+    await tester.pumpWidget(
+      _host(top: true, bottom: true, divider: true, showInfoContent: false),
+    );
+    final hidden = tester.getRect(find.byKey(const Key('reader-body')));
+    expect(hidden, shown);
+  });
+
   testWidgets('top and bottom dividers are independent', (tester) async {
     await tester.pumpWidget(
       _host(
@@ -116,5 +132,28 @@ void main() {
         .color;
     expect(topColor, Colors.transparent);
     expect(bottomColor, isNot(Colors.transparent));
+  });
+
+  testWidgets('divider visibility keeps fixed one-physical-pixel geometry', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _host(top: true, bottom: true, divider: false, padding: EdgeInsets.zero),
+    );
+    final body = tester.getRect(find.byKey(const Key('reader-body')));
+    final top = tester.getRect(find.byKey(readerTopInfoDividerKey));
+    final bottom = tester.getRect(find.byKey(readerBottomInfoDividerKey));
+    expect(
+      top.height,
+      greaterThanOrEqualTo(1 / tester.view.devicePixelRatio),
+    );
+    expect(
+      bottom.height,
+      greaterThanOrEqualTo(1 / tester.view.devicePixelRatio),
+    );
+    expect(top.height, lessThanOrEqualTo(1));
+    expect(bottom.height, lessThanOrEqualTo(1));
+    expect(top.bottom, lessThanOrEqualTo(body.top));
+    expect(body.bottom, lessThanOrEqualTo(bottom.top));
   });
 }

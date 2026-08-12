@@ -102,10 +102,15 @@ final class ReaderTypographyLayout {
     var cursor = start;
     var first = true;
     while (cursor < contentEnd) {
-      final x = first && indent
-          ? math.min(width - 1, firstLineIndent * (style.fontSize ?? 17))
-          : 0.0;
-      final available = math.max(1.0, width - x);
+      // A character unit follows the existing Reader contract (the current
+      // font's nominal em width), not a fixed pixel distance.
+      final characterWidth = style.fontSize ?? 17;
+      final rawX = first && indent ? firstLineIndent * characterWidth : 0.0;
+      // Negative em indentation is a hanging indent. Keep the content width
+      // stable and let the line paint into the leading margin instead of
+      // clipping it to the viewport.
+      final x = rawX.clamp(-width + 1, width - 1).toDouble();
+      final available = math.max(1.0, width - math.max(0, x));
       final remaining = text.substring(cursor, contentEnd);
       final probe = TextPainter(
         text: TextSpan(text: remaining, style: style),

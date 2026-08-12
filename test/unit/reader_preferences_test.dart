@@ -54,6 +54,7 @@ void main() {
       expect(ReaderPreferences.lineHeightStep, .1);
       expect(ReaderPreferences.paragraphSpacingStep, 1);
       expect(ReaderPreferences.firstLineIndentStep, .5);
+      expect(ReaderPreferences.minFirstLineIndent, -2);
       expect(ReaderPreferences.paddingStep, 2);
     });
 

@@ -818,6 +818,18 @@ class _ReaderInputSettingsPageState
     );
   }
 
+  void _onPointerDown(PointerDownEvent event) {
+    if (_platform != ReaderInputPlatform.windows ||
+        !_router.capture.isActive ||
+        event.kind != PointerDeviceKind.mouse ||
+        event.buttons & kMiddleMouseButton == 0) {
+      return;
+    }
+    _router.handlePhysicalGesture(
+      ReaderInputGesture.single(PhysicalInputId.mouseMiddleButton),
+    );
+  }
+
   Future<void> _clearBinding(ReaderInputGesture gesture) async {
     await _repository.unbind(_platform, gesture);
     final latest = await _repository.load(_platform);
@@ -889,6 +901,7 @@ class _ReaderInputSettingsPageState
           fit: StackFit.expand,
           children: [
             Listener(
+              onPointerDown: _onPointerDown,
               onPointerSignal: _onPointerSignal,
               child: SafeArea(
                 child: Center(
@@ -987,6 +1000,7 @@ class _ReaderInputSettingsPageState
                 onConfirm: _confirmCandidate,
                 onRetry: _retryCapture,
                 onCancel: _cancelCapture,
+                onPointerDown: _onPointerDown,
                 onPointerSignal: _onPointerSignal,
               ),
           ],
@@ -1213,6 +1227,7 @@ class _CaptureOverlay extends StatelessWidget {
     required this.onRetry,
     required this.onCancel,
     required this.onPointerSignal,
+    required this.onPointerDown,
   });
 
   final ReaderInputGesture? candidate;
@@ -1222,6 +1237,7 @@ class _CaptureOverlay extends StatelessWidget {
   final VoidCallback onRetry;
   final VoidCallback onCancel;
   final void Function(PointerSignalEvent event) onPointerSignal;
+  final void Function(PointerDownEvent event) onPointerDown;
 
   @override
   Widget build(BuildContext context) {
@@ -1240,6 +1256,7 @@ class _CaptureOverlay extends StatelessWidget {
           SafeArea(
             child: Center(
               child: Listener(
+                onPointerDown: onPointerDown,
                 onPointerSignal: onPointerSignal,
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 560),
@@ -1376,6 +1393,18 @@ String inputLabel(PhysicalInputId input) {
     PhysicalInputId.keyboardEnter => 'Enter',
     PhysicalInputId.mouseWheelUp => 'Wheel Up',
     PhysicalInputId.mouseWheelDown => 'Wheel Down',
+    PhysicalInputId.mouseMiddleButton => 'Mouse Middle',
+    PhysicalInputId.keyboardComma => 'Comma',
+    PhysicalInputId.keyboardPeriod => 'Period',
+    PhysicalInputId.keyboardSlash => 'Slash',
+    PhysicalInputId.keyboardSemicolon => 'Semicolon',
+    PhysicalInputId.keyboardQuote => 'Quote',
+    PhysicalInputId.keyboardBracketLeft => 'Bracket Left',
+    PhysicalInputId.keyboardBracketRight => 'Bracket Right',
+    PhysicalInputId.keyboardBackslash => 'Backslash',
+    PhysicalInputId.keyboardMinus => 'Minus',
+    PhysicalInputId.keyboardEqual => 'Equal',
+    PhysicalInputId.keyboardBackquote => 'Backquote',
     PhysicalInputId.androidVolumeUp => 'Volume Up',
     PhysicalInputId.androidVolumeDown => 'Volume Down',
     _ => input.value,

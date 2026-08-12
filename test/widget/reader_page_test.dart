@@ -349,6 +349,22 @@ void main() {
       expect(await progressRepo.getProgress('local-txt:abc'), isNull);
     });
 
+    testWidgets('Chrome show/hide keeps Reader body geometry and locator', (
+      tester,
+    ) async {
+      await pumpReader(tester);
+      final bodyBefore = tester.getRect(find.byType(ReaderTextBlock).first);
+      await tester.tap(find.byKey(readerChromeToggleKey));
+      await tester.pump(const Duration(milliseconds: 150));
+      final bodyHidden = tester.getRect(find.byType(ReaderTextBlock).first);
+      await tester.tap(find.byKey(readerChromeToggleKey));
+      await tester.pump(const Duration(milliseconds: 150));
+      final bodyAfter = tester.getRect(find.byType(ReaderTextBlock).first);
+      expect(bodyHidden.top, bodyBefore.top);
+      expect(bodyAfter.top, bodyBefore.top);
+      expect(await progressRepo.getProgress('local-txt:abc'), isNull);
+    });
+
     testWidgets(
       'Aa opens complete settings panel; opening and closing writes no progress',
       (tester) async {

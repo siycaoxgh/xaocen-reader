@@ -96,11 +96,17 @@ final class BossKeyTracker {
   bool _leftDown = false;
   bool _rightDown = false;
   bool _triggered = false;
+  DateTime? _leftDownAt;
+  DateTime? _rightDownAt;
+
+  static const chordWindow = Duration(milliseconds: 250);
 
   void clear() {
     _leftDown = false;
     _rightDown = false;
     _triggered = false;
+    _leftDownAt = null;
+    _rightDownAt = null;
   }
 
   bool updateMouse(
@@ -112,9 +118,20 @@ final class BossKeyTracker {
       clear();
       return false;
     }
+    final now = DateTime.now();
+    if (left && !_leftDown) _leftDownAt = now;
+    if (right && !_rightDown) _rightDownAt = now;
     _leftDown = left;
     _rightDown = right;
     if (!_leftDown || !_rightDown) {
+      _triggered = false;
+      return false;
+    }
+    final leftAt = _leftDownAt;
+    final rightAt = _rightDownAt;
+    if (leftAt == null ||
+        rightAt == null ||
+        leftAt.difference(rightAt).abs() > chordWindow) {
       _triggered = false;
       return false;
     }

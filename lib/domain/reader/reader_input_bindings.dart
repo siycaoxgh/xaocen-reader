@@ -47,6 +47,18 @@ final class PhysicalInputId {
   static const keyboardEnter = PhysicalInputId('keyboard.enter');
   static const mouseWheelUp = PhysicalInputId('mouse.wheelUp');
   static const mouseWheelDown = PhysicalInputId('mouse.wheelDown');
+  static const mouseMiddleButton = PhysicalInputId('mouse.middleButton');
+  static const keyboardComma = PhysicalInputId('keyboard.comma');
+  static const keyboardPeriod = PhysicalInputId('keyboard.period');
+  static const keyboardSlash = PhysicalInputId('keyboard.slash');
+  static const keyboardSemicolon = PhysicalInputId('keyboard.semicolon');
+  static const keyboardQuote = PhysicalInputId('keyboard.quote');
+  static const keyboardBracketLeft = PhysicalInputId('keyboard.bracketLeft');
+  static const keyboardBracketRight = PhysicalInputId('keyboard.bracketRight');
+  static const keyboardBackslash = PhysicalInputId('keyboard.backslash');
+  static const keyboardMinus = PhysicalInputId('keyboard.minus');
+  static const keyboardEqual = PhysicalInputId('keyboard.equal');
+  static const keyboardBackquote = PhysicalInputId('keyboard.backquote');
   static const androidVolumeUp = PhysicalInputId('android.volumeUp');
   static const androidVolumeDown = PhysicalInputId('android.volumeDown');
 
@@ -212,6 +224,18 @@ final class PhysicalInputId {
     ...keyboardFunctionKeys,
     mouseWheelUp,
     mouseWheelDown,
+    mouseMiddleButton,
+    keyboardComma,
+    keyboardPeriod,
+    keyboardSlash,
+    keyboardSemicolon,
+    keyboardQuote,
+    keyboardBracketLeft,
+    keyboardBracketRight,
+    keyboardBackslash,
+    keyboardMinus,
+    keyboardEqual,
+    keyboardBackquote,
   ];
 
   static const androidInputs = <PhysicalInputId>[

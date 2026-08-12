@@ -5,6 +5,31 @@ import 'package:xaocen_reader/domain/reader/auto_read_preferences.dart';
 import 'package:xaocen_reader/reader/vertical_auto_read_driver.dart';
 
 void main() {
+  for (final velocity in <double>[2, 25, 100]) {
+    testWidgets('vertical auto-read honors ${velocity.toInt()} px/s', (
+      tester,
+    ) async {
+      final key = GlobalKey<_AutoReadHarnessState>();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: _AutoReadHarness(
+            key: key,
+            preferences: AutoReadPreferences(
+              verticalVelocityPixelsPerSecond: velocity.toInt(),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      final state = key.currentState!;
+      state.driver.start();
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(state.scroll.position.pixels, greaterThanOrEqualTo(0));
+      expect(state.controller.state, AutoReadState.running);
+    });
+  }
+
   testWidgets('ticker scrolls smoothly and auto frames do not self-pause', (
     tester,
   ) async {

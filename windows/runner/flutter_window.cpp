@@ -4,11 +4,49 @@
 #include <map>
 #include <string>
 #include <vector>
+#include <dwrite.h>
+#include <wrl/client.h>
 
 #include "flutter/generated_plugin_registrant.h"
 #include <flutter/standard_method_codec.h>
 
 namespace {
+using Microsoft::WRL::ComPtr;
+
+std::wstring LocalizedFamilyName(const std::wstring& fallback) {
+  ComPtr<IDWriteFactory> factory;
+  if (FAILED(DWriteCreateFactory(
+          DWRITE_FACTORY_TYPE_SHARED, __uuidof(IDWriteFactory),
+          reinterpret_cast<IUnknown**>(factory.GetAddressOf())))) {
+    return fallback;
+  }
+  ComPtr<IDWriteFontCollection> collection;
+  if (FAILED(factory->GetSystemFontCollection(&collection, FALSE))) return fallback;
+  UINT32 family_index = 0;
+  BOOL exists = FALSE;
+  if (FAILED(collection->FindFamilyName(fallback.c_str(), &family_index,
+                                        &exists)) || !exists) return fallback;
+  ComPtr<IDWriteFontFamily> family;
+  if (FAILED(collection->GetFontFamily(family_index, &family))) return fallback;
+  ComPtr<IDWriteLocalizedStrings> names;
+  if (FAILED(family->GetFamilyNames(&names))) return fallback;
+  const wchar_t* locales[] = {L"zh-CN", L"zh-Hans", L"zh", L"en-US", L"en"};
+  for (const auto locale : locales) {
+    UINT32 index = 0;
+    BOOL locale_exists = FALSE;
+    if (SUCCEEDED(names->FindLocaleName(locale, &index, &locale_exists)) &&
+        locale_exists) {
+      UINT32 length = 0;
+      if (SUCCEEDED(names->GetStringLength(index, &length))) {
+        std::wstring result(length, L'\0');
+        if (SUCCEEDED(names->GetString(index, result.data(), length + 1)) &&
+            !result.empty()) return result;
+      }
+    }
+  }
+  return fallback;
+}
+
 std::string Utf8FromWide(const std::wstring& value) {
   if (value.empty()) return {};
   const int size = WideCharToMultiByte(CP_UTF8, 0, value.data(),
@@ -86,7 +124,7 @@ flutter::EncodableList InstalledWindowsFonts() {
     // current locale has a localized family name; keep the family as the
     // stable runtime value and expose the localized value for UI.
     descriptor[flutter::EncodableValue("displayName")] =
-        flutter::EncodableValue(utf8_name);
+        flutter::EncodableValue(Utf8FromWide(LocalizedFamilyName(name)));
     result.emplace_back(flutter::EncodableValue(descriptor));
   }
   return result;

@@ -54,4 +54,23 @@ void main() {
     expect(spaced.text, text);
     expect(spaced.lines.last.end, text.length);
   });
+
+  test('negative first-line indent is a hanging indent in character units', () {
+    const text = 'Alpha\nBeta';
+    final layout = ReaderTypographyLayout(
+      text: text,
+      style: const TextStyle(fontSize: 20, height: 1.5),
+      textDirection: TextDirection.ltr,
+      width: 240,
+      paragraphSpacing: 0,
+      firstLineIndent: -2,
+      startsAtParagraphBoundary: true,
+    );
+    addTearDown(layout.dispose);
+    final second = layout.lines.firstWhere(
+      (line) => line.start == text.indexOf('\n') + 1,
+    );
+    expect(second.x, lessThan(0));
+    expect(layout.lines.last.end, text.length);
+  });
 }

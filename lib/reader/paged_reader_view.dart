@@ -191,6 +191,15 @@ class _PagedReaderViewState extends State<PagedReaderView> {
   }
 
   void _onPointerDown(PointerDownEvent event) {
+    // Mouse middle is a physical input, not a page drag. Route it through
+    // the same binding/capture boundary as keyboard and wheel input.
+    if (event.kind == PointerDeviceKind.mouse &&
+        event.buttons & kMiddleMouseButton != 0) {
+      widget.inputRouter?.handlePhysicalInput(
+        PhysicalInputId.mouseMiddleButton,
+      );
+      return;
+    }
     // Keep keyboard shortcuts owned by the Reader after a panel/control has
     // previously taken focus.  PageView itself does not reliably request this
     // node on a pointer tap, so without an explicit request the next

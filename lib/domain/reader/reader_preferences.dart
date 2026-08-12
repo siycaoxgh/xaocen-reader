@@ -89,7 +89,7 @@ final class ReaderPreferences {
 
   /// Em units; visual placeholder only, never inserted into normalized text.
   static const double defaultFirstLineIndent = 0;
-  static const double minFirstLineIndent = 0;
+  static const double minFirstLineIndent = -2;
   static const double maxFirstLineIndent = 4;
   static const double firstLineIndentStep = 0.5;
 

@@ -15,6 +15,7 @@ import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:super_sliver_list/super_sliver_list.dart';
@@ -2248,16 +2249,29 @@ class _ReaderPageState extends State<ReaderPage>
         fit: StackFit.expand,
         children: [
           _buildReaderBackground(),
-          GestureDetector(
-            key: readerChromeToggleKey,
-            behavior: HitTestBehavior.translucent,
-            onTap: _toggleChrome,
-            child: Focus(
-              autofocus: _mode == ReaderMode.vertical,
-              onKeyEvent: _mode == ReaderMode.vertical
-                  ? _onVerticalKeyEvent
-                  : null,
-              child: readerBody,
+          Listener(
+            onPointerDown: (event) {
+              if (_mode != ReaderMode.vertical ||
+                  defaultTargetPlatform != TargetPlatform.windows ||
+                  event.kind != PointerDeviceKind.mouse ||
+                  event.buttons & kMiddleMouseButton == 0) {
+                return;
+              }
+              _inputRouter.handlePhysicalInput(
+                PhysicalInputId.mouseMiddleButton,
+              );
+            },
+            child: GestureDetector(
+              key: readerChromeToggleKey,
+              behavior: HitTestBehavior.translucent,
+              onTap: _toggleChrome,
+              child: Focus(
+                autofocus: _mode == ReaderMode.vertical,
+                onKeyEvent: _mode == ReaderMode.vertical
+                    ? _onVerticalKeyEvent
+                    : null,
+                child: readerBody,
+              ),
             ),
           ),
           ReaderChrome(
@@ -2355,7 +2369,13 @@ class _ReaderPageState extends State<ReaderPage>
     BuildContext context,
     Widget readerContent,
   ) {
-    if (!_minimalReaderInfoVisible) return readerContent;
+    final readerInfoAllowed =
+        defaultTargetPlatform != TargetPlatform.android ||
+        _preferences.statusBarMode == ReaderStatusBarMode.readerInfo;
+    final reserveInfoRegions =
+        readerInfoAllowed &&
+        (_preferences.showTopInfoBar || _preferences.showBottomInfoBar);
+    if (!reserveInfoRegions) return readerContent;
     return ReaderInfoScaffold(
       body: readerContent,
       mode: _mode,
@@ -2367,6 +2387,9 @@ class _ReaderPageState extends State<ReaderPage>
       progressPercent: _progressPercent,
       showTopInfoBar: _preferences.showTopInfoBar,
       showBottomInfoBar: _preferences.showBottomInfoBar,
+      // Reserve the same body geometry while Chrome is visible. The minimal
+      // information itself is only painted while Chrome is hidden.
+      showInfoContent: _minimalReaderInfoVisible,
       showProgressInfo: _preferences.showProgressInfo,
       showChapterInfo: _preferences.showChapterInfo,
       showChapterProgressInfo: _preferences.showChapterProgressInfo,
@@ -2403,14 +2426,16 @@ class _ReaderPageState extends State<ReaderPage>
               _preferences.paddingRight,
               _preferences.paddingBottom,
             ),
-            child: Scrollbar(
-              controller: _scroll,
-              child: NotificationListener<ScrollNotification>(
-                onNotification: (n) {
-                  _onUserScroll(n);
-                  return false;
-                },
-                child: SuperListView.builder(
+            child: Listener(
+              onPointerSignal: _onVerticalPointerSignal,
+              child: Scrollbar(
+                controller: _scroll,
+                child: NotificationListener<ScrollNotification>(
+                  onNotification: (n) {
+                    _onUserScroll(n);
+                    return false;
+                  },
+                  child: SuperListView.builder(
                   controller: _scroll,
                   listController: _listController,
                   itemCount: index.blockCount,
@@ -2445,6 +2470,7 @@ class _ReaderPageState extends State<ReaderPage>
                       },
                     );
                   },
+                  ),
                 ),
               ),
             ),
@@ -2452,6 +2478,24 @@ class _ReaderPageState extends State<ReaderPage>
         ),
       ],
     );
+  }
+
+  void _onVerticalPointerSignal(PointerSignalEvent event) {
+    if (event is! PointerScrollEvent || !_scroll.hasClients) return;
+    final delta = event.scrollDelta.dy;
+    if (delta == 0) return;
+    // Mouse-wheel input is continuous vertical scrolling, never a page
+    // command. Keep one notch near three real text line heights while
+    // retaining high-resolution trackpad deltas and clamping pathological
+    // device reports on short windows.
+    final lineHeight =
+        (_bodyStyle.fontSize ?? ReaderPreferences.defaultFontSize) *
+        (_bodyStyle.height ?? ReaderPreferences.defaultLineHeight);
+    final maxDelta = lineHeight * 3;
+    final clamped = delta.clamp(-maxDelta, maxDelta).toDouble();
+    GestureBinding.instance.pointerSignalResolver.register(event, (_) {
+      if (_scroll.hasClients) _scroll.position.pointerScroll(clamped);
+    });
   }
 
   KeyEventResult _onVerticalKeyEvent(FocusNode node, KeyEvent event) {

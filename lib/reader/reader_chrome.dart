@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 import '../design/theme/app_typography.dart';
@@ -128,6 +129,7 @@ class ReaderChrome extends StatelessWidget {
     this.showInfoDivider = false,
     this.showTopInfoDivider,
     this.showBottomInfoDivider,
+    this.showInfoContent = true,
     this.showAutoReadMinimalInfo = true,
     this.showMinimalInfoOverlay = true,
     this.chapterInfoSlot = ReaderInfoSlot.topLeft,
@@ -174,6 +176,11 @@ class ReaderChrome extends StatelessWidget {
   final bool showInfoDivider;
   final bool? showTopInfoDivider;
   final bool? showBottomInfoDivider;
+
+  /// Keeps the top/bottom regions in the layout while Reader chrome is open.
+  /// Chrome visibility must never resize the reading body or trigger a
+  /// relayout/repagination jump.
+  final bool showInfoContent;
   final bool showAutoReadMinimalInfo;
 
   /// Kept for compatibility with the standalone chrome widget tests. The
@@ -495,6 +502,7 @@ class ReaderInfoScaffold extends StatelessWidget {
     this.showInfoDivider = false,
     this.showTopInfoDivider,
     this.showBottomInfoDivider,
+    this.showInfoContent = true,
     required this.chapterInfoSlot,
     required this.chapterProgressInfoSlot,
     required this.clockInfoSlot,
@@ -524,6 +532,9 @@ class ReaderInfoScaffold extends StatelessWidget {
   final bool showInfoDivider;
   final bool? showTopInfoDivider;
   final bool? showBottomInfoDivider;
+
+  /// Keep region geometry stable while full Reader chrome is visible.
+  final bool showInfoContent;
   final ReaderInfoSlot chapterInfoSlot;
   final ReaderInfoSlot chapterProgressInfoSlot;
   final ReaderInfoSlot clockInfoSlot;
@@ -538,6 +549,12 @@ class ReaderInfoScaffold extends StatelessWidget {
     final systemInset = top
         ? MediaQuery.paddingOf(context).top
         : MediaQuery.paddingOf(context).bottom;
+    if (!showInfoContent) {
+      return SizedBox(
+        width: double.infinity,
+        height: readerInfoRegionExtent + systemInset,
+      );
+    }
     return SizedBox(
       height: readerInfoRegionExtent + systemInset,
       child: Padding(
@@ -600,13 +617,17 @@ class ReaderInfoScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final reserveTop = showTopInfoBar;
+    final reserveBottom = showBottomInfoBar;
     return Column(
       children: [
-        if (showTopInfoBar) _region(context, top: true),
-        if (showTopInfoBar) _divider(context, top: true),
-        Expanded(child: body),
-        if (showBottomInfoBar) _divider(context, top: false),
-        if (showBottomInfoBar) _region(context, top: false),
+        if (reserveTop) _region(context, top: true),
+        if (reserveTop) _divider(context, top: true),
+        Expanded(
+          child: SizedBox(width: double.infinity, child: body),
+        ),
+        if (reserveBottom) _divider(context, top: false),
+        if (reserveBottom) _region(context, top: false),
       ],
     );
   }
@@ -1423,6 +1444,9 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
   String? _fontPreviewError;
   late ReaderMode _mode = widget.mode;
   _ReaderSettingsCategory _category = _ReaderSettingsCategory.typography;
+  final ScrollController _categoryScrollController = ScrollController();
+  double _categoryDragStart = 0;
+  double _categoryScrollStart = 0;
   late final TextEditingController _lightTextColorController =
       TextEditingController(text: _hexColor(_draft.lightTextColorArgb));
   late final TextEditingController _lightBackgroundColorController =
@@ -1510,6 +1534,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
 
   @override
   void dispose() {
+    _categoryScrollController.dispose();
     _lightTextColorController.dispose();
     _lightBackgroundColorController.dispose();
     _darkTextColorController.dispose();
@@ -1963,7 +1988,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
           value: _draft.firstLineIndent,
           min: ReaderPreferences.minFirstLineIndent,
           max: ReaderPreferences.maxFirstLineIndent,
-          divisions: 8,
+           divisions: 12,
           step: ReaderPreferences.firstLineIndentStep,
           valueLabel: _draft.firstLineIndent.toStringAsFixed(1),
           onDraftChanged: (value) =>
@@ -2465,25 +2490,46 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
           onSlotChanged: (slot) =>
               _commit(_draft.copyWith(wholeBookProgressInfoSlot: slot)),
         ),
+        /* Legacy divider rows were replaced by fixed divider toggles below.
         _buildInfoItemRow(
           context,
           label: '分隔线',
           value: _draft.showTopInfoDivider,
-          slot: _draft.infoDividerSlot,
-          onValueChanged: (value) =>
+          onChanged: (value) =>
               _commit(_draft.copyWith(showTopInfoDivider: value)),
-          onSlotChanged: (slot) =>
-              _commit(_draft.copyWith(infoDividerSlot: slot)),
         ),
-        _buildInfoItemRow(
+        SwitchListTile.adaptive(
           context,
           label: '\u5e95\u90e8\u4fe1\u606f\u5206\u9694\u7ebf',
           value: _draft.showBottomInfoDivider,
-          slot: _draft.infoDividerSlot,
-          onValueChanged: (value) =>
+        SwitchListTile.adaptive(
+          contentPadding: EdgeInsets.zero,
+          title: const Text('顶部信息分隔线'),
+          value: _draft.showTopInfoDivider,
+          onChanged: (value) =>
+              _commit(_draft.copyWith(showTopInfoDivider: value)),
+        ),
+        SwitchListTile.adaptive(
+          contentPadding: EdgeInsets.zero,
+          title: const Text('底部信息分隔线'),
+          value: _draft.showBottomInfoDivider,
+          onChanged: (value) =>
               _commit(_draft.copyWith(showBottomInfoDivider: value)),
-          onSlotChanged: (slot) =>
-              _commit(_draft.copyWith(infoDividerSlot: slot)),
+        ),
+        */
+        SwitchListTile.adaptive(
+          contentPadding: EdgeInsets.zero,
+          title: const Text('顶部信息分隔线'),
+          value: _draft.showTopInfoDivider,
+          onChanged: (value) =>
+              _commit(_draft.copyWith(showTopInfoDivider: value)),
+        ),
+        SwitchListTile.adaptive(
+          contentPadding: EdgeInsets.zero,
+          title: const Text('底部信息分隔线'),
+          value: _draft.showBottomInfoDivider,
+          onChanged: (value) =>
+              _commit(_draft.copyWith(showBottomInfoDivider: value)),
         ),
         if (defaultTargetPlatform == TargetPlatform.android) ...[
           const SizedBox(height: 8),
@@ -2546,6 +2592,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
     BuildContext context, {
     required String label,
     required bool value,
+    bool showSlot = true,
     required ReaderInfoSlot slot,
     required ValueChanged<bool> onValueChanged,
     required ValueChanged<ReaderInfoSlot> onSlotChanged,
@@ -2555,18 +2602,20 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
       dense: true,
       title: Text(label),
       leading: Switch.adaptive(value: value, onChanged: onValueChanged),
-      trailing: DropdownButton<ReaderInfoSlot>(
-        value: slot,
-        isDense: true,
-        underline: const SizedBox.shrink(),
-        onChanged: (next) {
-          if (next != null) onSlotChanged(next);
-        },
-        items: [
-          for (final item in ReaderInfoSlot.values)
-            DropdownMenuItem(value: item, child: Text(_slotLabel(item))),
-        ],
-      ),
+      trailing: showSlot
+          ? DropdownButton<ReaderInfoSlot>(
+              value: slot,
+              isDense: true,
+              underline: const SizedBox.shrink(),
+              onChanged: (next) {
+                if (next != null) onSlotChanged(next);
+              },
+              items: [
+                for (final item in ReaderInfoSlot.values)
+                  DropdownMenuItem(value: item, child: Text(_slotLabel(item))),
+              ],
+            )
+          : const SizedBox.shrink(),
     );
   }
 
@@ -2670,9 +2719,41 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
               ],
             ),
           )
-        : SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
+        : Listener(
+            onPointerDown: (event) {
+              _categoryDragStart = event.position.dx;
+              _categoryScrollStart = _categoryScrollController.hasClients
+                  ? _categoryScrollController.offset
+                  : 0;
+            },
+            onPointerMove: (event) {
+              if (!_categoryScrollController.hasClients) return;
+              final next = (_categoryScrollStart +
+                      (_categoryDragStart - event.position.dx))
+                  .clamp(
+                    0.0,
+                    _categoryScrollController.position.maxScrollExtent,
+                  )
+                  .toDouble();
+              _categoryScrollController.jumpTo(next);
+            },
+            onPointerSignal: (event) {
+              if (event is PointerScrollEvent &&
+                  _categoryScrollController.hasClients) {
+                final next = (_categoryScrollController.offset +
+                        event.scrollDelta.dy)
+                    .clamp(
+                      0.0,
+                      _categoryScrollController.position.maxScrollExtent,
+                    )
+                    .toDouble();
+                _categoryScrollController.jumpTo(next);
+              }
+            },
+            child: SingleChildScrollView(
+              controller: _categoryScrollController,
+              scrollDirection: Axis.horizontal,
+              child: Row(
               children: [
                 for (final item in categories) ...[
                   ChoiceChip(
@@ -2685,6 +2766,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
                   const SizedBox(width: 8),
                 ],
               ],
+              ),
             ),
           );
     final panel = (useLabelRail || useIconRail)
@@ -3181,7 +3263,7 @@ class _ReaderAppearancePreviewCard extends StatelessWidget {
               value: _draft.firstLineIndent,
               min: ReaderPreferences.minFirstLineIndent,
               max: ReaderPreferences.maxFirstLineIndent,
-              divisions: 8,
+               divisions: 12,
               step: ReaderPreferences.firstLineIndentStep,
               valueLabel: _draft.firstLineIndent.toStringAsFixed(1),
               onDraftChanged: (value) => setState(

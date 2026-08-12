@@ -58,4 +58,31 @@ void main() {
       expect(readerInputGestureForKey(LogicalKeyboardKey.escape), isNull);
     },
   );
+
+  test('physical punctuation and middle mouse inputs have stable IDs', () {
+    expect(
+      readerInputGestureForKey(LogicalKeyboardKey.comma)?.primaryInput,
+      PhysicalInputId.keyboardComma,
+    );
+    expect(
+      readerInputGestureForKey(
+        LogicalKeyboardKey.bracketLeft,
+        shift: true,
+      )?.canonicalKey,
+      'shift+keyboard.bracketLeft',
+    );
+    expect(
+      PhysicalInputId.parse('mouse.middleButton'),
+      PhysicalInputId.mouseMiddleButton,
+    );
+  });
+
+  test('shifted punctuation keeps physical primary identity', () {
+    final gesture = readerInputGestureForKey(
+      LogicalKeyboardKey.equal,
+      shift: true,
+    );
+    expect(gesture?.primaryInput, PhysicalInputId.keyboardEqual);
+    expect(gesture?.modifiers, contains(ReaderInputModifier.shift));
+  });
 }
