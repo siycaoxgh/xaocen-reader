@@ -117,6 +117,8 @@ final class ReaderInputBridge {
     required bool pagedActive,
     required bool inputCaptureActive,
     bool volumeBindingActive = false,
+    bool volumeUpBindingActive = false,
+    bool volumeDownBindingActive = false,
     required void Function(PhysicalInputId input) onInput,
   }) async {
     _channel.setMethodCallHandler((call) async {
@@ -135,6 +137,8 @@ final class ReaderInputBridge {
       pagedActive: pagedActive,
       inputCaptureActive: inputCaptureActive,
       volumeBindingActive: volumeBindingActive,
+      volumeUpBindingActive: volumeUpBindingActive,
+      volumeDownBindingActive: volumeDownBindingActive,
     );
   }
 
@@ -159,6 +163,8 @@ final class ReaderInputBridge {
     required bool pagedActive,
     required bool inputCaptureActive,
     bool volumeBindingActive = false,
+    bool volumeUpBindingActive = false,
+    bool volumeDownBindingActive = false,
   }) async {
     try {
       await _channel.invokeMethod<void>('setPagedActive', pagedActive);
@@ -168,7 +174,11 @@ final class ReaderInputBridge {
       );
       await _channel.invokeMethod<void>(
         'setVolumeBindingActive',
-        volumeBindingActive,
+        {
+          'all': volumeBindingActive,
+          'up': volumeUpBindingActive,
+          'down': volumeDownBindingActive,
+        },
       );
     } on MissingPluginException {
       // Desktop and test hosts have no Android bridge.
@@ -181,17 +191,19 @@ final class ReaderInputBridge {
       pagedActive: false,
       inputCaptureActive: false,
       volumeBindingActive: false,
+      volumeUpBindingActive: false,
+      volumeDownBindingActive: false,
     );
   }
 
   static Future<void> deactivate() async {
     _channel.setMethodCallHandler(null);
-    try {
-      await _channel.invokeMethod<void>('setPagedActive', false);
-      await _channel.invokeMethod<void>('setInputCaptureActive', false);
-      await _channel.invokeMethod<void>('setVolumeBindingActive', false);
-    } on MissingPluginException {
-      // Desktop and test hosts have no Android bridge.
-    }
+    await setActiveState(
+      pagedActive: false,
+      inputCaptureActive: false,
+      volumeBindingActive: false,
+      volumeUpBindingActive: false,
+      volumeDownBindingActive: false,
+    );
   }
 }

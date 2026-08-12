@@ -13,6 +13,19 @@ enum ReaderCommand {
   toggleAutoRead,
 }
 
+/// Action used by an Android volume key while AutoRead is already running.
+/// This is deliberately separate from the normal ReaderCommand binding: the
+/// same physical key has a different, explicit user-selected context only
+/// while the AutoRead driver is active.
+enum AndroidAutoReadVolumeAction {
+  followNormal,
+  previousPage,
+  nextPage,
+  toggleAutoRead,
+  systemVolume,
+  disabled,
+}
+
 /// Stable persisted physical-input identifier.
 ///
 /// The value is deliberately a string owned by the domain contract. It is not
@@ -219,8 +232,12 @@ final class ReaderInputProfile {
     required this.platform,
     required this.version,
     required Map<ReaderInputGesture, ReaderCommand?> bindings,
+    Map<PhysicalInputId, AndroidAutoReadVolumeAction>? autoReadVolumeActions,
     required this.updatedAt,
-  }) : bindings = Map.unmodifiable(bindings);
+  }) : bindings = Map.unmodifiable(bindings),
+       autoReadVolumeActions = Map.unmodifiable(
+         autoReadVolumeActions ?? const {},
+       );
 
   static const currentVersion = 2;
 
@@ -243,6 +260,8 @@ final class ReaderInputProfile {
   final ReaderInputPlatform platform;
   final int version;
   final Map<ReaderInputGesture, ReaderCommand?> bindings;
+  final Map<PhysicalInputId, AndroidAutoReadVolumeAction>
+  autoReadVolumeActions;
   final DateTime updatedAt;
 
   factory ReaderInputProfile.defaults(
@@ -277,6 +296,14 @@ final class ReaderInputProfile {
       platform: platform,
       version: currentVersion,
       bindings: Map.unmodifiable(map),
+      autoReadVolumeActions: platform == ReaderInputPlatform.android
+          ? {
+              PhysicalInputId.androidVolumeUp:
+                  AndroidAutoReadVolumeAction.followNormal,
+              PhysicalInputId.androidVolumeDown:
+                  AndroidAutoReadVolumeAction.followNormal,
+            }
+          : const {},
       updatedAt: updatedAt ?? DateTime.fromMillisecondsSinceEpoch(0),
     );
   }
@@ -294,11 +321,13 @@ final class ReaderInputProfile {
   ReaderInputProfile copyWith({
     int? version,
     Map<ReaderInputGesture, ReaderCommand?>? bindings,
+    Map<PhysicalInputId, AndroidAutoReadVolumeAction>? autoReadVolumeActions,
     DateTime? updatedAt,
   }) => ReaderInputProfile(
     platform: platform,
     version: version ?? this.version,
     bindings: Map.unmodifiable(bindings ?? this.bindings),
+    autoReadVolumeActions: autoReadVolumeActions ?? this.autoReadVolumeActions,
     updatedAt: updatedAt ?? this.updatedAt,
   );
 

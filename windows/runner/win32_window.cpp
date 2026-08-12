@@ -375,11 +375,7 @@ Win32Window::MessageHandler(HWND hwnd,
     case kTrayCallbackMessage:
       if (static_cast<UINT>(lparam) == WM_LBUTTONUP ||
           static_cast<UINT>(lparam) == WM_LBUTTONDBLCLK) {
-        if (IsWindowVisible(hwnd)) {
-          HideToTray();
-        } else {
-          ShowFromTray();
-        }
+        ShowFromTray();
         return 0;
       }
       if (static_cast<UINT>(lparam) == WM_RBUTTONUP) {
@@ -390,11 +386,7 @@ Win32Window::MessageHandler(HWND hwnd,
 
     case WM_COMMAND:
       if (LOWORD(wparam) == kTrayShowHideCommand) {
-        if (IsWindowVisible(hwnd)) {
-          HideToTray();
-        } else {
-          ShowFromTray();
-        }
+        ShowFromTray();
         return 0;
       }
       if (LOWORD(wparam) == kTrayExitCommand) {
@@ -629,8 +621,7 @@ void Win32Window::ShowTrayMenu() {
   GetCursorPos(&point);
   HMENU menu = CreatePopupMenu();
   if (menu == nullptr) return;
-  AppendMenuW(menu, MF_STRING, kTrayShowHideCommand,
-              IsWindowVisible(window_handle_) ? L"Hide window" : L"Show window");
+  AppendMenuW(menu, MF_STRING, kTrayShowHideCommand, L"Show window");
   AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
   AppendMenuW(menu, MF_STRING, kTrayExitCommand, L"Exit application");
   SetForegroundWindow(window_handle_);

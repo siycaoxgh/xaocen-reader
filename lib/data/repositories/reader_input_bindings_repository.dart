@@ -74,6 +74,24 @@ final class ReaderInputBindingsRepository {
         );
   }
 
+  Future<void> setAndroidAutoReadAction(
+    PhysicalInputId input,
+    AndroidAutoReadVolumeAction action,
+  ) async {
+    if (input.platform != ReaderInputPlatform.android) return;
+    final current = await load(ReaderInputPlatform.android);
+    await update(
+      ReaderInputPlatform.android,
+      current.copyWith(
+        autoReadVolumeActions: {
+          ...current.autoReadVolumeActions,
+          input: action,
+        },
+        updatedAt: DateTime.now().toUtc(),
+      ),
+    );
+  }
+
   Future<void> resetToDefaults(ReaderInputPlatform platform) async {
     await (_db.delete(
       _db.appSettings,
@@ -95,6 +113,10 @@ final class ReaderInputBindingsRepository {
           'command': entry.value?.name,
         },
     ],
+    'autoReadVolumeActions': {
+      for (final entry in profile.autoReadVolumeActions.entries)
+        entry.key.value: entry.value.name,
+    },
   };
 
   ReaderInputProfile _decode(String? raw, ReaderInputPlatform platform) {
@@ -113,6 +135,19 @@ final class ReaderInputBindingsRepository {
         return defaults;
       }
       final merged = <ReaderInputGesture, ReaderCommand?>{...defaults.bindings};
+      final autoReadActions = <PhysicalInputId,
+          AndroidAutoReadVolumeAction>{...defaults.autoReadVolumeActions};
+      final rawAutoReadActions = decoded['autoReadVolumeActions'];
+      if (rawAutoReadActions is Map && platform == ReaderInputPlatform.android) {
+        for (final entry in rawAutoReadActions.entries) {
+          final input = PhysicalInputId.parse(entry.key.toString());
+          final action = _parseAutoReadAction(entry.value);
+          if (input != null && action != null &&
+              input.platform == ReaderInputPlatform.android) {
+            autoReadActions[input] = action;
+          }
+        }
+      }
       if (rawBindings is Map) {
         // Version 1 stored a map keyed by the plain PhysicalInputId string.
         for (final entry in rawBindings.entries) {
@@ -153,6 +188,7 @@ final class ReaderInputBindingsRepository {
         platform: platform,
         version: migrated,
         bindings: Map.unmodifiable(merged),
+        autoReadVolumeActions: Map.unmodifiable(autoReadActions),
         updatedAt: timestamp,
       );
     } catch (_) {
@@ -177,6 +213,7 @@ final class ReaderInputBindingsRepository {
       platform: platform,
       version: ReaderInputProfile.currentVersion,
       bindings: Map.unmodifiable(bindings),
+      autoReadVolumeActions: profile.autoReadVolumeActions,
       updatedAt: profile.updatedAt,
     );
   }
@@ -185,6 +222,14 @@ final class ReaderInputBindingsRepository {
     if (value is! String) return null;
     for (final command in ReaderCommand.values) {
       if (command.name == value) return command;
+    }
+    return null;
+  }
+
+  AndroidAutoReadVolumeAction? _parseAutoReadAction(Object? value) {
+    if (value is! String) return null;
+    for (final action in AndroidAutoReadVolumeAction.values) {
+      if (action.name == value) return action;
     }
     return null;
   }

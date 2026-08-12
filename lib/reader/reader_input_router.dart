@@ -19,6 +19,7 @@ final class ReaderInputRouter {
     this.onToggleReaderControls,
     this.onOpenToc,
     this.onToggleAutoRead,
+    this.onAndroidVolume,
     this.onProfileChanged,
     this.onHostStateChanged,
   }) : _profile = ReaderInputProfile.defaults(platform);
@@ -32,6 +33,10 @@ final class ReaderInputRouter {
   final ReaderInputAction? onToggleReaderControls;
   final ReaderInputAction? onOpenToc;
   final ReaderInputAction? onToggleAutoRead;
+  /// Optional context-sensitive Android volume handling. Returning true means
+  /// the physical volume event was consumed; false falls through to the
+  /// normal profile binding (or the operating system).
+  final FutureOr<bool> Function(PhysicalInputId input)? onAndroidVolume;
   final void Function(ReaderInputProfile profile)? onProfileChanged;
   final void Function({required bool pagedActive, required bool captureActive})?
   onHostStateChanged;
@@ -98,6 +103,22 @@ final class ReaderInputRouter {
     if (_disposed) return false;
     if (capture.handleGesture(gesture)) {
       _notifyHostState();
+      return true;
+    }
+    if (platform == ReaderInputPlatform.android &&
+        gesture.isPlain &&
+        (gesture.primaryInput == PhysicalInputId.androidVolumeUp ||
+            gesture.primaryInput == PhysicalInputId.androidVolumeDown) &&
+        onAndroidVolume != null) {
+      final eventGeneration = _generation;
+      unawaited(
+        Future<void>.microtask(() async {
+          if (_disposed || eventGeneration != _generation) return;
+          await onAndroidVolume!(gesture.primaryInput);
+        }),
+      );
+      // The bridge decides whether this key is actually intercepted. The
+      // callback is still allowed to return false for non-consuming actions.
       return true;
     }
     final command = _profile.commandFor(gesture);

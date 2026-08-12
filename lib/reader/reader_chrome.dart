@@ -19,6 +19,20 @@ import 'reader_mode.dart';
 const readerChromeToggleKey = Key('reader-chrome-toggle');
 const readerTopChromeKey = Key('reader-top-chrome');
 const readerBottomChromeKey = Key('reader-bottom-chrome');
+const readerTopInfoRegionKey = Key('reader-top-info-region');
+const readerBottomInfoRegionKey = Key('reader-bottom-info-region');
+
+/// Height reserved by one minimal Reader information region, excluding the
+/// device/system inset. The row itself is deliberately fixed and compact;
+/// SafeArea supplies the variable cutout/navigation inset.
+const double readerInfoRegionExtent = 38;
+
+double readerInfoRegionInset(
+  BuildContext context, {
+  required bool top,
+}) =>
+    readerInfoRegionExtent +
+    (top ? MediaQuery.paddingOf(context).top : MediaQuery.paddingOf(context).bottom);
 const readerTocActionKey = Key('reader-toc-action');
 const readerAppearanceActionKey = Key('reader-appearance-action');
 const readerMoreActionKey = Key('reader-more-action');
@@ -67,10 +81,12 @@ const _aaControlRadius = 12.0;
 const _aaControlHeight = 40.0;
 
 abstract final class ReaderProgressLabels {
-  static const chapter = '本章';
-  static const wholeBook = '全书';
-  static const wholeDocument = '全文';
-  static const pages = '页';
+  // Keep labels in source-safe Unicode escapes so Windows/editor encoding
+  // cannot turn the Reader progress chrome into mojibake.
+  static const chapter = '\u672c\u7ae0';
+  static const wholeBook = '\u5168\u4e66';
+  static const wholeDocument = '\u5168\u6587';
+  static const pages = '\u9875';
 }
 
 class ReaderChrome extends StatelessWidget {
@@ -222,7 +238,7 @@ class ReaderChrome extends StatelessWidget {
                                 currentChapterNumber == null
                                     ? (currentChapterTitle ??
                                           ReaderProgressLabels.wholeDocument)
-                                    : '第$currentChapterNumber章  ${currentChapterTitle ?? ''}',
+                                    : '\u7b2c $currentChapterNumber \u7ae0  ${currentChapterTitle ?? ''}',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: Theme.of(context).textTheme.labelSmall
@@ -264,7 +280,7 @@ class ReaderChrome extends StatelessWidget {
                                 currentChapterNumber == null
                                     ? (currentChapterTitle ??
                                           ReaderProgressLabels.wholeDocument)
-                                    : '第$currentChapterNumber章  ${currentChapterTitle ?? ''}',
+                                    : '\u7b2c $currentChapterNumber \u7ae0  ${currentChapterTitle ?? ''}',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: Theme.of(context).textTheme.labelSmall
@@ -393,6 +409,8 @@ class ReaderChrome extends StatelessWidget {
         if (!visible &&
             (autoReadState != AutoReadState.running ||
                 showAutoReadMinimalInfo) &&
+            (defaultTargetPlatform != TargetPlatform.android ||
+                statusBarMode == ReaderStatusBarMode.readerInfo) &&
             (showTopInfoBar || showBottomInfoBar))
           ReaderMinimalInfoLayer(
             mode: mode,
@@ -529,16 +547,48 @@ class _ReaderMinimalInfoLayerState extends State<ReaderMinimalInfoLayer> {
       ],
     );
 
+    // Keep the information layer in the same top/body/bottom geometry as the
+    // Reader body. It is intentionally not a card or an overlay column at the
+    // top of the screen: ReaderPage reserves these two regions before laying
+    // out the scroll/page viewport.
     return IgnorePointer(
       child: SafeArea(
         minimum: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        child: Stack(
+          fit: StackFit.expand,
           children: [
             if (widget.showTopInfoBar)
-              _buildRow(context, top: true, style: style),
+              Align(
+                key: readerTopInfoRegionKey,
+                alignment: Alignment.topCenter,
+                child: _buildRow(context, top: true, style: style),
+              ),
             if (widget.showBottomInfoBar)
-              _buildRow(context, top: false, style: style),
+              Align(
+                key: readerBottomInfoRegionKey,
+                alignment: Alignment.bottomCenter,
+                child: _buildRow(context, top: false, style: style),
+              ),
+            if (widget.showInfoDivider &&
+                widget.showTopInfoBar &&
+                widget.showBottomInfoBar)
+              Positioned.fill(
+                child: Column(
+                  children: [
+                    SizedBox(height: readerInfoRegionExtent),
+                    Container(
+                      height: 1,
+                      color: style?.color?.withValues(alpha: .45),
+                    ),
+                    const Spacer(),
+                    Container(
+                      height: 1,
+                      color: style?.color?.withValues(alpha: .45),
+                    ),
+                    SizedBox(height: readerInfoRegionExtent),
+                  ],
+                ),
+              ),
           ],
         ),
       ),
@@ -604,15 +654,6 @@ class _ReaderMinimalInfoLayerState extends State<ReaderMinimalInfoLayer> {
           _wholeBookProgressLabel(),
           textAlign: _textAlign(slot),
           style: style,
-        ),
-      );
-    }
-    if (widget.showInfoDivider && widget.infoDividerSlot == slot) {
-      children.add(
-        Container(
-          height: 1,
-          margin: const EdgeInsets.symmetric(vertical: 3),
-          color: style?.color?.withValues(alpha: .45),
         ),
       );
     }

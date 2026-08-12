@@ -930,8 +930,19 @@ class _ReaderInputSettingsPageState
                             _AndroidInputSection(
                               input: input,
                               command: profile.commandFor(input),
+                              autoReadAction:
+                                  profile.autoReadVolumeActions[input] ??
+                                  AndroidAutoReadVolumeAction.followNormal,
                               onChanged: (command) =>
                                   _selectAndroidBinding(input, command),
+                              onAutoReadChanged: (action) async {
+                                await _repository.setAndroidAutoReadAction(
+                                  input,
+                                  action,
+                                );
+                                final latest = await _repository.load(_platform);
+                                if (mounted) setState(() => _profile = latest);
+                              },
                             )
                         else ...[
                           for (final command in ReaderCommand.values)
@@ -1005,18 +1016,26 @@ class _AndroidInputSection extends StatelessWidget {
   const _AndroidInputSection({
     required this.input,
     required this.command,
+    required this.autoReadAction,
     required this.onChanged,
+    required this.onAutoReadChanged,
   });
 
   final PhysicalInputId input;
   final ReaderCommand? command;
+  final AndroidAutoReadVolumeAction autoReadAction;
   final ValueChanged<ReaderCommand?> onChanged;
+  final ValueChanged<AndroidAutoReadVolumeAction> onAutoReadChanged;
 
   @override
   Widget build(BuildContext context) => Card(
     key: ValueKey('reader-input-android-${input.value}'),
     margin: const EdgeInsets.only(bottom: 10),
-    child: ListTile(
+    child: Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Column(
+        children: [
+          ListTile(
       leading: Icon(
         input == PhysicalInputId.androidVolumeUp
             ? Icons.volume_up_outlined
@@ -1048,6 +1067,46 @@ class _AndroidInputSection extends StatelessWidget {
             DropdownMenuItem<ReaderCommand?>(value: null, child: Text('不使用')),
           ],
         ),
+      ),
+          ),
+          ListTile(
+            dense: true,
+            title: const Text('自动阅读运行时'),
+            subtitle: const Text('自动阅读运行中按下此键时的操作'),
+            trailing: DropdownButton<AndroidAutoReadVolumeAction>(
+              value: autoReadAction,
+              onChanged: (value) {
+                if (value != null) onAutoReadChanged(value);
+              },
+              items: const [
+                DropdownMenuItem(
+                  value: AndroidAutoReadVolumeAction.followNormal,
+                  child: Text('沿用普通阅读'),
+                ),
+                DropdownMenuItem(
+                  value: AndroidAutoReadVolumeAction.previousPage,
+                  child: Text('上一页'),
+                ),
+                DropdownMenuItem(
+                  value: AndroidAutoReadVolumeAction.nextPage,
+                  child: Text('下一页'),
+                ),
+                DropdownMenuItem(
+                  value: AndroidAutoReadVolumeAction.toggleAutoRead,
+                  child: Text('暂停/继续自动阅读'),
+                ),
+                DropdownMenuItem(
+                  value: AndroidAutoReadVolumeAction.systemVolume,
+                  child: Text('系统音量'),
+                ),
+                DropdownMenuItem(
+                  value: AndroidAutoReadVolumeAction.disabled,
+                  child: Text('禁用'),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     ),
   );

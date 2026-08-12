@@ -247,7 +247,16 @@ class _ReaderPageState extends State<ReaderPage>
   Future<void> _historyWriteTail = Future<void>.value();
 
   void _toggleChrome() {
-    setState(() => _chromeVisible = !_chromeVisible);
+    _autoReadChromeHideTimer?.cancel();
+    _autoReadChromeHideTimer = null;
+    if (_chromeVisible) {
+      setState(() => _chromeVisible = false);
+    } else {
+      setState(() => _chromeVisible = true);
+      if (_autoReadController.state == AutoReadState.running) {
+        _scheduleAutoReadChromeHide();
+      }
+    }
   }
 
   /// M5.4b vertical AutoRead is exposed through the existing Reader chrome;
@@ -281,6 +290,8 @@ class _ReaderPageState extends State<ReaderPage>
   }
 
   void _pauseAutoRead(AutoReadPauseReason reason) {
+    _autoReadChromeHideTimer?.cancel();
+    _autoReadChromeHideTimer = null;
     if (_autoReadController.state != AutoReadState.running) return;
     if (_mode == ReaderMode.vertical) {
       _verticalAutoReadDriver.pause(reason);
@@ -301,6 +312,8 @@ class _ReaderPageState extends State<ReaderPage>
   }
 
   void _stopAutoRead() {
+    _autoReadChromeHideTimer?.cancel();
+    _autoReadChromeHideTimer = null;
     _showChrome();
     if (_mode == ReaderMode.vertical) {
       stopVerticalAutoRead();
@@ -441,30 +454,52 @@ class _ReaderPageState extends State<ReaderPage>
     required bool pagedActive,
     required bool captureActive,
   }) {
+    final volumeActive = _androidVolumeBindingStates();
     unawaited(
       ReaderInputBridge.setActiveState(
         pagedActive: pagedActive,
         inputCaptureActive: captureActive,
-        volumeBindingActive: _androidVolumeBindingActive(),
+        volumeBindingActive: volumeActive.$1 || volumeActive.$2,
+        volumeUpBindingActive: volumeActive.$1,
+        volumeDownBindingActive: volumeActive.$2,
       ),
     );
   }
 
   bool _androidVolumeBindingActive() {
-    if (defaultTargetPlatform != TargetPlatform.android) return false;
-    for (final input in [
-      PhysicalInputId.androidVolumeUp,
-      PhysicalInputId.androidVolumeDown,
-    ]) {
+    final states = _androidVolumeBindingStates();
+    return states.$1 || states.$2;
+  }
+
+  (bool, bool) _androidVolumeBindingStates() {
+    if (defaultTargetPlatform != TargetPlatform.android) return (false, false);
+    bool activeFor(PhysicalInputId input) {
       final command = _inputRouter.profile.commandFor(input);
-      if (command == ReaderCommand.toggleAutoRead ||
-          (_mode == ReaderMode.paged &&
-              (command == ReaderCommand.previousPage ||
-                  command == ReaderCommand.nextPage))) {
-        return true;
+      final autoAction = _inputRouter.profile.autoReadVolumeActions[input] ??
+          AndroidAutoReadVolumeAction.followNormal;
+      final running = _autoReadController.state == AutoReadState.running;
+      final normalConsumes = switch (command) {
+        ReaderCommand.previousPage || ReaderCommand.nextPage =>
+          _mode == ReaderMode.paged || _mode == ReaderMode.vertical,
+        ReaderCommand.toggleAutoRead => true,
+        _ => false,
+      };
+      if (!running || autoAction == AndroidAutoReadVolumeAction.followNormal) {
+        return normalConsumes;
       }
+      return switch (autoAction) {
+        AndroidAutoReadVolumeAction.previousPage ||
+        AndroidAutoReadVolumeAction.nextPage ||
+        AndroidAutoReadVolumeAction.toggleAutoRead => true,
+        AndroidAutoReadVolumeAction.systemVolume ||
+        AndroidAutoReadVolumeAction.disabled => false,
+        AndroidAutoReadVolumeAction.followNormal => normalConsumes,
+      };
     }
-    return false;
+    return (
+      activeFor(PhysicalInputId.androidVolumeUp),
+      activeFor(PhysicalInputId.androidVolumeDown),
+    );
   }
 
   void _onReaderInputProfileChanged(ReaderInputProfile profile) {
@@ -475,17 +510,77 @@ class _ReaderPageState extends State<ReaderPage>
   }
 
   void _routerPreviousPage() {
-    if (_mode != ReaderMode.paged) return;
     _pauseAutoReadForManualNavigation();
-    _pagedController?.previousPage();
+    if (_mode == ReaderMode.paged) {
+      _pagedController?.previousPage();
+    } else if (_scroll.hasClients) {
+      final position = _scroll.position;
+      final extent = position.viewportDimension;
+      unawaited(
+        _scroll.animateTo(
+          (position.pixels - extent).clamp(0.0, position.maxScrollExtent),
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOut,
+        ),
+      );
+    }
     if (mounted) setState(() {});
   }
 
   void _routerNextPage() {
-    if (_mode != ReaderMode.paged) return;
     _pauseAutoReadForManualNavigation();
-    _pagedController?.nextPage();
+    if (_mode == ReaderMode.paged) {
+      _pagedController?.nextPage();
+    } else if (_scroll.hasClients) {
+      final position = _scroll.position;
+      final extent = position.viewportDimension;
+      unawaited(
+        _scroll.animateTo(
+          (position.pixels + extent).clamp(0.0, position.maxScrollExtent),
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOut,
+        ),
+      );
+    }
     if (mounted) setState(() {});
+  }
+
+  FutureOr<bool> _handleAndroidVolume(PhysicalInputId input) async {
+    if (defaultTargetPlatform != TargetPlatform.android) return false;
+    final running = _autoReadController.state == AutoReadState.running;
+    final action = running
+        ? (_inputRouter.profile.autoReadVolumeActions[input] ??
+            AndroidAutoReadVolumeAction.followNormal)
+        : AndroidAutoReadVolumeAction.followNormal;
+    switch (action) {
+      case AndroidAutoReadVolumeAction.systemVolume:
+      case AndroidAutoReadVolumeAction.disabled:
+        return false;
+      case AndroidAutoReadVolumeAction.followNormal:
+        final command = _inputRouter.profile.commandFor(input);
+        if (command == ReaderCommand.previousPage) {
+          _routerPreviousPage();
+          return true;
+        }
+        if (command == ReaderCommand.nextPage) {
+          _routerNextPage();
+          return true;
+        }
+        if (command == ReaderCommand.toggleAutoRead) {
+          _toggleAutoRead();
+          return true;
+        }
+        return false;
+      case AndroidAutoReadVolumeAction.previousPage:
+        _routerPreviousPage();
+        return true;
+      case AndroidAutoReadVolumeAction.nextPage:
+        _routerNextPage();
+        return true;
+      case AndroidAutoReadVolumeAction.toggleAutoRead:
+        _toggleAutoRead();
+        return true;
+    }
   }
 
   Future<void> _routerPreviousChapter() =>
@@ -598,6 +693,10 @@ class _ReaderPageState extends State<ReaderPage>
           _autoReadController.state == AutoReadState.stoppedAtEnd) {
         _showChrome();
       }
+      _onInputHostStateChanged(
+        pagedActive: _mode == ReaderMode.paged,
+        captureActive: _inputRouter.capture.isActive,
+      );
       if (mounted) setState(() {});
     });
     _searchService = ReaderSearchService();
@@ -613,6 +712,7 @@ class _ReaderPageState extends State<ReaderPage>
       onToggleReaderControls: _toggleChrome,
       onOpenToc: _openToc,
       onToggleAutoRead: _toggleAutoRead,
+      onAndroidVolume: _handleAndroidVolume,
       onProfileChanged: _onReaderInputProfileChanged,
       onHostStateChanged: _onInputHostStateChanged,
     );
@@ -622,6 +722,8 @@ class _ReaderPageState extends State<ReaderPage>
         pagedActive: false,
         inputCaptureActive: false,
         volumeBindingActive: _androidVolumeBindingActive(),
+        volumeUpBindingActive: _androidVolumeBindingStates().$1,
+        volumeDownBindingActive: _androidVolumeBindingStates().$2,
         onInput: _inputRouter.handlePhysicalInput,
       ),
     );
@@ -2102,6 +2204,7 @@ class _ReaderPageState extends State<ReaderPage>
     final readerContent = _mode == ReaderMode.paged && _pagedController != null
         ? _buildPagedBody(context)
         : _buildVerticalBody(context, index, doc);
+    final readerBody = _buildReaderBodyWithInfoRegions(context, readerContent);
     return Scaffold(
       backgroundColor: _appearance.backgroundColor,
       body: Stack(
@@ -2117,7 +2220,7 @@ class _ReaderPageState extends State<ReaderPage>
               onKeyEvent: _mode == ReaderMode.vertical
                   ? _onVerticalKeyEvent
                   : null,
-              child: readerContent,
+              child: readerBody,
             ),
           ),
           ReaderChrome(
@@ -2198,6 +2301,31 @@ class _ReaderPageState extends State<ReaderPage>
           ),
         ],
       ),
+    );
+  }
+
+  bool get _minimalReaderInfoVisible =>
+      !_chromeVisible &&
+      (_autoReadController.state != AutoReadState.running ||
+          _preferences.showAutoReadMinimalInfo) &&
+      (defaultTargetPlatform != TargetPlatform.android ||
+          _preferences.statusBarMode == ReaderStatusBarMode.readerInfo) &&
+      (_preferences.showTopInfoBar || _preferences.showBottomInfoBar);
+
+  Widget _buildReaderBodyWithInfoRegions(
+    BuildContext context,
+    Widget readerContent,
+  ) {
+    if (!_minimalReaderInfoVisible) return readerContent;
+    final top = _preferences.showTopInfoBar
+        ? readerInfoRegionInset(context, top: true)
+        : 0.0;
+    final bottom = _preferences.showBottomInfoBar
+        ? readerInfoRegionInset(context, top: false)
+        : 0.0;
+    return Padding(
+      padding: EdgeInsets.only(top: top, bottom: bottom),
+      child: readerContent,
     );
   }
 

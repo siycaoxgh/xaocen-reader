@@ -11,6 +11,8 @@ class MainActivity : FlutterActivity() {
     private var pagedReaderActive = false
     private var inputCaptureActive = false
     private var volumeBindingActive = false
+    private var volumeUpBindingActive = false
+    private var volumeDownBindingActive = false
     private lateinit var inputChannel: MethodChannel
     private lateinit var fontsChannel: MethodChannel
 
@@ -60,7 +62,14 @@ class MainActivity : FlutterActivity() {
                     result.success(null)
                 }
                 "setVolumeBindingActive" -> {
-                    volumeBindingActive = call.arguments as? Boolean ?: false
+                    when (val args = call.arguments) {
+                        is Boolean -> volumeBindingActive = args
+                        is Map<*, *> -> {
+                            volumeBindingActive = args["all"] as? Boolean ?: false
+                            volumeUpBindingActive = args["up"] as? Boolean ?: false
+                            volumeDownBindingActive = args["down"] as? Boolean ?: false
+                        }
+                    }
                     result.success(null)
                 }
                 "setKeepScreenOn" -> {
@@ -80,7 +89,12 @@ class MainActivity : FlutterActivity() {
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         val isVolume = event.keyCode == KeyEvent.KEYCODE_VOLUME_UP ||
             event.keyCode == KeyEvent.KEYCODE_VOLUME_DOWN
-        if ((volumeBindingActive || inputCaptureActive) && isVolume) {
+        val keyBindingActive = when (event.keyCode) {
+            KeyEvent.KEYCODE_VOLUME_UP -> volumeUpBindingActive
+            KeyEvent.KEYCODE_VOLUME_DOWN -> volumeDownBindingActive
+            else -> volumeBindingActive
+        }
+        if ((keyBindingActive || inputCaptureActive) && isVolume) {
             if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
                 val input = if (event.keyCode == KeyEvent.KEYCODE_VOLUME_UP) {
                     "android.volumeUp"
