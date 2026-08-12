@@ -85,6 +85,32 @@ PhysicalInputId? physicalInputIdForKey(LogicalKeyboardKey key) => switch (key) {
   LogicalKeyboardKey.digit7 => PhysicalInputId.keyboardDigit7,
   LogicalKeyboardKey.digit8 => PhysicalInputId.keyboardDigit8,
   LogicalKeyboardKey.digit9 => PhysicalInputId.keyboardDigit9,
+  LogicalKeyboardKey.numpad0 => PhysicalInputId.keyboardNumpad0,
+  LogicalKeyboardKey.numpad1 => PhysicalInputId.keyboardNumpad1,
+  LogicalKeyboardKey.numpad2 => PhysicalInputId.keyboardNumpad2,
+  LogicalKeyboardKey.numpad3 => PhysicalInputId.keyboardNumpad3,
+  LogicalKeyboardKey.numpad4 => PhysicalInputId.keyboardNumpad4,
+  LogicalKeyboardKey.numpad5 => PhysicalInputId.keyboardNumpad5,
+  LogicalKeyboardKey.numpad6 => PhysicalInputId.keyboardNumpad6,
+  LogicalKeyboardKey.numpad7 => PhysicalInputId.keyboardNumpad7,
+  LogicalKeyboardKey.numpad8 => PhysicalInputId.keyboardNumpad8,
+  LogicalKeyboardKey.numpad9 => PhysicalInputId.keyboardNumpad9,
+  LogicalKeyboardKey.numpadAdd => PhysicalInputId.keyboardNumpadAdd,
+  LogicalKeyboardKey.numpadSubtract => PhysicalInputId.keyboardNumpadSubtract,
+  LogicalKeyboardKey.numpadMultiply => PhysicalInputId.keyboardNumpadMultiply,
+  LogicalKeyboardKey.numpadDivide => PhysicalInputId.keyboardNumpadDivide,
+  LogicalKeyboardKey.f1 => PhysicalInputId.keyboardF1,
+  LogicalKeyboardKey.f2 => PhysicalInputId.keyboardF2,
+  LogicalKeyboardKey.f3 => PhysicalInputId.keyboardF3,
+  LogicalKeyboardKey.f4 => PhysicalInputId.keyboardF4,
+  LogicalKeyboardKey.f5 => PhysicalInputId.keyboardF5,
+  LogicalKeyboardKey.f6 => PhysicalInputId.keyboardF6,
+  LogicalKeyboardKey.f7 => PhysicalInputId.keyboardF7,
+  LogicalKeyboardKey.f8 => PhysicalInputId.keyboardF8,
+  LogicalKeyboardKey.f9 => PhysicalInputId.keyboardF9,
+  LogicalKeyboardKey.f10 => PhysicalInputId.keyboardF10,
+  LogicalKeyboardKey.f11 => PhysicalInputId.keyboardF11,
+  LogicalKeyboardKey.f12 => PhysicalInputId.keyboardF12,
   _ => null,
 };
 
@@ -172,14 +198,11 @@ final class ReaderInputBridge {
         'setInputCaptureActive',
         inputCaptureActive,
       );
-      await _channel.invokeMethod<void>(
-        'setVolumeBindingActive',
-        {
-          'all': volumeBindingActive,
-          'up': volumeUpBindingActive,
-          'down': volumeDownBindingActive,
-        },
-      );
+      await _channel.invokeMethod<void>('setVolumeBindingActive', {
+        'all': volumeBindingActive,
+        'up': volumeUpBindingActive,
+        'down': volumeDownBindingActive,
+      });
     } on MissingPluginException {
       // Desktop and test hosts have no Android bridge.
     }

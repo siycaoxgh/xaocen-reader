@@ -27,12 +27,7 @@ void main() {
       await tester.pumpWidget(_settings(Size(width, 720)));
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
-      for (final name in [
-        'typography',
-        'appearance',
-        'paging',
-        'advanced',
-      ]) {
+      for (final name in ['typography', 'appearance', 'paging', 'advanced']) {
         expect(
           find.byKey(ValueKey('reader-settings-category-$name')),
           findsOneWidget,
@@ -69,4 +64,33 @@ void main() {
       );
     }
   });
+
+  testWidgets(
+    'appearance exposes full-width preview and color picker actions',
+    (tester) async {
+      await tester.pumpWidget(_settings(const Size(1024, 720)));
+      await tester.tap(
+        find.byKey(const ValueKey('reader-settings-category-appearance')),
+      );
+      await tester.pumpAndSettle();
+      final preview = tester.getRect(
+        find.byKey(const ValueKey('reader-appearance-preview')),
+      );
+      expect(preview.width, greaterThan(500));
+      final pickerButtons = find.text('\u53d6\u8272');
+      expect(pickerButtons, findsNWidgets(2));
+      await tester.ensureVisible(pickerButtons.first);
+      await tester.tap(pickerButtons.first);
+      await tester.pumpAndSettle();
+      expect(find.text('\u9009\u62e9\u989c\u8272'), findsOneWidget);
+      final pickerField = find.byType(TextField).last;
+      await tester.enterText(pickerField, '#123456');
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pump();
+      expect(find.text('\u786e\u8ba4'), findsOneWidget);
+      await tester.tap(find.text('\u786e\u8ba4'));
+      await tester.pumpAndSettle();
+      expect(find.text('\u9009\u62e9\u989c\u8272'), findsNothing);
+    },
+  );
 }

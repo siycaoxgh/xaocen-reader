@@ -5,15 +5,17 @@
 /// only convenient UI mappings to that value.
 library;
 
+/// Stable names are retained for JSON/source compatibility; labels are
+/// localized as 极慢/慢/中/快/极快 in the UI.
 enum VerticalSpeedPreset { slow, slower, standard, faster, fast }
 
 extension VerticalSpeedPresetValues on VerticalSpeedPreset {
   int get velocityPixelsPerSecond => switch (this) {
-    VerticalSpeedPreset.slow => 18,
-    VerticalSpeedPreset.slower => 28,
-    VerticalSpeedPreset.standard => 40,
-    VerticalSpeedPreset.faster => 56,
-    VerticalSpeedPreset.fast => 76,
+    VerticalSpeedPreset.slow => 2,
+    VerticalSpeedPreset.slower => 10,
+    VerticalSpeedPreset.standard => 25,
+    VerticalSpeedPreset.faster => 50,
+    VerticalSpeedPreset.fast => 100,
   };
 
   static VerticalSpeedPreset? fromVelocity(int velocity) {
@@ -33,13 +35,15 @@ final class AutoReadPreferences {
   });
 
   static const int currentVersion = 2;
-  static const int minVerticalVelocityPixelsPerSecond = 12;
-  static const int maxVerticalVelocityPixelsPerSecond = 120;
-  static const int defaultVerticalVelocityPixelsPerSecond = 40;
+  static const int minVerticalVelocityPixelsPerSecond = 2;
+  static const int maxVerticalVelocityPixelsPerSecond = 100;
+  static const int defaultVerticalVelocityPixelsPerSecond = 25;
   static const VerticalSpeedPreset defaultVerticalSpeedPreset =
       VerticalSpeedPreset.standard;
   static const int defaultPagedIntervalSeconds = 5;
-  static const Set<int> supportedPagedIntervals = {3, 5, 8, 10, 15};
+  static const int minPagedIntervalSeconds = 5;
+  static const int maxPagedIntervalSeconds = 120;
+  static const Set<int> supportedPagedIntervals = {120, 60, 30, 15, 5};
 
   static AutoReadPreferences get defaults => AutoReadPreferences._(
     verticalVelocityPixelsPerSecond: defaultVerticalVelocityPixelsPerSecond,
@@ -69,7 +73,8 @@ final class AutoReadPreferences {
     return AutoReadPreferences._(
       verticalVelocityPixelsPerSecond: velocity,
       pagedIntervalSeconds:
-          supportedPagedIntervals.contains(pagedIntervalSeconds)
+          pagedIntervalSeconds >= minPagedIntervalSeconds &&
+              pagedIntervalSeconds <= maxPagedIntervalSeconds
           ? pagedIntervalSeconds
           : defaultPagedIntervalSeconds,
       version: currentVersion,

@@ -120,16 +120,21 @@ final class AutoReadPreferencesRepository {
     return velocity;
   }
 
-  int _parseLegacyPreset(Object? value) => VerticalSpeedPreset.values
-      .firstWhere(
-        (preset) => preset.name == value,
-        orElse: () => AutoReadPreferences.defaultVerticalSpeedPreset,
-      )
-      .velocityPixelsPerSecond;
+  int _parseLegacyPreset(Object? value) => switch (value) {
+    // v1 stored the former preset names. Preserve their effective canonical
+    // velocity rather than silently changing an existing reader's speed.
+    'slow' => 18,
+    'slower' => 28,
+    'standard' => 40,
+    'faster' => 56,
+    'fast' => 76,
+    _ => AutoReadPreferences.defaultVerticalSpeedPreset.velocityPixelsPerSecond,
+  };
 
   int _parseInterval(Object? value) =>
       value is int &&
-          AutoReadPreferences.supportedPagedIntervals.contains(value)
+          value >= AutoReadPreferences.minPagedIntervalSeconds &&
+          value <= AutoReadPreferences.maxPagedIntervalSeconds
       ? value
       : AutoReadPreferences.defaultPagedIntervalSeconds;
 

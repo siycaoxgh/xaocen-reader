@@ -21,11 +21,11 @@ void main() {
   tearDown(() => db.close());
 
   test('defaults and derived velocity mapping are typed', () async {
-    expect(db.schemaVersion, 12);
+    expect(db.schemaVersion, 13);
     final preferences = await repository.load();
     expect(preferences.verticalSpeedPreset, VerticalSpeedPreset.standard);
     expect(preferences.pagedIntervalSeconds, 5);
-    expect(preferences.verticalVelocityPixelsPerSecond, 40);
+    expect(preferences.verticalVelocityPixelsPerSecond, 25);
   });
 
   test('custom velocity is canonical and preset is derived', () async {
@@ -44,6 +44,39 @@ void main() {
     expect(json.containsKey('verticalSpeedPreset'), isFalse);
   });
 
+  test('continuous speed and interval ranges include both boundaries', () {
+    expect(
+      AutoReadPreferences(
+        verticalVelocityPixelsPerSecond: 2,
+      ).verticalVelocityPixelsPerSecond,
+      2,
+    );
+    expect(
+      AutoReadPreferences(
+        verticalVelocityPixelsPerSecond: 100,
+      ).verticalVelocityPixelsPerSecond,
+      100,
+    );
+    expect(
+      AutoReadPreferences(pagedIntervalSeconds: 5).pagedIntervalSeconds,
+      5,
+    );
+    expect(
+      AutoReadPreferences(pagedIntervalSeconds: 120).pagedIntervalSeconds,
+      120,
+    );
+    expect(
+      AutoReadPreferences(
+        verticalVelocityPixelsPerSecond: 1,
+      ).verticalVelocityPixelsPerSecond,
+      25,
+    );
+    expect(
+      AutoReadPreferences(pagedIntervalSeconds: 121).pagedIntervalSeconds,
+      5,
+    );
+  });
+
   test('update, setters, reset, and watch persist typed values', () async {
     final values = <AutoReadPreferences>[];
     final subscription = repository.watch().listen(values.add);
@@ -53,7 +86,7 @@ void main() {
     await repository.update(
       AutoReadPreferences(
         verticalSpeedPreset: VerticalSpeedPreset.faster,
-        pagedIntervalSeconds: 8,
+        pagedIntervalSeconds: 60,
       ),
     );
     expect(
@@ -80,7 +113,7 @@ void main() {
       jsonEncode({
         'version': 1,
         'verticalSpeedPreset': 'not-a-preset',
-        'pagedIntervalSeconds': 99,
+        'pagedIntervalSeconds': 121,
         'updatedAt': 'not-a-date',
       }),
     );
@@ -101,14 +134,15 @@ void main() {
       jsonEncode({
         'version': 0,
         'verticalSpeedPreset': 'fast',
-        'pagedIntervalSeconds': 3,
+        'pagedIntervalSeconds': 5,
         'updatedAt': '2026-08-10T00:00:00Z',
       }),
     );
     var preferences = await repository.load();
     expect(preferences.version, AutoReadPreferences.currentVersion);
-    expect(preferences.verticalSpeedPreset, VerticalSpeedPreset.fast);
-    expect(preferences.pagedIntervalSeconds, 3);
+    expect(preferences.verticalSpeedPreset, isNull);
+    expect(preferences.verticalVelocityPixelsPerSecond, 76);
+    expect(preferences.pagedIntervalSeconds, 5);
 
     await _putRaw(
       db,
@@ -116,12 +150,12 @@ void main() {
       jsonEncode({
         'version': 1,
         'verticalSpeedPreset': 'fast',
-        'pagedIntervalSeconds': 3,
+        'pagedIntervalSeconds': 5,
       }),
     );
     preferences = await repository.load();
     expect(preferences.verticalVelocityPixelsPerSecond, 76);
-    expect(preferences.verticalSpeedPreset, VerticalSpeedPreset.fast);
+    expect(preferences.verticalSpeedPreset, isNull);
 
     await _putRaw(
       db,
@@ -129,11 +163,11 @@ void main() {
       jsonEncode({
         'version': 2,
         'verticalVelocityPixelsPerSecond': 121,
-        'pagedIntervalSeconds': 3,
+        'pagedIntervalSeconds': 5,
       }),
     );
     preferences = await repository.load();
-    expect(preferences.verticalVelocityPixelsPerSecond, 40);
+    expect(preferences.verticalVelocityPixelsPerSecond, 25);
     expect(preferences.verticalSpeedPreset, VerticalSpeedPreset.standard);
 
     await _putRaw(db, _key, jsonEncode({'version': 999}));
@@ -174,7 +208,7 @@ void main() {
         )).commandFor(PhysicalInputId.keyboardArrowLeft),
         ReaderCommand.previousPage,
       );
-      expect(secondDb.schemaVersion, 12);
+      expect(secondDb.schemaVersion, 13);
       await secondDb.close();
       await directory.delete(recursive: true);
     },

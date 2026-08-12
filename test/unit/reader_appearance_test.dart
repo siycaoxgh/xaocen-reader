@@ -2,9 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:xaocen_reader/design/theme/app_theme.dart';
 import 'package:xaocen_reader/reader/reader_appearance.dart';
+import 'package:xaocen_reader/reader/reader_chrome.dart';
 
 /// P1：ReaderResolvedAppearance 解析 + 对比度验收（≥4.5:1）。
 void main() {
+  test('color picker parser accepts HEX and RGB and rejects invalid input', () {
+    expect(ReaderSettingsSheetStateColorParser.parse('#123456'), 0xff123456);
+    expect(
+      ReaderSettingsSheetStateColorParser.parse('rgb(18, 52, 86)'),
+      0xff123456,
+    );
+    expect(ReaderSettingsSheetStateColorParser.parse('rgb(256, 0, 0)'), isNull);
+  });
   group('对比度工具', () {
     test('黑/白对比度为 21', () {
       expect(contrastRatio(Colors.black, Colors.white), closeTo(21.0, 0.5));

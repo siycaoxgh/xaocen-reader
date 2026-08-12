@@ -58,6 +58,7 @@ class _PagedReaderViewState extends State<PagedReaderView> {
   final InputBinding _inputBinding = InputBinding.defaults;
   DateTime? _lastWheelTurn;
   bool _userGestureActive = false;
+  bool _navigationNotified = false;
   int? _gestureWindowGeneration;
   int? _programmaticTargetIndex;
   int? _edgeFallbackGeneration;
@@ -144,14 +145,20 @@ class _PagedReaderViewState extends State<PagedReaderView> {
   bool _onScrollNotification(ScrollNotification notification) {
     if (notification is ScrollStartNotification &&
         notification.dragDetails != null) {
-      // Notify the Reader only once a real drag has started. Calling this from
-      // PointerDown made a plain center tap reveal Chrome and then the tap
-      // toggle immediately hid it again while AutoRead was idle/paused.
-      widget.onUserNavigation?.call();
+      // A ScrollStart can be emitted for a tap on some platforms. Defer the
+      // navigation signal until a real drag update so center taps never alter
+      // Reader chrome or AutoRead state.
       _userGestureActive = true;
+      _navigationNotified = false;
       _programmaticTargetIndex = null;
       _gestureWindowGeneration = widget.controller.window.windowGeneration;
       _edgeFallbackGeneration = null;
+    } else if (notification is ScrollUpdateNotification &&
+        notification.dragDetails != null &&
+        _userGestureActive &&
+        !_navigationNotified) {
+      _navigationNotified = true;
+      widget.onUserNavigation?.call();
     } else if (notification is OverscrollNotification && _userGestureActive) {
       final metrics = notification.metrics;
       final atEnd = metrics.pixels >= metrics.maxScrollExtent;
@@ -164,6 +171,7 @@ class _PagedReaderViewState extends State<PagedReaderView> {
     } else if (notification is ScrollEndNotification) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _userGestureActive = false;
+        _navigationNotified = false;
         _gestureWindowGeneration = null;
       });
     }
@@ -214,12 +222,14 @@ class _PagedReaderViewState extends State<PagedReaderView> {
     }
     _pointerDownPosition = null;
     _userGestureActive = false;
+    _navigationNotified = false;
     _gestureWindowGeneration = null;
   }
 
   void _onPointerCancel(PointerCancelEvent event) {
     _pointerDownPosition = null;
     _userGestureActive = false;
+    _navigationNotified = false;
     _gestureWindowGeneration = null;
   }
 

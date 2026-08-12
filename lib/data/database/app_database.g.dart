@@ -4497,6 +4497,35 @@ class $ReaderPreferencesRowsTable extends ReaderPreferencesRows
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _showTopInfoDividerMeta =
+      const VerificationMeta('showTopInfoDivider');
+  @override
+  late final GeneratedColumn<bool> showTopInfoDivider = GeneratedColumn<bool>(
+    'show_top_info_divider',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("show_top_info_divider" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _showBottomInfoDividerMeta =
+      const VerificationMeta('showBottomInfoDivider');
+  @override
+  late final GeneratedColumn<bool> showBottomInfoDivider =
+      GeneratedColumn<bool>(
+        'show_bottom_info_divider',
+        aliasedName,
+        false,
+        type: DriftSqlType.bool,
+        requiredDuringInsert: false,
+        defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'CHECK ("show_bottom_info_divider" IN (0, 1))',
+        ),
+        defaultValue: const Constant(false),
+      );
   static const VerificationMeta _showAutoReadMinimalInfoMeta =
       const VerificationMeta('showAutoReadMinimalInfo');
   @override
@@ -4617,6 +4646,8 @@ class $ReaderPreferencesRowsTable extends ReaderPreferencesRows
     showClockInfo,
     showWholeBookProgressInfo,
     showInfoDivider,
+    showTopInfoDivider,
+    showBottomInfoDivider,
     showAutoReadMinimalInfo,
     chapterInfoSlot,
     chapterProgressInfoSlot,
@@ -4929,6 +4960,24 @@ class $ReaderPreferencesRowsTable extends ReaderPreferencesRows
         ),
       );
     }
+    if (data.containsKey('show_top_info_divider')) {
+      context.handle(
+        _showTopInfoDividerMeta,
+        showTopInfoDivider.isAcceptableOrUnknown(
+          data['show_top_info_divider']!,
+          _showTopInfoDividerMeta,
+        ),
+      );
+    }
+    if (data.containsKey('show_bottom_info_divider')) {
+      context.handle(
+        _showBottomInfoDividerMeta,
+        showBottomInfoDivider.isAcceptableOrUnknown(
+          data['show_bottom_info_divider']!,
+          _showBottomInfoDividerMeta,
+        ),
+      );
+    }
     if (data.containsKey('show_auto_read_minimal_info')) {
       context.handle(
         _showAutoReadMinimalInfoMeta,
@@ -5128,6 +5177,14 @@ class $ReaderPreferencesRowsTable extends ReaderPreferencesRows
         DriftSqlType.bool,
         data['${effectivePrefix}show_info_divider'],
       )!,
+      showTopInfoDivider: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}show_top_info_divider'],
+      )!,
+      showBottomInfoDivider: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}show_bottom_info_divider'],
+      )!,
       showAutoReadMinimalInfo: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}show_auto_read_minimal_info'],
@@ -5201,6 +5258,8 @@ class ReaderPreferencesRow extends DataClass
   final bool showClockInfo;
   final bool showWholeBookProgressInfo;
   final bool showInfoDivider;
+  final bool showTopInfoDivider;
+  final bool showBottomInfoDivider;
   final bool showAutoReadMinimalInfo;
   final String chapterInfoSlot;
   final String chapterProgressInfoSlot;
@@ -5241,6 +5300,8 @@ class ReaderPreferencesRow extends DataClass
     required this.showClockInfo,
     required this.showWholeBookProgressInfo,
     required this.showInfoDivider,
+    required this.showTopInfoDivider,
+    required this.showBottomInfoDivider,
     required this.showAutoReadMinimalInfo,
     required this.chapterInfoSlot,
     required this.chapterProgressInfoSlot,
@@ -5308,6 +5369,8 @@ class ReaderPreferencesRow extends DataClass
       showWholeBookProgressInfo,
     );
     map['show_info_divider'] = Variable<bool>(showInfoDivider);
+    map['show_top_info_divider'] = Variable<bool>(showTopInfoDivider);
+    map['show_bottom_info_divider'] = Variable<bool>(showBottomInfoDivider);
     map['show_auto_read_minimal_info'] = Variable<bool>(
       showAutoReadMinimalInfo,
     );
@@ -5374,6 +5437,8 @@ class ReaderPreferencesRow extends DataClass
       showClockInfo: Value(showClockInfo),
       showWholeBookProgressInfo: Value(showWholeBookProgressInfo),
       showInfoDivider: Value(showInfoDivider),
+      showTopInfoDivider: Value(showTopInfoDivider),
+      showBottomInfoDivider: Value(showBottomInfoDivider),
       showAutoReadMinimalInfo: Value(showAutoReadMinimalInfo),
       chapterInfoSlot: Value(chapterInfoSlot),
       chapterProgressInfoSlot: Value(chapterProgressInfoSlot),
@@ -5438,6 +5503,10 @@ class ReaderPreferencesRow extends DataClass
         json['showWholeBookProgressInfo'],
       ),
       showInfoDivider: serializer.fromJson<bool>(json['showInfoDivider']),
+      showTopInfoDivider: serializer.fromJson<bool>(json['showTopInfoDivider']),
+      showBottomInfoDivider: serializer.fromJson<bool>(
+        json['showBottomInfoDivider'],
+      ),
       showAutoReadMinimalInfo: serializer.fromJson<bool>(
         json['showAutoReadMinimalInfo'],
       ),
@@ -5501,6 +5570,8 @@ class ReaderPreferencesRow extends DataClass
         showWholeBookProgressInfo,
       ),
       'showInfoDivider': serializer.toJson<bool>(showInfoDivider),
+      'showTopInfoDivider': serializer.toJson<bool>(showTopInfoDivider),
+      'showBottomInfoDivider': serializer.toJson<bool>(showBottomInfoDivider),
       'showAutoReadMinimalInfo': serializer.toJson<bool>(
         showAutoReadMinimalInfo,
       ),
@@ -5550,6 +5621,8 @@ class ReaderPreferencesRow extends DataClass
     bool? showClockInfo,
     bool? showWholeBookProgressInfo,
     bool? showInfoDivider,
+    bool? showTopInfoDivider,
+    bool? showBottomInfoDivider,
     bool? showAutoReadMinimalInfo,
     String? chapterInfoSlot,
     String? chapterProgressInfoSlot,
@@ -5608,6 +5681,8 @@ class ReaderPreferencesRow extends DataClass
     showWholeBookProgressInfo:
         showWholeBookProgressInfo ?? this.showWholeBookProgressInfo,
     showInfoDivider: showInfoDivider ?? this.showInfoDivider,
+    showTopInfoDivider: showTopInfoDivider ?? this.showTopInfoDivider,
+    showBottomInfoDivider: showBottomInfoDivider ?? this.showBottomInfoDivider,
     showAutoReadMinimalInfo:
         showAutoReadMinimalInfo ?? this.showAutoReadMinimalInfo,
     chapterInfoSlot: chapterInfoSlot ?? this.chapterInfoSlot,
@@ -5709,6 +5784,12 @@ class ReaderPreferencesRow extends DataClass
       showInfoDivider: data.showInfoDivider.present
           ? data.showInfoDivider.value
           : this.showInfoDivider,
+      showTopInfoDivider: data.showTopInfoDivider.present
+          ? data.showTopInfoDivider.value
+          : this.showTopInfoDivider,
+      showBottomInfoDivider: data.showBottomInfoDivider.present
+          ? data.showBottomInfoDivider.value
+          : this.showBottomInfoDivider,
       showAutoReadMinimalInfo: data.showAutoReadMinimalInfo.present
           ? data.showAutoReadMinimalInfo.value
           : this.showAutoReadMinimalInfo,
@@ -5766,6 +5847,8 @@ class ReaderPreferencesRow extends DataClass
           ..write('showClockInfo: $showClockInfo, ')
           ..write('showWholeBookProgressInfo: $showWholeBookProgressInfo, ')
           ..write('showInfoDivider: $showInfoDivider, ')
+          ..write('showTopInfoDivider: $showTopInfoDivider, ')
+          ..write('showBottomInfoDivider: $showBottomInfoDivider, ')
           ..write('showAutoReadMinimalInfo: $showAutoReadMinimalInfo, ')
           ..write('chapterInfoSlot: $chapterInfoSlot, ')
           ..write('chapterProgressInfoSlot: $chapterProgressInfoSlot, ')
@@ -5811,6 +5894,8 @@ class ReaderPreferencesRow extends DataClass
     showClockInfo,
     showWholeBookProgressInfo,
     showInfoDivider,
+    showTopInfoDivider,
+    showBottomInfoDivider,
     showAutoReadMinimalInfo,
     chapterInfoSlot,
     chapterProgressInfoSlot,
@@ -5855,6 +5940,8 @@ class ReaderPreferencesRow extends DataClass
           other.showClockInfo == this.showClockInfo &&
           other.showWholeBookProgressInfo == this.showWholeBookProgressInfo &&
           other.showInfoDivider == this.showInfoDivider &&
+          other.showTopInfoDivider == this.showTopInfoDivider &&
+          other.showBottomInfoDivider == this.showBottomInfoDivider &&
           other.showAutoReadMinimalInfo == this.showAutoReadMinimalInfo &&
           other.chapterInfoSlot == this.chapterInfoSlot &&
           other.chapterProgressInfoSlot == this.chapterProgressInfoSlot &&
@@ -5898,6 +5985,8 @@ class ReaderPreferencesRowsCompanion
   final Value<bool> showClockInfo;
   final Value<bool> showWholeBookProgressInfo;
   final Value<bool> showInfoDivider;
+  final Value<bool> showTopInfoDivider;
+  final Value<bool> showBottomInfoDivider;
   final Value<bool> showAutoReadMinimalInfo;
   final Value<String> chapterInfoSlot;
   final Value<String> chapterProgressInfoSlot;
@@ -5939,6 +6028,8 @@ class ReaderPreferencesRowsCompanion
     this.showClockInfo = const Value.absent(),
     this.showWholeBookProgressInfo = const Value.absent(),
     this.showInfoDivider = const Value.absent(),
+    this.showTopInfoDivider = const Value.absent(),
+    this.showBottomInfoDivider = const Value.absent(),
     this.showAutoReadMinimalInfo = const Value.absent(),
     this.chapterInfoSlot = const Value.absent(),
     this.chapterProgressInfoSlot = const Value.absent(),
@@ -5981,6 +6072,8 @@ class ReaderPreferencesRowsCompanion
     this.showClockInfo = const Value.absent(),
     this.showWholeBookProgressInfo = const Value.absent(),
     this.showInfoDivider = const Value.absent(),
+    this.showTopInfoDivider = const Value.absent(),
+    this.showBottomInfoDivider = const Value.absent(),
     this.showAutoReadMinimalInfo = const Value.absent(),
     this.chapterInfoSlot = const Value.absent(),
     this.chapterProgressInfoSlot = const Value.absent(),
@@ -6034,6 +6127,8 @@ class ReaderPreferencesRowsCompanion
     Expression<bool>? showClockInfo,
     Expression<bool>? showWholeBookProgressInfo,
     Expression<bool>? showInfoDivider,
+    Expression<bool>? showTopInfoDivider,
+    Expression<bool>? showBottomInfoDivider,
     Expression<bool>? showAutoReadMinimalInfo,
     Expression<String>? chapterInfoSlot,
     Expression<String>? chapterProgressInfoSlot,
@@ -6085,6 +6180,10 @@ class ReaderPreferencesRowsCompanion
       if (showWholeBookProgressInfo != null)
         'show_whole_book_progress_info': showWholeBookProgressInfo,
       if (showInfoDivider != null) 'show_info_divider': showInfoDivider,
+      if (showTopInfoDivider != null)
+        'show_top_info_divider': showTopInfoDivider,
+      if (showBottomInfoDivider != null)
+        'show_bottom_info_divider': showBottomInfoDivider,
       if (showAutoReadMinimalInfo != null)
         'show_auto_read_minimal_info': showAutoReadMinimalInfo,
       if (chapterInfoSlot != null) 'chapter_info_slot': chapterInfoSlot,
@@ -6132,6 +6231,8 @@ class ReaderPreferencesRowsCompanion
     Value<bool>? showClockInfo,
     Value<bool>? showWholeBookProgressInfo,
     Value<bool>? showInfoDivider,
+    Value<bool>? showTopInfoDivider,
+    Value<bool>? showBottomInfoDivider,
     Value<bool>? showAutoReadMinimalInfo,
     Value<String>? chapterInfoSlot,
     Value<String>? chapterProgressInfoSlot,
@@ -6180,6 +6281,9 @@ class ReaderPreferencesRowsCompanion
       showWholeBookProgressInfo:
           showWholeBookProgressInfo ?? this.showWholeBookProgressInfo,
       showInfoDivider: showInfoDivider ?? this.showInfoDivider,
+      showTopInfoDivider: showTopInfoDivider ?? this.showTopInfoDivider,
+      showBottomInfoDivider:
+          showBottomInfoDivider ?? this.showBottomInfoDivider,
       showAutoReadMinimalInfo:
           showAutoReadMinimalInfo ?? this.showAutoReadMinimalInfo,
       chapterInfoSlot: chapterInfoSlot ?? this.chapterInfoSlot,
@@ -6307,6 +6411,14 @@ class ReaderPreferencesRowsCompanion
     if (showInfoDivider.present) {
       map['show_info_divider'] = Variable<bool>(showInfoDivider.value);
     }
+    if (showTopInfoDivider.present) {
+      map['show_top_info_divider'] = Variable<bool>(showTopInfoDivider.value);
+    }
+    if (showBottomInfoDivider.present) {
+      map['show_bottom_info_divider'] = Variable<bool>(
+        showBottomInfoDivider.value,
+      );
+    }
     if (showAutoReadMinimalInfo.present) {
       map['show_auto_read_minimal_info'] = Variable<bool>(
         showAutoReadMinimalInfo.value,
@@ -6375,6 +6487,8 @@ class ReaderPreferencesRowsCompanion
           ..write('showClockInfo: $showClockInfo, ')
           ..write('showWholeBookProgressInfo: $showWholeBookProgressInfo, ')
           ..write('showInfoDivider: $showInfoDivider, ')
+          ..write('showTopInfoDivider: $showTopInfoDivider, ')
+          ..write('showBottomInfoDivider: $showBottomInfoDivider, ')
           ..write('showAutoReadMinimalInfo: $showAutoReadMinimalInfo, ')
           ..write('chapterInfoSlot: $chapterInfoSlot, ')
           ..write('chapterProgressInfoSlot: $chapterProgressInfoSlot, ')
@@ -11589,6 +11703,8 @@ typedef $$ReaderPreferencesRowsTableCreateCompanionBuilder =
       Value<bool> showClockInfo,
       Value<bool> showWholeBookProgressInfo,
       Value<bool> showInfoDivider,
+      Value<bool> showTopInfoDivider,
+      Value<bool> showBottomInfoDivider,
       Value<bool> showAutoReadMinimalInfo,
       Value<String> chapterInfoSlot,
       Value<String> chapterProgressInfoSlot,
@@ -11632,6 +11748,8 @@ typedef $$ReaderPreferencesRowsTableUpdateCompanionBuilder =
       Value<bool> showClockInfo,
       Value<bool> showWholeBookProgressInfo,
       Value<bool> showInfoDivider,
+      Value<bool> showTopInfoDivider,
+      Value<bool> showBottomInfoDivider,
       Value<bool> showAutoReadMinimalInfo,
       Value<String> chapterInfoSlot,
       Value<String> chapterProgressInfoSlot,
@@ -11839,6 +11957,16 @@ class $$ReaderPreferencesRowsTableFilterComposer
 
   ColumnFilters<bool> get showInfoDivider => $composableBuilder(
     column: $table.showInfoDivider,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get showTopInfoDivider => $composableBuilder(
+    column: $table.showTopInfoDivider,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get showBottomInfoDivider => $composableBuilder(
+    column: $table.showBottomInfoDivider,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -12065,6 +12193,16 @@ class $$ReaderPreferencesRowsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get showTopInfoDivider => $composableBuilder(
+    column: $table.showTopInfoDivider,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get showBottomInfoDivider => $composableBuilder(
+    column: $table.showBottomInfoDivider,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<bool> get showAutoReadMinimalInfo => $composableBuilder(
     column: $table.showAutoReadMinimalInfo,
     builder: (column) => ColumnOrderings(column),
@@ -12280,6 +12418,16 @@ class $$ReaderPreferencesRowsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<bool> get showTopInfoDivider => $composableBuilder(
+    column: $table.showTopInfoDivider,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get showBottomInfoDivider => $composableBuilder(
+    column: $table.showBottomInfoDivider,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<bool> get showAutoReadMinimalInfo => $composableBuilder(
     column: $table.showAutoReadMinimalInfo,
     builder: (column) => column,
@@ -12409,6 +12557,8 @@ class $$ReaderPreferencesRowsTableTableManager
                 Value<bool> showClockInfo = const Value.absent(),
                 Value<bool> showWholeBookProgressInfo = const Value.absent(),
                 Value<bool> showInfoDivider = const Value.absent(),
+                Value<bool> showTopInfoDivider = const Value.absent(),
+                Value<bool> showBottomInfoDivider = const Value.absent(),
                 Value<bool> showAutoReadMinimalInfo = const Value.absent(),
                 Value<String> chapterInfoSlot = const Value.absent(),
                 Value<String> chapterProgressInfoSlot = const Value.absent(),
@@ -12450,6 +12600,8 @@ class $$ReaderPreferencesRowsTableTableManager
                 showClockInfo: showClockInfo,
                 showWholeBookProgressInfo: showWholeBookProgressInfo,
                 showInfoDivider: showInfoDivider,
+                showTopInfoDivider: showTopInfoDivider,
+                showBottomInfoDivider: showBottomInfoDivider,
                 showAutoReadMinimalInfo: showAutoReadMinimalInfo,
                 chapterInfoSlot: chapterInfoSlot,
                 chapterProgressInfoSlot: chapterProgressInfoSlot,
@@ -12493,6 +12645,8 @@ class $$ReaderPreferencesRowsTableTableManager
                 Value<bool> showClockInfo = const Value.absent(),
                 Value<bool> showWholeBookProgressInfo = const Value.absent(),
                 Value<bool> showInfoDivider = const Value.absent(),
+                Value<bool> showTopInfoDivider = const Value.absent(),
+                Value<bool> showBottomInfoDivider = const Value.absent(),
                 Value<bool> showAutoReadMinimalInfo = const Value.absent(),
                 Value<String> chapterInfoSlot = const Value.absent(),
                 Value<String> chapterProgressInfoSlot = const Value.absent(),
@@ -12534,6 +12688,8 @@ class $$ReaderPreferencesRowsTableTableManager
                 showClockInfo: showClockInfo,
                 showWholeBookProgressInfo: showWholeBookProgressInfo,
                 showInfoDivider: showInfoDivider,
+                showTopInfoDivider: showTopInfoDivider,
+                showBottomInfoDivider: showBottomInfoDivider,
                 showAutoReadMinimalInfo: showAutoReadMinimalInfo,
                 chapterInfoSlot: chapterInfoSlot,
                 chapterProgressInfoSlot: chapterProgressInfoSlot,

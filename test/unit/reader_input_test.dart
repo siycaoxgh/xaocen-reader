@@ -64,6 +64,18 @@ void main() {
         PhysicalInputId.windowsInputs,
         contains(PhysicalInputId.keyboardDigit9),
       );
+      expect(
+        physicalInputIdForKey(LogicalKeyboardKey.numpad1),
+        PhysicalInputId.keyboardNumpad1,
+      );
+      expect(
+        physicalInputIdForKey(LogicalKeyboardKey.numpadAdd),
+        PhysicalInputId.keyboardNumpadAdd,
+      );
+      expect(
+        physicalInputIdForKey(LogicalKeyboardKey.f12),
+        PhysicalInputId.keyboardF12,
+      );
     },
   );
 }

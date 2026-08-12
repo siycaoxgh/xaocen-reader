@@ -43,7 +43,7 @@ void main() {
     await tester.tap(find.byKey(const Key('reader-auto-read-start')));
     await tester.pump();
     expect(
-      find.text('\u81ea\u52a8\u9605\u8bfb\u4e2d \u00b7 \u6807\u51c6'),
+      find.text('\u81ea\u52a8\u9605\u8bfb\u4e2d \u00b7 25 px/s'),
       findsOneWidget,
     );
 
@@ -59,7 +59,7 @@ void main() {
     await tester.tap(find.text('\u5feb').last);
     await tester.pump();
     expect(
-      find.text('\u81ea\u52a8\u9605\u8bfb\u4e2d \u00b7 \u5feb'),
+      find.text('\u81ea\u52a8\u9605\u8bfb\u4e2d \u00b7 50 px/s'),
       findsOneWidget,
     );
 
@@ -68,7 +68,8 @@ void main() {
       const Offset(-37, 0),
     );
     await tester.pump();
-    expect(find.textContaining('\u81ea\u5b9a\u4e49 \u00b7'), findsWidgets);
+    expect(find.byKey(const Key('reader-auto-read-speed-value')), findsOneWidget);
+    expect(find.textContaining('px/s'), findsWidgets);
 
     await tester.tap(find.byKey(const Key('reader-auto-read-stop')));
     await tester.pump();

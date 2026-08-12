@@ -88,6 +88,39 @@ final class PhysicalInputId {
   static const keyboardDigit8 = PhysicalInputId('keyboard.digit8');
   static const keyboardDigit9 = PhysicalInputId('keyboard.digit9');
 
+  // Numpad identities are intentionally distinct from the main-row digits.
+  static const keyboardNumpad0 = PhysicalInputId('keyboard.numpad0');
+  static const keyboardNumpad1 = PhysicalInputId('keyboard.numpad1');
+  static const keyboardNumpad2 = PhysicalInputId('keyboard.numpad2');
+  static const keyboardNumpad3 = PhysicalInputId('keyboard.numpad3');
+  static const keyboardNumpad4 = PhysicalInputId('keyboard.numpad4');
+  static const keyboardNumpad5 = PhysicalInputId('keyboard.numpad5');
+  static const keyboardNumpad6 = PhysicalInputId('keyboard.numpad6');
+  static const keyboardNumpad7 = PhysicalInputId('keyboard.numpad7');
+  static const keyboardNumpad8 = PhysicalInputId('keyboard.numpad8');
+  static const keyboardNumpad9 = PhysicalInputId('keyboard.numpad9');
+  static const keyboardNumpadAdd = PhysicalInputId('keyboard.numpadAdd');
+  static const keyboardNumpadSubtract = PhysicalInputId(
+    'keyboard.numpadSubtract',
+  );
+  static const keyboardNumpadMultiply = PhysicalInputId(
+    'keyboard.numpadMultiply',
+  );
+  static const keyboardNumpadDivide = PhysicalInputId('keyboard.numpadDivide');
+
+  static const keyboardF1 = PhysicalInputId('keyboard.f1');
+  static const keyboardF2 = PhysicalInputId('keyboard.f2');
+  static const keyboardF3 = PhysicalInputId('keyboard.f3');
+  static const keyboardF4 = PhysicalInputId('keyboard.f4');
+  static const keyboardF5 = PhysicalInputId('keyboard.f5');
+  static const keyboardF6 = PhysicalInputId('keyboard.f6');
+  static const keyboardF7 = PhysicalInputId('keyboard.f7');
+  static const keyboardF8 = PhysicalInputId('keyboard.f8');
+  static const keyboardF9 = PhysicalInputId('keyboard.f9');
+  static const keyboardF10 = PhysicalInputId('keyboard.f10');
+  static const keyboardF11 = PhysicalInputId('keyboard.f11');
+  static const keyboardF12 = PhysicalInputId('keyboard.f12');
+
   static const keyboardLetters = <PhysicalInputId>[
     keyboardKeyA,
     keyboardKeyB,
@@ -130,6 +163,34 @@ final class PhysicalInputId {
     keyboardDigit9,
   ];
 
+  static const keyboardNumpadDigits = <PhysicalInputId>[
+    keyboardNumpad0,
+    keyboardNumpad1,
+    keyboardNumpad2,
+    keyboardNumpad3,
+    keyboardNumpad4,
+    keyboardNumpad5,
+    keyboardNumpad6,
+    keyboardNumpad7,
+    keyboardNumpad8,
+    keyboardNumpad9,
+  ];
+
+  static const keyboardFunctionKeys = <PhysicalInputId>[
+    keyboardF1,
+    keyboardF2,
+    keyboardF3,
+    keyboardF4,
+    keyboardF5,
+    keyboardF6,
+    keyboardF7,
+    keyboardF8,
+    keyboardF9,
+    keyboardF10,
+    keyboardF11,
+    keyboardF12,
+  ];
+
   static const windowsInputs = <PhysicalInputId>[
     keyboardArrowLeft,
     keyboardArrowRight,
@@ -143,6 +204,12 @@ final class PhysicalInputId {
     keyboardEnter,
     ...keyboardLetters,
     ...keyboardDigits,
+    ...keyboardNumpadDigits,
+    keyboardNumpadAdd,
+    keyboardNumpadSubtract,
+    keyboardNumpadMultiply,
+    keyboardNumpadDivide,
+    ...keyboardFunctionKeys,
     mouseWheelUp,
     mouseWheelDown,
   ];
@@ -260,8 +327,7 @@ final class ReaderInputProfile {
   final ReaderInputPlatform platform;
   final int version;
   final Map<ReaderInputGesture, ReaderCommand?> bindings;
-  final Map<PhysicalInputId, AndroidAutoReadVolumeAction>
-  autoReadVolumeActions;
+  final Map<PhysicalInputId, AndroidAutoReadVolumeAction> autoReadVolumeActions;
   final DateTime updatedAt;
 
   factory ReaderInputProfile.defaults(

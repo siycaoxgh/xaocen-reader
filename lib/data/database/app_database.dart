@@ -37,7 +37,7 @@ class AppDatabase extends _$AppDatabase {
       super(NativeDatabase.memory());
 
   @override
-  int get schemaVersion => 12;
+  int get schemaVersion => 13;
 
   /// 打开应用数据库（support 目录下）。
   static Future<AppDatabase> open({DataRoot? dataRoot}) async {
@@ -279,6 +279,24 @@ class AppDatabase extends _$AppDatabase {
       }
       if (from >= 5 && from < 12) {
         await m.addColumn(readerPreferencesRows, readerPreferencesRows.fontId);
+      }
+      // schema 12 -> 13: independent top and bottom Reader info dividers.
+      // Existing single-divider preference is copied to both sides so no
+      // user's prior visibility choice is lost.
+      if (from >= 5 && from < 13) {
+        await m.addColumn(
+          readerPreferencesRows,
+          readerPreferencesRows.showTopInfoDivider,
+        );
+        await m.addColumn(
+          readerPreferencesRows,
+          readerPreferencesRows.showBottomInfoDivider,
+        );
+        await customStatement('''
+          UPDATE reader_preferences
+          SET show_top_info_divider = show_info_divider,
+              show_bottom_info_divider = show_info_divider
+        ''');
       }
     },
     beforeOpen: (details) async {

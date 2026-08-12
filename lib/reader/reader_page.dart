@@ -190,6 +190,8 @@ class _ReaderPageState extends State<ReaderPage>
   StreamSubscription<AutoReadPreferences>? _autoReadPreferencesSubscription;
   Timer? _autoReadSpeedWriteTimer;
   int? _pendingAutoReadSpeedWrite;
+  Timer? _autoReadIntervalWriteTimer;
+  int? _pendingAutoReadIntervalWrite;
   final ReaderFontRuntime _fontRuntime = ReaderFontRuntime();
   final ReaderSystemFontRepository _systemFontRepository =
       ReaderSystemFontRepository();
@@ -412,7 +414,27 @@ class _ReaderPageState extends State<ReaderPage>
     );
     _autoReadController.updatePreferences(next);
     final repository = widget.launch.autoReadPreferencesRepository;
-    if (repository != null) unawaited(repository.update(next));
+    _pendingAutoReadIntervalWrite = seconds;
+    _autoReadIntervalWriteTimer?.cancel();
+    if (repository != null) {
+      _autoReadIntervalWriteTimer = Timer(
+        const Duration(milliseconds: 250),
+        () {
+          final pending = _pendingAutoReadIntervalWrite;
+          _pendingAutoReadIntervalWrite = null;
+          if (pending != null) {
+            unawaited(
+              repository.update(
+                _autoReadController.preferences.copyWith(
+                  pagedIntervalSeconds: pending,
+                  updatedAt: DateTime.now().toUtc(),
+                ),
+              ),
+            );
+          }
+        },
+      );
+    }
   }
 
   Future<void> _confirmVerticalAutoReadPosition() async {
@@ -450,6 +472,13 @@ class _ReaderPageState extends State<ReaderPage>
     _pauseAutoReadForManualNavigation();
   }
 
+  /// Page/chapter commands are navigation-only. They pause AutoRead when
+  /// needed, but must never alter Reader Chrome visibility; only a deliberate
+  /// center tap owns that visibility toggle.
+  void _pauseAutoReadForPageNavigation() {
+    _pauseAutoRead(AutoReadPauseReason.manualNavigation);
+  }
+
   void _onInputHostStateChanged({
     required bool pagedActive,
     required bool captureActive,
@@ -475,7 +504,8 @@ class _ReaderPageState extends State<ReaderPage>
     if (defaultTargetPlatform != TargetPlatform.android) return (false, false);
     bool activeFor(PhysicalInputId input) {
       final command = _inputRouter.profile.commandFor(input);
-      final autoAction = _inputRouter.profile.autoReadVolumeActions[input] ??
+      final autoAction =
+          _inputRouter.profile.autoReadVolumeActions[input] ??
           AndroidAutoReadVolumeAction.followNormal;
       final running = _autoReadController.state == AutoReadState.running;
       final normalConsumes = switch (command) {
@@ -496,6 +526,7 @@ class _ReaderPageState extends State<ReaderPage>
         AndroidAutoReadVolumeAction.followNormal => normalConsumes,
       };
     }
+
     return (
       activeFor(PhysicalInputId.androidVolumeUp),
       activeFor(PhysicalInputId.androidVolumeDown),
@@ -510,7 +541,7 @@ class _ReaderPageState extends State<ReaderPage>
   }
 
   void _routerPreviousPage() {
-    _pauseAutoReadForManualNavigation();
+    _pauseAutoReadForPageNavigation();
     if (_mode == ReaderMode.paged) {
       _pagedController?.previousPage();
     } else if (_scroll.hasClients) {
@@ -528,7 +559,7 @@ class _ReaderPageState extends State<ReaderPage>
   }
 
   void _routerNextPage() {
-    _pauseAutoReadForManualNavigation();
+    _pauseAutoReadForPageNavigation();
     if (_mode == ReaderMode.paged) {
       _pagedController?.nextPage();
     } else if (_scroll.hasClients) {
@@ -550,7 +581,7 @@ class _ReaderPageState extends State<ReaderPage>
     final running = _autoReadController.state == AutoReadState.running;
     final action = running
         ? (_inputRouter.profile.autoReadVolumeActions[input] ??
-            AndroidAutoReadVolumeAction.followNormal)
+              AndroidAutoReadVolumeAction.followNormal)
         : AndroidAutoReadVolumeAction.followNormal;
     switch (action) {
       case AndroidAutoReadVolumeAction.systemVolume:
@@ -621,7 +652,7 @@ class _ReaderPageState extends State<ReaderPage>
   }
 
   Future<void> _startChapterNavigation(LibraryTocEntry entry) async {
-    _pauseAutoReadForManualNavigation();
+    _pauseAutoReadForPageNavigation();
     _invalidateChapterNavigation();
     final generation = _chapterNavigationGeneration;
     await _restoreToChapter(entry, navigationGeneration: generation);
@@ -988,18 +1019,24 @@ class _ReaderPageState extends State<ReaderPage>
     _autoReadChromeHideTimer = null;
     _autoReadSpeedWriteTimer?.cancel();
     final pendingSpeed = _pendingAutoReadSpeedWrite;
+    final pendingInterval = _pendingAutoReadIntervalWrite;
     final autoReadRepository = widget.launch.autoReadPreferencesRepository;
-    if (pendingSpeed != null && autoReadRepository != null) {
+    if (autoReadRepository != null &&
+        (pendingSpeed != null || pendingInterval != null)) {
       unawaited(
         autoReadRepository.update(
           _autoReadController.preferences.copyWith(
             verticalVelocityPixelsPerSecond: pendingSpeed,
+            pagedIntervalSeconds: pendingInterval,
             updatedAt: DateTime.now().toUtc(),
           ),
         ),
       );
     }
     _pendingAutoReadSpeedWrite = null;
+    _pendingAutoReadIntervalWrite = null;
+    _autoReadSpeedWriteTimer?.cancel();
+    _autoReadIntervalWriteTimer?.cancel();
     _autoReadEvents?.cancel();
     _autoReadPreferencesSubscription?.cancel();
     _verticalAutoReadDriver.interrupt(AutoReadPauseReason.lifecycle);
@@ -2240,7 +2277,8 @@ class _ReaderPageState extends State<ReaderPage>
             showChapterProgressInfo: _preferences.showChapterProgressInfo,
             showClockInfo: _preferences.showClockInfo,
             showWholeBookProgressInfo: _preferences.showWholeBookProgressInfo,
-            showInfoDivider: _preferences.showInfoDivider,
+            showTopInfoDivider: _preferences.showTopInfoDivider,
+            showBottomInfoDivider: _preferences.showBottomInfoDivider,
             showAutoReadMinimalInfo: _preferences.showAutoReadMinimalInfo,
             showMinimalInfoOverlay: false,
             chapterInfoSlot: _preferences.chapterInfoSlot,
@@ -2334,7 +2372,8 @@ class _ReaderPageState extends State<ReaderPage>
       showChapterProgressInfo: _preferences.showChapterProgressInfo,
       showClockInfo: _preferences.showClockInfo,
       showWholeBookProgressInfo: _preferences.showWholeBookProgressInfo,
-      showInfoDivider: _preferences.showInfoDivider,
+      showTopInfoDivider: _preferences.showTopInfoDivider,
+      showBottomInfoDivider: _preferences.showBottomInfoDivider,
       chapterInfoSlot: _preferences.chapterInfoSlot,
       chapterProgressInfoSlot: _preferences.chapterProgressInfoSlot,
       clockInfoSlot: _preferences.clockInfoSlot,
@@ -2448,7 +2487,7 @@ class _ReaderPageState extends State<ReaderPage>
           controller: paged,
           appearance: _appearance,
           inputRouter: _inputRouter,
-          onUserNavigation: _pauseAutoReadForManualNavigation,
+          onUserNavigation: _pauseAutoReadForPageNavigation,
           focusNode: _pagedInputFocusNode,
         );
       },

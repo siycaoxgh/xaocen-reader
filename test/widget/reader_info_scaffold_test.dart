@@ -8,6 +8,8 @@ Widget _host({
   required bool top,
   required bool bottom,
   required bool divider,
+  bool? topDivider,
+  bool? bottomDivider,
   EdgeInsets padding = EdgeInsets.zero,
 }) {
   return MaterialApp(
@@ -31,6 +33,8 @@ Widget _host({
           showClockInfo: false,
           showWholeBookProgressInfo: true,
           showInfoDivider: divider,
+          showTopInfoDivider: topDivider,
+          showBottomInfoDivider: bottomDivider,
           chapterInfoSlot: ReaderInfoSlot.topLeft,
           chapterProgressInfoSlot: ReaderInfoSlot.topRight,
           clockInfoSlot: ReaderInfoSlot.bottomLeft,
@@ -48,12 +52,14 @@ void main() {
   testWidgets('top and bottom regions never intersect Reader body', (
     tester,
   ) async {
-    await tester.pumpWidget(_host(
-      top: true,
-      bottom: true,
-      divider: true,
-      padding: const EdgeInsets.fromLTRB(0, 34, 0, 24),
-    ));
+    await tester.pumpWidget(
+      _host(
+        top: true,
+        bottom: true,
+        divider: true,
+        padding: const EdgeInsets.fromLTRB(0, 34, 0, 24),
+      ),
+    );
     final top = tester.getRect(find.byKey(readerTopInfoRegionKey));
     final body = tester.getRect(find.byKey(const Key('reader-body')));
     final bottom = tester.getRect(find.byKey(readerBottomInfoRegionKey));
@@ -69,11 +75,46 @@ void main() {
     expect(hidden.height, greaterThan(withInfo.height));
   });
 
-  testWidgets('divider visibility does not change body geometry', (tester) async {
+  testWidgets('divider visibility does not change body geometry', (
+    tester,
+  ) async {
     await tester.pumpWidget(_host(top: true, bottom: true, divider: true));
     final shown = tester.getRect(find.byKey(const Key('reader-body')));
     await tester.pumpWidget(_host(top: true, bottom: true, divider: false));
     final hidden = tester.getRect(find.byKey(const Key('reader-body')));
     expect(hidden, shown);
+  });
+
+  testWidgets('top and bottom dividers are independent', (tester) async {
+    await tester.pumpWidget(
+      _host(
+        top: true,
+        bottom: true,
+        divider: false,
+        topDivider: true,
+        bottomDivider: false,
+      ),
+    );
+    expect(find.byKey(readerTopInfoDividerKey), findsOneWidget);
+    expect(find.byKey(readerBottomInfoDividerKey), findsOneWidget);
+    await tester.pumpWidget(
+      _host(
+        top: true,
+        bottom: true,
+        divider: false,
+        topDivider: false,
+        bottomDivider: true,
+      ),
+    );
+    expect(find.byKey(readerTopInfoDividerKey), findsOneWidget);
+    expect(find.byKey(readerBottomInfoDividerKey), findsOneWidget);
+    final topColor = tester
+        .widget<ColoredBox>(find.byKey(readerTopInfoDividerKey))
+        .color;
+    final bottomColor = tester
+        .widget<ColoredBox>(find.byKey(readerBottomInfoDividerKey))
+        .color;
+    expect(topColor, Colors.transparent);
+    expect(bottomColor, isNot(Colors.transparent));
   });
 }

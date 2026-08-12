@@ -92,7 +92,7 @@ void main() {
     controller.dispose();
     controller.dispose();
     controller.start();
-    controller.updatePreferences(AutoReadPreferences(pagedIntervalSeconds: 3));
+    controller.updatePreferences(AutoReadPreferences(pagedIntervalSeconds: 5));
     expect(controller.state, AutoReadState.idle);
     expect(controller.generation, 1);
   });

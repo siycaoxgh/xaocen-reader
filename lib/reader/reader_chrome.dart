@@ -27,12 +27,11 @@ const readerBottomInfoRegionKey = Key('reader-bottom-info-region');
 /// SafeArea supplies the variable cutout/navigation inset.
 const double readerInfoRegionExtent = 38;
 
-double readerInfoRegionInset(
-  BuildContext context, {
-  required bool top,
-}) =>
+double readerInfoRegionInset(BuildContext context, {required bool top}) =>
     readerInfoRegionExtent +
-    (top ? MediaQuery.paddingOf(context).top : MediaQuery.paddingOf(context).bottom);
+    (top
+        ? MediaQuery.paddingOf(context).top
+        : MediaQuery.paddingOf(context).bottom);
 const readerTocActionKey = Key('reader-toc-action');
 const readerAppearanceActionKey = Key('reader-appearance-action');
 const readerMoreActionKey = Key('reader-more-action');
@@ -75,6 +74,8 @@ const readerShowAutoReadMinimalInfoKey = Key(
 );
 const readerStatusBarModeKey = Key('reader-status-bar-mode');
 const readerTimeDisplayModeKey = Key('reader-time-display-mode');
+const readerTopInfoDividerKey = Key('reader-top-info-divider');
+const readerBottomInfoDividerKey = Key('reader-bottom-info-divider');
 
 const _aaSectionGap = 12.0;
 const _aaControlRadius = 12.0;
@@ -125,6 +126,8 @@ class ReaderChrome extends StatelessWidget {
     this.showClockInfo = true,
     this.showWholeBookProgressInfo = true,
     this.showInfoDivider = false,
+    this.showTopInfoDivider,
+    this.showBottomInfoDivider,
     this.showAutoReadMinimalInfo = true,
     this.showMinimalInfoOverlay = true,
     this.chapterInfoSlot = ReaderInfoSlot.topLeft,
@@ -169,7 +172,10 @@ class ReaderChrome extends StatelessWidget {
   final bool showClockInfo;
   final bool showWholeBookProgressInfo;
   final bool showInfoDivider;
+  final bool? showTopInfoDivider;
+  final bool? showBottomInfoDivider;
   final bool showAutoReadMinimalInfo;
+
   /// Kept for compatibility with the standalone chrome widget tests. The
   /// production Reader renders info in [ReaderInfoScaffold], which reserves
   /// real layout space instead of overlaying the body.
@@ -411,7 +417,8 @@ class ReaderChrome extends StatelessWidget {
     return Stack(
       fit: StackFit.expand,
       children: [
-        if (showMinimalInfoOverlay && !visible &&
+        if (showMinimalInfoOverlay &&
+            !visible &&
             (autoReadState != AutoReadState.running ||
                 showAutoReadMinimalInfo) &&
             (defaultTargetPlatform != TargetPlatform.android ||
@@ -433,6 +440,8 @@ class ReaderChrome extends StatelessWidget {
             showClockInfo: showClockInfo,
             showWholeBookProgressInfo: showWholeBookProgressInfo,
             showInfoDivider: showInfoDivider,
+            showTopInfoDivider: showTopInfoDivider,
+            showBottomInfoDivider: showBottomInfoDivider,
             chapterInfoSlot: chapterInfoSlot,
             chapterProgressInfoSlot: chapterProgressInfoSlot,
             clockInfoSlot: clockInfoSlot,
@@ -483,7 +492,9 @@ class ReaderInfoScaffold extends StatelessWidget {
     required this.showChapterProgressInfo,
     required this.showClockInfo,
     required this.showWholeBookProgressInfo,
-    required this.showInfoDivider,
+    this.showInfoDivider = false,
+    this.showTopInfoDivider,
+    this.showBottomInfoDivider,
     required this.chapterInfoSlot,
     required this.chapterProgressInfoSlot,
     required this.clockInfoSlot,
@@ -511,6 +522,8 @@ class ReaderInfoScaffold extends StatelessWidget {
   final bool showClockInfo;
   final bool showWholeBookProgressInfo;
   final bool showInfoDivider;
+  final bool? showTopInfoDivider;
+  final bool? showBottomInfoDivider;
   final ReaderInfoSlot chapterInfoSlot;
   final ReaderInfoSlot chapterProgressInfoSlot;
   final ReaderInfoSlot clockInfoSlot;
@@ -567,13 +580,21 @@ class ReaderInfoScaffold extends StatelessWidget {
     );
   }
 
-  Widget _divider(BuildContext context) {
+  Widget _divider(BuildContext context, {required bool top}) {
     final devicePixelRatio = MediaQuery.devicePixelRatioOf(context);
     final color = (readerTextColor ?? Theme.of(context).colorScheme.onSurface)
         .withValues(alpha: .42);
     return SizedBox(
       height: 1 / devicePixelRatio,
-      child: ColoredBox(color: showInfoDivider ? color : Colors.transparent),
+      child: ColoredBox(
+        key: top ? readerTopInfoDividerKey : readerBottomInfoDividerKey,
+        color:
+            (top
+                ? (showTopInfoDivider ?? showInfoDivider)
+                : (showBottomInfoDivider ?? showInfoDivider))
+            ? color
+            : Colors.transparent,
+      ),
     );
   }
 
@@ -582,9 +603,9 @@ class ReaderInfoScaffold extends StatelessWidget {
     return Column(
       children: [
         if (showTopInfoBar) _region(context, top: true),
-        if (showTopInfoBar) _divider(context),
+        if (showTopInfoBar) _divider(context, top: true),
         Expanded(child: body),
-        if (showBottomInfoBar) _divider(context),
+        if (showBottomInfoBar) _divider(context, top: false),
         if (showBottomInfoBar) _region(context, top: false),
       ],
     );
@@ -612,6 +633,8 @@ class ReaderMinimalInfoLayer extends StatefulWidget {
     this.showClockInfo = true,
     this.showWholeBookProgressInfo = true,
     this.showInfoDivider = false,
+    this.showTopInfoDivider,
+    this.showBottomInfoDivider,
     this.chapterInfoSlot = ReaderInfoSlot.topLeft,
     this.chapterProgressInfoSlot = ReaderInfoSlot.topRight,
     this.clockInfoSlot = ReaderInfoSlot.bottomLeft,
@@ -638,6 +661,8 @@ class ReaderMinimalInfoLayer extends StatefulWidget {
   final bool showClockInfo;
   final bool showWholeBookProgressInfo;
   final bool showInfoDivider;
+  final bool? showTopInfoDivider;
+  final bool? showBottomInfoDivider;
   final ReaderInfoSlot chapterInfoSlot;
   final ReaderInfoSlot chapterProgressInfoSlot;
   final ReaderInfoSlot clockInfoSlot;
@@ -706,24 +731,26 @@ class _ReaderMinimalInfoLayerState extends State<ReaderMinimalInfoLayer> {
                 alignment: Alignment.bottomCenter,
                 child: _buildRow(context, top: false, style: style),
               ),
-            if (widget.showInfoDivider &&
-                widget.showTopInfoBar &&
+            if ((widget.showTopInfoDivider ?? widget.showInfoDivider) &&
+                widget.showTopInfoBar)
+              Positioned(
+                top: readerInfoRegionExtent,
+                left: 0,
+                right: 0,
+                child: Container(
+                  height: 1,
+                  color: style?.color?.withValues(alpha: .45),
+                ),
+              ),
+            if ((widget.showBottomInfoDivider ?? widget.showInfoDivider) &&
                 widget.showBottomInfoBar)
-              Positioned.fill(
-                child: Column(
-                  children: [
-                    SizedBox(height: readerInfoRegionExtent),
-                    Container(
-                      height: 1,
-                      color: style?.color?.withValues(alpha: .45),
-                    ),
-                    const Spacer(),
-                    Container(
-                      height: 1,
-                      color: style?.color?.withValues(alpha: .45),
-                    ),
-                    SizedBox(height: readerInfoRegionExtent),
-                  ],
+              Positioned(
+                bottom: readerInfoRegionExtent,
+                left: 0,
+                right: 0,
+                child: Container(
+                  height: 1,
+                  color: style?.color?.withValues(alpha: .45),
                 ),
               ),
           ],
@@ -976,18 +1003,15 @@ class ReaderAutoReadStatusBar extends StatelessWidget {
 }
 
 String _autoReadPresetLabel(VerticalSpeedPreset preset) => switch (preset) {
-  VerticalSpeedPreset.slow => '\u6162',
-  VerticalSpeedPreset.slower => '\u8f83\u6162',
-  VerticalSpeedPreset.standard => '\u6807\u51c6',
-  VerticalSpeedPreset.faster => '\u8f83\u5feb',
-  VerticalSpeedPreset.fast => '\u5feb',
+  VerticalSpeedPreset.slow => '\u6781\u6162',
+  VerticalSpeedPreset.slower => '\u6162',
+  VerticalSpeedPreset.standard => '\u4e2d',
+  VerticalSpeedPreset.faster => '\u5feb',
+  VerticalSpeedPreset.fast => '\u6781\u5feb',
 };
 
 String _autoReadSpeedLabel(int velocity) {
-  final preset = VerticalSpeedPresetValues.fromVelocity(velocity);
-  return preset == null
-      ? '\u81ea\u5b9a\u4e49 \u00b7 $velocity px/s'
-      : _autoReadPresetLabel(preset);
+  return '$velocity px/s';
 }
 
 String _autoReadStatusLabel(
@@ -998,7 +1022,7 @@ String _autoReadStatusLabel(
 ) => switch (state) {
   AutoReadState.running =>
     mode == ReaderMode.vertical
-        ? '\u81ea\u52a8\u9605\u8bfb\u4e2d \u00b7 ${_autoReadSpeedLabel(speedPixelsPerSecond)}'
+        ? '\u81ea\u52a8\u9605\u8bfb\u4e2d \u00b7 $speedPixelsPerSecond px/s'
         : '\u81ea\u52a8\u7ffb\u9875\u4e2d \u00b7 $pagedIntervalSeconds \u79d2/\u9875',
   AutoReadState.paused => '\u81ea\u52a8\u9605\u8bfb\u5df2\u6682\u505c',
   AutoReadState.stoppedAtEnd => '\u5df2\u8bfb\u5230\u672c\u4e66\u672b\u5c3e',
@@ -1220,8 +1244,9 @@ class ReaderAutoReadSheet extends StatelessWidget {
                 spacing: 8,
                 runSpacing: 8,
                 children: [
-                  for (final seconds
-                      in AutoReadPreferences.supportedPagedIntervals)
+                  for (final seconds in [
+                    ...AutoReadPreferences.supportedPagedIntervals,
+                  ]..sort((a, b) => b.compareTo(a)))
                     ChoiceChip(
                       label: Text('\u6bcf $seconds \u79d2'),
                       selected: pagedIntervalSeconds == seconds,
@@ -1230,6 +1255,30 @@ class ReaderAutoReadSheet extends StatelessWidget {
                           : (_) => onPagedIntervalChanged!(seconds),
                     ),
                 ],
+              ),
+              const SizedBox(height: 8),
+              Slider(
+                key: const Key('reader-auto-read-interval-slider'),
+                min: AutoReadPreferences.minPagedIntervalSeconds.toDouble(),
+                max: AutoReadPreferences.maxPagedIntervalSeconds.toDouble(),
+                divisions:
+                    AutoReadPreferences.maxPagedIntervalSeconds -
+                    AutoReadPreferences.minPagedIntervalSeconds,
+                value: pagedIntervalSeconds.toDouble().clamp(
+                  AutoReadPreferences.minPagedIntervalSeconds.toDouble(),
+                  AutoReadPreferences.maxPagedIntervalSeconds.toDouble(),
+                ),
+                label: '$pagedIntervalSeconds \u79d2/\u9875',
+                onChanged: onPagedIntervalChanged == null
+                    ? null
+                    : (value) => onPagedIntervalChanged!(value.round()),
+              ),
+              Align(
+                alignment: Alignment.center,
+                child: Text(
+                  '$pagedIntervalSeconds \u79d2/\u9875',
+                  key: const Key('reader-auto-read-interval-value'),
+                ),
               ),
             ],
           ],
@@ -1390,6 +1439,15 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
   void _commit(ReaderPreferences value) {
     setState(() => _draft = value);
     widget.onPreferencesCommitted(value);
+  }
+
+  @override
+  void didUpdateWidget(covariant ReaderSettingsSheet oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.preferences != widget.preferences) {
+      setState(() => _draft = widget.preferences);
+      _syncBrightnessControllers();
+    }
   }
 
   String? get _selectedFontId =>
@@ -1658,44 +1716,47 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
           ],
         ),
         const SizedBox(height: 10),
-        DecoratedBox(
-          key: const ValueKey('reader-font-preview-card'),
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surfaceContainerHighest,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-              color: Theme.of(context).colorScheme.outlineVariant,
+        SizedBox(
+          width: double.infinity,
+          child: DecoratedBox(
+            key: const ValueKey('reader-font-preview-card'),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: Theme.of(context).colorScheme.outlineVariant,
+              ),
             ),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: DefaultTextStyle(
-              style: Theme.of(context).textTheme.bodyMedium!,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('中文阅读效果预览'),
-                  const SizedBox(height: 4),
-                  Text(
-                    'XAOCEN Reader  1234567890',
-                    style: TextStyle(fontFamily: previewFamily, fontSize: 16),
-                  ),
-                  if (_fontPreviewLoading)
-                    const Padding(
-                      padding: EdgeInsets.only(top: 6),
-                      child: LinearProgressIndicator(minHeight: 2),
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: DefaultTextStyle(
+                style: Theme.of(context).textTheme.bodyMedium!,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('中文阅读效果预览'),
+                    const SizedBox(height: 4),
+                    Text(
+                      'XAOCEN Reader  1234567890',
+                      style: TextStyle(fontFamily: previewFamily, fontSize: 16),
                     ),
-                  if (_fontPreviewError != null)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 6),
-                      child: Text(
-                        _fontPreviewError!,
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.error,
+                    if (_fontPreviewLoading)
+                      const Padding(
+                        padding: EdgeInsets.only(top: 6),
+                        child: LinearProgressIndicator(minHeight: 2),
+                      ),
+                    if (_fontPreviewError != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: Text(
+                          _fontPreviewError!,
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.error,
+                          ),
                         ),
                       ),
-                    ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -2082,6 +2143,32 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
           errorText: _textColorError,
           onChanged: (value) => _previewColor(text: true, value: value),
           onSubmitted: (value) => _previewColor(text: true, value: value),
+          onPick: () async {
+            final result = await _showReaderColorPicker(
+              context,
+              initial: textColor ?? resolvedTextColor,
+              defaultColor: Color(
+                ReaderPaletteResolver.resolve(
+                  paletteId: _draft.paletteId == ReaderPaletteId.custom
+                      ? ReaderPreferences.defaultPaletteId
+                      : _draft.paletteId,
+                  dark: _editingBrightness == Brightness.dark,
+                ).textArgb,
+              ),
+            );
+            if (result == null) return;
+            _commit(
+              _draft.copyWith(
+                paletteId: ReaderPaletteId.custom,
+                lightTextColorArgb: _editingBrightness == Brightness.light
+                    ? result
+                    : _draft.lightTextColorArgb,
+                darkTextColorArgb: _editingBrightness == Brightness.dark
+                    ? result
+                    : _draft.darkTextColorArgb,
+              ),
+            );
+          },
         ),
         if (contrastWarning)
           Text(
@@ -2124,6 +2211,32 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
           errorText: _backgroundColorError,
           onChanged: (value) => _previewColor(text: false, value: value),
           onSubmitted: (value) => _previewColor(text: false, value: value),
+          onPick: () async {
+            final result = await _showReaderColorPicker(
+              context,
+              initial: backgroundColor ?? resolvedBackgroundColor,
+              defaultColor: Color(
+                ReaderPaletteResolver.resolve(
+                  paletteId: _draft.paletteId == ReaderPaletteId.custom
+                      ? ReaderPreferences.defaultPaletteId
+                      : _draft.paletteId,
+                  dark: _editingBrightness == Brightness.dark,
+                ).backgroundArgb,
+              ),
+            );
+            if (result == null) return;
+            _commit(
+              _draft.copyWith(
+                paletteId: ReaderPaletteId.custom,
+                lightBackgroundColorArgb: _editingBrightness == Brightness.light
+                    ? result
+                    : _draft.lightBackgroundColorArgb,
+                darkBackgroundColorArgb: _editingBrightness == Brightness.dark
+                    ? result
+                    : _draft.darkBackgroundColorArgb,
+              ),
+            );
+          },
         ),
         const SizedBox(height: 10),
         Row(
@@ -2355,10 +2468,20 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
         _buildInfoItemRow(
           context,
           label: '分隔线',
-          value: _draft.showInfoDivider,
+          value: _draft.showTopInfoDivider,
           slot: _draft.infoDividerSlot,
           onValueChanged: (value) =>
-              _commit(_draft.copyWith(showInfoDivider: value)),
+              _commit(_draft.copyWith(showTopInfoDivider: value)),
+          onSlotChanged: (slot) =>
+              _commit(_draft.copyWith(infoDividerSlot: slot)),
+        ),
+        _buildInfoItemRow(
+          context,
+          label: '\u5e95\u90e8\u4fe1\u606f\u5206\u9694\u7ebf',
+          value: _draft.showBottomInfoDivider,
+          slot: _draft.infoDividerSlot,
+          onValueChanged: (value) =>
+              _commit(_draft.copyWith(showBottomInfoDivider: value)),
           onSlotChanged: (slot) =>
               _commit(_draft.copyWith(infoDividerSlot: slot)),
         ),
@@ -2623,6 +2746,7 @@ class _ColorInput extends StatelessWidget {
     required this.errorText,
     required this.onChanged,
     required this.onSubmitted,
+    this.onPick,
   });
 
   final TextEditingController controller;
@@ -2631,36 +2755,193 @@ class _ColorInput extends StatelessWidget {
   final String? errorText;
   final ValueChanged<String> onChanged;
   final ValueChanged<String> onSubmitted;
+  final VoidCallback? onPick;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(top: 8),
-      child: TextField(
-        controller: controller,
-        decoration: InputDecoration(
-          labelText: label,
-          hintText: '#RRGGBB 或 rgb(255,255,255)',
-          errorText: errorText,
-          prefixIcon: Padding(
-            padding: const EdgeInsets.all(12),
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: preview ?? Theme.of(context).colorScheme.surface,
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: Theme.of(context).colorScheme.outlineVariant,
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: controller,
+              decoration: InputDecoration(
+                labelText: label,
+                hintText: '#RRGGBB 或 rgb(255,255,255)',
+                errorText: errorText,
+                prefixIcon: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: preview ?? Theme.of(context).colorScheme.surface,
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: Theme.of(context).colorScheme.outlineVariant,
+                      ),
+                    ),
+                    child: const SizedBox(width: 18, height: 18),
+                  ),
                 ),
               ),
-              child: const SizedBox(width: 18, height: 18),
+              textInputAction: TextInputAction.done,
+              onChanged: onChanged,
+              onSubmitted: onSubmitted,
             ),
           ),
-        ),
-        textInputAction: TextInputAction.done,
-        onChanged: onChanged,
-        onSubmitted: onSubmitted,
+          const SizedBox(width: 8),
+          OutlinedButton.icon(
+            onPressed: onPick,
+            icon: const Icon(Icons.colorize),
+            label: const Text('\u53d6\u8272'),
+          ),
+        ],
       ),
     );
+  }
+}
+
+Future<int?> _showReaderColorPicker(
+  BuildContext context, {
+  required Color initial,
+  required Color defaultColor,
+}) {
+  return showDialog<int>(
+    context: context,
+    builder: (_) =>
+        _ReaderColorPickerDialog(initial: initial, defaultColor: defaultColor),
+  );
+}
+
+class _ReaderColorPickerDialog extends StatefulWidget {
+  const _ReaderColorPickerDialog({
+    required this.initial,
+    required this.defaultColor,
+  });
+
+  final Color initial;
+  final Color defaultColor;
+
+  @override
+  State<_ReaderColorPickerDialog> createState() =>
+      _ReaderColorPickerDialogState();
+}
+
+class _ReaderColorPickerDialogState extends State<_ReaderColorPickerDialog> {
+  late Color _color = widget.initial;
+  late final TextEditingController _hex = TextEditingController(
+    text: '#${widget.initial.toARGB32().toRadixString(16).substring(2)}',
+  );
+  String? _error;
+
+  @override
+  void dispose() {
+    _hex.dispose();
+    super.dispose();
+  }
+
+  void _setColor(Color color) {
+    setState(() {
+      _color = color.withAlpha(255);
+      _hex.text =
+          '#${(_color.toARGB32() & 0xffffff).toRadixString(16).padLeft(6, '0')}';
+      _error = null;
+    });
+  }
+
+  void _parseHex(String raw) {
+    final parsed = ReaderSettingsSheetStateColorParser.parse(raw);
+    if (parsed == null) {
+      setState(() => _error = '\u8bf7\u8f93\u5165 #RRGGBB \u6216 rgb(r,g,b)');
+      return;
+    }
+    _setColor(Color(parsed));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final hsv = HSVColor.fromColor(_color);
+    return AlertDialog(
+      title: const Text('\u9009\u62e9\u989c\u8272'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(height: 64, color: _color),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _hex,
+              decoration: InputDecoration(
+                labelText: 'HEX / RGB',
+                errorText: _error,
+              ),
+              onSubmitted: _parseHex,
+            ),
+            const SizedBox(height: 8),
+            Slider(
+              min: 0,
+              max: 360,
+              value: hsv.hue,
+              onChanged: (value) => _setColor(hsv.withHue(value).toColor()),
+            ),
+            Slider(
+              min: 0,
+              max: 1,
+              value: hsv.saturation,
+              onChanged: (value) =>
+                  _setColor(hsv.withSaturation(value).toColor()),
+            ),
+            Slider(
+              min: 0,
+              max: 1,
+              value: hsv.value,
+              onChanged: (value) => _setColor(hsv.withValue(value).toColor()),
+            ),
+            TextButton.icon(
+              onPressed: () => _setColor(widget.defaultColor),
+              icon: const Icon(Icons.restore),
+              label: const Text('\u6062\u590d\u65b9\u6848\u9ed8\u8ba4\u8272'),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('\u53d6\u6d88'),
+        ),
+        FilledButton(
+          onPressed: _error == null
+              ? () => Navigator.pop(context, _color.toARGB32())
+              : null,
+          child: const Text('\u786e\u8ba4'),
+        ),
+      ],
+    );
+  }
+}
+
+/// Kept local to the appearance UI so parsing remains identical to the
+/// existing #RRGGBB/rgb(r,g,b) contract without adding a second persistence
+/// format.
+final class ReaderSettingsSheetStateColorParser {
+  static int? parse(String raw) {
+    final value = raw.trim();
+    final hex = RegExp(r'^#?([0-9a-fA-F]{6})$').firstMatch(value);
+    if (hex != null) return int.parse('ff${hex.group(1)}', radix: 16);
+    final rgb = RegExp(
+      r'^rgb\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*\)$',
+      caseSensitive: false,
+    ).firstMatch(value);
+    if (rgb == null) return null;
+    final channels = [
+      int.parse(rgb.group(1)!),
+      int.parse(rgb.group(2)!),
+      int.parse(rgb.group(3)!),
+    ];
+    if (channels.any((channel) => channel > 255)) return null;
+    return 0xff000000 | (channels[0] << 16) | (channels[1] << 8) | channels[2];
   }
 }
 
@@ -2792,6 +3073,7 @@ class _ReaderAppearancePreviewCard extends StatelessWidget {
     final background = Color(colors.backgroundArgb);
     final text = Color(colors.textArgb);
     return Container(
+      key: const ValueKey('reader-appearance-preview'),
       width: double.infinity,
       constraints: const BoxConstraints(minHeight: 72),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),

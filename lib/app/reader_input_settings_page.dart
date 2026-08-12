@@ -54,9 +54,9 @@ class ReaderSettingsPage extends StatelessWidget {
                     title: const Text('平台能力诊断'),
                     subtitle: const Text('查看当前平台、渲染器、显示与窗口能力'),
                     trailing: const Icon(Icons.chevron_right),
-                    onTap: () => Navigator.of(context).pushNamed(
-                      AppRouter.platformDiagnostics,
-                    ),
+                    onTap: () => Navigator.of(
+                      context,
+                    ).pushNamed(AppRouter.platformDiagnostics),
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -940,7 +940,9 @@ class _ReaderInputSettingsPageState
                                   input,
                                   action,
                                 );
-                                final latest = await _repository.load(_platform);
+                                final latest = await _repository.load(
+                                  _platform,
+                                );
                                 if (mounted) setState(() => _profile = latest);
                               },
                             )
@@ -1036,38 +1038,41 @@ class _AndroidInputSection extends StatelessWidget {
       child: Column(
         children: [
           ListTile(
-      leading: Icon(
-        input == PhysicalInputId.androidVolumeUp
-            ? Icons.volume_up_outlined
-            : Icons.volume_down_outlined,
-      ),
-      title: Text(inputLabel(input)),
-      subtitle: Text(
-        '当前操作：${command == null ? '不使用' : commandLabel(command!)}',
-      ),
-      trailing: DropdownButtonHideUnderline(
-        child: DropdownButton<ReaderCommand?>(
-          key: ValueKey('reader-input-android-select-${input.value}'),
-          value: command,
-          hint: const Text('选择操作'),
-          onChanged: onChanged,
-          items: const [
-            DropdownMenuItem<ReaderCommand?>(
-              value: ReaderCommand.previousPage,
-              child: Text('上一页'),
+            leading: Icon(
+              input == PhysicalInputId.androidVolumeUp
+                  ? Icons.volume_up_outlined
+                  : Icons.volume_down_outlined,
             ),
-            DropdownMenuItem<ReaderCommand?>(
-              value: ReaderCommand.nextPage,
-              child: Text('下一页'),
+            title: Text(inputLabel(input)),
+            subtitle: Text(
+              '当前操作：${command == null ? '不使用' : commandLabel(command!)}',
             ),
-            DropdownMenuItem<ReaderCommand?>(
-              value: ReaderCommand.toggleAutoRead,
-              child: Text('自动阅读'),
+            trailing: DropdownButtonHideUnderline(
+              child: DropdownButton<ReaderCommand?>(
+                key: ValueKey('reader-input-android-select-${input.value}'),
+                value: command,
+                hint: const Text('选择操作'),
+                onChanged: onChanged,
+                items: const [
+                  DropdownMenuItem<ReaderCommand?>(
+                    value: ReaderCommand.previousPage,
+                    child: Text('上一页'),
+                  ),
+                  DropdownMenuItem<ReaderCommand?>(
+                    value: ReaderCommand.nextPage,
+                    child: Text('下一页'),
+                  ),
+                  DropdownMenuItem<ReaderCommand?>(
+                    value: ReaderCommand.toggleAutoRead,
+                    child: Text('自动阅读'),
+                  ),
+                  DropdownMenuItem<ReaderCommand?>(
+                    value: null,
+                    child: Text('不使用'),
+                  ),
+                ],
+              ),
             ),
-            DropdownMenuItem<ReaderCommand?>(value: null, child: Text('不使用')),
-          ],
-        ),
-      ),
           ),
           ListTile(
             dense: true,
@@ -1344,6 +1349,19 @@ String inputLabel(PhysicalInputId input) {
   }
   if (value.startsWith('keyboard.digit')) {
     return value.substring('keyboard.digit'.length);
+  }
+  if (value.startsWith('keyboard.numpad')) {
+    final suffix = value.substring('keyboard.numpad'.length);
+    return switch (suffix) {
+      'Add' => 'Numpad +',
+      'Subtract' => 'Numpad -',
+      'Multiply' => 'Numpad *',
+      'Divide' => 'Numpad /',
+      _ => 'Numpad $suffix',
+    };
+  }
+  if (value.startsWith('keyboard.f')) {
+    return value.substring('keyboard.'.length).toUpperCase();
   }
   return switch (input) {
     PhysicalInputId.keyboardArrowLeft => 'Arrow Left',

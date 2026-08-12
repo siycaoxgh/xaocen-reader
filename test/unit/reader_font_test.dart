@@ -123,7 +123,7 @@ void main() {
   });
 
   test(
-    'schema 11 to 12 migration preserves progress and adds font assets',
+    'schema 11 to 13 migration preserves progress and adds font assets',
     () async {
       final file = File('${temp.path}/migration.sqlite');
       var old = AppDatabase(NativeDatabase(file));
@@ -149,6 +149,12 @@ void main() {
       await old.customStatement(
         'ALTER TABLE reader_preferences DROP COLUMN font_id',
       );
+      await old.customStatement(
+        'ALTER TABLE reader_preferences DROP COLUMN show_top_info_divider',
+      );
+      await old.customStatement(
+        'ALTER TABLE reader_preferences DROP COLUMN show_bottom_info_divider',
+      );
       await old.customStatement('DROP TABLE reader_font_asset_rows');
       await old.customStatement('PRAGMA user_version = 11');
       await old.close();
@@ -162,7 +168,7 @@ void main() {
       expect(
         (await migrated.customSelect('PRAGMA user_version').getSingle())
             .data['user_version'],
-        12,
+        13,
       );
       expect(
         await migrated.select(migrated.readerFontAssetRows).get(),

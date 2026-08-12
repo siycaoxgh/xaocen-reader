@@ -56,7 +56,8 @@ final class ReaderPreferences {
     required this.showChapterProgressInfo,
     required this.showClockInfo,
     required this.showWholeBookProgressInfo,
-    required this.showInfoDivider,
+    required this.showTopInfoDivider,
+    required this.showBottomInfoDivider,
     required this.showAutoReadMinimalInfo,
     required this.chapterInfoSlot,
     required this.chapterProgressInfoSlot,
@@ -159,7 +160,8 @@ final class ReaderPreferences {
     showChapterProgressInfo: defaultShowChapterProgressInfo,
     showClockInfo: defaultShowClockInfo,
     showWholeBookProgressInfo: defaultShowWholeBookProgressInfo,
-    showInfoDivider: defaultShowInfoDivider,
+    showTopInfoDivider: defaultShowInfoDivider,
+    showBottomInfoDivider: defaultShowInfoDivider,
     showAutoReadMinimalInfo: defaultShowAutoReadMinimalInfo,
     chapterInfoSlot: defaultChapterInfoSlot,
     chapterProgressInfoSlot: defaultChapterProgressInfoSlot,
@@ -199,7 +201,9 @@ final class ReaderPreferences {
     bool? showChapterProgressInfo,
     bool? showClockInfo,
     bool? showWholeBookProgressInfo,
-    bool showInfoDivider = defaultShowInfoDivider,
+    bool? showInfoDivider,
+    bool? showTopInfoDivider,
+    bool? showBottomInfoDivider,
     bool showAutoReadMinimalInfo = defaultShowAutoReadMinimalInfo,
     ReaderInfoSlot chapterInfoSlot = defaultChapterInfoSlot,
     ReaderInfoSlot chapterProgressInfoSlot = defaultChapterProgressInfoSlot,
@@ -298,7 +302,10 @@ final class ReaderPreferences {
     showChapterProgressInfo: showChapterProgressInfo ?? showProgressInfo,
     showClockInfo: showClockInfo ?? defaultShowClockInfo,
     showWholeBookProgressInfo: showWholeBookProgressInfo ?? showProgressInfo,
-    showInfoDivider: showInfoDivider,
+    showTopInfoDivider:
+        showTopInfoDivider ?? showInfoDivider ?? defaultShowInfoDivider,
+    showBottomInfoDivider:
+        showBottomInfoDivider ?? showInfoDivider ?? defaultShowInfoDivider,
     showAutoReadMinimalInfo: showAutoReadMinimalInfo,
     chapterInfoSlot: chapterInfoSlot,
     chapterProgressInfoSlot: chapterProgressInfoSlot,
@@ -335,7 +342,12 @@ final class ReaderPreferences {
   final bool showChapterProgressInfo;
   final bool showClockInfo;
   final bool showWholeBookProgressInfo;
-  final bool showInfoDivider;
+  final bool showTopInfoDivider;
+  final bool showBottomInfoDivider;
+
+  /// Legacy aggregate retained for source compatibility. New UI and storage
+  /// use the independent top/bottom flags.
+  bool get showInfoDivider => showTopInfoDivider || showBottomInfoDivider;
   final bool showAutoReadMinimalInfo;
   final ReaderInfoSlot chapterInfoSlot;
   final ReaderInfoSlot chapterProgressInfoSlot;
@@ -389,6 +401,8 @@ final class ReaderPreferences {
     bool? showClockInfo,
     bool? showWholeBookProgressInfo,
     bool? showInfoDivider,
+    bool? showTopInfoDivider,
+    bool? showBottomInfoDivider,
     bool? showAutoReadMinimalInfo,
     ReaderInfoSlot? chapterInfoSlot,
     ReaderInfoSlot? chapterProgressInfoSlot,
@@ -477,7 +491,12 @@ final class ReaderPreferences {
       showChapterProgressInfo: nextChapterProgress,
       showClockInfo: showClockInfo ?? this.showClockInfo,
       showWholeBookProgressInfo: nextWholeBookProgress,
-      showInfoDivider: showInfoDivider ?? this.showInfoDivider,
+      showTopInfoDivider:
+          showTopInfoDivider ?? showInfoDivider ?? this.showTopInfoDivider,
+      showBottomInfoDivider:
+          showBottomInfoDivider ??
+          showInfoDivider ??
+          this.showBottomInfoDivider,
       showAutoReadMinimalInfo:
           showAutoReadMinimalInfo ?? this.showAutoReadMinimalInfo,
       chapterInfoSlot: chapterInfoSlot ?? this.chapterInfoSlot,
@@ -524,7 +543,8 @@ final class ReaderPreferences {
         showChapterProgressInfo != previous.showChapterProgressInfo ||
         showClockInfo != previous.showClockInfo ||
         showWholeBookProgressInfo != previous.showWholeBookProgressInfo ||
-        showInfoDivider != previous.showInfoDivider ||
+        showTopInfoDivider != previous.showTopInfoDivider ||
+        showBottomInfoDivider != previous.showBottomInfoDivider ||
         showAutoReadMinimalInfo != previous.showAutoReadMinimalInfo ||
         chapterInfoSlot != previous.chapterInfoSlot ||
         chapterProgressInfoSlot != previous.chapterProgressInfoSlot ||
@@ -588,7 +608,8 @@ final class ReaderPreferences {
       showChapterProgressInfo == other.showChapterProgressInfo &&
       showClockInfo == other.showClockInfo &&
       showWholeBookProgressInfo == other.showWholeBookProgressInfo &&
-      showInfoDivider == other.showInfoDivider &&
+      showTopInfoDivider == other.showTopInfoDivider &&
+      showBottomInfoDivider == other.showBottomInfoDivider &&
       showAutoReadMinimalInfo == other.showAutoReadMinimalInfo &&
       chapterInfoSlot == other.chapterInfoSlot &&
       chapterProgressInfoSlot == other.chapterProgressInfoSlot &&
@@ -626,7 +647,8 @@ final class ReaderPreferences {
     showChapterProgressInfo,
     showClockInfo,
     showWholeBookProgressInfo,
-    showInfoDivider,
+    showTopInfoDivider,
+    showBottomInfoDivider,
     showAutoReadMinimalInfo,
     chapterInfoSlot,
     chapterProgressInfoSlot,

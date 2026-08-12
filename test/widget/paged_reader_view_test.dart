@@ -196,6 +196,34 @@ void main() {
     },
   );
 
+  testWidgets('center tap is not navigation; real swipe is navigation', (
+    tester,
+  ) async {
+    final c = makeController();
+    c.open(const ReaderLocator(collectionId: 'c1', absoluteCharacterOffset: 0));
+    var navigationSignals = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SizedBox(
+          width: 400,
+          height: 600,
+          child: PagedReaderView(
+            controller: c,
+            appearance: appearance(),
+            onUserNavigation: () => navigationSignals++,
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.byType(PageView));
+    await tester.pump();
+    expect(navigationSignals, 0);
+    await tester.fling(find.byType(PageView), const Offset(-500, 0), 1200);
+    await tester.pumpAndSettle();
+    expect(navigationSignals, 1);
+    c.dispose();
+  });
+
   testWidgets('2. next：左滑翻到下一页并更新 confirmed', (tester) async {
     final c = makeController();
     c.open(const ReaderLocator(collectionId: 'c1', absoluteCharacterOffset: 0));
