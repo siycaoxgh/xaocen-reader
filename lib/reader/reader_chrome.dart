@@ -126,6 +126,7 @@ class ReaderChrome extends StatelessWidget {
     this.showWholeBookProgressInfo = true,
     this.showInfoDivider = false,
     this.showAutoReadMinimalInfo = true,
+    this.showMinimalInfoOverlay = true,
     this.chapterInfoSlot = ReaderInfoSlot.topLeft,
     this.chapterProgressInfoSlot = ReaderInfoSlot.topRight,
     this.clockInfoSlot = ReaderInfoSlot.bottomLeft,
@@ -169,6 +170,10 @@ class ReaderChrome extends StatelessWidget {
   final bool showWholeBookProgressInfo;
   final bool showInfoDivider;
   final bool showAutoReadMinimalInfo;
+  /// Kept for compatibility with the standalone chrome widget tests. The
+  /// production Reader renders info in [ReaderInfoScaffold], which reserves
+  /// real layout space instead of overlaying the body.
+  final bool showMinimalInfoOverlay;
   final ReaderInfoSlot chapterInfoSlot;
   final ReaderInfoSlot chapterProgressInfoSlot;
   final ReaderInfoSlot clockInfoSlot;
@@ -384,7 +389,7 @@ class ReaderChrome extends StatelessWidget {
                         _ChromeAction(
                           key: readerAppearanceActionKey,
                           icon: Icons.text_fields_rounded,
-                          label: '界面',
+                          label: 'Aa',
                           onPressed: onAppearance,
                         ),
                         _ChromeAction(
@@ -406,7 +411,7 @@ class ReaderChrome extends StatelessWidget {
     return Stack(
       fit: StackFit.expand,
       children: [
-        if (!visible &&
+        if (showMinimalInfoOverlay && !visible &&
             (autoReadState != AutoReadState.running ||
                 showAutoReadMinimalInfo) &&
             (defaultTargetPlatform != TargetPlatform.android ||
@@ -449,6 +454,138 @@ class ReaderChrome extends StatelessWidget {
             onResume: onAutoRead == null ? null : onResumeAutoRead,
             onStop: onAutoRead == null ? null : onStopAutoRead,
           ),
+      ],
+    );
+  }
+}
+
+/// A real top/body/bottom layout for hidden Reader chrome.
+///
+/// The information regions are siblings of the body, so pagination and the
+/// vertical viewport receive the remaining height.  The standalone
+/// [ReaderMinimalInfoLayer] remains available for legacy previews/tests, but
+/// ReaderPage uses this scaffold in production.
+class ReaderInfoScaffold extends StatelessWidget {
+  const ReaderInfoScaffold({
+    super.key,
+    required this.body,
+    required this.mode,
+    required this.currentChapterTitle,
+    required this.currentChapterNumber,
+    required this.chapterProgressPercent,
+    required this.chapterPageNumber,
+    required this.chapterPageCount,
+    required this.progressPercent,
+    required this.showTopInfoBar,
+    required this.showBottomInfoBar,
+    required this.showProgressInfo,
+    required this.showChapterInfo,
+    required this.showChapterProgressInfo,
+    required this.showClockInfo,
+    required this.showWholeBookProgressInfo,
+    required this.showInfoDivider,
+    required this.chapterInfoSlot,
+    required this.chapterProgressInfoSlot,
+    required this.clockInfoSlot,
+    required this.wholeBookProgressInfoSlot,
+    required this.infoDividerSlot,
+    required this.statusBarMode,
+    required this.timeDisplayMode,
+    this.readerTextColor,
+    this.readerBackgroundColor,
+  });
+
+  final Widget body;
+  final ReaderMode mode;
+  final String? currentChapterTitle;
+  final int? currentChapterNumber;
+  final double? chapterProgressPercent;
+  final int? chapterPageNumber;
+  final int? chapterPageCount;
+  final double? progressPercent;
+  final bool showTopInfoBar;
+  final bool showBottomInfoBar;
+  final bool showProgressInfo;
+  final bool showChapterInfo;
+  final bool showChapterProgressInfo;
+  final bool showClockInfo;
+  final bool showWholeBookProgressInfo;
+  final bool showInfoDivider;
+  final ReaderInfoSlot chapterInfoSlot;
+  final ReaderInfoSlot chapterProgressInfoSlot;
+  final ReaderInfoSlot clockInfoSlot;
+  final ReaderInfoSlot wholeBookProgressInfoSlot;
+  final ReaderInfoSlot infoDividerSlot;
+  final ReaderStatusBarMode statusBarMode;
+  final ReaderTimeDisplayMode timeDisplayMode;
+  final Color? readerTextColor;
+  final Color? readerBackgroundColor;
+
+  Widget _region(BuildContext context, {required bool top}) {
+    final systemInset = top
+        ? MediaQuery.paddingOf(context).top
+        : MediaQuery.paddingOf(context).bottom;
+    return SizedBox(
+      height: readerInfoRegionExtent + systemInset,
+      child: Padding(
+        padding: EdgeInsets.only(
+          top: top ? systemInset : 0,
+          bottom: top ? 0 : systemInset,
+        ),
+        child: MediaQuery.removePadding(
+          context: context,
+          removeTop: true,
+          removeBottom: true,
+          child: ReaderMinimalInfoLayer(
+            mode: mode,
+            currentChapterTitle: currentChapterTitle,
+            currentChapterNumber: currentChapterNumber,
+            chapterProgressPercent: chapterProgressPercent,
+            chapterPageNumber: chapterPageNumber,
+            chapterPageCount: chapterPageCount,
+            progressPercent: progressPercent,
+            showTopInfoBar: top,
+            showBottomInfoBar: !top,
+            showProgressInfo: showProgressInfo,
+            showChapterInfo: showChapterInfo,
+            showChapterProgressInfo: showChapterProgressInfo,
+            showClockInfo: showClockInfo,
+            showWholeBookProgressInfo: showWholeBookProgressInfo,
+            showInfoDivider: false,
+            chapterInfoSlot: chapterInfoSlot,
+            chapterProgressInfoSlot: chapterProgressInfoSlot,
+            clockInfoSlot: clockInfoSlot,
+            wholeBookProgressInfoSlot: wholeBookProgressInfoSlot,
+            infoDividerSlot: infoDividerSlot,
+            statusBarMode: statusBarMode,
+            timeDisplayMode: timeDisplayMode,
+            readerTextColor: readerTextColor,
+            readerBackgroundColor: readerBackgroundColor,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _divider(BuildContext context) {
+    final devicePixelRatio = MediaQuery.devicePixelRatioOf(context);
+    final color = (readerTextColor ?? Theme.of(context).colorScheme.onSurface)
+        .withValues(alpha: .42);
+    return SizedBox(
+      height: 1 / devicePixelRatio,
+      child: ColoredBox(color: showInfoDivider ? color : Colors.transparent),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        if (showTopInfoBar) _region(context, top: true),
+        if (showTopInfoBar) _divider(context),
+        Expanded(child: body),
+        if (showBottomInfoBar) _divider(context),
+        if (showBottomInfoBar) _region(context, top: false),
       ],
     );
   }
@@ -2361,11 +2498,12 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
       _syncBrightnessControllers();
       _brightnessInitialized = true;
     }
-    final isDesktop = defaultTargetPlatform == TargetPlatform.windows;
     final availableWidth = MediaQuery.sizeOf(context).width;
-    final panelWidth = isDesktop
+    final panelWidth = defaultTargetPlatform == TargetPlatform.windows
         ? math.min(960.0, availableWidth)
         : availableWidth;
+    final useLabelRail = panelWidth >= 840;
+    final useIconRail = panelWidth >= 600 && panelWidth < 840;
     final categories = [
       (_ReaderSettingsCategory.typography, '排版布局', Icons.text_fields_rounded),
       (_ReaderSettingsCategory.appearance, '阅读外观', Icons.palette_outlined),
@@ -2373,18 +2511,38 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
       (_ReaderSettingsCategory.advanced, '高级设置', Icons.tune_rounded),
     ];
     final content = _buildCategoryPanel(context);
-    final navigation = isDesktop
+    final navigation = useLabelRail
         ? SizedBox(
-            width: 132,
+            width: 180,
             child: Column(
               children: [
                 for (final item in categories)
                   ListTile(
+                    key: ValueKey('reader-settings-category-${item.$1.name}'),
                     dense: true,
                     selected: _category == item.$1,
                     leading: Icon(item.$3),
                     title: Text(item.$2),
                     onTap: () => setState(() => _category = item.$1),
+                  ),
+              ],
+            ),
+          )
+        : useIconRail
+        ? SizedBox(
+            width: 64,
+            child: Column(
+              children: [
+                for (final item in categories)
+                  Tooltip(
+                    message: item.$2,
+                    child: IconButton(
+                      key: ValueKey('reader-settings-category-${item.$1.name}'),
+                      isSelected: _category == item.$1,
+                      selectedIcon: Icon(item.$3),
+                      icon: Icon(item.$3),
+                      onPressed: () => setState(() => _category = item.$1),
+                    ),
                   ),
               ],
             ),
@@ -2395,6 +2553,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
               children: [
                 for (final item in categories) ...[
                   ChoiceChip(
+                    key: ValueKey('reader-settings-category-${item.$1.name}'),
                     selected: _category == item.$1,
                     label: Text(item.$2),
                     avatar: Icon(item.$3, size: 17),
@@ -2405,7 +2564,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
               ],
             ),
           );
-    final panel = isDesktop
+    final panel = (useLabelRail || useIconRail)
         ? Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -2434,9 +2593,9 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
           child: Padding(
             key: readerSettingsSheetKey,
             padding: EdgeInsets.fromLTRB(
-              isDesktop ? 28 : 20,
+              useLabelRail ? 28 : 20,
               0,
-              isDesktop ? 28 : 20,
+              useLabelRail ? 28 : 20,
               24,
             ),
             child: Column(

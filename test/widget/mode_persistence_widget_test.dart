@@ -129,7 +129,13 @@ void main() {
   Future<void> selectMode(WidgetTester tester, ReaderMode mode) async {
     await tester.tap(find.byKey(readerAppearanceActionKey));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('阅读行为'));
+    // The responsive Aa sheet uses an icon rail at the 600–839 px tier, so
+    // the category label is intentionally not rendered at the test surface
+    // width. Select the stable category key instead of relying on desktop
+    // text being present.
+    await tester.tap(
+      find.byKey(const ValueKey('reader-settings-category-paging')),
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.text(mode == ReaderMode.paged ? '分页' : '滚动').last);
     await tester.pump();

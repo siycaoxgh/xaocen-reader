@@ -47,7 +47,7 @@ class ReaderSettingsPage extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 24),
-              if (kDebugMode) ...[
+              if (kDebugMode || Platform.isWindows || Platform.isAndroid) ...[
                 Card(
                   child: ListTile(
                     leading: const Icon(Icons.analytics_outlined),

@@ -2242,6 +2242,7 @@ class _ReaderPageState extends State<ReaderPage>
             showWholeBookProgressInfo: _preferences.showWholeBookProgressInfo,
             showInfoDivider: _preferences.showInfoDivider,
             showAutoReadMinimalInfo: _preferences.showAutoReadMinimalInfo,
+            showMinimalInfoOverlay: false,
             chapterInfoSlot: _preferences.chapterInfoSlot,
             chapterProgressInfoSlot: _preferences.chapterProgressInfoSlot,
             clockInfoSlot: _preferences.clockInfoSlot,
@@ -2317,15 +2318,32 @@ class _ReaderPageState extends State<ReaderPage>
     Widget readerContent,
   ) {
     if (!_minimalReaderInfoVisible) return readerContent;
-    final top = _preferences.showTopInfoBar
-        ? readerInfoRegionInset(context, top: true)
-        : 0.0;
-    final bottom = _preferences.showBottomInfoBar
-        ? readerInfoRegionInset(context, top: false)
-        : 0.0;
-    return Padding(
-      padding: EdgeInsets.only(top: top, bottom: bottom),
-      child: readerContent,
+    return ReaderInfoScaffold(
+      body: readerContent,
+      mode: _mode,
+      currentChapterTitle: _currentChapterTitle,
+      currentChapterNumber: _currentChapterBoundary?.chapterNumber,
+      chapterProgressPercent: _chapterProgressPercent,
+      chapterPageNumber: _chapterPageMetrics?.currentPageNumber,
+      chapterPageCount: _chapterPageMetrics?.totalPageCount,
+      progressPercent: _progressPercent,
+      showTopInfoBar: _preferences.showTopInfoBar,
+      showBottomInfoBar: _preferences.showBottomInfoBar,
+      showProgressInfo: _preferences.showProgressInfo,
+      showChapterInfo: _preferences.showChapterInfo,
+      showChapterProgressInfo: _preferences.showChapterProgressInfo,
+      showClockInfo: _preferences.showClockInfo,
+      showWholeBookProgressInfo: _preferences.showWholeBookProgressInfo,
+      showInfoDivider: _preferences.showInfoDivider,
+      chapterInfoSlot: _preferences.chapterInfoSlot,
+      chapterProgressInfoSlot: _preferences.chapterProgressInfoSlot,
+      clockInfoSlot: _preferences.clockInfoSlot,
+      wholeBookProgressInfoSlot: _preferences.wholeBookProgressInfoSlot,
+      infoDividerSlot: _preferences.infoDividerSlot,
+      statusBarMode: _preferences.statusBarMode,
+      timeDisplayMode: _preferences.timeDisplayMode,
+      readerTextColor: _appearance.textColor,
+      readerBackgroundColor: _appearance.backgroundColor,
     );
   }
 

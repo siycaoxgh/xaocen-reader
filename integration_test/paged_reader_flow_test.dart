@@ -53,7 +53,9 @@ void main() {
   Future<void> selectMode(WidgetTester tester, ReaderMode mode) async {
     await tester.tap(find.byKey(readerAppearanceActionKey));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('阅读行为'));
+    await tester.tap(
+      find.byKey(const ValueKey('reader-settings-category-paging')),
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.text(mode == ReaderMode.paged ? '分页' : '滚动').last);
     await tester.pump();

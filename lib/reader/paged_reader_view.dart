@@ -144,6 +144,9 @@ class _PagedReaderViewState extends State<PagedReaderView> {
   bool _onScrollNotification(ScrollNotification notification) {
     if (notification is ScrollStartNotification &&
         notification.dragDetails != null) {
+      // Notify the Reader only once a real drag has started. Calling this from
+      // PointerDown made a plain center tap reveal Chrome and then the tap
+      // toggle immediately hid it again while AutoRead was idle/paused.
       widget.onUserNavigation?.call();
       _userGestureActive = true;
       _programmaticTargetIndex = null;
@@ -186,7 +189,6 @@ class _PagedReaderViewState extends State<PagedReaderView> {
     // PageUp/PageDown/arrow event can be consumed by the former control (or
     // by Scrollable's default actions) instead of reaching ReaderInputRouter.
     _focusNode.requestFocus();
-    widget.onUserNavigation?.call();
     _pointerDownPosition = event.position;
     _userGestureActive = true;
     _gestureWindowGeneration = widget.controller.window.windowGeneration;

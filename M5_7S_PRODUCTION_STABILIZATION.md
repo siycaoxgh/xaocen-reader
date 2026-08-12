@@ -54,3 +54,18 @@ manual/device validation items and are not claimed as automated PASS here.
 TASK B device acceptance is intentionally separate and must be completed before
 the paused Vanilla Engine gate can resume. The Flutter Engine alpha patch has
 not been applied.
+
+## Superseding status: reopened after manual Windows review
+
+The automated result above was too broad: implementation and automated tests
+were treated as product acceptance. Manual Windows testing later showed that
+local shell and visual behavior still require validation. Therefore:
+
+**M5.7 PRODUCTION STABILIZATION = REOPENED.**
+
+The corrected Reader Info layout, responsive settings, diagnostics visibility,
+and regression suite are now covered by automated evidence. Windows mouse/tray,
+Boss Key, borderless pointer behavior, and live visual checks remain
+MANUAL/DEFERRED in RDP. Android physical validation remains DEFERRED because
+the expected USB device `ce8df63f` is unavailable. The Flutter Engine alpha
+patch remains untouched and no DComp work is resumed.
