@@ -1522,9 +1522,13 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
         ),
         const SizedBox(height: 10),
         DecoratedBox(
+          key: const ValueKey('reader-font-preview-card'),
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surfaceContainerHighest,
             borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: Theme.of(context).colorScheme.outlineVariant,
+            ),
           ),
           child: Padding(
             padding: const EdgeInsets.all(12),
@@ -1533,7 +1537,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('中文阅读效果'),
+                  const Text('中文阅读效果预览'),
                   const SizedBox(height: 4),
                   Text(
                     'XAOCEN Reader  1234567890',
