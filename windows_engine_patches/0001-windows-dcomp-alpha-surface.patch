@@ -1,0 +1,554 @@
+diff --git a/engine/src/flutter/shell/platform/windows/BUILD.gn b/engine/src/flutter/shell/platform/windows/BUILD.gn
+index 09b52a96fb0..af6077668d4 100644
+--- a/engine/src/flutter/shell/platform/windows/BUILD.gn
++++ b/engine/src/flutter/shell/platform/windows/BUILD.gn
+@@ -58,6 +58,8 @@ source_set("flutter_windows_source") {
+     "dpi_utils.h",
+     "egl/context.cc",
+     "egl/context.h",
++    "egl/dcomp_window_surface.cc",
++    "egl/dcomp_window_surface.h",
+     "egl/egl.cc",
+     "egl/egl.h",
+     "egl/manager.cc",
+@@ -148,7 +150,10 @@ source_set("flutter_windows_source") {
+   ]
+ 
+   libs = [
++    "dcomp.lib",
++    "d3d11.lib",
+     "dwmapi.lib",
++    "dxgi.lib",
+     "imm32.lib",
+   ]
+ 
+diff --git a/engine/src/flutter/shell/platform/windows/egl/dcomp_window_surface.cc b/engine/src/flutter/shell/platform/windows/egl/dcomp_window_surface.cc
+new file mode 100644
+index 00000000000..383c9db7f28
+--- /dev/null
++++ b/engine/src/flutter/shell/platform/windows/egl/dcomp_window_surface.cc
+@@ -0,0 +1,289 @@
++// Copyright 2013 The Flutter Authors. All rights reserved.
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#include "flutter/shell/platform/windows/egl/dcomp_window_surface.h"
++
++#include <EGL/eglext.h>
++
++#include <algorithm>
++#include <string_view>
++
++#include "flutter/fml/logging.h"
++#include "flutter/shell/platform/windows/egl/egl.h"
++#include "flutter/shell/platform/windows/egl/manager.h"
++
++#pragma comment(lib, "dcomp.lib")
++#pragma comment(lib, "d3d11.lib")
++#pragma comment(lib, "dxgi.lib")
++
++namespace flutter {
++namespace egl {
++
++namespace {
++
++constexpr DXGI_FORMAT kFormat = DXGI_FORMAT_B8G8R8A8_UNORM;
++constexpr DXGI_ALPHA_MODE kAlphaMode = DXGI_ALPHA_MODE_PREMULTIPLIED;
++
++void LogHr(const char* operation, HRESULT hr) {
++  FML_LOG(ERROR) << operation << " failed: 0x" << std::hex
++                 << static_cast<unsigned long>(hr);
++}
++
++bool HasExtension(EGLDisplay display, const char* name) {
++  const char* extensions = ::eglQueryString(display, EGL_EXTENSIONS);
++  if (extensions == nullptr) {
++    return false;
++  }
++  std::string_view all(extensions);
++  std::string_view needle(name);
++  size_t offset = 0;
++  while (offset < all.size()) {
++    size_t end = all.find(' ', offset);
++    if (end == std::string_view::npos) {
++      end = all.size();
++    }
++    if (all.substr(offset, end - offset) == needle) {
++      return true;
++    }
++    offset = end + 1;
++  }
++  return false;
++}
++
++}  // namespace
++
++DCompWindowSurface::DCompWindowSurface(EGLDisplay display,
++                                       EGLContext context,
++                                       size_t width,
++                                       size_t height)
++    : WindowSurface(display, context, EGL_NO_SURFACE, width, height) {}
++
++DCompWindowSurface::~DCompWindowSurface() {
++  Destroy();
++}
++
++std::unique_ptr<DCompWindowSurface> DCompWindowSurface::Create(
++    Manager* manager,
++    HWND hwnd,
++    size_t width,
++    size_t height) {
++  if (manager == nullptr || hwnd == nullptr || width == 0 || height == 0) {
++    return nullptr;
++  }
++
++  auto surface = std::unique_ptr<DCompWindowSurface>(new DCompWindowSurface(
++      manager->egl_display(), manager->render_context()->GetHandle(), width,
++      height));
++  if (!surface->Initialize(manager, hwnd)) {
++    return nullptr;
++  }
++  return surface;
++}
++
++bool DCompWindowSurface::Initialize(Manager* manager, HWND hwnd) {
++  manager_ = manager;
++  hwnd_ = hwnd;
++
++  if (!HasExtension(display_, "EGL_ANGLE_d3d_share_handle_client_buffer") &&
++      !HasExtension(display_,
++                    "EGL_ANGLE_surface_d3d_texture_2d_share_handle")) {
++    FML_LOG(WARNING)
++        << "Transparent surface disabled: ANGLE shared-handle extension is "
++           "unavailable";
++    return false;
++  }
++
++  if (!CreateSwapchainAndComposition(manager, hwnd)) {
++    return false;
++  }
++  if (!ImportBackbuffer(manager)) {
++    return false;
++  }
++  is_valid_ = true;
++  return true;
++}
++
++bool DCompWindowSurface::CreateSwapchainAndComposition(Manager* manager,
++                                                        HWND hwnd) {
++  if (!manager->GetDevice(d3d_device_.GetAddressOf())) {
++    FML_LOG(WARNING) << "Transparent surface disabled: ANGLE D3D device "
++                        "could not be queried";
++    return false;
++  }
++
++  Microsoft::WRL::ComPtr<IDXGIDevice> dxgi_device;
++  HRESULT hr = d3d_device_.As(&dxgi_device);
++  if (FAILED(hr)) {
++    LogHr("Query IDXGIDevice", hr);
++    return false;
++  }
++
++  Microsoft::WRL::ComPtr<IDXGIFactory2> factory;
++  hr = ::CreateDXGIFactory2(0, IID_PPV_ARGS(&factory));
++  if (FAILED(hr)) {
++    LogHr("CreateDXGIFactory2", hr);
++    return false;
++  }
++
++  DXGI_SWAP_CHAIN_DESC1 description = {};
++  description.Width = static_cast<UINT>(width());
++  description.Height = static_cast<UINT>(height());
++  description.Format = kFormat;
++  description.SampleDesc.Count = 1;
++  description.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
++  description.BufferCount = 2;
++  description.Scaling = DXGI_SCALING_STRETCH;
++  description.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
++  description.AlphaMode = kAlphaMode;
++  // The shared flag is required for a swapchain buffer to expose a D3D
++  // interop handle. If a driver rejects the combination, creation fails and
++  // the caller falls back to the normal opaque ANGLE window surface.
++  description.Flags = DXGI_SWAP_CHAIN_FLAG_SHARED;
++
++  hr = factory->CreateSwapChainForComposition(
++      d3d_device_.Get(), &description, nullptr, swapchain_.GetAddressOf());
++  if (FAILED(hr)) {
++    LogHr("CreateSwapChainForComposition", hr);
++    return false;
++  }
++
++  hr = ::DCompositionCreateDevice(dxgi_device.Get(),
++                                  IID_PPV_ARGS(&dcomp_device_));
++  if (FAILED(hr)) {
++    LogHr("DCompositionCreateDevice", hr);
++    return false;
++  }
++  hr = dcomp_device_->CreateTargetForHwnd(hwnd, TRUE,
++                                          dcomp_target_.GetAddressOf());
++  if (FAILED(hr)) {
++    LogHr("CreateTargetForHwnd", hr);
++    return false;
++  }
++  hr = dcomp_device_->CreateVisual(dcomp_visual_.GetAddressOf());
++  if (FAILED(hr)) {
++    LogHr("CreateVisual", hr);
++    return false;
++  }
++  hr = dcomp_visual_->SetContent(swapchain_.Get());
++  if (FAILED(hr)) {
++    LogHr("Visual.SetContent", hr);
++    return false;
++  }
++  hr = dcomp_target_->SetRoot(dcomp_visual_.Get());
++  if (FAILED(hr)) {
++    LogHr("Target.SetRoot", hr);
++    return false;
++  }
++  hr = dcomp_device_->Commit();
++  if (FAILED(hr)) {
++    LogHr("DComp Commit", hr);
++    return false;
++  }
++  composition_committed_ = true;
++  return true;
++}
++
++bool DCompWindowSurface::ImportBackbuffer(Manager* manager) {
++  Microsoft::WRL::ComPtr<ID3D11Texture2D> backbuffer;
++  HRESULT hr = swapchain_->GetBuffer(0, IID_PPV_ARGS(&backbuffer));
++  if (FAILED(hr)) {
++    LogHr("Swapchain.GetBuffer", hr);
++    return false;
++  }
++
++  Microsoft::WRL::ComPtr<IDXGIResource1> resource;
++  hr = backbuffer.As(&resource);
++  if (FAILED(hr)) {
++    LogHr("Backbuffer.Query IDXGIResource1", hr);
++    return false;
++  }
++
++  hr = resource->CreateSharedHandle(
++      nullptr, DXGI_SHARED_RESOURCE_READ | DXGI_SHARED_RESOURCE_WRITE, nullptr,
++      &shared_handle_);
++  if (FAILED(hr) || shared_handle_ == nullptr) {
++    // Older ANGLE/driver combinations expose the legacy shared handle for a
++    // swapchain backbuffer even when IDXGIResource1 cannot create an NT
++    // handle. It is still GPU-to-GPU interop; the handle is retained until
++    // EGL destroys the imported surface.
++    Microsoft::WRL::ComPtr<IDXGIResource> legacy_resource;
++    if (SUCCEEDED(backbuffer.As(&legacy_resource))) {
++      hr = legacy_resource->GetSharedHandle(&shared_handle_);
++    }
++  }
++  if (FAILED(hr) || shared_handle_ == nullptr) {
++    LogHr("Backbuffer shared-handle export", hr);
++    return false;
++  }
++
++  const EGLint attributes[] = {
++      EGL_WIDTH,
++      static_cast<EGLint>(width()),
++      EGL_HEIGHT,
++      static_cast<EGLint>(height()),
++      EGL_NONE,
++  };
++  EGLSurface imported = manager->CreateSurfaceFromHandle(
++      EGL_D3D_TEXTURE_2D_SHARE_HANDLE_ANGLE,
++      reinterpret_cast<EGLClientBuffer>(shared_handle_), attributes);
++  if (imported == EGL_NO_SURFACE) {
++    LogEGLError("ANGLE failed to import DComp swapchain shared handle");
++    ReleaseSharedHandle();
++    return false;
++  }
++  surface_ = imported;
++  return true;
++}
++
++void DCompWindowSurface::ReleaseSharedHandle() {
++  if (shared_handle_ != nullptr) {
++    ::CloseHandle(shared_handle_);
++    shared_handle_ = nullptr;
++  }
++}
++
++bool DCompWindowSurface::Destroy() {
++  bool result = true;
++  if (surface_ != EGL_NO_SURFACE) {
++    result = WindowSurface::Destroy();
++  }
++  ReleaseSharedHandle();
++  dcomp_visual_.Reset();
++  dcomp_target_.Reset();
++  if (dcomp_device_ && composition_committed_) {
++    dcomp_device_->Commit();
++  }
++  dcomp_device_.Reset();
++  swapchain_.Reset();
++  d3d_device_.Reset();
++  manager_ = nullptr;
++  hwnd_ = nullptr;
++  composition_committed_ = false;
++  return result;
++}
++
++bool DCompWindowSurface::SwapBuffers() const {
++  // eglSwapBuffers on the imported pbuffer is used as the existing ANGLE
++  // flush/present boundary. No pixels are read back or copied to the CPU.
++  if (::eglSwapBuffers(display_, surface_) != EGL_TRUE) {
++    WINDOWS_LOG_EGL_ERROR;
++    return false;
++  }
++
++  const UINT sync_interval = vsync_enabled() ? 1 : 0;
++  HRESULT hr = swapchain_->Present(sync_interval, 0);
++  if (FAILED(hr)) {
++    LogHr("DComp swapchain Present", hr);
++    return false;
++  }
++  hr = dcomp_device_->Commit();
++  if (FAILED(hr)) {
++    LogHr("DComp frame Commit", hr);
++    return false;
++  }
++  return true;
++}
++
++}  // namespace egl
++}  // namespace flutter
+diff --git a/engine/src/flutter/shell/platform/windows/egl/dcomp_window_surface.h b/engine/src/flutter/shell/platform/windows/egl/dcomp_window_surface.h
+new file mode 100644
+index 00000000000..0836cc609ec
+--- /dev/null
++++ b/engine/src/flutter/shell/platform/windows/egl/dcomp_window_surface.h
+@@ -0,0 +1,73 @@
++// Copyright 2013 The Flutter Authors. All rights reserved.
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#ifndef FLUTTER_SHELL_PLATFORM_WINDOWS_EGL_DCOMP_WINDOW_SURFACE_H_
++#define FLUTTER_SHELL_PLATFORM_WINDOWS_EGL_DCOMP_WINDOW_SURFACE_H_
++
++#include <EGL/egl.h>
++
++#include <windows.h>
++#include <d3d11.h>
++#include <dcomp.h>
++#include <dxgi1_2.h>
++#include <wrl/client.h>
++
++#include <memory>
++
++#include "flutter/fml/macros.h"
++#include "flutter/shell/platform/windows/egl/window_surface.h"
++
++namespace flutter {
++namespace egl {
++
++class Manager;
++
++// A Windows-only EGL surface backed by a DirectComposition swapchain.
++//
++// This class deliberately keeps the existing WindowSurface contract so the
++// OpenGL compositor, input, focus, and accessibility paths remain unchanged.
++// The swapchain backbuffer is imported into ANGLE through its D3D shared-handle
++// client-buffer extension; no CPU readback or per-frame texture copy is used.
++class DCompWindowSurface final : public WindowSurface {
++ public:
++  static std::unique_ptr<DCompWindowSurface> Create(
++      Manager* manager,
++      HWND hwnd,
++      size_t width,
++      size_t height);
++
++  ~DCompWindowSurface() override;
++
++  bool Destroy() override;
++  bool SwapBuffers() const override;
++
++ private:
++  DCompWindowSurface(EGLDisplay display,
++                     EGLContext context,
++                     size_t width,
++                     size_t height);
++
++  bool Initialize(Manager* manager, HWND hwnd);
++  bool CreateSwapchainAndComposition(Manager* manager, HWND hwnd);
++  bool ImportBackbuffer(Manager* manager);
++  void ReleaseSharedHandle();
++
++  Manager* manager_ = nullptr;  // Not owned; manager outlives the surface.
++  HWND hwnd_ = nullptr;
++
++  Microsoft::WRL::ComPtr<ID3D11Device> d3d_device_;
++  Microsoft::WRL::ComPtr<IDXGISwapChain1> swapchain_;
++  Microsoft::WRL::ComPtr<IDCompositionDevice> dcomp_device_;
++  Microsoft::WRL::ComPtr<IDCompositionTarget> dcomp_target_;
++  Microsoft::WRL::ComPtr<IDCompositionVisual> dcomp_visual_;
++  HANDLE shared_handle_ = nullptr;
++  bool composition_committed_ = false;
++
++  FML_DISALLOW_COPY_AND_ASSIGN(DCompWindowSurface);
++};
++
++}  // namespace egl
++}  // namespace flutter
++
++#endif  // FLUTTER_SHELL_PLATFORM_WINDOWS_EGL_DCOMP_WINDOW_SURFACE_H_
+diff --git a/engine/src/flutter/shell/platform/windows/egl/manager.cc b/engine/src/flutter/shell/platform/windows/egl/manager.cc
+index 64fb765bf54..27c8fab2be1 100644
+--- a/engine/src/flutter/shell/platform/windows/egl/manager.cc
++++ b/engine/src/flutter/shell/platform/windows/egl/manager.cc
+@@ -7,6 +7,7 @@
+ #include <vector>
+ 
+ #include "flutter/fml/logging.h"
++#include "flutter/shell/platform/windows/egl/dcomp_window_surface.h"
+ #include "flutter/shell/platform/windows/egl/egl.h"
+ 
+ namespace flutter {
+@@ -310,6 +311,16 @@ std::unique_ptr<WindowSurface> Manager::CreateWindowSurface(HWND hwnd,
+                                          surface, width, height);
+ }
+ 
++std::unique_ptr<WindowSurface> Manager::CreateDcompWindowSurface(
++    HWND hwnd,
++    size_t width,
++    size_t height) {
++  if (!hwnd || !is_valid_) {
++    return nullptr;
++  }
++  return DCompWindowSurface::Create(this, hwnd, width, height);
++}
++
+ bool Manager::HasContextCurrent() {
+   return ::eglGetCurrentContext() != EGL_NO_CONTEXT;
+ }
+diff --git a/engine/src/flutter/shell/platform/windows/egl/manager.h b/engine/src/flutter/shell/platform/windows/egl/manager.h
+index 420b0060452..6398c23ca8a 100644
+--- a/engine/src/flutter/shell/platform/windows/egl/manager.h
++++ b/engine/src/flutter/shell/platform/windows/egl/manager.h
+@@ -60,6 +60,15 @@ class Manager {
+                                                              size_t width,
+                                                              size_t height);
+ 
++  // Creates a DirectComposition-backed surface that imports the swapchain
++  // backbuffer into ANGLE through the D3D shared-handle client-buffer path.
++  // Returns nullptr when the platform/driver/ANGLE combination cannot prove
++  // zero-copy interop; callers must fall back to CreateWindowSurface.
++  virtual std::unique_ptr<WindowSurface> CreateDcompWindowSurface(
++      HWND hwnd,
++      size_t width,
++      size_t height);
++
+   // Check if the current thread has a context bound.
+   bool HasContextCurrent();
+ 
+diff --git a/engine/src/flutter/shell/platform/windows/flutter_windows_engine.cc b/engine/src/flutter/shell/platform/windows/flutter_windows_engine.cc
+index 785a83d642d..45b4826e46a 100644
+--- a/engine/src/flutter/shell/platform/windows/flutter_windows_engine.cc
++++ b/engine/src/flutter/shell/platform/windows/flutter_windows_engine.cc
+@@ -196,6 +196,13 @@ FlutterWindowsEngine::FlutterWindowsEngine(
+   auto& switches = project_->GetSwitches();
+   enable_impeller_ = std::find(switches.begin(), switches.end(),
+                                "--enable-impeller=true") != switches.end();
++  transparent_surface_requested_ =
++      std::find(switches.begin(), switches.end(),
++                "--enable-windows-alpha-surface") != switches.end();
++  if (transparent_surface_requested_) {
++    FML_LOG(INFO) << "Windows alpha surface requested; transparent creation "
++                     "will fall back to opaque before first frame on failure";
++  }
+ 
+   egl_manager_ = egl::Manager::Create(
+       static_cast<egl::GpuPreference>(project_->gpu_preference()));
+diff --git a/engine/src/flutter/shell/platform/windows/flutter_windows_engine.h b/engine/src/flutter/shell/platform/windows/flutter_windows_engine.h
+index 720a65a7dd8..548ec2a8fec 100644
+--- a/engine/src/flutter/shell/platform/windows/flutter_windows_engine.h
++++ b/engine/src/flutter/shell/platform/windows/flutter_windows_engine.h
+@@ -182,6 +182,14 @@ class FlutterWindowsEngine {
+   // rendering using software instead of OpenGL.
+   egl::Manager* egl_manager() const { return egl_manager_.get(); }
+ 
++  // Windows-only opt-in used by the isolated alpha-surface spike. The normal
++  // runner leaves this false, preserving the stock opaque surface path.
++  bool transparent_surface_requested() const {
++    return transparent_surface_requested_ && !transparent_surface_unavailable_;
++  }
++
++  void DisableTransparentSurface() { transparent_surface_unavailable_ = true; }
++
+   WindowProcDelegateManager* window_proc_delegate_manager() {
+     return window_proc_delegate_manager_.get();
+   }
+@@ -511,6 +519,11 @@ class FlutterWindowsEngine {
+ 
+   bool enable_impeller_ = false;
+ 
++  // Set from the pre-engine switch --enable-windows-alpha-surface. This is an
++  // engine/runner concern and is intentionally not exposed to Dart/Reader.
++  bool transparent_surface_requested_ = false;
++  bool transparent_surface_unavailable_ = false;
++
+   // The manager for WindowProc delegate registration and callbacks.
+   std::unique_ptr<WindowProcDelegateManager> window_proc_delegate_manager_;
+ 
+diff --git a/engine/src/flutter/shell/platform/windows/flutter_windows_view.cc b/engine/src/flutter/shell/platform/windows/flutter_windows_view.cc
+index 5fa04fe1bf8..00d5f9973a5 100644
+--- a/engine/src/flutter/shell/platform/windows/flutter_windows_view.cc
++++ b/engine/src/flutter/shell/platform/windows/flutter_windows_view.cc
+@@ -805,8 +805,20 @@ void FlutterWindowsView::CreateRenderSurface() {
+ 
+   if (engine_->egl_manager()) {
+     PhysicalWindowBounds bounds = binding_handler_->GetPhysicalWindowBounds();
+-    surface_ = engine_->egl_manager()->CreateWindowSurface(
+-        GetWindowHandle(), bounds.width, bounds.height);
++    if (engine_->transparent_surface_requested()) {
++      surface_ = engine_->egl_manager()->CreateDcompWindowSurface(
++          GetWindowHandle(), bounds.width, bounds.height);
++      if (!surface_) {
++        engine_->DisableTransparentSurface();
++        FML_LOG(WARNING)
++            << "Windows alpha surface unavailable; using opaque ANGLE "
++               "surface";
++      }
++    }
++    if (!surface_) {
++      surface_ = engine_->egl_manager()->CreateWindowSurface(
++          GetWindowHandle(), bounds.width, bounds.height);
++    }
+ 
+     UpdateVsync(*engine_, surface_.get(), NeedsVsync());
+ 
+@@ -833,9 +845,18 @@ bool FlutterWindowsView::ResizeRenderSurface(size_t width, size_t height) {
+     return false;
+   }
+ 
+-  std::unique_ptr<egl::WindowSurface> resized_surface =
+-      engine_->egl_manager()->CreateWindowSurface(GetWindowHandle(), width,
+-                                                  height);
++  std::unique_ptr<egl::WindowSurface> resized_surface;
++  if (engine_->transparent_surface_requested()) {
++    resized_surface = engine_->egl_manager()->CreateDcompWindowSurface(
++        GetWindowHandle(), width, height);
++    if (!resized_surface) {
++      engine_->DisableTransparentSurface();
++    }
++  }
++  if (!resized_surface) {
++    resized_surface = engine_->egl_manager()->CreateWindowSurface(
++        GetWindowHandle(), width, height);
++  }
+   if (!resized_surface) {
+     FML_LOG(ERROR) << "View resize failed to create surface";
+     return false;
+warning: in the working copy of 'engine/src/flutter/shell/platform/windows/BUILD.gn', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'engine/src/flutter/shell/platform/windows/egl/manager.cc', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'engine/src/flutter/shell/platform/windows/egl/manager.h', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'engine/src/flutter/shell/platform/windows/flutter_windows_engine.cc', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'engine/src/flutter/shell/platform/windows/flutter_windows_engine.h', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'engine/src/flutter/shell/platform/windows/flutter_windows_view.cc', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'engine/src/flutter/shell/platform/windows/egl/dcomp_window_surface.cc', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'engine/src/flutter/shell/platform/windows/egl/dcomp_window_surface.h', LF will be replaced by CRLF the next time Git touches it
+

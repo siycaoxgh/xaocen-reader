@@ -1,0 +1,29 @@
+{
+  "frameworkRevision": "84fc5cbb223",
+  "engineRevision": "69c8c61792f04cc809dfef0c910414fb9afc06cd",
+  "patch": "0001-windows-dcomp-alpha-surface.patch",
+  "patchSha256": "a27a3a6c74ae606c12d15878910fe28ac9a79de737becf0d15242e6961a11aa0",
+  "upstreamBlobSha1": {
+    "engine/src/flutter/shell/platform/windows/BUILD.gn": "09b52a96fb0b1c5271ca76079af495173aa4460a",
+    "engine/src/flutter/shell/platform/windows/egl/manager.cc": "64fb765bf546190fa610a9bdff007fc881c3cc7e",
+    "engine/src/flutter/shell/platform/windows/egl/manager.h": "420b00604521500bacc9ea78db3c959b87428ea7",
+    "engine/src/flutter/shell/platform/windows/flutter_windows_engine.cc": "785a83d642da6a2a4f05a1f311e0d1148ec33167",
+    "engine/src/flutter/shell/platform/windows/flutter_windows_engine.h": "720a65a7dd81d67191052e7e1a2efa8858f1c0da",
+    "engine/src/flutter/shell/platform/windows/flutter_windows_view.cc": "5fa04fe1bf85392fcf9d848e133dafee5ca7ca08"
+  },
+  "touchedFiles": [
+    "engine/src/flutter/shell/platform/windows/BUILD.gn",
+    "engine/src/flutter/shell/platform/windows/egl/dcomp_window_surface.cc",
+    "engine/src/flutter/shell/platform/windows/egl/dcomp_window_surface.h",
+    "engine/src/flutter/shell/platform/windows/egl/manager.cc",
+    "engine/src/flutter/shell/platform/windows/egl/manager.h",
+    "engine/src/flutter/shell/platform/windows/flutter_windows_engine.cc",
+    "engine/src/flutter/shell/platform/windows/flutter_windows_engine.h",
+    "engine/src/flutter/shell/platform/windows/flutter_windows_view.cc"
+  ],
+  "buildTargets": ["host_debug_unopt", "host_release"],
+  "transparentFormat": "DXGI_FORMAT_B8G8R8A8_UNORM",
+  "transparentAlphaMode": "DXGI_ALPHA_MODE_PREMULTIPLIED",
+  "requiredWindowsLibs": ["dcomp.lib", "d3d11.lib", "dxgi.lib"],
+  "cpuReadback": false
+}
