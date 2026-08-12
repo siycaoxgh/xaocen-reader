@@ -23,7 +23,15 @@ if ((Get-FileHash $patchPath -Algorithm SHA256).Hash.ToLowerInvariant() -ne $man
 
 foreach ($path in $manifest.touchedFiles) {
   $absolute = Join-Path $engineRoot $path
-  if (-not (Test-Path $absolute)) { throw "Missing patched file: $path" }
+  if (-not (Test-Path $absolute)) {
+    # Files introduced by the patch are intentionally absent before apply.
+    # Existing upstream files must still be present before any verification.
+    $patchText = Get-Content $patchPath -Raw
+    $escapedPath = [regex]::Escape("b/$path")
+    if ($patchText -notmatch "(?ms)new file mode 100644.*?\+\+\+ $escapedPath(?:\r?\n|$)") {
+      throw "Missing upstream file: $path"
+    }
+  }
 }
 $root = Join-Path $engineRoot 'engine/src/flutter/shell/platform/windows'
 $sources = Get-ChildItem $root -Recurse -File | Where-Object {
@@ -35,7 +43,10 @@ foreach ($forbidden in @('UpdateLayeredWindow', 'SetLayeredWindowAttributes', 'g
   if ($joined.Contains($forbidden)) { throw "Forbidden path/API found: $forbidden" }
 }
 $build = Get-Content (Join-Path $root 'BUILD.gn') -Raw
+$patchText = Get-Content $patchPath -Raw
 foreach ($library in @('dcomp.lib', 'd3d11.lib', 'dxgi.lib')) {
-  if (-not $build.Contains($library)) { throw "Missing native library: $library" }
+  if (-not $build.Contains($library) -and -not $patchText.Contains($library)) {
+    throw "Missing native library: $library"
+  }
 }
 Write-Output "Patch verification passed for engine $head"

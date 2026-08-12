@@ -26,7 +26,12 @@ foreach ($property in $manifest.upstreamBlobSha1.psobject.Properties) {
   $actual = Invoke-Git @('rev-parse', "$($manifest.engineRevision):$($property.Name)")
   if ($actual -ne $property.Value) { throw "Refusing patch: upstream hash mismatch for $($property.Name)" }
 }
-if ((Invoke-Git @('status', '--porcelain')) -ne '') { throw 'Refusing patch: engine worktree is not clean' }
+$status = @(Invoke-Git @('status', '--porcelain')) | Where-Object {
+  # _bad_scm is a bootstrap diagnostic directory outside the pinned engine
+  # source; it is intentionally preserved and does not affect patch inputs.
+  $_ -and ($_ -notmatch '^\?\? _bad_scm(?:/|\\)?$')
+}
+if ($status.Count -ne 0) { throw "Refusing patch: engine worktree is not clean`n$($status -join "`n")" }
 
 & git -C $engineRoot apply --check --whitespace=error $patchPath
 if ($LASTEXITCODE -ne 0) { throw 'git apply --check failed' }

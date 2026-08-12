@@ -63,3 +63,11 @@ environment; they are not promoted to PASS without local Windows validation.
 Android APK remains:
 
 `C:\Users\TOM\Desktop\xaocen-reader-v4\xaocen_reader\build\app\outputs\flutter-apk\app-debug.apk`
+
+## Gate adjustment
+
+Android physical validation is an environment condition, not a production
+failure. B1 host acceptance is therefore allowed to proceed independently;
+B2 remains **DEFERRED — physical device unavailable** (expected serial
+`ce8df63f`). No further adb restart or wireless discovery is required for this
+queue.
