@@ -26,6 +26,8 @@ final class WindowsShellBridge {
       final result = await _channel.invokeMethod<bool>('setShellVisibility', {
         'taskbar': preferences.showTaskbarIcon,
         'tray': preferences.showTrayIcon,
+        'bossEnabled': preferences.bossKeyEnabled,
+        'boss': preferences.bossKeyGesture.toJson(),
       });
       final visibilityApplied = result ?? false;
       final borderApplied = await _channel.invokeMethod<bool>(
@@ -206,7 +208,7 @@ class _WindowsShellHostState extends ConsumerState<WindowsShellHost> {
     final gesture = preferences?.bossKeyGesture;
     if (preferences?.bossKeyEnabled != true || gesture == null) return;
     if (!_tracker.updateMouse(gesture, left: left, right: right)) return;
-    if (preferences?.showTrayIcon == true) {
+    if (preferences?.hasRecoveryEntry == true) {
       unawaited(WindowsShellBridge.hideWindow());
     }
   }
@@ -238,7 +240,7 @@ class _WindowsShellHostState extends ConsumerState<WindowsShellHost> {
     }
     // Native hide-to-tray is the only recovery-safe hidden state. A visible
     // taskbar entry cannot recover a window after SW_HIDE removes it.
-    if (preferences.showTrayIcon) {
+    if (preferences.hasRecoveryEntry) {
       unawaited(WindowsShellBridge.hideWindow());
       return KeyEventResult.handled;
     }

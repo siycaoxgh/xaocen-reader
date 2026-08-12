@@ -12,6 +12,8 @@ Widget _host({
   bool? topDivider,
   bool? bottomDivider,
   EdgeInsets padding = EdgeInsets.zero,
+  Color readerTextColor = Colors.black,
+  Color readerBackgroundColor = Colors.white,
 }) {
   return MaterialApp(
     home: MediaQuery(
@@ -44,6 +46,8 @@ Widget _host({
           infoDividerSlot: ReaderInfoSlot.topCenter,
           statusBarMode: ReaderStatusBarMode.readerInfo,
           timeDisplayMode: ReaderTimeDisplayMode.hidden,
+          readerTextColor: readerTextColor,
+          readerBackgroundColor: readerBackgroundColor,
         ),
       ),
     ),
@@ -143,10 +147,7 @@ void main() {
     final body = tester.getRect(find.byKey(const Key('reader-body')));
     final top = tester.getRect(find.byKey(readerTopInfoDividerKey));
     final bottom = tester.getRect(find.byKey(readerBottomInfoDividerKey));
-    expect(
-      top.height,
-      greaterThanOrEqualTo(1 / tester.view.devicePixelRatio),
-    );
+    expect(top.height, greaterThanOrEqualTo(1 / tester.view.devicePixelRatio));
     expect(
       bottom.height,
       greaterThanOrEqualTo(1 / tester.view.devicePixelRatio),
@@ -155,5 +156,33 @@ void main() {
     expect(bottom.height, lessThanOrEqualTo(1));
     expect(top.bottom, lessThanOrEqualTo(body.top));
     expect(body.bottom, lessThanOrEqualTo(bottom.top));
+  });
+
+  testWidgets('enabled dividers paint visible non-background colors', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _host(
+        top: true,
+        bottom: true,
+        divider: false,
+        topDivider: true,
+        bottomDivider: true,
+        readerTextColor: Colors.black,
+        readerBackgroundColor: Colors.white,
+      ),
+    );
+    final topColor = tester
+        .widget<ColoredBox>(find.byKey(readerTopInfoDividerKey))
+        .color;
+    final bottomColor = tester
+        .widget<ColoredBox>(find.byKey(readerBottomInfoDividerKey))
+        .color;
+    expect(topColor, isNot(Colors.transparent));
+    expect(bottomColor, isNot(Colors.transparent));
+    expect(topColor, isNot(Colors.white));
+    expect(bottomColor, isNot(Colors.white));
+    expect(topColor.computeLuminance(), lessThan(.95));
+    expect(bottomColor.computeLuminance(), lessThan(.95));
   });
 }

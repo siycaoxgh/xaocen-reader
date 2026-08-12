@@ -599,8 +599,26 @@ class ReaderInfoScaffold extends StatelessWidget {
 
   Widget _divider(BuildContext context, {required bool top}) {
     final devicePixelRatio = MediaQuery.devicePixelRatioOf(context);
-    final color = (readerTextColor ?? Theme.of(context).colorScheme.onSurface)
-        .withValues(alpha: .42);
+    final scheme = Theme.of(context).colorScheme;
+    final background = readerBackgroundColor ?? scheme.surface;
+    final text = readerTextColor ?? scheme.onSurface;
+    // Dividers are paint-only, but must remain visible on custom palettes.
+    // Blend the text/on-surface color over the actual reader background and
+    // strengthen it when the two luminances are too close to distinguish.
+    var color = Color.alphaBlend(text.withValues(alpha: .24), background);
+    if ((color.computeLuminance() - background.computeLuminance()).abs() <
+        .08) {
+      final contrastSource = background.computeLuminance() > .5
+          ? Colors.black
+          : Colors.white;
+      color = Color.alphaBlend(
+        contrastSource.withValues(alpha: .32),
+        background,
+      );
+    }
+    if (color == background) {
+      color = background.computeLuminance() > .5 ? Colors.black : Colors.white;
+    }
     return SizedBox(
       height: 1 / devicePixelRatio,
       child: ColoredBox(
@@ -1988,7 +2006,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
           value: _draft.firstLineIndent,
           min: ReaderPreferences.minFirstLineIndent,
           max: ReaderPreferences.maxFirstLineIndent,
-           divisions: 12,
+          divisions: 12,
           step: ReaderPreferences.firstLineIndentStep,
           valueLabel: _draft.firstLineIndent.toStringAsFixed(1),
           onDraftChanged: (value) =>
@@ -2136,32 +2154,8 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
           darkBackgroundArgb: _draft.darkBackgroundColorArgb,
         ),
         const SizedBox(height: 8),
-        _ReaderColorPalette(
-          key: readerTextColorControlKey,
-          label: '字体颜色（当前亮度）',
-          selectedArgb: textColor?.toARGB32(),
-          colors: const [
-            Color(0xff1c1b1f),
-            Color(0xff4b3425),
-            Color(0xfff5f2ea),
-            Color(0xffffffff),
-          ],
-          onChanged: (value) {
-            _textColorController.text = _hexColor(value);
-            _commit(
-              _editingBrightness == Brightness.light
-                  ? _draft.copyWith(
-                      paletteId: ReaderPaletteId.custom,
-                      lightTextColorArgb: value,
-                    )
-                  : _draft.copyWith(
-                      paletteId: ReaderPaletteId.custom,
-                      darkTextColorArgb: value,
-                    ),
-            );
-          },
-        ),
         _ColorInput(
+          key: readerTextColorControlKey,
           controller: _textColorController,
           label: '字体颜色',
           preview: textColor,
@@ -2203,33 +2197,8 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
             ),
           ),
         const SizedBox(height: 14),
-        _ReaderColorPalette(
-          key: readerBackgroundColorControlKey,
-          label: '阅读背景颜色（当前亮度）',
-          selectedArgb: backgroundColor?.toARGB32(),
-          colors: const [
-            Color(0xffffffff),
-            Color(0xfffff8e7),
-            Color(0xffe8f0e8),
-            Color(0xff202124),
-            Color(0xff000000),
-          ],
-          onChanged: (value) {
-            _backgroundColorController.text = _hexColor(value);
-            _commit(
-              _editingBrightness == Brightness.light
-                  ? _draft.copyWith(
-                      paletteId: ReaderPaletteId.custom,
-                      lightBackgroundColorArgb: value,
-                    )
-                  : _draft.copyWith(
-                      paletteId: ReaderPaletteId.custom,
-                      darkBackgroundColorArgb: value,
-                    ),
-            );
-          },
-        ),
         _ColorInput(
+          key: readerBackgroundColorControlKey,
           controller: _backgroundColorController,
           label: '阅读背景颜色',
           preview: backgroundColor,
@@ -2728,25 +2697,26 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
             },
             onPointerMove: (event) {
               if (!_categoryScrollController.hasClients) return;
-              final next = (_categoryScrollStart +
-                      (_categoryDragStart - event.position.dx))
-                  .clamp(
-                    0.0,
-                    _categoryScrollController.position.maxScrollExtent,
-                  )
-                  .toDouble();
+              final next =
+                  (_categoryScrollStart +
+                          (_categoryDragStart - event.position.dx))
+                      .clamp(
+                        0.0,
+                        _categoryScrollController.position.maxScrollExtent,
+                      )
+                      .toDouble();
               _categoryScrollController.jumpTo(next);
             },
             onPointerSignal: (event) {
               if (event is PointerScrollEvent &&
                   _categoryScrollController.hasClients) {
-                final next = (_categoryScrollController.offset +
-                        event.scrollDelta.dy)
-                    .clamp(
-                      0.0,
-                      _categoryScrollController.position.maxScrollExtent,
-                    )
-                    .toDouble();
+                final next =
+                    (_categoryScrollController.offset + event.scrollDelta.dy)
+                        .clamp(
+                          0.0,
+                          _categoryScrollController.position.maxScrollExtent,
+                        )
+                        .toDouble();
                 _categoryScrollController.jumpTo(next);
               }
             },
@@ -2754,18 +2724,18 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
               controller: _categoryScrollController,
               scrollDirection: Axis.horizontal,
               child: Row(
-              children: [
-                for (final item in categories) ...[
-                  ChoiceChip(
-                    key: ValueKey('reader-settings-category-${item.$1.name}'),
-                    selected: _category == item.$1,
-                    label: Text(item.$2),
-                    avatar: Icon(item.$3, size: 17),
-                    onSelected: (_) => setState(() => _category = item.$1),
-                  ),
-                  const SizedBox(width: 8),
+                children: [
+                  for (final item in categories) ...[
+                    ChoiceChip(
+                      key: ValueKey('reader-settings-category-${item.$1.name}'),
+                      selected: _category == item.$1,
+                      label: Text(item.$2),
+                      avatar: Icon(item.$3, size: 17),
+                      onSelected: (_) => setState(() => _category = item.$1),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
                 ],
-              ],
               ),
             ),
           );
@@ -2822,6 +2792,7 @@ enum _ReaderSettingsCategory { typography, appearance, paging, advanced }
 
 class _ColorInput extends StatelessWidget {
   const _ColorInput({
+    super.key,
     required this.controller,
     required this.label,
     required this.preview,
@@ -3042,7 +3013,7 @@ class _ReaderPalettePresetGrid extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('阅读配色', style: Theme.of(context).textTheme.titleSmall),
+        Text('阅读配色方案', style: Theme.of(context).textTheme.titleSmall),
         const SizedBox(height: 8),
         Wrap(
           spacing: 8,
@@ -3504,77 +3475,6 @@ class _ReaderAppearancePreviewCard extends StatelessWidget {
   }
 }
 */
-
-class _ReaderColorPalette extends StatelessWidget {
-  const _ReaderColorPalette({
-    super.key,
-    required this.label,
-    required this.selectedArgb,
-    required this.colors,
-    required this.onChanged,
-  });
-
-  final String label;
-  final int? selectedArgb;
-  final List<Color> colors;
-  final ValueChanged<int?> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 10,
-          runSpacing: 8,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            ChoiceChip(
-              label: const Text('跟随主题'),
-              selected: selectedArgb == null,
-              onSelected: (_) => onChanged(null),
-            ),
-            for (final color in colors)
-              Semantics(
-                button: true,
-                selected: selectedArgb == color.toARGB32(),
-                label: '$label #${color.toARGB32().toRadixString(16)}',
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(20),
-                  onTap: () => onChanged(color.toARGB32()),
-                  child: Container(
-                    width: 38,
-                    height: 38,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: color,
-                      border: Border.all(
-                        color: selectedArgb == color.toARGB32()
-                            ? scheme.primary
-                            : scheme.outlineVariant,
-                        width: selectedArgb == color.toARGB32() ? 3 : 1,
-                      ),
-                    ),
-                    child: selectedArgb == color.toARGB32()
-                        ? Icon(
-                            Icons.check_rounded,
-                            color: color.computeLuminance() > 0.5
-                                ? Colors.black
-                                : Colors.white,
-                          )
-                        : null,
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ],
-    );
-  }
-}
 
 class _PreferenceSlider extends StatelessWidget {
   const _PreferenceSlider({

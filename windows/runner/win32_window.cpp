@@ -384,9 +384,26 @@ Win32Window::MessageHandler(HWND hwnd,
       }
       break;
 
+    case WM_HOTKEY:
+      if (wparam == kBossHotKeyId) {
+        if (IsWindowVisible(window_handle_) != FALSE) {
+          // A registered global Boss Key is itself a recovery channel. It
+          // may therefore hide even when the tray is disabled.
+          if (!HideToTray()) ShowWindow(window_handle_, SW_HIDE);
+        } else {
+          ShowFromTray();
+        }
+        return 0;
+      }
+      break;
+
     case WM_COMMAND:
-      if (LOWORD(wparam) == kTrayShowHideCommand) {
+      if (LOWORD(wparam) == kTrayShowCommand) {
         ShowFromTray();
+        return 0;
+      }
+      if (LOWORD(wparam) == kTrayHideCommand) {
+        HideToTray();
         return 0;
       }
       if (LOWORD(wparam) == kTrayExitCommand) {
@@ -432,6 +449,7 @@ Win32Window::MessageHandler(HWND hwnd,
 void Win32Window::Destroy() {
   OnDestroy();
 
+  ClearGlobalBossKey();
   RemoveTrayIcon();
 
   if (window_handle_) {
@@ -540,6 +558,20 @@ bool Win32Window::SetShellVisibility(bool show_taskbar, bool show_tray) {
   return true;
 }
 
+bool Win32Window::SetGlobalBossKey(UINT modifiers, UINT virtual_key) {
+  if (window_handle_ == nullptr || virtual_key == 0) return false;
+  ClearGlobalBossKey();
+  boss_hotkey_registered_ = RegisterHotKey(window_handle_, kBossHotKeyId,
+                                           modifiers, virtual_key) != FALSE;
+  return boss_hotkey_registered_;
+}
+
+void Win32Window::ClearGlobalBossKey() {
+  if (!boss_hotkey_registered_ || window_handle_ == nullptr) return;
+  UnregisterHotKey(window_handle_, kBossHotKeyId);
+  boss_hotkey_registered_ = false;
+}
+
 bool Win32Window::SetWindowBorder(bool show_border) {
   if (window_handle_ == nullptr) return false;
   if (window_border_visible_ == show_border) return true;
@@ -565,7 +597,12 @@ bool Win32Window::SetWindowBorder(bool show_border) {
 }
 
 bool Win32Window::HideToTray() {
-  if (window_handle_ == nullptr || !tray_enabled_) return false;
+  // A taskbar entry is also a valid recovery path for Boss Key. The name is
+  // retained for the existing channel contract, but hiding is allowed when
+  // either shell entry remains enabled.
+  if (window_handle_ == nullptr || (!tray_enabled_ && !taskbar_enabled_)) {
+    return false;
+  }
   ShowWindow(window_handle_, SW_HIDE);
   return true;
 }
@@ -573,7 +610,10 @@ bool Win32Window::HideToTray() {
 bool Win32Window::ShowFromTray() {
   if (window_handle_ == nullptr) return false;
   ShowWindow(window_handle_, IsIconic(window_handle_) ? SW_RESTORE : SW_SHOW);
+  SetWindowPos(window_handle_, HWND_TOP, 0, 0, 0, 0,
+               SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
   SetForegroundWindow(window_handle_);
+  BringWindowToTop(window_handle_);
   if (child_content_ != nullptr) SetFocus(child_content_);
   return true;
 }
@@ -621,10 +661,13 @@ void Win32Window::ShowTrayMenu() {
   GetCursorPos(&point);
   HMENU menu = CreatePopupMenu();
   if (menu == nullptr) return;
-  AppendMenuW(menu, MF_STRING, kTrayShowHideCommand, L"Show window");
+  const bool visible = IsWindowVisible(window_handle_) != FALSE;
+  AppendMenuW(menu, MF_STRING, kTrayShowCommand, L"Show window");
+  AppendMenuW(menu, MF_STRING | (visible ? MF_ENABLED : MF_GRAYED),
+              kTrayHideCommand, L"Hide window");
   AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
   AppendMenuW(menu, MF_STRING, kTrayExitCommand, L"Exit application");
-  SetForegroundWindow(window_handle_);
+  if (visible) SetForegroundWindow(window_handle_);
   TrackPopupMenu(menu, TPM_RIGHTBUTTON, point.x, point.y, 0, window_handle_,
                  nullptr);
   DestroyMenu(menu);

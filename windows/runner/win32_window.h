@@ -66,6 +66,10 @@ class Win32Window {
   // Windows shell visibility and tray operations. These are native shell
   // concerns; Reader state remains in Flutter.
   bool SetShellVisibility(bool show_taskbar, bool show_tray);
+  // Registers the persisted keyboard Boss Key with the Windows shell. This
+  // remains process-owned and is cleared when the gesture changes.
+  bool SetGlobalBossKey(UINT modifiers, UINT virtual_key);
+  void ClearGlobalBossKey();
   // Toggle the native frame while retaining resize/maximize affordances.
   bool SetWindowBorder(bool show_border);
   bool IsWindowBorderVisible() const { return window_border_visible_; }
@@ -119,6 +123,7 @@ class Win32Window {
   bool tray_enabled_ = false;
   bool tray_icon_added_ = false;
   bool window_border_visible_ = true;
+  bool boss_hotkey_registered_ = false;
 
   // window handle for top level window.
   HWND window_handle_ = nullptr;
@@ -128,8 +133,10 @@ class Win32Window {
 
   static constexpr UINT kTrayCallbackMessage = WM_APP + 42;
   static constexpr UINT kTrayIconId = 1;
-  static constexpr UINT kTrayShowHideCommand = 0x5001;
-  static constexpr UINT kTrayExitCommand = 0x5002;
+  static constexpr UINT kTrayShowCommand = 0x5001;
+  static constexpr UINT kTrayHideCommand = 0x5002;
+  static constexpr UINT kTrayExitCommand = 0x5003;
+  static constexpr int kBossHotKeyId = 0x6A;
 
   bool AddTrayIcon();
   void RemoveTrayIcon();
