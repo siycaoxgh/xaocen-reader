@@ -18,7 +18,8 @@ enum CapabilityFallbackReason {
 final class CapabilityStatus {
   const CapabilityStatus._(this.support, this.fallbackReason);
 
-  const CapabilityStatus.supported() : this._(CapabilitySupport.supported, null);
+  const CapabilityStatus.supported()
+    : this._(CapabilitySupport.supported, null);
 
   const CapabilityStatus.unsupported(CapabilityFallbackReason reason)
     : this._(CapabilitySupport.unsupported, reason);

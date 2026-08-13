@@ -15,7 +15,9 @@ class PlatformDiagnosticsPage extends ConsumerWidget {
       body: state.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => Center(
-          child: Text('\u8bfb\u53d6\u5e73\u53f0\u80fd\u529b\u5931\u8d25\uff1a$error'),
+          child: Text(
+            '\u8bfb\u53d6\u5e73\u53f0\u80fd\u529b\u5931\u8d25\uff1a$error',
+          ),
         ),
         data: (capabilities) => _CapabilitiesView(capabilities: capabilities),
       ),
@@ -35,29 +37,35 @@ class _CapabilitiesView extends StatelessWidget {
         final wide = constraints.maxWidth >= 840;
         final sections = [
           _section('\u5e73\u53f0', [
-            _valueRow('\u64cd\u4f5c\u7cfb\u7edf / platform', capabilities.platform),
+            _valueRow('\u64cd\u4f5c\u7cfb\u7edf / 平台', capabilities.platform),
           ]),
           _section('\u663e\u793a', [
-            _valueRow('devicePixelRatio', _number(capabilities.display.devicePixelRatio)),
-            _valueRow('\u5206\u8fa8\u7387', capabilities.display.resolution?.toString() ?? 'unknown'),
-            _valueRow('\u5237\u65b0\u7387', _hz(capabilities.display.refreshRate)),
+            _valueRow('设备像素比', _number(capabilities.display.devicePixelRatio)),
+            _valueRow(
+              '分辨率',
+              capabilities.display.resolution?.toString() ?? '未知',
+            ),
+            _valueRow('刷新率', _hz(capabilities.display.refreshRate)),
             _statusRow('HDR', capabilities.display.hdr),
-            _statusRow('Wide Color', capabilities.display.wideColor),
+            _statusRow('宽色域', capabilities.display.wideColor),
           ]),
           _section('\u6e32\u67d3', [
-            _valueRow('renderer', capabilities.rendering.renderer ?? 'unknown'),
-            _valueRow('backend', capabilities.rendering.backend ?? 'unknown'),
-            _statusRow('alpha surface', capabilities.rendering.alphaSurface),
+            _valueRow('渲染器', capabilities.rendering.renderer ?? '未知'),
+            _valueRow('图形后端', capabilities.rendering.backend ?? '未知'),
+            _statusRow('Alpha 透明表面', capabilities.rendering.alphaSurface),
           ]),
           _section('\u7a97\u53e3\u4e0e\u8f93\u5165', [
-            _statusRow('borderless', capabilities.desktopWindow.borderless),
-            _statusRow('desktop transparency', capabilities.desktopWindow.desktopTransparency),
-            _statusRow('tray', capabilities.desktopWindow.tray),
-            _statusRow('taskbar/dock', capabilities.desktopWindow.taskbarOrDock),
-            _statusRow('keyboard', capabilities.input.keyboard),
-            _statusRow('mouse', capabilities.input.mouse),
-            _statusRow('touch', capabilities.input.touch),
-            _statusRow('volume keys', capabilities.input.volumeKeys),
+            _statusRow('无边框窗口', capabilities.desktopWindow.borderless),
+            _statusRow(
+              '桌面阅读透明',
+              capabilities.desktopWindow.desktopTransparency,
+            ),
+            _statusRow('系统托盘', capabilities.desktopWindow.tray),
+            _statusRow('任务栏 / Dock', capabilities.desktopWindow.taskbarOrDock),
+            _statusRow('键盘', capabilities.input.keyboard),
+            _statusRow('鼠标', capabilities.input.mouse),
+            _statusRow('触控', capabilities.input.touch),
+            _statusRow('音量键', capabilities.input.volumeKeys),
           ]),
         ];
         return ListView(
@@ -83,11 +91,11 @@ class _CapabilitiesView extends StatelessWidget {
             const SizedBox(height: 16),
             Card(
               child: ListTile(
-                title: const Text('supportsDesktopReaderTransparency'),
+                title: const Text('桌面阅读透明能力'),
                 subtitle: Text(
                   capabilities.supportsDesktopReaderTransparency
-                      ? 'supported'
-                      : 'not supported (${capabilities.desktopTransparencyFallbackReason.name})',
+                      ? '支持'
+                      : '不支持 · ${_reason(capabilities.desktopTransparencyFallbackReason)}',
                 ),
                 leading: Icon(
                   capabilities.supportsDesktopReaderTransparency
@@ -122,7 +130,11 @@ class _CapabilitiesView extends StatelessWidget {
     title: Text(label),
     trailing: SizedBox(
       width: 170,
-      child: Text(value, textAlign: TextAlign.right, overflow: TextOverflow.ellipsis),
+      child: Text(
+        value,
+        textAlign: TextAlign.right,
+        overflow: TextOverflow.ellipsis,
+      ),
     ),
   );
 
@@ -132,14 +144,29 @@ class _CapabilitiesView extends StatelessWidget {
     title: Text(label),
     trailing: Text(
       status.fallbackReason == null
-          ? status.diagnosticLabel
-          : '${status.diagnosticLabel} \u00b7 ${status.fallbackReason!.name}',
+          ? _support(status)
+          : '${_support(status)} · ${_reason(status.fallbackReason!)}',
     ),
   );
 
   String _number(double? value) =>
-      value == null ? 'unknown' : value.toStringAsFixed(2);
+      value == null ? '未知' : value.toStringAsFixed(2);
 
   String _hz(double? value) =>
-      value == null ? 'unknown' : '${value.toStringAsFixed(1)} Hz';
+      value == null ? '未知' : '${value.toStringAsFixed(1)} Hz';
+
+  String _support(CapabilityStatus status) => switch (status.support) {
+    CapabilitySupport.supported => '支持',
+    CapabilitySupport.unsupported => '不支持',
+    CapabilitySupport.unknown => '未知',
+  };
+
+  String _reason(CapabilityFallbackReason reason) => switch (reason) {
+    CapabilityFallbackReason.unsupportedPlatform => '当前平台不支持',
+    CapabilityFallbackReason.backendUnavailable => '图形后端不可用',
+    CapabilityFallbackReason.standardWindow => '标准窗口模式',
+    CapabilityFallbackReason.rendererUnsupported => '当前渲染器不支持',
+    CapabilityFallbackReason.displayUnsupported => '当前显示设备不支持',
+    CapabilityFallbackReason.unknown => '未知原因',
+  };
 }

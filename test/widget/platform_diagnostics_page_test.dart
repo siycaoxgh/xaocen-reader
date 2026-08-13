@@ -23,9 +23,7 @@ void main() {
           CapabilityFallbackReason.unsupportedPlatform,
         ),
       ),
-      input: InputCapabilities(
-        touch: CapabilityStatus.supported(),
-      ),
+      input: InputCapabilities(touch: CapabilityStatus.supported()),
     );
 
     await tester.pumpWidget(
@@ -43,7 +41,8 @@ void main() {
     expect(find.text('android'), findsOneWidget);
     await tester.drag(find.byType(ListView), const Offset(0, -1200));
     await tester.pump();
-    expect(find.textContaining('unsupportedPlatform'), findsAtLeastNWidgets(1));
-    expect(find.text('supported'), findsOneWidget);
+    expect(find.textContaining('当前平台不支持'), findsAtLeastNWidgets(1));
+    expect(find.text('支持'), findsOneWidget);
+    expect(find.text('桌面阅读透明能力'), findsOneWidget);
   });
 }

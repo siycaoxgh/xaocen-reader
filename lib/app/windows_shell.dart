@@ -165,6 +165,10 @@ final class BossKeyTracker {
     _triggered = true;
     return true;
   }
+
+  /// A keyboard gesture is one press cycle. Key repeat and a held modifier
+  /// cannot retrigger until the physical key is released.
+  void releaseKeyboard() => _triggered = false;
 }
 
 void unawaitedShell(Future<void> future) => unawaited(future);

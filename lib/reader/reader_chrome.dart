@@ -607,12 +607,12 @@ class ReaderInfoScaffold extends StatelessWidget {
     // strengthen it when the two luminances are too close to distinguish.
     var color = Color.alphaBlend(text.withValues(alpha: .24), background);
     if ((color.computeLuminance() - background.computeLuminance()).abs() <
-        .08) {
+        .12) {
       final contrastSource = background.computeLuminance() > .5
           ? Colors.black
           : Colors.white;
       color = Color.alphaBlend(
-        contrastSource.withValues(alpha: .32),
+        contrastSource.withValues(alpha: .42),
         background,
       );
     }
@@ -3714,8 +3714,13 @@ class _ReaderSearchSheetState extends State<_ReaderSearchSheet> {
             text: result.snippet.substring(start, end),
             style: style?.copyWith(
               fontWeight: FontWeight.bold,
-              color: Theme.of(context).colorScheme.primary,
-              backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+              // Keep search hits readable in both custom palettes. The
+              // highlight is a translucent accent wash; text remains the
+              // normal foreground rather than reusing the accent itself.
+              color: style.color ?? Theme.of(context).colorScheme.onSurface,
+              backgroundColor: Theme.of(
+                context,
+              ).colorScheme.primary.withValues(alpha: .20),
             ),
           ),
           TextSpan(text: result.snippet.substring(end)),
