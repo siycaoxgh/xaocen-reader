@@ -373,8 +373,14 @@ Win32Window::MessageHandler(HWND hwnd,
       SaveCurrentState();
       return DefWindowProc(hwnd, message, wparam, lparam);
 
-    case kTrayCallbackMessage:
-      if (static_cast<UINT>(lparam) == WM_LBUTTONUP ||
+    case kTrayCallbackMessage: {
+      // NOTIFYICON_VERSION_4 packs the notification code into LOWORD(lParam)
+      // and the icon id into HIWORD(lParam). Older shells may send the code
+      // directly, so accept both forms without changing right-click routing.
+      const UINT tray_event = LOWORD(lparam);
+      if (tray_event == WM_LBUTTONUP ||
+          tray_event == WM_LBUTTONDBLCLK ||
+          static_cast<UINT>(lparam) == WM_LBUTTONUP ||
           static_cast<UINT>(lparam) == WM_LBUTTONDBLCLK) {
         ShowFromTray();
         return 0;
@@ -384,6 +390,7 @@ Win32Window::MessageHandler(HWND hwnd,
         return 0;
       }
       break;
+    }
 
     case WM_HOTKEY:
       if (wparam == kBossHotKeyId) {
@@ -719,9 +726,13 @@ bool Win32Window::HideToTray() {
 
 bool Win32Window::ShowFromTray() {
   if (window_handle_ == nullptr) return false;
-  ShowWindow(window_handle_, IsIconic(window_handle_) ? SW_RESTORE : SW_SHOW);
+  const bool was_minimized = IsIconic(window_handle_) != FALSE;
+  const bool was_maximized = IsZoomed(window_handle_) != FALSE;
+  ShowWindow(window_handle_, was_minimized ? SW_RESTORE : SW_SHOW);
+  if (was_maximized) ShowWindow(window_handle_, SW_MAXIMIZE);
   SetWindowPos(window_handle_, HWND_TOP, 0, 0, 0, 0,
                SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
+  SetActiveWindow(window_handle_);
   SetForegroundWindow(window_handle_);
   BringWindowToTop(window_handle_);
   if (child_content_ != nullptr) SetFocus(child_content_);
