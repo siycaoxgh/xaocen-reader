@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:xaocen_reader/domain/reader/reader_preferences.dart';
 import 'package:xaocen_reader/reader/reader_chrome.dart';
 import 'package:xaocen_reader/reader/reader_mode.dart';
+import 'package:xaocen_reader/reader/android_reader_window.dart';
 
 Widget _host({
   required bool top,
@@ -42,6 +43,7 @@ Widget _host({
           chapterInfoSlot: ReaderInfoSlot.topLeft,
           chapterProgressInfoSlot: ReaderInfoSlot.topRight,
           clockInfoSlot: ReaderInfoSlot.bottomLeft,
+          batteryInfoSlot: ReaderInfoSlot.bottomCenter,
           wholeBookProgressInfoSlot: ReaderInfoSlot.bottomRight,
           infoDividerSlot: ReaderInfoSlot.topCenter,
           statusBarMode: ReaderStatusBarMode.readerInfo,
@@ -213,5 +215,35 @@ void main() {
     expect(bottomColor, isNot(Colors.white));
     expect(topColor.computeLuminance(), lessThan(.95));
     expect(bottomColor.computeLuminance(), lessThan(.95));
+  });
+
+  testWidgets('battery item renders percent and charging indicator', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ReaderMinimalInfoLayer(
+            mode: ReaderMode.vertical,
+            currentChapterTitle: 'City Edge',
+            currentChapterNumber: 53,
+            chapterProgressPercent: .68,
+            chapterPageNumber: null,
+            chapterPageCount: null,
+            progressPercent: .37,
+            showTopInfoBar: false,
+            showBottomInfoBar: true,
+            showProgressInfo: true,
+            showClockInfo: false,
+            showBatteryInfo: true,
+            batteryStatus: const BatteryStatus(percent: 85, charging: true),
+            batteryInfoSlot: ReaderInfoSlot.bottomCenter,
+            statusBarMode: ReaderStatusBarMode.readerInfo,
+            timeDisplayMode: ReaderTimeDisplayMode.hidden,
+          ),
+        ),
+      ),
+    );
+    expect(find.text('85% ⚡'), findsOneWidget);
   });
 }

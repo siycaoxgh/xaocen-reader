@@ -263,6 +263,8 @@ class ReaderPreferencesRows extends Table {
   BoolColumn get showChapterProgressInfo =>
       boolean().withDefault(const Constant(true))();
   BoolColumn get showClockInfo => boolean().withDefault(const Constant(true))();
+  BoolColumn get showBatteryInfo =>
+      boolean().withDefault(const Constant(true))();
   BoolColumn get showWholeBookProgressInfo =>
       boolean().withDefault(const Constant(true))();
   BoolColumn get showInfoDivider =>
@@ -279,6 +281,8 @@ class ReaderPreferencesRows extends Table {
       text().withDefault(const Constant('topRight'))();
   TextColumn get clockInfoSlot =>
       text().withDefault(const Constant('bottomLeft'))();
+  TextColumn get batteryInfoSlot =>
+      text().withDefault(const Constant('bottomCenter'))();
   TextColumn get wholeBookProgressInfoSlot =>
       text().withDefault(const Constant('bottomRight'))();
   TextColumn get infoDividerSlot =>

@@ -344,6 +344,12 @@ void main() {
       raw.execute(
         'ALTER TABLE reader_preferences DROP COLUMN screen_orientation',
       );
+      raw.execute(
+        'ALTER TABLE reader_preferences DROP COLUMN show_battery_info',
+      );
+      raw.execute(
+        'ALTER TABLE reader_preferences DROP COLUMN battery_info_slot',
+      );
       raw.execute('PRAGMA user_version = 13');
       raw.dispose();
 
@@ -361,7 +367,7 @@ void main() {
       expect(
         (await db.customSelect('PRAGMA user_version').getSingle())
             .data['user_version'],
-        15,
+        16,
       );
       await db.close();
       await dir.delete(recursive: true);
@@ -384,6 +390,8 @@ void main() {
     raw.execute(
       'ALTER TABLE reader_preferences DROP COLUMN screen_orientation',
     );
+    raw.execute('ALTER TABLE reader_preferences DROP COLUMN show_battery_info');
+    raw.execute('ALTER TABLE reader_preferences DROP COLUMN battery_info_slot');
     raw.execute('PRAGMA user_version = 14');
     raw.dispose();
     db = AppDatabase(NativeDatabase(file));
@@ -394,11 +402,53 @@ void main() {
     expect(
       (await db.customSelect('PRAGMA user_version').getSingle())
           .data['user_version'],
-      15,
+      16,
     );
     await db.close();
     await dir.delete(recursive: true);
   });
+
+  test(
+    'schema 15 -> 16 adds optional battery item without moving slots',
+    () async {
+      final dir = await Directory.systemTemp.createTemp(
+        'm57s_battery_migration',
+      );
+      final file = File('${dir.path}${Platform.pathSeparator}db.sqlite');
+      var db = AppDatabase(NativeDatabase(file));
+      await seedBook(db, a);
+      await ReaderPreferencesRepository(db: db).update(
+        a,
+        ReaderPreferences.defaults.copyWith(
+          chapterInfoSlot: ReaderInfoSlot.topRight,
+          showTopInfoBar: false,
+        ),
+      );
+      await db.close();
+      final raw = sqlite3.open(file.path);
+      raw.execute(
+        'ALTER TABLE reader_preferences DROP COLUMN show_battery_info',
+      );
+      raw.execute(
+        'ALTER TABLE reader_preferences DROP COLUMN battery_info_slot',
+      );
+      raw.execute('PRAGMA user_version = 15');
+      raw.dispose();
+      db = AppDatabase(NativeDatabase(file));
+      final loaded = await ReaderPreferencesRepository(db: db).load(a);
+      expect(loaded.showBatteryInfo, isFalse);
+      expect(loaded.batteryInfoSlot, ReaderInfoSlot.bottomCenter);
+      expect(loaded.chapterInfoSlot, ReaderInfoSlot.topRight);
+      expect(loaded.showTopInfoBar, isFalse);
+      expect(
+        (await db.customSelect('PRAGMA user_version').getSingle())
+            .data['user_version'],
+        16,
+      );
+      await db.close();
+      await dir.delete(recursive: true);
+    },
+  );
 
   test('schema 6鈫?1 preserves typography and adds display defaults', () async {
     final dir = await Directory.systemTemp.createTemp('m55e_migration');
@@ -453,7 +503,7 @@ void main() {
     expect(
       (await db.customSelect('PRAGMA user_version').getSingle())
           .data['user_version'],
-      15,
+      16,
     );
     await db.close();
     await dir.delete(recursive: true);
@@ -541,7 +591,7 @@ void main() {
     expect(
       (await db.customSelect('PRAGMA user_version').getSingle())
           .data['user_version'],
-      15,
+      16,
     );
     expect((await db.select(db.contentCollections).get()).single.id, a);
     await db.close();
@@ -635,7 +685,7 @@ void main() {
       expect(
         (await db.customSelect('PRAGMA user_version').getSingle())
             .data['user_version'],
-        15,
+        16,
       );
       await db.close();
       await dir.delete(recursive: true);
@@ -725,7 +775,7 @@ void main() {
       expect(
         (await db.customSelect('PRAGMA user_version').getSingle())
             .data['user_version'],
-        15,
+        16,
       );
       await db.close();
       await dir.delete(recursive: true);

@@ -80,6 +80,7 @@ const readerResetPreferencesKey = Key('reader-reset-preferences');
 const readerShowTopInfoKey = Key('reader-show-top-info');
 const readerShowBottomInfoKey = Key('reader-show-bottom-info');
 const readerShowProgressInfoKey = Key('reader-show-progress-info');
+const readerShowBatteryInfoKey = Key('reader-show-battery-info');
 const readerShowAutoReadMinimalInfoKey = Key(
   'reader-show-auto-read-minimal-info',
 );
@@ -140,6 +141,7 @@ class ReaderChrome extends StatelessWidget {
     this.showChapterInfo = true,
     this.showChapterProgressInfo = true,
     this.showClockInfo = true,
+    this.showBatteryInfo = true,
     this.showWholeBookProgressInfo = true,
     this.showInfoDivider = false,
     this.showTopInfoDivider,
@@ -150,12 +152,14 @@ class ReaderChrome extends StatelessWidget {
     this.chapterInfoSlot = ReaderInfoSlot.topLeft,
     this.chapterProgressInfoSlot = ReaderInfoSlot.topRight,
     this.clockInfoSlot = ReaderInfoSlot.bottomLeft,
+    this.batteryInfoSlot = ReaderInfoSlot.bottomCenter,
     this.wholeBookProgressInfoSlot = ReaderInfoSlot.bottomRight,
     this.infoDividerSlot = ReaderInfoSlot.topCenter,
     this.statusBarMode = ReaderStatusBarMode.system,
     this.timeDisplayMode = ReaderTimeDisplayMode.twentyFourHour,
     this.readerTextColor,
     this.readerBackgroundColor,
+    this.batteryStatus,
     this.extendIntoDisplayCutout = false,
     this.hideNavigationBar = false,
   });
@@ -189,6 +193,7 @@ class ReaderChrome extends StatelessWidget {
   final bool showChapterInfo;
   final bool showChapterProgressInfo;
   final bool showClockInfo;
+  final bool showBatteryInfo;
   final bool showWholeBookProgressInfo;
   final bool showInfoDivider;
   final bool? showTopInfoDivider;
@@ -207,12 +212,14 @@ class ReaderChrome extends StatelessWidget {
   final ReaderInfoSlot chapterInfoSlot;
   final ReaderInfoSlot chapterProgressInfoSlot;
   final ReaderInfoSlot clockInfoSlot;
+  final ReaderInfoSlot batteryInfoSlot;
   final ReaderInfoSlot wholeBookProgressInfoSlot;
   final ReaderInfoSlot infoDividerSlot;
   final ReaderStatusBarMode statusBarMode;
   final ReaderTimeDisplayMode timeDisplayMode;
   final Color? readerTextColor;
   final Color? readerBackgroundColor;
+  final BatteryStatus? batteryStatus;
   final bool extendIntoDisplayCutout;
   final bool hideNavigationBar;
 
@@ -464,6 +471,7 @@ class ReaderChrome extends StatelessWidget {
             showChapterInfo: showChapterInfo,
             showChapterProgressInfo: showChapterProgressInfo,
             showClockInfo: showClockInfo,
+            showBatteryInfo: showBatteryInfo,
             showWholeBookProgressInfo: showWholeBookProgressInfo,
             showInfoDivider: showInfoDivider,
             showTopInfoDivider: showTopInfoDivider,
@@ -471,12 +479,14 @@ class ReaderChrome extends StatelessWidget {
             chapterInfoSlot: chapterInfoSlot,
             chapterProgressInfoSlot: chapterProgressInfoSlot,
             clockInfoSlot: clockInfoSlot,
+            batteryInfoSlot: batteryInfoSlot,
             wholeBookProgressInfoSlot: wholeBookProgressInfoSlot,
             infoDividerSlot: infoDividerSlot,
             statusBarMode: statusBarMode,
             timeDisplayMode: timeDisplayMode,
             readerTextColor: readerTextColor,
             readerBackgroundColor: readerBackgroundColor,
+            batteryStatus: batteryStatus,
           ),
         chrome,
         if (visible && autoReadState != AutoReadState.idle)
@@ -517,6 +527,7 @@ class ReaderInfoScaffold extends StatelessWidget {
     required this.showChapterInfo,
     required this.showChapterProgressInfo,
     required this.showClockInfo,
+    this.showBatteryInfo = true,
     required this.showWholeBookProgressInfo,
     this.showInfoDivider = false,
     this.showTopInfoDivider,
@@ -525,12 +536,14 @@ class ReaderInfoScaffold extends StatelessWidget {
     required this.chapterInfoSlot,
     required this.chapterProgressInfoSlot,
     required this.clockInfoSlot,
+    this.batteryInfoSlot = ReaderInfoSlot.bottomCenter,
     required this.wholeBookProgressInfoSlot,
     required this.infoDividerSlot,
     required this.statusBarMode,
     required this.timeDisplayMode,
     this.readerTextColor,
     this.readerBackgroundColor,
+    this.batteryStatus,
     this.extendIntoDisplayCutout = false,
     this.hideNavigationBar = false,
   });
@@ -549,6 +562,7 @@ class ReaderInfoScaffold extends StatelessWidget {
   final bool showChapterInfo;
   final bool showChapterProgressInfo;
   final bool showClockInfo;
+  final bool showBatteryInfo;
   final bool showWholeBookProgressInfo;
   final bool showInfoDivider;
   final bool? showTopInfoDivider;
@@ -559,12 +573,14 @@ class ReaderInfoScaffold extends StatelessWidget {
   final ReaderInfoSlot chapterInfoSlot;
   final ReaderInfoSlot chapterProgressInfoSlot;
   final ReaderInfoSlot clockInfoSlot;
+  final ReaderInfoSlot batteryInfoSlot;
   final ReaderInfoSlot wholeBookProgressInfoSlot;
   final ReaderInfoSlot infoDividerSlot;
   final ReaderStatusBarMode statusBarMode;
   final ReaderTimeDisplayMode timeDisplayMode;
   final Color? readerTextColor;
   final Color? readerBackgroundColor;
+  final BatteryStatus? batteryStatus;
   final bool extendIntoDisplayCutout;
   final bool hideNavigationBar;
 
@@ -603,17 +619,20 @@ class ReaderInfoScaffold extends StatelessWidget {
                   showChapterInfo: showChapterInfo,
                   showChapterProgressInfo: showChapterProgressInfo,
                   showClockInfo: showClockInfo,
+                  showBatteryInfo: showBatteryInfo,
                   showWholeBookProgressInfo: showWholeBookProgressInfo,
                   showInfoDivider: false,
                   chapterInfoSlot: chapterInfoSlot,
                   chapterProgressInfoSlot: chapterProgressInfoSlot,
                   clockInfoSlot: clockInfoSlot,
+                  batteryInfoSlot: batteryInfoSlot,
                   wholeBookProgressInfoSlot: wholeBookProgressInfoSlot,
                   infoDividerSlot: infoDividerSlot,
                   statusBarMode: statusBarMode,
                   timeDisplayMode: timeDisplayMode,
                   readerTextColor: readerTextColor,
                   readerBackgroundColor: readerBackgroundColor,
+                  batteryStatus: batteryStatus,
                   useRegionKeys: false,
                 )
               : const SizedBox.shrink(),
@@ -644,8 +663,9 @@ class ReaderInfoScaffold extends StatelessWidget {
     if (color == background) {
       color = background.computeLuminance() > .5 ? Colors.black : Colors.white;
     }
+    final dividerExtent = math.max(1.0, 1.0 / devicePixelRatio);
     return SizedBox(
-      height: 1 / devicePixelRatio,
+      height: dividerExtent,
       child: ColoredBox(
         key: top ? readerTopInfoDividerKey : readerBottomInfoDividerKey,
         color:
@@ -709,6 +729,7 @@ class ReaderMinimalInfoLayer extends StatefulWidget {
     this.showChapterInfo = true,
     this.showChapterProgressInfo = true,
     this.showClockInfo = true,
+    this.showBatteryInfo = true,
     this.showWholeBookProgressInfo = true,
     this.showInfoDivider = false,
     this.showTopInfoDivider,
@@ -716,12 +737,14 @@ class ReaderMinimalInfoLayer extends StatefulWidget {
     this.chapterInfoSlot = ReaderInfoSlot.topLeft,
     this.chapterProgressInfoSlot = ReaderInfoSlot.topRight,
     this.clockInfoSlot = ReaderInfoSlot.bottomLeft,
+    this.batteryInfoSlot = ReaderInfoSlot.bottomCenter,
     this.wholeBookProgressInfoSlot = ReaderInfoSlot.bottomRight,
     this.infoDividerSlot = ReaderInfoSlot.topCenter,
     required this.statusBarMode,
     required this.timeDisplayMode,
     this.readerTextColor,
     this.readerBackgroundColor,
+    this.batteryStatus,
     this.useRegionKeys = true,
   });
 
@@ -738,6 +761,7 @@ class ReaderMinimalInfoLayer extends StatefulWidget {
   final bool showChapterInfo;
   final bool showChapterProgressInfo;
   final bool showClockInfo;
+  final bool showBatteryInfo;
   final bool showWholeBookProgressInfo;
   final bool showInfoDivider;
   final bool? showTopInfoDivider;
@@ -745,12 +769,14 @@ class ReaderMinimalInfoLayer extends StatefulWidget {
   final ReaderInfoSlot chapterInfoSlot;
   final ReaderInfoSlot chapterProgressInfoSlot;
   final ReaderInfoSlot clockInfoSlot;
+  final ReaderInfoSlot batteryInfoSlot;
   final ReaderInfoSlot wholeBookProgressInfoSlot;
   final ReaderInfoSlot infoDividerSlot;
   final ReaderStatusBarMode statusBarMode;
   final ReaderTimeDisplayMode timeDisplayMode;
   final Color? readerTextColor;
   final Color? readerBackgroundColor;
+  final BatteryStatus? batteryStatus;
   final bool useRegionKeys;
 
   @override
@@ -818,7 +844,10 @@ class _ReaderMinimalInfoLayerState extends State<ReaderMinimalInfoLayer> {
                 left: 0,
                 right: 0,
                 child: Container(
-                  height: 1,
+                  height: math.max(
+                    1.0,
+                    1.0 / MediaQuery.devicePixelRatioOf(context),
+                  ),
                   color: style?.color?.withValues(alpha: .45),
                 ),
               ),
@@ -829,7 +858,10 @@ class _ReaderMinimalInfoLayerState extends State<ReaderMinimalInfoLayer> {
                 left: 0,
                 right: 0,
                 child: Container(
-                  height: 1,
+                  height: math.max(
+                    1.0,
+                    1.0 / MediaQuery.devicePixelRatioOf(context),
+                  ),
                   color: style?.color?.withValues(alpha: .45),
                 ),
               ),
@@ -886,6 +918,18 @@ class _ReaderMinimalInfoLayerState extends State<ReaderMinimalInfoLayer> {
       children.add(
         Text(
           _formatClock(_now, widget.timeDisplayMode),
+          textAlign: _textAlign(slot),
+          style: style,
+        ),
+      );
+    }
+    if (widget.showBatteryInfo &&
+        widget.batteryStatus != null &&
+        widget.batteryInfoSlot == slot) {
+      final battery = widget.batteryStatus!;
+      children.add(
+        Text(
+          '${battery.percent}%${battery.charging ? ' ⚡' : ''}',
           textAlign: _textAlign(slot),
           style: style,
         ),
@@ -2506,6 +2550,16 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
               _commit(_draft.copyWith(showClockInfo: value)),
           onSlotChanged: (slot) =>
               _commit(_draft.copyWith(clockInfoSlot: slot)),
+        ),
+        _buildInfoItemRow(
+          context,
+          label: '设备电量',
+          value: _draft.showBatteryInfo,
+          slot: _draft.batteryInfoSlot,
+          onValueChanged: (value) =>
+              _commit(_draft.copyWith(showBatteryInfo: value)),
+          onSlotChanged: (slot) =>
+              _commit(_draft.copyWith(batteryInfoSlot: slot)),
         ),
         _buildInfoItemRow(
           context,

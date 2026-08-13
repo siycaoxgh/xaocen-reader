@@ -66,7 +66,7 @@ void main() {
     tearDown(() => db.close());
 
     test('schema version and PRAGMA foreign keys are active', () async {
-      expect(db.schemaVersion, 15);
+      expect(db.schemaVersion, 16);
       final enabled = await db.customSelect('PRAGMA foreign_keys').getSingle();
       expect(enabled.data['foreign_keys'], 1);
 
@@ -223,7 +223,7 @@ void main() {
         expect(
           (await migrated.customSelect('PRAGMA user_version').getSingle())
               .data['user_version'],
-          15,
+          16,
         );
         expect((await pragmaRows(migrated, 'reading_history')).length, 1);
         expect((await pragmaRows(migrated, 'reader_bookmarks')).length, 1);

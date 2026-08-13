@@ -2,6 +2,7 @@ package com.xaocen.xaocen_reader
 
 import android.view.KeyEvent
 import android.content.pm.ActivityInfo
+import android.graphics.Color
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -43,6 +44,8 @@ class MainActivity : FlutterActivity() {
                     val args = call.arguments as? Map<*, *>
                     val showStatus = args?.get("showStatusBar") as? Boolean ?: true
                     val hideNavigation = args?.get("hideNavigationBar") as? Boolean ?: false
+                    window.statusBarColor = Color.TRANSPARENT
+                    window.navigationBarColor = Color.TRANSPARENT
                     if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
                         val controller = window.insetsController
                         if (controller != null) {
@@ -68,6 +71,19 @@ class MainActivity : FlutterActivity() {
                         else -> requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
                     }
                     result.success(null)
+                }
+                "getBatteryStatus" -> {
+                    val manager = getSystemService(android.content.Context.BATTERY_SERVICE) as android.os.BatteryManager
+                    val level = manager.getIntProperty(android.os.BatteryManager.BATTERY_PROPERTY_CAPACITY)
+                    val intent = registerReceiver(null, android.content.IntentFilter(android.content.Intent.ACTION_BATTERY_CHANGED))
+                    val status = intent?.getIntExtra(android.os.BatteryManager.EXTRA_STATUS, -1) ?: -1
+                    val charging = status == android.os.BatteryManager.BATTERY_STATUS_CHARGING ||
+                        status == android.os.BatteryManager.BATTERY_STATUS_FULL
+                    if (level !in 0..100) {
+                        result.success(null)
+                    } else {
+                        result.success(mapOf("percent" to level, "charging" to charging))
+                    }
                 }
                 else -> result.notImplemented()
             }

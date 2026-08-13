@@ -63,6 +63,7 @@ final class ReaderPreferencesRepository {
       showChapterInfo: preferences.showChapterInfo,
       showChapterProgressInfo: preferences.showChapterProgressInfo,
       showClockInfo: preferences.showClockInfo,
+      showBatteryInfo: preferences.showBatteryInfo,
       showWholeBookProgressInfo: preferences.showWholeBookProgressInfo,
       showTopInfoDivider: preferences.showTopInfoDivider,
       showBottomInfoDivider: preferences.showBottomInfoDivider,
@@ -70,6 +71,7 @@ final class ReaderPreferencesRepository {
       chapterInfoSlot: preferences.chapterInfoSlot,
       chapterProgressInfoSlot: preferences.chapterProgressInfoSlot,
       clockInfoSlot: preferences.clockInfoSlot,
+      batteryInfoSlot: preferences.batteryInfoSlot,
       wholeBookProgressInfoSlot: preferences.wholeBookProgressInfoSlot,
       infoDividerSlot: preferences.infoDividerSlot,
     );
@@ -113,6 +115,7 @@ final class ReaderPreferencesRepository {
             showChapterInfo: Value(safe.showChapterInfo),
             showChapterProgressInfo: Value(safe.showChapterProgressInfo),
             showClockInfo: Value(safe.showClockInfo),
+            showBatteryInfo: Value(safe.showBatteryInfo),
             showWholeBookProgressInfo: Value(safe.showWholeBookProgressInfo),
             showInfoDivider: Value(safe.showInfoDivider),
             showTopInfoDivider: Value(safe.showTopInfoDivider),
@@ -121,6 +124,7 @@ final class ReaderPreferencesRepository {
             chapterInfoSlot: Value(safe.chapterInfoSlot.name),
             chapterProgressInfoSlot: Value(safe.chapterProgressInfoSlot.name),
             clockInfoSlot: Value(safe.clockInfoSlot.name),
+            batteryInfoSlot: Value(safe.batteryInfoSlot.name),
             wholeBookProgressInfoSlot: Value(
               safe.wholeBookProgressInfoSlot.name,
             ),
@@ -192,6 +196,7 @@ final class ReaderPreferencesRepository {
       showChapterInfo: row.showChapterInfo,
       showChapterProgressInfo: row.showChapterProgressInfo,
       showClockInfo: row.showClockInfo,
+      showBatteryInfo: row.showBatteryInfo,
       showWholeBookProgressInfo: row.showWholeBookProgressInfo,
       showTopInfoDivider: row.showTopInfoDivider,
       showBottomInfoDivider: row.showBottomInfoDivider,
@@ -207,6 +212,10 @@ final class ReaderPreferencesRepository {
       clockInfoSlot: _decodeSlot(
         row.clockInfoSlot,
         ReaderPreferences.defaultClockInfoSlot,
+      ),
+      batteryInfoSlot: _decodeSlot(
+        row.batteryInfoSlot,
+        ReaderPreferences.defaultBatteryInfoSlot,
       ),
       wholeBookProgressInfoSlot: _decodeSlot(
         row.wholeBookProgressInfoSlot,

@@ -37,7 +37,7 @@ class AppDatabase extends _$AppDatabase {
       super(NativeDatabase.memory());
 
   @override
-  int get schemaVersion => 15;
+  int get schemaVersion => 16;
 
   /// 打开应用数据库（support 目录下）。
   static Future<AppDatabase> open({DataRoot? dataRoot}) async {
@@ -69,6 +69,13 @@ class AppDatabase extends _$AppDatabase {
       await _createFontIndexes(customStatement);
     },
     onUpgrade: (m, from, to) async {
+      Future<bool> hasReaderPreferenceColumn(String name) async {
+        final rows = await customSelect(
+          'PRAGMA table_info(reader_preferences)',
+        ).get();
+        return rows.any((row) => row.data['name'] == name);
+      }
+
       // schema 1 → 2：仅新增 reading_progress 表，不触碰 M2 既有数据。
       if (from < 2) {
         await m.createTable(readingProgress);
@@ -338,6 +345,28 @@ class AppDatabase extends _$AppDatabase {
           readerPreferencesRows,
           readerPreferencesRows.screenOrientation,
         );
+      }
+      // schema 15 -> 16: optional device-battery Reader information item.
+      // Existing books keep their current slots and do not gain a new visible
+      // item unexpectedly; new/default preferences enable bottom-center.
+      if (from >= 5 && from < 16) {
+        if (!await hasReaderPreferenceColumn('show_battery_info')) {
+          await m.addColumn(
+            readerPreferencesRows,
+            readerPreferencesRows.showBatteryInfo,
+          );
+        }
+        if (!await hasReaderPreferenceColumn('battery_info_slot')) {
+          await m.addColumn(
+            readerPreferencesRows,
+            readerPreferencesRows.batteryInfoSlot,
+          );
+        }
+        if (await hasReaderPreferenceColumn('show_battery_info')) {
+          await customStatement(
+            'UPDATE reader_preferences SET show_battery_info = 0',
+          );
+        }
       }
     },
     beforeOpen: (details) async {

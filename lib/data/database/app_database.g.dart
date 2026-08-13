@@ -4524,6 +4524,21 @@ class $ReaderPreferencesRowsTable extends ReaderPreferencesRows
     ),
     defaultValue: const Constant(true),
   );
+  static const VerificationMeta _showBatteryInfoMeta = const VerificationMeta(
+    'showBatteryInfo',
+  );
+  @override
+  late final GeneratedColumn<bool> showBatteryInfo = GeneratedColumn<bool>(
+    'show_battery_info',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("show_battery_info" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
   static const VerificationMeta _showWholeBookProgressInfoMeta =
       const VerificationMeta('showWholeBookProgressInfo');
   @override
@@ -4634,6 +4649,18 @@ class $ReaderPreferencesRowsTable extends ReaderPreferencesRows
     requiredDuringInsert: false,
     defaultValue: const Constant('bottomLeft'),
   );
+  static const VerificationMeta _batteryInfoSlotMeta = const VerificationMeta(
+    'batteryInfoSlot',
+  );
+  @override
+  late final GeneratedColumn<String> batteryInfoSlot = GeneratedColumn<String>(
+    'battery_info_slot',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('bottomCenter'),
+  );
   static const VerificationMeta _wholeBookProgressInfoSlotMeta =
       const VerificationMeta('wholeBookProgressInfoSlot');
   @override
@@ -4705,6 +4732,7 @@ class $ReaderPreferencesRowsTable extends ReaderPreferencesRows
     showChapterInfo,
     showChapterProgressInfo,
     showClockInfo,
+    showBatteryInfo,
     showWholeBookProgressInfo,
     showInfoDivider,
     showTopInfoDivider,
@@ -4713,6 +4741,7 @@ class $ReaderPreferencesRowsTable extends ReaderPreferencesRows
     chapterInfoSlot,
     chapterProgressInfoSlot,
     clockInfoSlot,
+    batteryInfoSlot,
     wholeBookProgressInfoSlot,
     infoDividerSlot,
     updatedAt,
@@ -5039,6 +5068,15 @@ class $ReaderPreferencesRowsTable extends ReaderPreferencesRows
         ),
       );
     }
+    if (data.containsKey('show_battery_info')) {
+      context.handle(
+        _showBatteryInfoMeta,
+        showBatteryInfo.isAcceptableOrUnknown(
+          data['show_battery_info']!,
+          _showBatteryInfoMeta,
+        ),
+      );
+    }
     if (data.containsKey('show_whole_book_progress_info')) {
       context.handle(
         _showWholeBookProgressInfoMeta,
@@ -5108,6 +5146,15 @@ class $ReaderPreferencesRowsTable extends ReaderPreferencesRows
         clockInfoSlot.isAcceptableOrUnknown(
           data['clock_info_slot']!,
           _clockInfoSlotMeta,
+        ),
+      );
+    }
+    if (data.containsKey('battery_info_slot')) {
+      context.handle(
+        _batteryInfoSlotMeta,
+        batteryInfoSlot.isAcceptableOrUnknown(
+          data['battery_info_slot']!,
+          _batteryInfoSlotMeta,
         ),
       );
     }
@@ -5282,6 +5329,10 @@ class $ReaderPreferencesRowsTable extends ReaderPreferencesRows
         DriftSqlType.bool,
         data['${effectivePrefix}show_clock_info'],
       )!,
+      showBatteryInfo: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}show_battery_info'],
+      )!,
       showWholeBookProgressInfo: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}show_whole_book_progress_info'],
@@ -5313,6 +5364,10 @@ class $ReaderPreferencesRowsTable extends ReaderPreferencesRows
       clockInfoSlot: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}clock_info_slot'],
+      )!,
+      batteryInfoSlot: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}battery_info_slot'],
       )!,
       wholeBookProgressInfoSlot: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
@@ -5373,6 +5428,7 @@ class ReaderPreferencesRow extends DataClass
   final bool showChapterInfo;
   final bool showChapterProgressInfo;
   final bool showClockInfo;
+  final bool showBatteryInfo;
   final bool showWholeBookProgressInfo;
   final bool showInfoDivider;
   final bool showTopInfoDivider;
@@ -5381,6 +5437,7 @@ class ReaderPreferencesRow extends DataClass
   final String chapterInfoSlot;
   final String chapterProgressInfoSlot;
   final String clockInfoSlot;
+  final String batteryInfoSlot;
   final String wholeBookProgressInfoSlot;
   final String infoDividerSlot;
   final DateTime updatedAt;
@@ -5419,6 +5476,7 @@ class ReaderPreferencesRow extends DataClass
     required this.showChapterInfo,
     required this.showChapterProgressInfo,
     required this.showClockInfo,
+    required this.showBatteryInfo,
     required this.showWholeBookProgressInfo,
     required this.showInfoDivider,
     required this.showTopInfoDivider,
@@ -5427,6 +5485,7 @@ class ReaderPreferencesRow extends DataClass
     required this.chapterInfoSlot,
     required this.chapterProgressInfoSlot,
     required this.clockInfoSlot,
+    required this.batteryInfoSlot,
     required this.wholeBookProgressInfoSlot,
     required this.infoDividerSlot,
     required this.updatedAt,
@@ -5490,6 +5549,7 @@ class ReaderPreferencesRow extends DataClass
     map['show_chapter_info'] = Variable<bool>(showChapterInfo);
     map['show_chapter_progress_info'] = Variable<bool>(showChapterProgressInfo);
     map['show_clock_info'] = Variable<bool>(showClockInfo);
+    map['show_battery_info'] = Variable<bool>(showBatteryInfo);
     map['show_whole_book_progress_info'] = Variable<bool>(
       showWholeBookProgressInfo,
     );
@@ -5504,6 +5564,7 @@ class ReaderPreferencesRow extends DataClass
       chapterProgressInfoSlot,
     );
     map['clock_info_slot'] = Variable<String>(clockInfoSlot);
+    map['battery_info_slot'] = Variable<String>(batteryInfoSlot);
     map['whole_book_progress_info_slot'] = Variable<String>(
       wholeBookProgressInfoSlot,
     );
@@ -5564,6 +5625,7 @@ class ReaderPreferencesRow extends DataClass
       showChapterInfo: Value(showChapterInfo),
       showChapterProgressInfo: Value(showChapterProgressInfo),
       showClockInfo: Value(showClockInfo),
+      showBatteryInfo: Value(showBatteryInfo),
       showWholeBookProgressInfo: Value(showWholeBookProgressInfo),
       showInfoDivider: Value(showInfoDivider),
       showTopInfoDivider: Value(showTopInfoDivider),
@@ -5572,6 +5634,7 @@ class ReaderPreferencesRow extends DataClass
       chapterInfoSlot: Value(chapterInfoSlot),
       chapterProgressInfoSlot: Value(chapterProgressInfoSlot),
       clockInfoSlot: Value(clockInfoSlot),
+      batteryInfoSlot: Value(batteryInfoSlot),
       wholeBookProgressInfoSlot: Value(wholeBookProgressInfoSlot),
       infoDividerSlot: Value(infoDividerSlot),
       updatedAt: Value(updatedAt),
@@ -5636,6 +5699,7 @@ class ReaderPreferencesRow extends DataClass
         json['showChapterProgressInfo'],
       ),
       showClockInfo: serializer.fromJson<bool>(json['showClockInfo']),
+      showBatteryInfo: serializer.fromJson<bool>(json['showBatteryInfo']),
       showWholeBookProgressInfo: serializer.fromJson<bool>(
         json['showWholeBookProgressInfo'],
       ),
@@ -5652,6 +5716,7 @@ class ReaderPreferencesRow extends DataClass
         json['chapterProgressInfoSlot'],
       ),
       clockInfoSlot: serializer.fromJson<String>(json['clockInfoSlot']),
+      batteryInfoSlot: serializer.fromJson<String>(json['batteryInfoSlot']),
       wholeBookProgressInfoSlot: serializer.fromJson<String>(
         json['wholeBookProgressInfoSlot'],
       ),
@@ -5709,6 +5774,7 @@ class ReaderPreferencesRow extends DataClass
         showChapterProgressInfo,
       ),
       'showClockInfo': serializer.toJson<bool>(showClockInfo),
+      'showBatteryInfo': serializer.toJson<bool>(showBatteryInfo),
       'showWholeBookProgressInfo': serializer.toJson<bool>(
         showWholeBookProgressInfo,
       ),
@@ -5723,6 +5789,7 @@ class ReaderPreferencesRow extends DataClass
         chapterProgressInfoSlot,
       ),
       'clockInfoSlot': serializer.toJson<String>(clockInfoSlot),
+      'batteryInfoSlot': serializer.toJson<String>(batteryInfoSlot),
       'wholeBookProgressInfoSlot': serializer.toJson<String>(
         wholeBookProgressInfoSlot,
       ),
@@ -5766,6 +5833,7 @@ class ReaderPreferencesRow extends DataClass
     bool? showChapterInfo,
     bool? showChapterProgressInfo,
     bool? showClockInfo,
+    bool? showBatteryInfo,
     bool? showWholeBookProgressInfo,
     bool? showInfoDivider,
     bool? showTopInfoDivider,
@@ -5774,6 +5842,7 @@ class ReaderPreferencesRow extends DataClass
     String? chapterInfoSlot,
     String? chapterProgressInfoSlot,
     String? clockInfoSlot,
+    String? batteryInfoSlot,
     String? wholeBookProgressInfoSlot,
     String? infoDividerSlot,
     DateTime? updatedAt,
@@ -5830,6 +5899,7 @@ class ReaderPreferencesRow extends DataClass
     showChapterProgressInfo:
         showChapterProgressInfo ?? this.showChapterProgressInfo,
     showClockInfo: showClockInfo ?? this.showClockInfo,
+    showBatteryInfo: showBatteryInfo ?? this.showBatteryInfo,
     showWholeBookProgressInfo:
         showWholeBookProgressInfo ?? this.showWholeBookProgressInfo,
     showInfoDivider: showInfoDivider ?? this.showInfoDivider,
@@ -5841,6 +5911,7 @@ class ReaderPreferencesRow extends DataClass
     chapterProgressInfoSlot:
         chapterProgressInfoSlot ?? this.chapterProgressInfoSlot,
     clockInfoSlot: clockInfoSlot ?? this.clockInfoSlot,
+    batteryInfoSlot: batteryInfoSlot ?? this.batteryInfoSlot,
     wholeBookProgressInfoSlot:
         wholeBookProgressInfoSlot ?? this.wholeBookProgressInfoSlot,
     infoDividerSlot: infoDividerSlot ?? this.infoDividerSlot,
@@ -5942,6 +6013,9 @@ class ReaderPreferencesRow extends DataClass
       showClockInfo: data.showClockInfo.present
           ? data.showClockInfo.value
           : this.showClockInfo,
+      showBatteryInfo: data.showBatteryInfo.present
+          ? data.showBatteryInfo.value
+          : this.showBatteryInfo,
       showWholeBookProgressInfo: data.showWholeBookProgressInfo.present
           ? data.showWholeBookProgressInfo.value
           : this.showWholeBookProgressInfo,
@@ -5966,6 +6040,9 @@ class ReaderPreferencesRow extends DataClass
       clockInfoSlot: data.clockInfoSlot.present
           ? data.clockInfoSlot.value
           : this.clockInfoSlot,
+      batteryInfoSlot: data.batteryInfoSlot.present
+          ? data.batteryInfoSlot.value
+          : this.batteryInfoSlot,
       wholeBookProgressInfoSlot: data.wholeBookProgressInfoSlot.present
           ? data.wholeBookProgressInfoSlot.value
           : this.wholeBookProgressInfoSlot,
@@ -6013,6 +6090,7 @@ class ReaderPreferencesRow extends DataClass
           ..write('showChapterInfo: $showChapterInfo, ')
           ..write('showChapterProgressInfo: $showChapterProgressInfo, ')
           ..write('showClockInfo: $showClockInfo, ')
+          ..write('showBatteryInfo: $showBatteryInfo, ')
           ..write('showWholeBookProgressInfo: $showWholeBookProgressInfo, ')
           ..write('showInfoDivider: $showInfoDivider, ')
           ..write('showTopInfoDivider: $showTopInfoDivider, ')
@@ -6021,6 +6099,7 @@ class ReaderPreferencesRow extends DataClass
           ..write('chapterInfoSlot: $chapterInfoSlot, ')
           ..write('chapterProgressInfoSlot: $chapterProgressInfoSlot, ')
           ..write('clockInfoSlot: $clockInfoSlot, ')
+          ..write('batteryInfoSlot: $batteryInfoSlot, ')
           ..write('wholeBookProgressInfoSlot: $wholeBookProgressInfoSlot, ')
           ..write('infoDividerSlot: $infoDividerSlot, ')
           ..write('updatedAt: $updatedAt')
@@ -6064,6 +6143,7 @@ class ReaderPreferencesRow extends DataClass
     showChapterInfo,
     showChapterProgressInfo,
     showClockInfo,
+    showBatteryInfo,
     showWholeBookProgressInfo,
     showInfoDivider,
     showTopInfoDivider,
@@ -6072,6 +6152,7 @@ class ReaderPreferencesRow extends DataClass
     chapterInfoSlot,
     chapterProgressInfoSlot,
     clockInfoSlot,
+    batteryInfoSlot,
     wholeBookProgressInfoSlot,
     infoDividerSlot,
     updatedAt,
@@ -6114,6 +6195,7 @@ class ReaderPreferencesRow extends DataClass
           other.showChapterInfo == this.showChapterInfo &&
           other.showChapterProgressInfo == this.showChapterProgressInfo &&
           other.showClockInfo == this.showClockInfo &&
+          other.showBatteryInfo == this.showBatteryInfo &&
           other.showWholeBookProgressInfo == this.showWholeBookProgressInfo &&
           other.showInfoDivider == this.showInfoDivider &&
           other.showTopInfoDivider == this.showTopInfoDivider &&
@@ -6122,6 +6204,7 @@ class ReaderPreferencesRow extends DataClass
           other.chapterInfoSlot == this.chapterInfoSlot &&
           other.chapterProgressInfoSlot == this.chapterProgressInfoSlot &&
           other.clockInfoSlot == this.clockInfoSlot &&
+          other.batteryInfoSlot == this.batteryInfoSlot &&
           other.wholeBookProgressInfoSlot == this.wholeBookProgressInfoSlot &&
           other.infoDividerSlot == this.infoDividerSlot &&
           other.updatedAt == this.updatedAt);
@@ -6163,6 +6246,7 @@ class ReaderPreferencesRowsCompanion
   final Value<bool> showChapterInfo;
   final Value<bool> showChapterProgressInfo;
   final Value<bool> showClockInfo;
+  final Value<bool> showBatteryInfo;
   final Value<bool> showWholeBookProgressInfo;
   final Value<bool> showInfoDivider;
   final Value<bool> showTopInfoDivider;
@@ -6171,6 +6255,7 @@ class ReaderPreferencesRowsCompanion
   final Value<String> chapterInfoSlot;
   final Value<String> chapterProgressInfoSlot;
   final Value<String> clockInfoSlot;
+  final Value<String> batteryInfoSlot;
   final Value<String> wholeBookProgressInfoSlot;
   final Value<String> infoDividerSlot;
   final Value<DateTime> updatedAt;
@@ -6210,6 +6295,7 @@ class ReaderPreferencesRowsCompanion
     this.showChapterInfo = const Value.absent(),
     this.showChapterProgressInfo = const Value.absent(),
     this.showClockInfo = const Value.absent(),
+    this.showBatteryInfo = const Value.absent(),
     this.showWholeBookProgressInfo = const Value.absent(),
     this.showInfoDivider = const Value.absent(),
     this.showTopInfoDivider = const Value.absent(),
@@ -6218,6 +6304,7 @@ class ReaderPreferencesRowsCompanion
     this.chapterInfoSlot = const Value.absent(),
     this.chapterProgressInfoSlot = const Value.absent(),
     this.clockInfoSlot = const Value.absent(),
+    this.batteryInfoSlot = const Value.absent(),
     this.wholeBookProgressInfoSlot = const Value.absent(),
     this.infoDividerSlot = const Value.absent(),
     this.updatedAt = const Value.absent(),
@@ -6258,6 +6345,7 @@ class ReaderPreferencesRowsCompanion
     this.showChapterInfo = const Value.absent(),
     this.showChapterProgressInfo = const Value.absent(),
     this.showClockInfo = const Value.absent(),
+    this.showBatteryInfo = const Value.absent(),
     this.showWholeBookProgressInfo = const Value.absent(),
     this.showInfoDivider = const Value.absent(),
     this.showTopInfoDivider = const Value.absent(),
@@ -6266,6 +6354,7 @@ class ReaderPreferencesRowsCompanion
     this.chapterInfoSlot = const Value.absent(),
     this.chapterProgressInfoSlot = const Value.absent(),
     this.clockInfoSlot = const Value.absent(),
+    this.batteryInfoSlot = const Value.absent(),
     this.wholeBookProgressInfoSlot = const Value.absent(),
     this.infoDividerSlot = const Value.absent(),
     required DateTime updatedAt,
@@ -6317,6 +6406,7 @@ class ReaderPreferencesRowsCompanion
     Expression<bool>? showChapterInfo,
     Expression<bool>? showChapterProgressInfo,
     Expression<bool>? showClockInfo,
+    Expression<bool>? showBatteryInfo,
     Expression<bool>? showWholeBookProgressInfo,
     Expression<bool>? showInfoDivider,
     Expression<bool>? showTopInfoDivider,
@@ -6325,6 +6415,7 @@ class ReaderPreferencesRowsCompanion
     Expression<String>? chapterInfoSlot,
     Expression<String>? chapterProgressInfoSlot,
     Expression<String>? clockInfoSlot,
+    Expression<String>? batteryInfoSlot,
     Expression<String>? wholeBookProgressInfoSlot,
     Expression<String>? infoDividerSlot,
     Expression<DateTime>? updatedAt,
@@ -6375,6 +6466,7 @@ class ReaderPreferencesRowsCompanion
       if (showChapterProgressInfo != null)
         'show_chapter_progress_info': showChapterProgressInfo,
       if (showClockInfo != null) 'show_clock_info': showClockInfo,
+      if (showBatteryInfo != null) 'show_battery_info': showBatteryInfo,
       if (showWholeBookProgressInfo != null)
         'show_whole_book_progress_info': showWholeBookProgressInfo,
       if (showInfoDivider != null) 'show_info_divider': showInfoDivider,
@@ -6388,6 +6480,7 @@ class ReaderPreferencesRowsCompanion
       if (chapterProgressInfoSlot != null)
         'chapter_progress_info_slot': chapterProgressInfoSlot,
       if (clockInfoSlot != null) 'clock_info_slot': clockInfoSlot,
+      if (batteryInfoSlot != null) 'battery_info_slot': batteryInfoSlot,
       if (wholeBookProgressInfoSlot != null)
         'whole_book_progress_info_slot': wholeBookProgressInfoSlot,
       if (infoDividerSlot != null) 'info_divider_slot': infoDividerSlot,
@@ -6431,6 +6524,7 @@ class ReaderPreferencesRowsCompanion
     Value<bool>? showChapterInfo,
     Value<bool>? showChapterProgressInfo,
     Value<bool>? showClockInfo,
+    Value<bool>? showBatteryInfo,
     Value<bool>? showWholeBookProgressInfo,
     Value<bool>? showInfoDivider,
     Value<bool>? showTopInfoDivider,
@@ -6439,6 +6533,7 @@ class ReaderPreferencesRowsCompanion
     Value<String>? chapterInfoSlot,
     Value<String>? chapterProgressInfoSlot,
     Value<String>? clockInfoSlot,
+    Value<String>? batteryInfoSlot,
     Value<String>? wholeBookProgressInfoSlot,
     Value<String>? infoDividerSlot,
     Value<DateTime>? updatedAt,
@@ -6485,6 +6580,7 @@ class ReaderPreferencesRowsCompanion
       showChapterProgressInfo:
           showChapterProgressInfo ?? this.showChapterProgressInfo,
       showClockInfo: showClockInfo ?? this.showClockInfo,
+      showBatteryInfo: showBatteryInfo ?? this.showBatteryInfo,
       showWholeBookProgressInfo:
           showWholeBookProgressInfo ?? this.showWholeBookProgressInfo,
       showInfoDivider: showInfoDivider ?? this.showInfoDivider,
@@ -6497,6 +6593,7 @@ class ReaderPreferencesRowsCompanion
       chapterProgressInfoSlot:
           chapterProgressInfoSlot ?? this.chapterProgressInfoSlot,
       clockInfoSlot: clockInfoSlot ?? this.clockInfoSlot,
+      batteryInfoSlot: batteryInfoSlot ?? this.batteryInfoSlot,
       wholeBookProgressInfoSlot:
           wholeBookProgressInfoSlot ?? this.wholeBookProgressInfoSlot,
       infoDividerSlot: infoDividerSlot ?? this.infoDividerSlot,
@@ -6624,6 +6721,9 @@ class ReaderPreferencesRowsCompanion
     if (showClockInfo.present) {
       map['show_clock_info'] = Variable<bool>(showClockInfo.value);
     }
+    if (showBatteryInfo.present) {
+      map['show_battery_info'] = Variable<bool>(showBatteryInfo.value);
+    }
     if (showWholeBookProgressInfo.present) {
       map['show_whole_book_progress_info'] = Variable<bool>(
         showWholeBookProgressInfo.value,
@@ -6655,6 +6755,9 @@ class ReaderPreferencesRowsCompanion
     }
     if (clockInfoSlot.present) {
       map['clock_info_slot'] = Variable<String>(clockInfoSlot.value);
+    }
+    if (batteryInfoSlot.present) {
+      map['battery_info_slot'] = Variable<String>(batteryInfoSlot.value);
     }
     if (wholeBookProgressInfoSlot.present) {
       map['whole_book_progress_info_slot'] = Variable<String>(
@@ -6710,6 +6813,7 @@ class ReaderPreferencesRowsCompanion
           ..write('showChapterInfo: $showChapterInfo, ')
           ..write('showChapterProgressInfo: $showChapterProgressInfo, ')
           ..write('showClockInfo: $showClockInfo, ')
+          ..write('showBatteryInfo: $showBatteryInfo, ')
           ..write('showWholeBookProgressInfo: $showWholeBookProgressInfo, ')
           ..write('showInfoDivider: $showInfoDivider, ')
           ..write('showTopInfoDivider: $showTopInfoDivider, ')
@@ -6718,6 +6822,7 @@ class ReaderPreferencesRowsCompanion
           ..write('chapterInfoSlot: $chapterInfoSlot, ')
           ..write('chapterProgressInfoSlot: $chapterProgressInfoSlot, ')
           ..write('clockInfoSlot: $clockInfoSlot, ')
+          ..write('batteryInfoSlot: $batteryInfoSlot, ')
           ..write('wholeBookProgressInfoSlot: $wholeBookProgressInfoSlot, ')
           ..write('infoDividerSlot: $infoDividerSlot, ')
           ..write('updatedAt: $updatedAt, ')
@@ -11930,6 +12035,7 @@ typedef $$ReaderPreferencesRowsTableCreateCompanionBuilder =
       Value<bool> showChapterInfo,
       Value<bool> showChapterProgressInfo,
       Value<bool> showClockInfo,
+      Value<bool> showBatteryInfo,
       Value<bool> showWholeBookProgressInfo,
       Value<bool> showInfoDivider,
       Value<bool> showTopInfoDivider,
@@ -11938,6 +12044,7 @@ typedef $$ReaderPreferencesRowsTableCreateCompanionBuilder =
       Value<String> chapterInfoSlot,
       Value<String> chapterProgressInfoSlot,
       Value<String> clockInfoSlot,
+      Value<String> batteryInfoSlot,
       Value<String> wholeBookProgressInfoSlot,
       Value<String> infoDividerSlot,
       required DateTime updatedAt,
@@ -11979,6 +12086,7 @@ typedef $$ReaderPreferencesRowsTableUpdateCompanionBuilder =
       Value<bool> showChapterInfo,
       Value<bool> showChapterProgressInfo,
       Value<bool> showClockInfo,
+      Value<bool> showBatteryInfo,
       Value<bool> showWholeBookProgressInfo,
       Value<bool> showInfoDivider,
       Value<bool> showTopInfoDivider,
@@ -11987,6 +12095,7 @@ typedef $$ReaderPreferencesRowsTableUpdateCompanionBuilder =
       Value<String> chapterInfoSlot,
       Value<String> chapterProgressInfoSlot,
       Value<String> clockInfoSlot,
+      Value<String> batteryInfoSlot,
       Value<String> wholeBookProgressInfoSlot,
       Value<String> infoDividerSlot,
       Value<DateTime> updatedAt,
@@ -12203,6 +12312,11 @@ class $$ReaderPreferencesRowsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<bool> get showBatteryInfo => $composableBuilder(
+    column: $table.showBatteryInfo,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<bool> get showWholeBookProgressInfo => $composableBuilder(
     column: $table.showWholeBookProgressInfo,
     builder: (column) => ColumnFilters(column),
@@ -12240,6 +12354,11 @@ class $$ReaderPreferencesRowsTableFilterComposer
 
   ColumnFilters<String> get clockInfoSlot => $composableBuilder(
     column: $table.clockInfoSlot,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get batteryInfoSlot => $composableBuilder(
+    column: $table.batteryInfoSlot,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -12456,6 +12575,11 @@ class $$ReaderPreferencesRowsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get showBatteryInfo => $composableBuilder(
+    column: $table.showBatteryInfo,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<bool> get showWholeBookProgressInfo => $composableBuilder(
     column: $table.showWholeBookProgressInfo,
     builder: (column) => ColumnOrderings(column),
@@ -12493,6 +12617,11 @@ class $$ReaderPreferencesRowsTableOrderingComposer
 
   ColumnOrderings<String> get clockInfoSlot => $composableBuilder(
     column: $table.clockInfoSlot,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get batteryInfoSlot => $composableBuilder(
+    column: $table.batteryInfoSlot,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -12701,6 +12830,11 @@ class $$ReaderPreferencesRowsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<bool> get showBatteryInfo => $composableBuilder(
+    column: $table.showBatteryInfo,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<bool> get showWholeBookProgressInfo => $composableBuilder(
     column: $table.showWholeBookProgressInfo,
     builder: (column) => column,
@@ -12738,6 +12872,11 @@ class $$ReaderPreferencesRowsTableAnnotationComposer
 
   GeneratedColumn<String> get clockInfoSlot => $composableBuilder(
     column: $table.clockInfoSlot,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get batteryInfoSlot => $composableBuilder(
+    column: $table.batteryInfoSlot,
     builder: (column) => column,
   );
 
@@ -12852,6 +12991,7 @@ class $$ReaderPreferencesRowsTableTableManager
                 Value<bool> showChapterInfo = const Value.absent(),
                 Value<bool> showChapterProgressInfo = const Value.absent(),
                 Value<bool> showClockInfo = const Value.absent(),
+                Value<bool> showBatteryInfo = const Value.absent(),
                 Value<bool> showWholeBookProgressInfo = const Value.absent(),
                 Value<bool> showInfoDivider = const Value.absent(),
                 Value<bool> showTopInfoDivider = const Value.absent(),
@@ -12860,6 +13000,7 @@ class $$ReaderPreferencesRowsTableTableManager
                 Value<String> chapterInfoSlot = const Value.absent(),
                 Value<String> chapterProgressInfoSlot = const Value.absent(),
                 Value<String> clockInfoSlot = const Value.absent(),
+                Value<String> batteryInfoSlot = const Value.absent(),
                 Value<String> wholeBookProgressInfoSlot = const Value.absent(),
                 Value<String> infoDividerSlot = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
@@ -12899,6 +13040,7 @@ class $$ReaderPreferencesRowsTableTableManager
                 showChapterInfo: showChapterInfo,
                 showChapterProgressInfo: showChapterProgressInfo,
                 showClockInfo: showClockInfo,
+                showBatteryInfo: showBatteryInfo,
                 showWholeBookProgressInfo: showWholeBookProgressInfo,
                 showInfoDivider: showInfoDivider,
                 showTopInfoDivider: showTopInfoDivider,
@@ -12907,6 +13049,7 @@ class $$ReaderPreferencesRowsTableTableManager
                 chapterInfoSlot: chapterInfoSlot,
                 chapterProgressInfoSlot: chapterProgressInfoSlot,
                 clockInfoSlot: clockInfoSlot,
+                batteryInfoSlot: batteryInfoSlot,
                 wholeBookProgressInfoSlot: wholeBookProgressInfoSlot,
                 infoDividerSlot: infoDividerSlot,
                 updatedAt: updatedAt,
@@ -12948,6 +13091,7 @@ class $$ReaderPreferencesRowsTableTableManager
                 Value<bool> showChapterInfo = const Value.absent(),
                 Value<bool> showChapterProgressInfo = const Value.absent(),
                 Value<bool> showClockInfo = const Value.absent(),
+                Value<bool> showBatteryInfo = const Value.absent(),
                 Value<bool> showWholeBookProgressInfo = const Value.absent(),
                 Value<bool> showInfoDivider = const Value.absent(),
                 Value<bool> showTopInfoDivider = const Value.absent(),
@@ -12956,6 +13100,7 @@ class $$ReaderPreferencesRowsTableTableManager
                 Value<String> chapterInfoSlot = const Value.absent(),
                 Value<String> chapterProgressInfoSlot = const Value.absent(),
                 Value<String> clockInfoSlot = const Value.absent(),
+                Value<String> batteryInfoSlot = const Value.absent(),
                 Value<String> wholeBookProgressInfoSlot = const Value.absent(),
                 Value<String> infoDividerSlot = const Value.absent(),
                 required DateTime updatedAt,
@@ -12995,6 +13140,7 @@ class $$ReaderPreferencesRowsTableTableManager
                 showChapterInfo: showChapterInfo,
                 showChapterProgressInfo: showChapterProgressInfo,
                 showClockInfo: showClockInfo,
+                showBatteryInfo: showBatteryInfo,
                 showWholeBookProgressInfo: showWholeBookProgressInfo,
                 showInfoDivider: showInfoDivider,
                 showTopInfoDivider: showTopInfoDivider,
@@ -13003,6 +13149,7 @@ class $$ReaderPreferencesRowsTableTableManager
                 chapterInfoSlot: chapterInfoSlot,
                 chapterProgressInfoSlot: chapterProgressInfoSlot,
                 clockInfoSlot: clockInfoSlot,
+                batteryInfoSlot: batteryInfoSlot,
                 wholeBookProgressInfoSlot: wholeBookProgressInfoSlot,
                 infoDividerSlot: infoDividerSlot,
                 updatedAt: updatedAt,

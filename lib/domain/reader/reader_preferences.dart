@@ -64,6 +64,7 @@ final class ReaderPreferences {
     required this.showChapterInfo,
     required this.showChapterProgressInfo,
     required this.showClockInfo,
+    required this.showBatteryInfo,
     required this.showWholeBookProgressInfo,
     required this.showTopInfoDivider,
     required this.showBottomInfoDivider,
@@ -71,6 +72,7 @@ final class ReaderPreferences {
     required this.chapterInfoSlot,
     required this.chapterProgressInfoSlot,
     required this.clockInfoSlot,
+    required this.batteryInfoSlot,
     required this.wholeBookProgressInfoSlot,
     required this.infoDividerSlot,
   });
@@ -134,6 +136,7 @@ final class ReaderPreferences {
   static const bool defaultShowChapterInfo = true;
   static const bool defaultShowChapterProgressInfo = true;
   static const bool defaultShowClockInfo = true;
+  static const bool defaultShowBatteryInfo = true;
   static const bool defaultShowWholeBookProgressInfo = true;
   static const bool defaultShowInfoDivider = false;
   static const bool defaultShowAutoReadMinimalInfo = true;
@@ -141,6 +144,8 @@ final class ReaderPreferences {
   static const ReaderInfoSlot defaultChapterProgressInfoSlot =
       ReaderInfoSlot.topRight;
   static const ReaderInfoSlot defaultClockInfoSlot = ReaderInfoSlot.bottomLeft;
+  static const ReaderInfoSlot defaultBatteryInfoSlot =
+      ReaderInfoSlot.bottomCenter;
   static const ReaderInfoSlot defaultWholeBookProgressInfoSlot =
       ReaderInfoSlot.bottomRight;
   static const ReaderInfoSlot defaultInfoDividerSlot = ReaderInfoSlot.topCenter;
@@ -177,6 +182,7 @@ final class ReaderPreferences {
     showChapterInfo: defaultShowChapterInfo,
     showChapterProgressInfo: defaultShowChapterProgressInfo,
     showClockInfo: defaultShowClockInfo,
+    showBatteryInfo: defaultShowBatteryInfo,
     showWholeBookProgressInfo: defaultShowWholeBookProgressInfo,
     showTopInfoDivider: defaultShowInfoDivider,
     showBottomInfoDivider: defaultShowInfoDivider,
@@ -184,6 +190,7 @@ final class ReaderPreferences {
     chapterInfoSlot: defaultChapterInfoSlot,
     chapterProgressInfoSlot: defaultChapterProgressInfoSlot,
     clockInfoSlot: defaultClockInfoSlot,
+    batteryInfoSlot: defaultBatteryInfoSlot,
     wholeBookProgressInfoSlot: defaultWholeBookProgressInfoSlot,
     infoDividerSlot: defaultInfoDividerSlot,
   );
@@ -222,6 +229,7 @@ final class ReaderPreferences {
     bool? showChapterInfo,
     bool? showChapterProgressInfo,
     bool? showClockInfo,
+    bool? showBatteryInfo,
     bool? showWholeBookProgressInfo,
     bool? showInfoDivider,
     bool? showTopInfoDivider,
@@ -230,6 +238,7 @@ final class ReaderPreferences {
     ReaderInfoSlot chapterInfoSlot = defaultChapterInfoSlot,
     ReaderInfoSlot chapterProgressInfoSlot = defaultChapterProgressInfoSlot,
     ReaderInfoSlot clockInfoSlot = defaultClockInfoSlot,
+    ReaderInfoSlot batteryInfoSlot = defaultBatteryInfoSlot,
     ReaderInfoSlot wholeBookProgressInfoSlot = defaultWholeBookProgressInfoSlot,
     ReaderInfoSlot infoDividerSlot = defaultInfoDividerSlot,
   }) => ReaderPreferences._(
@@ -330,6 +339,7 @@ final class ReaderPreferences {
     showChapterInfo: showChapterInfo ?? defaultShowChapterInfo,
     showChapterProgressInfo: showChapterProgressInfo ?? showProgressInfo,
     showClockInfo: showClockInfo ?? defaultShowClockInfo,
+    showBatteryInfo: showBatteryInfo ?? defaultShowBatteryInfo,
     showWholeBookProgressInfo: showWholeBookProgressInfo ?? showProgressInfo,
     showTopInfoDivider:
         showTopInfoDivider ?? showInfoDivider ?? defaultShowInfoDivider,
@@ -339,6 +349,7 @@ final class ReaderPreferences {
     chapterInfoSlot: chapterInfoSlot,
     chapterProgressInfoSlot: chapterProgressInfoSlot,
     clockInfoSlot: clockInfoSlot,
+    batteryInfoSlot: batteryInfoSlot,
     wholeBookProgressInfoSlot: wholeBookProgressInfoSlot,
     infoDividerSlot: infoDividerSlot,
   );
@@ -383,6 +394,7 @@ final class ReaderPreferences {
   final bool showChapterInfo;
   final bool showChapterProgressInfo;
   final bool showClockInfo;
+  final bool showBatteryInfo;
   final bool showWholeBookProgressInfo;
   final bool showTopInfoDivider;
   final bool showBottomInfoDivider;
@@ -394,6 +406,7 @@ final class ReaderPreferences {
   final ReaderInfoSlot chapterInfoSlot;
   final ReaderInfoSlot chapterProgressInfoSlot;
   final ReaderInfoSlot clockInfoSlot;
+  final ReaderInfoSlot batteryInfoSlot;
   final ReaderInfoSlot wholeBookProgressInfoSlot;
   final ReaderInfoSlot infoDividerSlot;
 
@@ -445,6 +458,7 @@ final class ReaderPreferences {
     bool? showChapterInfo,
     bool? showChapterProgressInfo,
     bool? showClockInfo,
+    bool? showBatteryInfo,
     bool? showWholeBookProgressInfo,
     bool? showInfoDivider,
     bool? showTopInfoDivider,
@@ -453,6 +467,7 @@ final class ReaderPreferences {
     ReaderInfoSlot? chapterInfoSlot,
     ReaderInfoSlot? chapterProgressInfoSlot,
     ReaderInfoSlot? clockInfoSlot,
+    ReaderInfoSlot? batteryInfoSlot,
     ReaderInfoSlot? wholeBookProgressInfoSlot,
     ReaderInfoSlot? infoDividerSlot,
   }) {
@@ -547,6 +562,7 @@ final class ReaderPreferences {
       showChapterInfo: nextChapterInfo,
       showChapterProgressInfo: nextChapterProgress,
       showClockInfo: showClockInfo ?? this.showClockInfo,
+      showBatteryInfo: showBatteryInfo ?? this.showBatteryInfo,
       showWholeBookProgressInfo: nextWholeBookProgress,
       showTopInfoDivider:
           showTopInfoDivider ?? showInfoDivider ?? this.showTopInfoDivider,
@@ -560,6 +576,7 @@ final class ReaderPreferences {
       chapterProgressInfoSlot:
           chapterProgressInfoSlot ?? this.chapterProgressInfoSlot,
       clockInfoSlot: clockInfoSlot ?? this.clockInfoSlot,
+      batteryInfoSlot: batteryInfoSlot ?? this.batteryInfoSlot,
       wholeBookProgressInfoSlot:
           wholeBookProgressInfoSlot ?? this.wholeBookProgressInfoSlot,
       infoDividerSlot: infoDividerSlot ?? this.infoDividerSlot,
@@ -603,6 +620,7 @@ final class ReaderPreferences {
         showChapterInfo != previous.showChapterInfo ||
         showChapterProgressInfo != previous.showChapterProgressInfo ||
         showClockInfo != previous.showClockInfo ||
+        showBatteryInfo != previous.showBatteryInfo ||
         showWholeBookProgressInfo != previous.showWholeBookProgressInfo ||
         showTopInfoDivider != previous.showTopInfoDivider ||
         showBottomInfoDivider != previous.showBottomInfoDivider ||
@@ -610,6 +628,7 @@ final class ReaderPreferences {
         chapterInfoSlot != previous.chapterInfoSlot ||
         chapterProgressInfoSlot != previous.chapterProgressInfoSlot ||
         clockInfoSlot != previous.clockInfoSlot ||
+        batteryInfoSlot != previous.batteryInfoSlot ||
         wholeBookProgressInfoSlot != previous.wholeBookProgressInfoSlot ||
         infoDividerSlot != previous.infoDividerSlot) {
       result.add(ReaderPreferenceChangeKind.display);
@@ -672,6 +691,7 @@ final class ReaderPreferences {
       showChapterInfo == other.showChapterInfo &&
       showChapterProgressInfo == other.showChapterProgressInfo &&
       showClockInfo == other.showClockInfo &&
+      showBatteryInfo == other.showBatteryInfo &&
       showWholeBookProgressInfo == other.showWholeBookProgressInfo &&
       showTopInfoDivider == other.showTopInfoDivider &&
       showBottomInfoDivider == other.showBottomInfoDivider &&
@@ -679,6 +699,7 @@ final class ReaderPreferences {
       chapterInfoSlot == other.chapterInfoSlot &&
       chapterProgressInfoSlot == other.chapterProgressInfoSlot &&
       clockInfoSlot == other.clockInfoSlot &&
+      batteryInfoSlot == other.batteryInfoSlot &&
       wholeBookProgressInfoSlot == other.wholeBookProgressInfoSlot &&
       infoDividerSlot == other.infoDividerSlot;
 
@@ -715,6 +736,7 @@ final class ReaderPreferences {
     showChapterInfo,
     showChapterProgressInfo,
     showClockInfo,
+    showBatteryInfo,
     showWholeBookProgressInfo,
     showTopInfoDivider,
     showBottomInfoDivider,
@@ -722,6 +744,7 @@ final class ReaderPreferences {
     chapterInfoSlot,
     chapterProgressInfoSlot,
     clockInfoSlot,
+    batteryInfoSlot,
     wholeBookProgressInfoSlot,
     infoDividerSlot,
   ]);

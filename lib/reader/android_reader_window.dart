@@ -16,6 +16,23 @@ final class AndroidReaderWindow {
 
   static const MethodChannel _channel = MethodChannel('xaocen.reader/window');
 
+  static Future<BatteryStatus?> batteryStatus() async {
+    if (defaultTargetPlatform != TargetPlatform.android) return null;
+    try {
+      final value = await _channel.invokeMethod<Object?>('getBatteryStatus');
+      if (value is! Map) return null;
+      final percent = value['percent'];
+      final charging = value['charging'];
+      if (percent is! num || charging is! bool) return null;
+      return BatteryStatus(
+        percent: percent.round().clamp(0, 100),
+        charging: charging,
+      );
+    } on PlatformException {
+      return null;
+    }
+  }
+
   static Future<void> setDisplayCutout({required bool extend}) async {
     if (defaultTargetPlatform != TargetPlatform.android) return;
     try {
@@ -114,4 +131,10 @@ final class AndroidReaderWindow {
       hideNavigationBar ? 0 : maxBottom,
     );
   }
+}
+
+final class BatteryStatus {
+  const BatteryStatus({required this.percent, required this.charging});
+  final int percent;
+  final bool charging;
 }

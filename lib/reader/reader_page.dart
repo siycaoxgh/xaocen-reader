@@ -243,6 +243,8 @@ class _ReaderPageState extends State<ReaderPage>
   bool _suppressProgrammaticScrollNotifications = false;
   bool _chromeVisible = true;
   Timer? _autoReadChromeHideTimer;
+  Timer? _batteryStatusTimer;
+  BatteryStatus? _batteryStatus;
   final FocusNode _pagedInputFocusNode = FocusNode(
     debugLabel: 'reader-paged-input',
   );
@@ -704,6 +706,13 @@ class _ReaderPageState extends State<ReaderPage>
   @override
   void initState() {
     super.initState();
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      unawaited(_refreshBatteryStatus());
+      _batteryStatusTimer = Timer.periodic(
+        const Duration(seconds: 30),
+        (_) => unawaited(_refreshBatteryStatus()),
+      );
+    }
     _autoReadController = AutoReadController();
     _verticalAutoReadDriver = VerticalAutoReadDriver(
       vsync: this,
@@ -792,6 +801,12 @@ class _ReaderPageState extends State<ReaderPage>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) unawaited(_initializePreferencesAndStart());
     });
+  }
+
+  Future<void> _refreshBatteryStatus() async {
+    final status = await AndroidReaderWindow.batteryStatus();
+    if (!mounted || status == _batteryStatus) return;
+    setState(() => _batteryStatus = status);
   }
 
   Future<void> _prepareFontForPreferences(ReaderPreferences preferences) async {
@@ -1042,6 +1057,8 @@ class _ReaderPageState extends State<ReaderPage>
 
   @override
   void dispose() {
+    _batteryStatusTimer?.cancel();
+    _batteryStatusTimer = null;
     _autoReadChromeHideTimer?.cancel();
     _autoReadChromeHideTimer = null;
     _autoReadSpeedWriteTimer?.cancel();
@@ -2291,6 +2308,8 @@ class _ReaderPageState extends State<ReaderPage>
         : _buildVerticalBody(context, index, doc);
     final readerBody = _buildReaderBodyWithInfoRegions(context, readerContent);
     return Scaffold(
+      extendBody: true,
+      extendBodyBehindAppBar: true,
       backgroundColor: _appearance.backgroundColor,
       body: Stack(
         fit: StackFit.expand,
@@ -2337,6 +2356,7 @@ class _ReaderPageState extends State<ReaderPage>
             showChapterInfo: _preferences.showChapterInfo,
             showChapterProgressInfo: _preferences.showChapterProgressInfo,
             showClockInfo: _preferences.showClockInfo,
+            showBatteryInfo: _preferences.showBatteryInfo,
             showWholeBookProgressInfo: _preferences.showWholeBookProgressInfo,
             showTopInfoDivider: _preferences.showTopInfoDivider,
             showBottomInfoDivider: _preferences.showBottomInfoDivider,
@@ -2345,12 +2365,14 @@ class _ReaderPageState extends State<ReaderPage>
             chapterInfoSlot: _preferences.chapterInfoSlot,
             chapterProgressInfoSlot: _preferences.chapterProgressInfoSlot,
             clockInfoSlot: _preferences.clockInfoSlot,
+            batteryInfoSlot: _preferences.batteryInfoSlot,
             wholeBookProgressInfoSlot: _preferences.wholeBookProgressInfoSlot,
             infoDividerSlot: _preferences.infoDividerSlot,
             statusBarMode: _preferences.statusBarMode,
             timeDisplayMode: _preferences.timeDisplayMode,
             readerTextColor: _appearance.textColor,
             readerBackgroundColor: _appearance.backgroundColor,
+            batteryStatus: _batteryStatus,
             extendIntoDisplayCutout: _preferences.extendIntoDisplayCutout,
             hideNavigationBar: _preferences.hideNavigationBar,
             autoReadState: _autoReadController.state,
@@ -2453,18 +2475,21 @@ class _ReaderPageState extends State<ReaderPage>
       showChapterInfo: _preferences.showChapterInfo,
       showChapterProgressInfo: _preferences.showChapterProgressInfo,
       showClockInfo: _preferences.showClockInfo,
+      showBatteryInfo: _preferences.showBatteryInfo,
       showWholeBookProgressInfo: _preferences.showWholeBookProgressInfo,
       showTopInfoDivider: _preferences.showTopInfoDivider,
       showBottomInfoDivider: _preferences.showBottomInfoDivider,
       chapterInfoSlot: _preferences.chapterInfoSlot,
       chapterProgressInfoSlot: _preferences.chapterProgressInfoSlot,
       clockInfoSlot: _preferences.clockInfoSlot,
+      batteryInfoSlot: _preferences.batteryInfoSlot,
       wholeBookProgressInfoSlot: _preferences.wholeBookProgressInfoSlot,
       infoDividerSlot: _preferences.infoDividerSlot,
       statusBarMode: _preferences.statusBarMode,
       timeDisplayMode: _preferences.timeDisplayMode,
       readerTextColor: _appearance.textColor,
       readerBackgroundColor: _appearance.backgroundColor,
+      batteryStatus: _batteryStatus,
       extendIntoDisplayCutout: _preferences.extendIntoDisplayCutout,
       hideNavigationBar: _preferences.hideNavigationBar,
     );
