@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:xaocen_reader/domain/reader/reader_preferences.dart';
 import 'package:xaocen_reader/reader/reader_chrome.dart';
@@ -17,11 +18,16 @@ Widget _host({
   Color readerBackgroundColor = Colors.white,
   Color? regionBackgroundColor,
   Brightness brightness = Brightness.light,
+  List<DisplayFeature> displayFeatures = const [],
 }) {
   return MaterialApp(
     theme: ThemeData(brightness: brightness),
     home: MediaQuery(
-      data: MediaQueryData(size: const Size(800, 600), padding: padding),
+      data: MediaQueryData(
+        size: const Size(800, 600),
+        padding: padding,
+        displayFeatures: displayFeatures,
+      ),
       child: Scaffold(
         body: ReaderInfoScaffold(
           body: const ColoredBox(key: Key('reader-body'), color: Colors.white),
@@ -61,6 +67,28 @@ Widget _host({
 }
 
 void main() {
+  testWidgets('top info and divider clear a real cutout bound', (tester) async {
+    const cutout = DisplayFeature(
+      bounds: Rect.fromLTWH(320, 0, 80, 52),
+      type: DisplayFeatureType.cutout,
+      state: DisplayFeatureState.unknown,
+    );
+    await tester.pumpWidget(
+      _host(
+        top: true,
+        bottom: false,
+        divider: false,
+        topDivider: true,
+        padding: EdgeInsets.zero,
+        displayFeatures: const [cutout],
+      ),
+    );
+    final divider = tester.getRect(find.byKey(readerTopInfoDividerKey));
+    expect(divider.top, greaterThanOrEqualTo(52 + 4));
+    expect(divider.left, 0);
+    expect(divider.right, 800);
+  });
+
   for (final platform in [TargetPlatform.android, TargetPlatform.windows]) {
     for (final brightness in Brightness.values) {
       testWidgets('Reader info owns the Reader palette background on '

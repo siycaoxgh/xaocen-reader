@@ -103,7 +103,7 @@ The historical bottom `BorderSide` on TopChrome was removed entirely. It was not
 ## Verification
 
 - `flutter analyze`: PASS.
-- Full Flutter tests: PASS, 557 tests (including the cross-platform supplement).
+- Full Flutter tests: PASS, 562 tests (including the cutout slot/geometry supplement).
 - Targeted Chrome/Divider widget tests: PASS, including SafeArea surface ownership and full-width divider geometry.
 - Android Debug build: PASS.
 - Normal APK `install -r`: PASS; emulator data preserved.
@@ -117,3 +117,62 @@ The historical bottom `BorderSide` on TopChrome was removed entirely. It was not
 - **DIVIDER = PASS** — final Android emulator screenshot and exact pixel rows.
 - **ANDROID READER COLOR OWNERSHIP = PASS** — runtime screenshot plus Light/Dark contract tests.
 - **WINDOWS READER COLOR OWNERSHIP = AUTOMATED PASS / MANUAL VISUAL REQUIRED** — shared implementation and Windows Light/Dark contract tests pass; no local window screenshot was obtainable in the current remote/tray state.
+
+## Cutout / notch foreground contract
+
+The same visual pass now consumes Flutter's real `MediaQuery.displayFeatures` and filters only `DisplayFeatureType.cutout`. No camera-center assumption, fixed status-bar height, or hard-coded notch dimension is used.
+
+On the current emulator, `adb shell dumpsys display` reports a real center top cutout with physical bounds approximately `(480,0)-(625,136)` (the Flutter logical bounds are supplied at runtime by `MediaQuery`). Background surfaces remain edge-to-edge. Important foreground content is given the cutout's actual bottom/side edge plus a 4 logical-pixel visual safety gap; therefore TopInfo content and the TopDivider are laid out after the cutout rather than painted through it. Left/right cutouts in landscape are handled by the same bounds-based calculation.
+
+The App Shell continues to use Flutter `SafeArea`, which consumes the platform-provided `MediaQuery` padding for header content while retaining a surface underlay behind system bars/cutouts. No user-facing camera-position setting was added.
+
+Cutout tests cover:
+
+- centered top cutout;
+- left and right edge cutouts in landscape;
+- non-cutout display features ignored;
+- existing status-bar/cutout preference contract.
+
+The current emulator supports cutout emulation, so `CUTOUT EMULATION = AVAILABLE`.
+
+### Cutout contract correction
+
+The first cutout implementation was intentionally conservative, but it moved
+the entire TopInfo row below a center camera hole. That was rejected by the
+product contract because edge-to-edge Reader mode must use the left and right
+spaces beside the hole. The implementation is now local:
+
+- `MediaQuery.displayFeatures` is filtered to real `DisplayFeatureType.cutout`
+  bounds; no camera-center or fixed status-bar assumption is used.
+- Reader background remains edge-to-edge behind status/cutout areas.
+- Top-left and top-right slots remain at their normal row position when a
+  centered cutout is present.
+- Only a top-center slot that actually intersects a cutout receives the
+  cutout's real bottom edge plus the 4 logical-pixel visual gap.
+- The full TopDivider remains one uninterrupted line. Its region is placed
+  after the real cutout clearance rather than split into left/right segments.
+- Edge cutouts in portrait and landscape are handled by local side padding;
+  fold/hinge display features are ignored.
+
+This prevents the former full-width blank block while keeping important
+foreground content and the divider out of the physical cutout. The emulator's
+center-hole run was reinstalled from the normal APK and captured as:
+
+- `test_output/m5_7s_7c_1_5r/cutout_reader_current.png`
+- `test_output/m5_7s_7c_1_5r/cutout_reader_hidden_contract.png`
+
+The hidden-Chrome hierarchy reports the TopInfo content at the top of the
+screen (with the center slot/divider constrained below the hole), and the
+screen background is continuous from physical `y=0`; no cutout-sized blank
+surface is introduced.
+
+Final supplement verification:
+
+- `flutter analyze`: PASS.
+- Targeted cutout/ReaderInfo tests: PASS, 21 tests.
+- Full Flutter tests: PASS, 562 tests.
+- Android Debug APK: PASS; installed with `adb -s emulator-5554 install -r`.
+- Windows Release build: PASS (`build/windows/x64/runner/Release/xaocen_reader.exe`).
+- `git diff --check`: PASS.
+- No schema, Locator, ReaderBody truth, Chrome command, Battery, Theme, or
+  Vertical/Paged contract changes.
