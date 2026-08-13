@@ -7,6 +7,7 @@ import 'package:drift/drift.dart';
 
 import '../../domain/reader/reader_preferences.dart';
 import '../../domain/reader/reader_palette.dart';
+import '../../domain/reader/reader_screen_awake.dart';
 import '../database/app_database.dart';
 
 final class ReaderPreferencesRepository {
@@ -75,6 +76,8 @@ final class ReaderPreferencesRepository {
       batteryInfoSlot: preferences.batteryInfoSlot,
       wholeBookProgressInfoSlot: preferences.wholeBookProgressInfoSlot,
       infoDividerSlot: preferences.infoDividerSlot,
+      screenAwakeMode: preferences.screenAwakeMode,
+      screenAwakeInactivityMinutes: preferences.screenAwakeInactivityMinutes,
     );
     await _db
         .into(_db.readerPreferencesRows)
@@ -131,6 +134,10 @@ final class ReaderPreferencesRepository {
               safe.wholeBookProgressInfoSlot.name,
             ),
             infoDividerSlot: Value(safe.infoDividerSlot.name),
+            screenAwakeMode: Value(safe.screenAwakeMode.name),
+            screenAwakeInactivityMinutes: Value(
+              safe.screenAwakeInactivityMinutes,
+            ),
             updatedAt: Value(DateTime.now()),
           ),
         );
@@ -232,6 +239,17 @@ final class ReaderPreferencesRepository {
         row.infoDividerSlot,
         ReaderPreferences.defaultInfoDividerSlot,
       ),
+      screenAwakeMode:
+          ReaderScreenAwakeMode.values
+              .where((value) => value.name == row.screenAwakeMode)
+              .firstOrNull ??
+          ReaderPreferences.defaultScreenAwakeMode,
+      screenAwakeInactivityMinutes:
+          ReaderScreenAwakeController.inactivityOptions.contains(
+            row.screenAwakeInactivityMinutes,
+          )
+          ? row.screenAwakeInactivityMinutes
+          : ReaderPreferences.defaultScreenAwakeInactivityMinutes,
     );
   }
 

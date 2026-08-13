@@ -12,6 +12,7 @@ import '../domain/reader/auto_read_controller.dart';
 import '../domain/reader/auto_read_preferences.dart';
 import '../domain/reader/reader_palette.dart';
 import '../domain/reader/reader_preferences.dart';
+import '../domain/reader/reader_screen_awake.dart';
 import 'android_reader_window.dart';
 import '../domain/reader/reader_font.dart';
 import '../data/repositories/reader_system_font_repository.dart';
@@ -93,6 +94,8 @@ const readerScreenOrientationKey = Key('reader-screen-orientation');
 const readerTimeDisplayModeKey = Key('reader-time-display-mode');
 const readerTopInfoDividerKey = Key('reader-top-info-divider');
 const readerBottomInfoDividerKey = Key('reader-bottom-info-divider');
+const readerScreenAwakeModeKey = Key('reader-screen-awake-mode');
+const readerScreenAwakeTimeoutKey = Key('reader-screen-awake-timeout');
 
 const _aaSectionGap = 12.0;
 const _aaControlRadius = 12.0;
@@ -2922,6 +2925,60 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
           '设置变化会保留当前 ReaderLocator；外观颜色属于即时预览，不会触发重新分页。',
           style: Theme.of(context).textTheme.bodySmall,
         ),
+        const SizedBox(height: 20),
+        Text(
+          '\u5c4f\u5e55\u4e0e\u6c89\u6d78',
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        const SizedBox(height: 4),
+        Text(
+          '\u63a7\u5236 Reader \u524d\u53f0\u65f6\u7684\u5c4f\u5e55\u4fdd\u6301\u7b56\u7565\uff0c\u4e0d\u4f1a\u4fee\u6539 Android \u7cfb\u7edf\u8d85\u65f6\u8bbe\u7f6e\u3002',
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+        const SizedBox(height: 10),
+        SegmentedButton<ReaderScreenAwakeMode>(
+          key: readerScreenAwakeModeKey,
+          segments: const [
+            ButtonSegment(
+              value: ReaderScreenAwakeMode.followSystem,
+              label: Text('\u8ddf\u968f\u7cfb\u7edf'),
+            ),
+            ButtonSegment(
+              value: ReaderScreenAwakeMode.smart,
+              label: Text('\u667a\u80fd\u5e38\u4eae'),
+            ),
+            ButtonSegment(
+              value: ReaderScreenAwakeMode.whileReading,
+              label: Text('\u9605\u8bfb\u65f6\u5e38\u4eae'),
+            ),
+          ],
+          selected: {_draft.screenAwakeMode},
+          onSelectionChanged: (selection) =>
+              _commit(_draft.copyWith(screenAwakeMode: selection.first)),
+        ),
+        if (_draft.screenAwakeMode == ReaderScreenAwakeMode.smart) ...[
+          const SizedBox(height: 12),
+          Text(
+            '\u65e0\u64cd\u4f5c\u540e\u6682\u505c\u5e38\u4eae\uff1a',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          const SizedBox(height: 6),
+          SegmentedButton<int>(
+            key: readerScreenAwakeTimeoutKey,
+            segments: [
+              for (final minutes
+                  in ReaderScreenAwakeController.inactivityOptions)
+                ButtonSegment(
+                  value: minutes,
+                  label: Text('$minutes \u5206\u949f'),
+                ),
+            ],
+            selected: {_draft.screenAwakeInactivityMinutes},
+            onSelectionChanged: (selection) => _commit(
+              _draft.copyWith(screenAwakeInactivityMinutes: selection.first),
+            ),
+          ),
+        ],
         const SizedBox(height: 20),
         OutlinedButton.icon(
           key: readerResetPreferencesKey,

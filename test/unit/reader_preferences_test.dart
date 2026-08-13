@@ -8,6 +8,7 @@ import 'package:xaocen_reader/data/database/app_database.dart';
 import 'package:xaocen_reader/data/repositories/reader_preferences_repository.dart';
 import 'package:xaocen_reader/domain/reader/reader_palette.dart';
 import 'package:xaocen_reader/domain/reader/reader_preferences.dart';
+import 'package:xaocen_reader/domain/reader/reader_screen_awake.dart';
 
 void main() {
   const a = 'local-txt:a';
@@ -197,6 +198,8 @@ void main() {
         showProgressInfo: false,
         statusBarMode: ReaderStatusBarMode.readerInfo,
         timeDisplayMode: ReaderTimeDisplayMode.twelveHour,
+        screenAwakeMode: ReaderScreenAwakeMode.smart,
+        screenAwakeInactivityMinutes: 15,
       );
       final emissions = <ReaderPreferences>[];
       final sub = repo.watch(a).listen(emissions.add);
@@ -374,7 +377,7 @@ void main() {
       expect(
         (await db.customSelect('PRAGMA user_version').getSingle())
             .data['user_version'],
-        17,
+        18,
       );
       await db.close();
       await dir.delete(recursive: true);
@@ -409,7 +412,7 @@ void main() {
     expect(
       (await db.customSelect('PRAGMA user_version').getSingle())
           .data['user_version'],
-      17,
+      18,
     );
     await db.close();
     await dir.delete(recursive: true);
@@ -450,7 +453,7 @@ void main() {
       expect(
         (await db.customSelect('PRAGMA user_version').getSingle())
             .data['user_version'],
-        17,
+        18,
       );
       await db.close();
       await dir.delete(recursive: true);
@@ -475,7 +478,37 @@ void main() {
     expect(
       (await db.customSelect('PRAGMA user_version').getSingle())
           .data['user_version'],
-      17,
+      18,
+    );
+    await db.close();
+    await dir.delete(recursive: true);
+  });
+
+  test('schema 17 -> 18 adds screen-awake defaults', () async {
+    final dir = await Directory.systemTemp.createTemp(
+      'm57s_screen_awake_migration',
+    );
+    final file = File('${dir.path}${Platform.pathSeparator}db.sqlite');
+    var db = AppDatabase(NativeDatabase(file));
+    await seedBook(db, a);
+    await db.close();
+    final raw = sqlite3.open(file.path);
+    raw.execute('ALTER TABLE reader_preferences DROP COLUMN screen_awake_mode');
+    raw.execute(
+      'ALTER TABLE reader_preferences '
+      'DROP COLUMN screen_awake_inactivity_minutes',
+    );
+    raw.execute('PRAGMA user_version = 17');
+    raw.dispose();
+
+    db = AppDatabase(NativeDatabase(file));
+    final loaded = await ReaderPreferencesRepository(db: db).load(a);
+    expect(loaded.screenAwakeMode, ReaderScreenAwakeMode.followSystem);
+    expect(loaded.screenAwakeInactivityMinutes, 30);
+    expect(
+      (await db.customSelect('PRAGMA user_version').getSingle())
+          .data['user_version'],
+      18,
     );
     await db.close();
     await dir.delete(recursive: true);
@@ -534,7 +567,7 @@ void main() {
     expect(
       (await db.customSelect('PRAGMA user_version').getSingle())
           .data['user_version'],
-      17,
+      18,
     );
     await db.close();
     await dir.delete(recursive: true);
@@ -622,7 +655,7 @@ void main() {
     expect(
       (await db.customSelect('PRAGMA user_version').getSingle())
           .data['user_version'],
-      17,
+      18,
     );
     expect((await db.select(db.contentCollections).get()).single.id, a);
     await db.close();
@@ -712,11 +745,13 @@ void main() {
       expect(migrated.chapterProgressInfoSlot, ReaderInfoSlot.topRight);
       expect(migrated.clockInfoSlot, ReaderInfoSlot.bottomLeft);
       expect(migrated.wholeBookProgressInfoSlot, ReaderInfoSlot.bottomRight);
+      expect(migrated.screenAwakeMode, ReaderScreenAwakeMode.followSystem);
+      expect(migrated.screenAwakeInactivityMinutes, 30);
       expect(migrated.statusBarMode, ReaderStatusBarMode.system);
       expect(
         (await db.customSelect('PRAGMA user_version').getSingle())
             .data['user_version'],
-        17,
+        18,
       );
       await db.close();
       await dir.delete(recursive: true);
@@ -806,7 +841,7 @@ void main() {
       expect(
         (await db.customSelect('PRAGMA user_version').getSingle())
             .data['user_version'],
-        17,
+        18,
       );
       await db.close();
       await dir.delete(recursive: true);

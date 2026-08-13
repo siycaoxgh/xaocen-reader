@@ -65,6 +65,21 @@ void main() {
     }
   });
 
+  testWidgets('advanced screen awake policy exposes typed controls', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_settings(const Size(1024, 720)));
+    await tester.tap(
+      find.byKey(const ValueKey('reader-settings-category-advanced')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byKey(readerScreenAwakeModeKey), findsOneWidget);
+    expect(find.byKey(readerScreenAwakeTimeoutKey), findsNothing);
+    await tester.tap(find.text('\u667a\u80fd\u5e38\u4eae'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(readerScreenAwakeTimeoutKey), findsOneWidget);
+  });
+
   testWidgets(
     'appearance exposes full-width preview and color picker actions',
     (tester) async {

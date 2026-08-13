@@ -43,6 +43,7 @@ import '../domain/reader/reader_locator.dart';
 import '../domain/reader/paged_text_range.dart';
 import '../domain/reader/reader_block.dart';
 import '../domain/reader/reader_preferences.dart';
+import '../domain/reader/reader_screen_awake.dart';
 import '../domain/reader/reader_font.dart';
 import '../domain/reader/reader_search.dart';
 import '../domain/reader/reader_visible_range.dart';
@@ -186,6 +187,7 @@ class _ReaderPageState extends State<ReaderPage>
   bool _preferencesWriteInFlight = false;
   late final ReaderInputRouter _inputRouter;
   late final AutoReadController _autoReadController;
+  late final ReaderScreenAwakeController _screenAwakeController;
   late final VerticalAutoReadDriver _verticalAutoReadDriver;
   PagedAutoReadDriver? _pagedAutoReadDriver;
   StreamSubscription<AutoReadEvent>? _autoReadEvents;
@@ -255,6 +257,7 @@ class _ReaderPageState extends State<ReaderPage>
   Future<void> _historyWriteTail = Future<void>.value();
 
   void _toggleChrome() {
+    _screenAwakeController.recordUserActivity();
     _autoReadChromeHideTimer?.cancel();
     _autoReadChromeHideTimer = null;
     if (_chromeVisible) {
@@ -331,6 +334,7 @@ class _ReaderPageState extends State<ReaderPage>
   }
 
   void _toggleAutoRead() {
+    _screenAwakeController.recordUserActivity();
     _showChrome();
     switch (_autoReadController.state) {
       case AutoReadState.running:
@@ -343,6 +347,7 @@ class _ReaderPageState extends State<ReaderPage>
   }
 
   void _pauseAutoReadForManualNavigation() {
+    _screenAwakeController.recordUserActivity();
     _showChrome();
     _pauseAutoRead(AutoReadPauseReason.manualNavigation);
   }
@@ -362,6 +367,7 @@ class _ReaderPageState extends State<ReaderPage>
   }
 
   void _openAutoReadControls() {
+    _screenAwakeController.recordUserActivity();
     _showChrome();
     // Opening an operation panel pauses a running driver and never resumes it
     // when the panel closes. ReadingSession remains lifecycle-owned.
@@ -482,6 +488,7 @@ class _ReaderPageState extends State<ReaderPage>
   /// needed, but must never alter Reader Chrome visibility; only a deliberate
   /// center tap owns that visibility toggle.
   void _pauseAutoReadForPageNavigation() {
+    _screenAwakeController.recordUserActivity();
     _pauseAutoRead(AutoReadPauseReason.manualNavigation);
   }
 
@@ -706,6 +713,14 @@ class _ReaderPageState extends State<ReaderPage>
   @override
   void initState() {
     super.initState();
+    _screenAwakeController = ReaderScreenAwakeController(
+      setKeepScreenOn: ReaderKeepAwake.setEnabled,
+      onSmartTimeout: () {
+        if (_autoReadController.state == AutoReadState.running) {
+          _pauseAutoRead(AutoReadPauseReason.inactivityTimeout);
+        }
+      },
+    );
     if (defaultTargetPlatform == TargetPlatform.android) {
       unawaited(_refreshBatteryStatus());
       _batteryStatusTimer = Timer.periodic(
@@ -727,11 +742,6 @@ class _ReaderPageState extends State<ReaderPage>
           _restoreFinished,
     );
     _autoReadEvents = _autoReadController.events.listen((_) {
-      unawaited(
-        ReaderKeepAwake.setEnabled(
-          _autoReadController.state == AutoReadState.running,
-        ),
-      );
       if (_autoReadController.state == AutoReadState.paused ||
           _autoReadController.state == AutoReadState.idle ||
           _autoReadController.state == AutoReadState.stoppedAtEnd) {
@@ -889,6 +899,11 @@ class _ReaderPageState extends State<ReaderPage>
     }
     if (!mounted) return;
     _preferencesReady = true;
+    _screenAwakeController.updatePreferences(
+      mode: _preferences.screenAwakeMode,
+      inactivityMinutes: _preferences.screenAwakeInactivityMinutes,
+    );
+    _screenAwakeController.enterReader();
     _resolveAppearance();
     _syncAndroidSystemUi();
     setState(() {});
@@ -1082,7 +1097,7 @@ class _ReaderPageState extends State<ReaderPage>
     _pagedAutoReadDriver?.dispose();
     _pagedAutoReadDriver = null;
     _autoReadController.dispose();
-    unawaited(ReaderKeepAwake.release());
+    _screenAwakeController.dispose();
     if (defaultTargetPlatform == TargetPlatform.android) {
       unawaited(SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge));
       unawaited(SystemChrome.setPreferredOrientations(const []));
@@ -1124,6 +1139,13 @@ class _ReaderPageState extends State<ReaderPage>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    _screenAwakeController.setLifecycle(switch (state) {
+      AppLifecycleState.resumed => ReaderScreenAwakeLifecycle.foreground,
+      AppLifecycleState.inactive => ReaderScreenAwakeLifecycle.inactive,
+      AppLifecycleState.paused => ReaderScreenAwakeLifecycle.background,
+      AppLifecycleState.detached => ReaderScreenAwakeLifecycle.detached,
+      AppLifecycleState.hidden => ReaderScreenAwakeLifecycle.background,
+    });
     if (state == AppLifecycleState.inactive ||
         state == AppLifecycleState.paused ||
         state == AppLifecycleState.detached) {
@@ -1155,6 +1177,15 @@ class _ReaderPageState extends State<ReaderPage>
     final nextSignature = ReaderMetricsSignature.fromPreferences(next);
     _preferences = next;
     _preferencesNotifier.value = next;
+    if (next.screenAwakeMode != previous.screenAwakeMode ||
+        next.screenAwakeInactivityMinutes !=
+            previous.screenAwakeInactivityMinutes) {
+      _screenAwakeController.updatePreferences(
+        mode: next.screenAwakeMode,
+        inactivityMinutes: next.screenAwakeInactivityMinutes,
+      );
+      _screenAwakeController.recordUserActivity();
+    }
     final androidWindowChanged =
         next.showSystemStatusBar != previous.showSystemStatusBar ||
         next.hideNavigationBar != previous.hideNavigationBar ||
@@ -2418,6 +2449,7 @@ class _ReaderPageState extends State<ReaderPage>
                   unawaited(_openToc());
                 },
                 onAppearance: () {
+                  _screenAwakeController.recordUserActivity();
                   _showChrome();
                   _pauseAutoRead(AutoReadPauseReason.settingsPanel);
                   unawaited(
@@ -2440,6 +2472,7 @@ class _ReaderPageState extends State<ReaderPage>
                   );
                 },
                 onMore: () {
+                  _screenAwakeController.recordUserActivity();
                   _showChrome();
                   _pauseAutoRead(AutoReadPauseReason.settingsPanel);
                   showReaderMorePreview(context, onSearch: _openSearch);
@@ -2448,6 +2481,7 @@ class _ReaderPageState extends State<ReaderPage>
                 onSearch: _openSearch,
                 onAutoRead: _openAutoReadControls,
                 onModeSelected: (mode) {
+                  _screenAwakeController.recordUserActivity();
                   _showChrome();
                   _selectMode(mode);
                 },
@@ -2676,6 +2710,10 @@ class _ReaderPageState extends State<ReaderPage>
   void _onUserScroll(ScrollNotification notification) {
     if (_suppressProgrammaticScrollNotifications) return;
     if (!_verticalAutoReadDriver.isApplyingAutoScroll &&
+        _mode == ReaderMode.vertical) {
+      _screenAwakeController.recordUserActivity();
+    }
+    if (!_verticalAutoReadDriver.isApplyingAutoScroll &&
         _mode == ReaderMode.vertical &&
         _autoReadController.state == AutoReadState.running) {
       // A notification not emitted by the driver's guarded jumpTo is a
@@ -2786,6 +2824,7 @@ class _ReaderPageState extends State<ReaderPage>
   }
 
   void _openSearch() {
+    _screenAwakeController.recordUserActivity();
     _showChrome();
     _pauseAutoRead(AutoReadPauseReason.search);
     unawaited(
@@ -2841,6 +2880,7 @@ class _ReaderPageState extends State<ReaderPage>
   }
 
   void _openBookmarks() {
+    _screenAwakeController.recordUserActivity();
     _showChrome();
     _pauseAutoRead(AutoReadPauseReason.bookmark);
     unawaited(_loadAndOpenBookmarks());
@@ -2937,6 +2977,7 @@ class _ReaderPageState extends State<ReaderPage>
   }
 
   Future<void> _openToc() async {
+    _screenAwakeController.recordUserActivity();
     _pauseAutoRead(AutoReadPauseReason.toc);
     // 当前章节高亮基于真实可见范围顶部（§十一），非上次点击/恢复位置。
     // M4：分页模式基于 confirmed locator（精确 anchor / 翻页后 page.start）。

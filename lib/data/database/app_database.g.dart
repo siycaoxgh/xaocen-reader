@@ -4697,6 +4697,30 @@ class $ReaderPreferencesRowsTable extends ReaderPreferencesRows
     requiredDuringInsert: false,
     defaultValue: const Constant('topCenter'),
   );
+  static const VerificationMeta _screenAwakeModeMeta = const VerificationMeta(
+    'screenAwakeMode',
+  );
+  @override
+  late final GeneratedColumn<String> screenAwakeMode = GeneratedColumn<String>(
+    'screen_awake_mode',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('followSystem'),
+  );
+  static const VerificationMeta _screenAwakeInactivityMinutesMeta =
+      const VerificationMeta('screenAwakeInactivityMinutes');
+  @override
+  late final GeneratedColumn<int> screenAwakeInactivityMinutes =
+      GeneratedColumn<int>(
+        'screen_awake_inactivity_minutes',
+        aliasedName,
+        false,
+        type: DriftSqlType.int,
+        requiredDuringInsert: false,
+        defaultValue: const Constant(30),
+      );
   static const VerificationMeta _updatedAtMeta = const VerificationMeta(
     'updatedAt',
   );
@@ -4757,6 +4781,8 @@ class $ReaderPreferencesRowsTable extends ReaderPreferencesRows
     batteryInfoSlot,
     wholeBookProgressInfoSlot,
     infoDividerSlot,
+    screenAwakeMode,
+    screenAwakeInactivityMinutes,
     updatedAt,
   ];
   @override
@@ -5198,6 +5224,24 @@ class $ReaderPreferencesRowsTable extends ReaderPreferencesRows
         ),
       );
     }
+    if (data.containsKey('screen_awake_mode')) {
+      context.handle(
+        _screenAwakeModeMeta,
+        screenAwakeMode.isAcceptableOrUnknown(
+          data['screen_awake_mode']!,
+          _screenAwakeModeMeta,
+        ),
+      );
+    }
+    if (data.containsKey('screen_awake_inactivity_minutes')) {
+      context.handle(
+        _screenAwakeInactivityMinutesMeta,
+        screenAwakeInactivityMinutes.isAcceptableOrUnknown(
+          data['screen_awake_inactivity_minutes']!,
+          _screenAwakeInactivityMinutesMeta,
+        ),
+      );
+    }
     if (data.containsKey('updated_at')) {
       context.handle(
         _updatedAtMeta,
@@ -5403,6 +5447,14 @@ class $ReaderPreferencesRowsTable extends ReaderPreferencesRows
         DriftSqlType.string,
         data['${effectivePrefix}info_divider_slot'],
       )!,
+      screenAwakeMode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}screen_awake_mode'],
+      )!,
+      screenAwakeInactivityMinutes: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}screen_awake_inactivity_minutes'],
+      )!,
       updatedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}updated_at'],
@@ -5467,6 +5519,8 @@ class ReaderPreferencesRow extends DataClass
   final String batteryInfoSlot;
   final String wholeBookProgressInfoSlot;
   final String infoDividerSlot;
+  final String screenAwakeMode;
+  final int screenAwakeInactivityMinutes;
   final DateTime updatedAt;
   const ReaderPreferencesRow({
     required this.collectionId,
@@ -5516,6 +5570,8 @@ class ReaderPreferencesRow extends DataClass
     required this.batteryInfoSlot,
     required this.wholeBookProgressInfoSlot,
     required this.infoDividerSlot,
+    required this.screenAwakeMode,
+    required this.screenAwakeInactivityMinutes,
     required this.updatedAt,
   });
   @override
@@ -5598,6 +5654,10 @@ class ReaderPreferencesRow extends DataClass
       wholeBookProgressInfoSlot,
     );
     map['info_divider_slot'] = Variable<String>(infoDividerSlot);
+    map['screen_awake_mode'] = Variable<String>(screenAwakeMode);
+    map['screen_awake_inactivity_minutes'] = Variable<int>(
+      screenAwakeInactivityMinutes,
+    );
     map['updated_at'] = Variable<DateTime>(updatedAt);
     return map;
   }
@@ -5667,6 +5727,8 @@ class ReaderPreferencesRow extends DataClass
       batteryInfoSlot: Value(batteryInfoSlot),
       wholeBookProgressInfoSlot: Value(wholeBookProgressInfoSlot),
       infoDividerSlot: Value(infoDividerSlot),
+      screenAwakeMode: Value(screenAwakeMode),
+      screenAwakeInactivityMinutes: Value(screenAwakeInactivityMinutes),
       updatedAt: Value(updatedAt),
     );
   }
@@ -5752,6 +5814,10 @@ class ReaderPreferencesRow extends DataClass
         json['wholeBookProgressInfoSlot'],
       ),
       infoDividerSlot: serializer.fromJson<String>(json['infoDividerSlot']),
+      screenAwakeMode: serializer.fromJson<String>(json['screenAwakeMode']),
+      screenAwakeInactivityMinutes: serializer.fromJson<int>(
+        json['screenAwakeInactivityMinutes'],
+      ),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
     );
   }
@@ -5826,6 +5892,10 @@ class ReaderPreferencesRow extends DataClass
         wholeBookProgressInfoSlot,
       ),
       'infoDividerSlot': serializer.toJson<String>(infoDividerSlot),
+      'screenAwakeMode': serializer.toJson<String>(screenAwakeMode),
+      'screenAwakeInactivityMinutes': serializer.toJson<int>(
+        screenAwakeInactivityMinutes,
+      ),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
     };
   }
@@ -5878,6 +5948,8 @@ class ReaderPreferencesRow extends DataClass
     String? batteryInfoSlot,
     String? wholeBookProgressInfoSlot,
     String? infoDividerSlot,
+    String? screenAwakeMode,
+    int? screenAwakeInactivityMinutes,
     DateTime? updatedAt,
   }) => ReaderPreferencesRow(
     collectionId: collectionId ?? this.collectionId,
@@ -5949,6 +6021,9 @@ class ReaderPreferencesRow extends DataClass
     wholeBookProgressInfoSlot:
         wholeBookProgressInfoSlot ?? this.wholeBookProgressInfoSlot,
     infoDividerSlot: infoDividerSlot ?? this.infoDividerSlot,
+    screenAwakeMode: screenAwakeMode ?? this.screenAwakeMode,
+    screenAwakeInactivityMinutes:
+        screenAwakeInactivityMinutes ?? this.screenAwakeInactivityMinutes,
     updatedAt: updatedAt ?? this.updatedAt,
   );
   ReaderPreferencesRow copyWithCompanion(ReaderPreferencesRowsCompanion data) {
@@ -6086,6 +6161,12 @@ class ReaderPreferencesRow extends DataClass
       infoDividerSlot: data.infoDividerSlot.present
           ? data.infoDividerSlot.value
           : this.infoDividerSlot,
+      screenAwakeMode: data.screenAwakeMode.present
+          ? data.screenAwakeMode.value
+          : this.screenAwakeMode,
+      screenAwakeInactivityMinutes: data.screenAwakeInactivityMinutes.present
+          ? data.screenAwakeInactivityMinutes.value
+          : this.screenAwakeInactivityMinutes,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
   }
@@ -6140,6 +6221,10 @@ class ReaderPreferencesRow extends DataClass
           ..write('batteryInfoSlot: $batteryInfoSlot, ')
           ..write('wholeBookProgressInfoSlot: $wholeBookProgressInfoSlot, ')
           ..write('infoDividerSlot: $infoDividerSlot, ')
+          ..write('screenAwakeMode: $screenAwakeMode, ')
+          ..write(
+            'screenAwakeInactivityMinutes: $screenAwakeInactivityMinutes, ',
+          )
           ..write('updatedAt: $updatedAt')
           ..write(')'))
         .toString();
@@ -6194,6 +6279,8 @@ class ReaderPreferencesRow extends DataClass
     batteryInfoSlot,
     wholeBookProgressInfoSlot,
     infoDividerSlot,
+    screenAwakeMode,
+    screenAwakeInactivityMinutes,
     updatedAt,
   ]);
   @override
@@ -6247,6 +6334,9 @@ class ReaderPreferencesRow extends DataClass
           other.batteryInfoSlot == this.batteryInfoSlot &&
           other.wholeBookProgressInfoSlot == this.wholeBookProgressInfoSlot &&
           other.infoDividerSlot == this.infoDividerSlot &&
+          other.screenAwakeMode == this.screenAwakeMode &&
+          other.screenAwakeInactivityMinutes ==
+              this.screenAwakeInactivityMinutes &&
           other.updatedAt == this.updatedAt);
 }
 
@@ -6299,6 +6389,8 @@ class ReaderPreferencesRowsCompanion
   final Value<String> batteryInfoSlot;
   final Value<String> wholeBookProgressInfoSlot;
   final Value<String> infoDividerSlot;
+  final Value<String> screenAwakeMode;
+  final Value<int> screenAwakeInactivityMinutes;
   final Value<DateTime> updatedAt;
   final Value<int> rowid;
   const ReaderPreferencesRowsCompanion({
@@ -6349,6 +6441,8 @@ class ReaderPreferencesRowsCompanion
     this.batteryInfoSlot = const Value.absent(),
     this.wholeBookProgressInfoSlot = const Value.absent(),
     this.infoDividerSlot = const Value.absent(),
+    this.screenAwakeMode = const Value.absent(),
+    this.screenAwakeInactivityMinutes = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -6400,6 +6494,8 @@ class ReaderPreferencesRowsCompanion
     this.batteryInfoSlot = const Value.absent(),
     this.wholeBookProgressInfoSlot = const Value.absent(),
     this.infoDividerSlot = const Value.absent(),
+    this.screenAwakeMode = const Value.absent(),
+    this.screenAwakeInactivityMinutes = const Value.absent(),
     required DateTime updatedAt,
     this.rowid = const Value.absent(),
   }) : collectionId = Value(collectionId),
@@ -6462,6 +6558,8 @@ class ReaderPreferencesRowsCompanion
     Expression<String>? batteryInfoSlot,
     Expression<String>? wholeBookProgressInfoSlot,
     Expression<String>? infoDividerSlot,
+    Expression<String>? screenAwakeMode,
+    Expression<int>? screenAwakeInactivityMinutes,
     Expression<DateTime>? updatedAt,
     Expression<int>? rowid,
   }) {
@@ -6529,6 +6627,9 @@ class ReaderPreferencesRowsCompanion
       if (wholeBookProgressInfoSlot != null)
         'whole_book_progress_info_slot': wholeBookProgressInfoSlot,
       if (infoDividerSlot != null) 'info_divider_slot': infoDividerSlot,
+      if (screenAwakeMode != null) 'screen_awake_mode': screenAwakeMode,
+      if (screenAwakeInactivityMinutes != null)
+        'screen_awake_inactivity_minutes': screenAwakeInactivityMinutes,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (rowid != null) 'rowid': rowid,
     });
@@ -6582,6 +6683,8 @@ class ReaderPreferencesRowsCompanion
     Value<String>? batteryInfoSlot,
     Value<String>? wholeBookProgressInfoSlot,
     Value<String>? infoDividerSlot,
+    Value<String>? screenAwakeMode,
+    Value<int>? screenAwakeInactivityMinutes,
     Value<DateTime>? updatedAt,
     Value<int>? rowid,
   }) {
@@ -6644,6 +6747,9 @@ class ReaderPreferencesRowsCompanion
       wholeBookProgressInfoSlot:
           wholeBookProgressInfoSlot ?? this.wholeBookProgressInfoSlot,
       infoDividerSlot: infoDividerSlot ?? this.infoDividerSlot,
+      screenAwakeMode: screenAwakeMode ?? this.screenAwakeMode,
+      screenAwakeInactivityMinutes:
+          screenAwakeInactivityMinutes ?? this.screenAwakeInactivityMinutes,
       updatedAt: updatedAt ?? this.updatedAt,
       rowid: rowid ?? this.rowid,
     );
@@ -6817,6 +6923,14 @@ class ReaderPreferencesRowsCompanion
     if (infoDividerSlot.present) {
       map['info_divider_slot'] = Variable<String>(infoDividerSlot.value);
     }
+    if (screenAwakeMode.present) {
+      map['screen_awake_mode'] = Variable<String>(screenAwakeMode.value);
+    }
+    if (screenAwakeInactivityMinutes.present) {
+      map['screen_awake_inactivity_minutes'] = Variable<int>(
+        screenAwakeInactivityMinutes.value,
+      );
+    }
     if (updatedAt.present) {
       map['updated_at'] = Variable<DateTime>(updatedAt.value);
     }
@@ -6876,6 +6990,10 @@ class ReaderPreferencesRowsCompanion
           ..write('batteryInfoSlot: $batteryInfoSlot, ')
           ..write('wholeBookProgressInfoSlot: $wholeBookProgressInfoSlot, ')
           ..write('infoDividerSlot: $infoDividerSlot, ')
+          ..write('screenAwakeMode: $screenAwakeMode, ')
+          ..write(
+            'screenAwakeInactivityMinutes: $screenAwakeInactivityMinutes, ',
+          )
           ..write('updatedAt: $updatedAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -12099,6 +12217,8 @@ typedef $$ReaderPreferencesRowsTableCreateCompanionBuilder =
       Value<String> batteryInfoSlot,
       Value<String> wholeBookProgressInfoSlot,
       Value<String> infoDividerSlot,
+      Value<String> screenAwakeMode,
+      Value<int> screenAwakeInactivityMinutes,
       required DateTime updatedAt,
       Value<int> rowid,
     });
@@ -12151,6 +12271,8 @@ typedef $$ReaderPreferencesRowsTableUpdateCompanionBuilder =
       Value<String> batteryInfoSlot,
       Value<String> wholeBookProgressInfoSlot,
       Value<String> infoDividerSlot,
+      Value<String> screenAwakeMode,
+      Value<int> screenAwakeInactivityMinutes,
       Value<DateTime> updatedAt,
       Value<int> rowid,
     });
@@ -12430,6 +12552,16 @@ class $$ReaderPreferencesRowsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<String> get screenAwakeMode => $composableBuilder(
+    column: $table.screenAwakeMode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get screenAwakeInactivityMinutes => $composableBuilder(
+    column: $table.screenAwakeInactivityMinutes,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<DateTime> get updatedAt => $composableBuilder(
     column: $table.updatedAt,
     builder: (column) => ColumnFilters(column),
@@ -12698,6 +12830,16 @@ class $$ReaderPreferencesRowsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get screenAwakeMode => $composableBuilder(
+    column: $table.screenAwakeMode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get screenAwakeInactivityMinutes => $composableBuilder(
+    column: $table.screenAwakeInactivityMinutes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
     column: $table.updatedAt,
     builder: (column) => ColumnOrderings(column),
@@ -12958,6 +13100,16 @@ class $$ReaderPreferencesRowsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<String> get screenAwakeMode => $composableBuilder(
+    column: $table.screenAwakeMode,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get screenAwakeInactivityMinutes => $composableBuilder(
+    column: $table.screenAwakeInactivityMinutes,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<DateTime> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
 
@@ -13072,6 +13224,8 @@ class $$ReaderPreferencesRowsTableTableManager
                 Value<String> batteryInfoSlot = const Value.absent(),
                 Value<String> wholeBookProgressInfoSlot = const Value.absent(),
                 Value<String> infoDividerSlot = const Value.absent(),
+                Value<String> screenAwakeMode = const Value.absent(),
+                Value<int> screenAwakeInactivityMinutes = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ReaderPreferencesRowsCompanion(
@@ -13122,6 +13276,8 @@ class $$ReaderPreferencesRowsTableTableManager
                 batteryInfoSlot: batteryInfoSlot,
                 wholeBookProgressInfoSlot: wholeBookProgressInfoSlot,
                 infoDividerSlot: infoDividerSlot,
+                screenAwakeMode: screenAwakeMode,
+                screenAwakeInactivityMinutes: screenAwakeInactivityMinutes,
                 updatedAt: updatedAt,
                 rowid: rowid,
               ),
@@ -13174,6 +13330,8 @@ class $$ReaderPreferencesRowsTableTableManager
                 Value<String> batteryInfoSlot = const Value.absent(),
                 Value<String> wholeBookProgressInfoSlot = const Value.absent(),
                 Value<String> infoDividerSlot = const Value.absent(),
+                Value<String> screenAwakeMode = const Value.absent(),
+                Value<int> screenAwakeInactivityMinutes = const Value.absent(),
                 required DateTime updatedAt,
                 Value<int> rowid = const Value.absent(),
               }) => ReaderPreferencesRowsCompanion.insert(
@@ -13224,6 +13382,8 @@ class $$ReaderPreferencesRowsTableTableManager
                 batteryInfoSlot: batteryInfoSlot,
                 wholeBookProgressInfoSlot: wholeBookProgressInfoSlot,
                 infoDividerSlot: infoDividerSlot,
+                screenAwakeMode: screenAwakeMode,
+                screenAwakeInactivityMinutes: screenAwakeInactivityMinutes,
                 updatedAt: updatedAt,
                 rowid: rowid,
               ),

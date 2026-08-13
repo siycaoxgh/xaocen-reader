@@ -2,6 +2,7 @@
 library;
 
 import 'reader_palette.dart';
+import 'reader_screen_awake.dart';
 
 enum ReaderThemeMode { system, light, dark }
 
@@ -80,6 +81,8 @@ final class ReaderPreferences {
     required this.batteryInfoSlot,
     required this.wholeBookProgressInfoSlot,
     required this.infoDividerSlot,
+    required this.screenAwakeMode,
+    required this.screenAwakeInactivityMinutes,
   });
 
   static const double defaultFontSize = 17;
@@ -154,6 +157,10 @@ final class ReaderPreferences {
   static const ReaderInfoSlot defaultWholeBookProgressInfoSlot =
       ReaderInfoSlot.bottomRight;
   static const ReaderInfoSlot defaultInfoDividerSlot = ReaderInfoSlot.topCenter;
+  static const ReaderScreenAwakeMode defaultScreenAwakeMode =
+      ReaderScreenAwakeMode.followSystem;
+  static const int defaultScreenAwakeInactivityMinutes =
+      ReaderScreenAwakeController.defaultInactivityMinutes;
 
   static const ReaderPreferences defaults = ReaderPreferences._(
     fontId: defaultFontId,
@@ -199,6 +206,8 @@ final class ReaderPreferences {
     batteryInfoSlot: defaultBatteryInfoSlot,
     wholeBookProgressInfoSlot: defaultWholeBookProgressInfoSlot,
     infoDividerSlot: defaultInfoDividerSlot,
+    screenAwakeMode: defaultScreenAwakeMode,
+    screenAwakeInactivityMinutes: defaultScreenAwakeInactivityMinutes,
   );
 
   factory ReaderPreferences({
@@ -248,6 +257,8 @@ final class ReaderPreferences {
     ReaderInfoSlot batteryInfoSlot = defaultBatteryInfoSlot,
     ReaderInfoSlot wholeBookProgressInfoSlot = defaultWholeBookProgressInfoSlot,
     ReaderInfoSlot infoDividerSlot = defaultInfoDividerSlot,
+    ReaderScreenAwakeMode screenAwakeMode = defaultScreenAwakeMode,
+    int screenAwakeInactivityMinutes = defaultScreenAwakeInactivityMinutes,
   }) => ReaderPreferences._(
     fontId: _validFontId(fontId),
     fontSize: _valid(fontSize, minFontSize, maxFontSize, defaultFontSize),
@@ -360,6 +371,10 @@ final class ReaderPreferences {
     batteryInfoSlot: batteryInfoSlot,
     wholeBookProgressInfoSlot: wholeBookProgressInfoSlot,
     infoDividerSlot: infoDividerSlot,
+    screenAwakeMode: screenAwakeMode,
+    screenAwakeInactivityMinutes: _validInactivityMinutes(
+      screenAwakeInactivityMinutes,
+    ),
   );
 
   final String? fontId;
@@ -418,6 +433,8 @@ final class ReaderPreferences {
   final ReaderInfoSlot batteryInfoSlot;
   final ReaderInfoSlot wholeBookProgressInfoSlot;
   final ReaderInfoSlot infoDividerSlot;
+  final ReaderScreenAwakeMode screenAwakeMode;
+  final int screenAwakeInactivityMinutes;
 
   /// Legacy aliases retained for callers from schema 7. They represent the
   /// light override; canonical storage keeps separate light/dark values.
@@ -480,6 +497,8 @@ final class ReaderPreferences {
     ReaderInfoSlot? batteryInfoSlot,
     ReaderInfoSlot? wholeBookProgressInfoSlot,
     ReaderInfoSlot? infoDividerSlot,
+    ReaderScreenAwakeMode? screenAwakeMode,
+    int? screenAwakeInactivityMinutes,
   }) {
     final legacyText = identical(textColorArgb, _unset)
         ? null
@@ -591,6 +610,9 @@ final class ReaderPreferences {
       wholeBookProgressInfoSlot:
           wholeBookProgressInfoSlot ?? this.wholeBookProgressInfoSlot,
       infoDividerSlot: infoDividerSlot ?? this.infoDividerSlot,
+      screenAwakeMode: screenAwakeMode ?? this.screenAwakeMode,
+      screenAwakeInactivityMinutes:
+          screenAwakeInactivityMinutes ?? this.screenAwakeInactivityMinutes,
     );
   }
 
@@ -645,6 +667,10 @@ final class ReaderPreferences {
         infoDividerSlot != previous.infoDividerSlot) {
       result.add(ReaderPreferenceChangeKind.display);
     }
+    if (screenAwakeMode != previous.screenAwakeMode ||
+        screenAwakeInactivityMinutes != previous.screenAwakeInactivityMinutes) {
+      result.add(ReaderPreferenceChangeKind.display);
+    }
     return result;
   }
 
@@ -653,6 +679,11 @@ final class ReaderPreferences {
 
   static int? _validArgb(int? value) =>
       value != null && value >= 0 && value <= 0xffffffff ? value : null;
+
+  static int _validInactivityMinutes(int value) =>
+      ReaderScreenAwakeController.inactivityOptions.contains(value)
+      ? value
+      : defaultScreenAwakeInactivityMinutes;
 
   static String? _validManagedPath(String? value) {
     final path = value?.trim();
@@ -714,7 +745,9 @@ final class ReaderPreferences {
       clockInfoSlot == other.clockInfoSlot &&
       batteryInfoSlot == other.batteryInfoSlot &&
       wholeBookProgressInfoSlot == other.wholeBookProgressInfoSlot &&
-      infoDividerSlot == other.infoDividerSlot;
+      infoDividerSlot == other.infoDividerSlot &&
+      screenAwakeMode == other.screenAwakeMode &&
+      screenAwakeInactivityMinutes == other.screenAwakeInactivityMinutes;
 
   @override
   int get hashCode => Object.hashAll([
@@ -761,5 +794,7 @@ final class ReaderPreferences {
     batteryInfoSlot,
     wholeBookProgressInfoSlot,
     infoDividerSlot,
+    screenAwakeMode,
+    screenAwakeInactivityMinutes,
   ]);
 }

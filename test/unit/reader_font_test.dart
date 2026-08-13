@@ -186,7 +186,7 @@ void main() {
       expect(
         (await migrated.customSelect('PRAGMA user_version').getSingle())
             .data['user_version'],
-        17,
+        18,
       );
       expect(
         await migrated.select(migrated.readerFontAssetRows).get(),

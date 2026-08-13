@@ -37,7 +37,7 @@ class AppDatabase extends _$AppDatabase {
       super(NativeDatabase.memory());
 
   @override
-  int get schemaVersion => 17;
+  int get schemaVersion => 18;
 
   /// 打开应用数据库（support 目录下）。
   static Future<AppDatabase> open({DataRoot? dataRoot}) async {
@@ -375,6 +375,25 @@ class AppDatabase extends _$AppDatabase {
           await m.addColumn(
             readerPreferencesRows,
             readerPreferencesRows.textAlignment,
+          );
+        }
+      }
+      // schema 17 -> 18: Reader screen-awake policy. These are per-book
+      // presentation preferences only; no Locator, progress, or session data
+      // is changed. Existing books receive follow-system/30-minute defaults.
+      if (from >= 5 && from < 18) {
+        if (!await hasReaderPreferenceColumn('screen_awake_mode')) {
+          await m.addColumn(
+            readerPreferencesRows,
+            readerPreferencesRows.screenAwakeMode,
+          );
+        }
+        if (!await hasReaderPreferenceColumn(
+          'screen_awake_inactivity_minutes',
+        )) {
+          await m.addColumn(
+            readerPreferencesRows,
+            readerPreferencesRows.screenAwakeInactivityMinutes,
           );
         }
       }

@@ -14,6 +14,7 @@ enum AutoReadPauseReason {
   bookmark,
   search,
   lifecycle,
+  inactivityTimeout,
   modeSwitch,
   relayout,
 }

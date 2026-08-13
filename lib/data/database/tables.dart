@@ -288,6 +288,10 @@ class ReaderPreferencesRows extends Table {
       text().withDefault(const Constant('bottomRight'))();
   TextColumn get infoDividerSlot =>
       text().withDefault(const Constant('topCenter'))();
+  TextColumn get screenAwakeMode =>
+      text().withDefault(const Constant('followSystem'))();
+  IntColumn get screenAwakeInactivityMinutes =>
+      integer().withDefault(const Constant(30))();
   DateTimeColumn get updatedAt => dateTime()();
 
   @override
