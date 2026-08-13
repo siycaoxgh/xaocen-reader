@@ -385,7 +385,8 @@ Win32Window::MessageHandler(HWND hwnd,
         ShowFromTray();
         return 0;
       }
-      if (static_cast<UINT>(lparam) == WM_RBUTTONUP) {
+      if (tray_event == WM_RBUTTONUP ||
+          static_cast<UINT>(lparam) == WM_RBUTTONUP) {
         ShowTrayMenu();
         return 0;
       }
@@ -788,10 +789,14 @@ void Win32Window::ShowTrayMenu() {
               kTrayHideCommand, L"Hide window");
   AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
   AppendMenuW(menu, MF_STRING, kTrayExitCommand, L"Exit application");
-  if (visible) SetForegroundWindow(window_handle_);
-  TrackPopupMenu(menu, TPM_RIGHTBUTTON, point.x, point.y, 0, window_handle_,
-                 nullptr);
+  // A popup menu must have a foreground owner for Windows to keep it open
+  // and deliver WM_COMMAND. The owner may be hidden after a Boss action; the
+  // tray popup itself remains the explicit recovery surface.
+  SetForegroundWindow(window_handle_);
+  TrackPopupMenu(menu, TPM_RIGHTBUTTON | TPM_NOANIMATION, point.x, point.y, 0,
+                 window_handle_, nullptr);
   DestroyMenu(menu);
+  SetForegroundWindow(window_handle_);
   PostMessage(window_handle_, WM_NULL, 0, 0);
 }
 
