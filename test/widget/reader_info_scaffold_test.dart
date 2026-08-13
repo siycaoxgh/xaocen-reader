@@ -17,6 +17,7 @@ Widget _host({
   Color readerTextColor = Colors.black,
   Color readerBackgroundColor = Colors.white,
   Color? regionBackgroundColor,
+  bool regionBackgroundTransparent = false,
   Brightness brightness = Brightness.light,
   List<DisplayFeature> displayFeatures = const [],
 }) {
@@ -60,6 +61,7 @@ Widget _host({
           readerTextColor: readerTextColor,
           readerBackgroundColor: readerBackgroundColor,
           regionBackgroundColor: regionBackgroundColor,
+          regionBackgroundTransparent: regionBackgroundTransparent,
         ),
       ),
     ),
@@ -285,6 +287,38 @@ void main() {
     expect(bottomColor, isNot(Colors.white));
     expect(topColor.computeLuminance(), lessThan(.95));
     expect(bottomColor.computeLuminance(), lessThan(.95));
+  });
+
+  testWidgets('transparent info regions reveal the shared Reader background', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _host(
+        top: true,
+        bottom: true,
+        divider: false,
+        readerBackgroundColor: const Color(0xff15212a),
+        regionBackgroundTransparent: true,
+      ),
+    );
+    final topRegion = tester.widget<ColoredBox>(
+      find
+          .ancestor(
+            of: find.byKey(readerTopInfoRegionKey),
+            matching: find.byType(ColoredBox),
+          )
+          .first,
+    );
+    final bottomRegion = tester.widget<ColoredBox>(
+      find
+          .ancestor(
+            of: find.byKey(readerBottomInfoRegionKey),
+            matching: find.byType(ColoredBox),
+          )
+          .first,
+    );
+    expect(topRegion.color, Colors.transparent);
+    expect(bottomRegion.color, Colors.transparent);
   });
 
   testWidgets('battery item renders percent and charging indicator', (

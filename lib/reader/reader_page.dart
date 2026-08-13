@@ -2526,6 +2526,10 @@ class _ReaderPageState extends State<ReaderPage>
       regionBackgroundColor: _chromeVisible
           ? _readerTopSurface
           : _appearance.backgroundColor,
+      // _buildReaderBackground owns the complete surface, including an
+      // imported image. Info regions are layout hosts in both chrome states;
+      // visible operation surfaces belong exclusively to ReaderChrome.
+      regionBackgroundTransparent: true,
       batteryStatus: _batteryStatus,
       extendIntoDisplayCutout: _preferences.extendIntoDisplayCutout,
       hideNavigationBar: _preferences.hideNavigationBar,

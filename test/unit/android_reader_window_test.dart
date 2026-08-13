@@ -94,6 +94,30 @@ void main() {
     );
   });
 
+  test(
+    'TopChrome keeps center text below a punch hole without a full-width inset',
+    () {
+      final media = MediaQueryData(
+        size: const Size(1080, 2400),
+        displayFeatures: [cutout(const Rect.fromLTWH(480, 0, 120, 52))],
+      );
+      expect(AndroidReaderWindow.topChromeTextClearanceForData(media), 56);
+      expect(
+        AndroidReaderWindow.topChromeSidePaddingForData(media),
+        EdgeInsets.zero,
+      );
+    },
+  );
+
+  test('edge cutout uses local action side padding', () {
+    final media = MediaQueryData(
+      size: const Size(1080, 2400),
+      displayFeatures: [cutout(const Rect.fromLTWH(0, 0, 120, 52))],
+    );
+    expect(AndroidReaderWindow.topChromeSidePaddingForData(media).left, 124);
+    expect(AndroidReaderWindow.topChromeTextClearanceForData(media), 0);
+  });
+
   test('foreground inset follows left and right cutouts in landscape', () {
     final media = MediaQueryData(
       size: const Size(2400, 1080),

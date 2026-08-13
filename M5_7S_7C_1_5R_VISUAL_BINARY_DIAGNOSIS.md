@@ -91,10 +91,16 @@ The Reader route installs one `_effectiveReaderTheme()` around the complete plat
 
 - **ANDROID READER COLOR OWNER** = `ReaderPage` effective Reader theme + resolved per-book `ReaderResolvedAppearance`; Android owns only system-bar/inset behavior.
 - **WINDOWS READER COLOR OWNER** = the same `ReaderPage` effective Reader theme + resolved per-book `ReaderResolvedAppearance`; Windows owns only native window/shell behavior.
-- **TOPINFO COLOR OWNER** = `ReaderInfoScaffold.regionBackgroundColor`, supplied from the resolved Reader appearance when Chrome is hidden; text comes from `ReaderResolvedAppearance.textColor`.
-- **BOTTOMINFO COLOR OWNER** = the same Reader Info contract as TopInfo.
+- **TOPINFO COLOR OWNER** = the outer `ReaderPage._buildReaderBackground()` layer when Chrome is hidden; `ReaderInfoScaffold` is transparent and contributes only geometry/content. This is the same owner for palette, custom color, and image backgrounds.
+- **BOTTOMINFO COLOR OWNER** = the same shared Reader background layer as TopInfo.
 - **CHROME COLOR OWNER** = the effective Reader theme `ColorScheme.surface` for both top and bottom operation Chrome.
 - **READER BODY COLOR OWNER** = `ReaderResolvedAppearance.backgroundColor` and `.textColor`.
+
+For production hidden-Chrome rendering, the Info region itself is transparent;
+the outer `_buildReaderBackground()` remains the sole paint owner. The
+`regionBackgroundColor` parameter is retained for standalone scaffold tests
+and geometry compatibility, but it is not allowed to mask a book image in the
+Reader route.
 
 There is no Android/Windows color branch and no hard-coded white Info surface. New Android/Windows × Light/Dark widget cases assert that TopInfo and BottomInfo resolve to the provided Reader palette background instead of the App theme surface. Chrome tests assert that top and bottom Chrome share the same effective Reader surface.
 
@@ -103,7 +109,7 @@ The historical bottom `BorderSide` on TopChrome was removed entirely. It was not
 ## Verification
 
 - `flutter analyze`: PASS.
-- Full Flutter tests: PASS, 562 tests (including the cutout slot/geometry supplement).
+- Full Flutter tests: PASS, 565 tests (including transparent Info-region background ownership and the cutout slot/geometry supplement).
 - Targeted Chrome/Divider widget tests: PASS, including SafeArea surface ownership and full-width divider geometry.
 - Android Debug build: PASS.
 - Normal APK `install -r`: PASS; emulator data preserved.
@@ -117,6 +123,40 @@ The historical bottom `BorderSide` on TopChrome was removed entirely. It was not
 - **DIVIDER = PASS** — final Android emulator screenshot and exact pixel rows.
 - **ANDROID READER COLOR OWNERSHIP = PASS** — runtime screenshot plus Light/Dark contract tests.
 - **WINDOWS READER COLOR OWNERSHIP = AUTOMATED PASS / MANUAL VISUAL REQUIRED** — shared implementation and Windows Light/Dark contract tests pass; no local window screenshot was obtainable in the current remote/tray state.
+
+## Windows Reader image-background continuity audit
+
+The reported Windows white TopInfo/BottomInfo blocks had a concrete shared
+source, not a Windows-specific color branch: `ReaderPage` paints the complete
+background (solid + optional imported image + overlay) first, then
+`ReaderInfoScaffold._region` painted a second opaque `ColoredBox` using the
+resolved solid appearance. With an image selected, that second box masked the
+image above and below the body and appeared as a fixed pale strip.
+
+The minimal fix adds `regionBackgroundTransparent`. Production Reader Info
+regions use it in both Chrome states; they retain their measured top/bottom
+geometry and divider children, while the only visible background is the shared
+outer Reader background. Operation Chrome remains the only independent surface
+when visible (`ReaderChrome` top/bottom `colorScheme.surface`). No App theme
+surface can cover hidden Info regions after this change.
+
+Requested Windows screenshot matrix (the current RDP/tray session cannot
+provide a reliable native window capture, so these are not claimed as visual
+PASS):
+
+| Case | Automated ownership contract | Local Windows screenshot |
+|---|---|---|
+| Light solid | shared background owner | MANUAL REQUIRED |
+| Dark solid | shared background owner | MANUAL REQUIRED |
+| Imported image | transparent Info regions expose outer image layer | MANUAL REQUIRED |
+
+`WINDOWS TOPINFO BACKGROUND OWNER = ReaderPage._buildReaderBackground()`
+
+`WINDOWS BOTTOMINFO BACKGROUND OWNER = ReaderPage._buildReaderBackground()`
+
+`IMAGE BACKGROUND CONTINUITY = AUTOMATED CONTRACT PASS / WINDOWS VISUAL MANUAL REQUIRED`
+
+`DIVIDER = AUTOMATED PIXEL/geometry PASS / WINDOWS VISUAL MANUAL REQUIRED`
 
 ## Cutout / notch foreground contract
 

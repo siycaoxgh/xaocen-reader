@@ -163,6 +163,49 @@ final class AndroidReaderWindow {
     return clearance;
   }
 
+  /// Clearance for continuous TopChrome text. Edge cutouts are handled by the
+  /// adjacent action padding; only a center/notch cutout that occupies the
+  /// text lane moves the text below its real bottom edge.
+  static double topChromeTextClearanceForData(MediaQueryData media) {
+    var clearance = 0.0;
+    final sideActionLane = media.size.width * .22;
+    for (final bounds in cutoutBoundsForData(media)) {
+      if (bounds.top > 0 || bounds.bottom <= 0) continue;
+      final touchesEdge = bounds.left <= 0 || bounds.right >= media.size.width;
+      final occupiesTextLane =
+          bounds.right > sideActionLane &&
+          bounds.left < media.size.width - sideActionLane;
+      if (!touchesEdge || occupiesTextLane) {
+        clearance = math.max(
+          clearance,
+          bounds.bottom + cutoutForegroundSafetyGap,
+        );
+      }
+    }
+    return clearance;
+  }
+
+  /// Horizontal clearance for top actions that sit beside an edge cutout.
+  /// A centered cutout deliberately returns zero: the action buttons already
+  /// occupy the left/right thirds and the continuous text is handled below.
+  static EdgeInsets topChromeSidePaddingForData(MediaQueryData media) {
+    var left = 0.0;
+    var right = 0.0;
+    for (final bounds in cutoutBoundsForData(media)) {
+      if (bounds.top > 0 || bounds.bottom <= 0) continue;
+      if (bounds.left <= 0) {
+        left = math.max(left, bounds.right + cutoutForegroundSafetyGap);
+      }
+      if (bounds.right >= media.size.width) {
+        right = math.max(
+          right,
+          media.size.width - bounds.left + cutoutForegroundSafetyGap,
+        );
+      }
+    }
+    return EdgeInsets.fromLTRB(left, 0, right, 0);
+  }
+
   /// Returns the smallest local padding needed by a top slot. Edge cutouts
   /// reserve only the affected side; a centered cutout reserves vertical room
   /// for the center slot. The other slots retain their normal top position.
