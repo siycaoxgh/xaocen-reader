@@ -4398,6 +4398,20 @@ class $ReaderPreferencesRowsTable extends ReaderPreferencesRows
     ),
     defaultValue: const Constant(true),
   );
+  static const VerificationMeta _showSystemStatusBarMeta =
+      const VerificationMeta('showSystemStatusBar');
+  @override
+  late final GeneratedColumn<bool> showSystemStatusBar = GeneratedColumn<bool>(
+    'show_system_status_bar',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("show_system_status_bar" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
   static const VerificationMeta _statusBarModeMeta = const VerificationMeta(
     'statusBarMode',
   );
@@ -4639,6 +4653,7 @@ class $ReaderPreferencesRowsTable extends ReaderPreferencesRows
     showTopInfoBar,
     showBottomInfoBar,
     showProgressInfo,
+    showSystemStatusBar,
     statusBarMode,
     timeDisplayMode,
     showChapterInfo,
@@ -4897,6 +4912,15 @@ class $ReaderPreferencesRowsTable extends ReaderPreferencesRows
         ),
       );
     }
+    if (data.containsKey('show_system_status_bar')) {
+      context.handle(
+        _showSystemStatusBarMeta,
+        showSystemStatusBar.isAcceptableOrUnknown(
+          data['show_system_status_bar']!,
+          _showSystemStatusBarMeta,
+        ),
+      );
+    }
     if (data.containsKey('status_bar_mode')) {
       context.handle(
         _statusBarModeMeta,
@@ -5149,6 +5173,10 @@ class $ReaderPreferencesRowsTable extends ReaderPreferencesRows
         DriftSqlType.bool,
         data['${effectivePrefix}show_progress_info'],
       )!,
+      showSystemStatusBar: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}show_system_status_bar'],
+      )!,
       statusBarMode: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}status_bar_mode'],
@@ -5251,6 +5279,7 @@ class ReaderPreferencesRow extends DataClass
   final bool showTopInfoBar;
   final bool showBottomInfoBar;
   final bool showProgressInfo;
+  final bool showSystemStatusBar;
   final String statusBarMode;
   final String timeDisplayMode;
   final bool showChapterInfo;
@@ -5293,6 +5322,7 @@ class ReaderPreferencesRow extends DataClass
     required this.showTopInfoBar,
     required this.showBottomInfoBar,
     required this.showProgressInfo,
+    required this.showSystemStatusBar,
     required this.statusBarMode,
     required this.timeDisplayMode,
     required this.showChapterInfo,
@@ -5360,6 +5390,7 @@ class ReaderPreferencesRow extends DataClass
     map['show_top_info_bar'] = Variable<bool>(showTopInfoBar);
     map['show_bottom_info_bar'] = Variable<bool>(showBottomInfoBar);
     map['show_progress_info'] = Variable<bool>(showProgressInfo);
+    map['show_system_status_bar'] = Variable<bool>(showSystemStatusBar);
     map['status_bar_mode'] = Variable<String>(statusBarMode);
     map['time_display_mode'] = Variable<String>(timeDisplayMode);
     map['show_chapter_info'] = Variable<bool>(showChapterInfo);
@@ -5430,6 +5461,7 @@ class ReaderPreferencesRow extends DataClass
       showTopInfoBar: Value(showTopInfoBar),
       showBottomInfoBar: Value(showBottomInfoBar),
       showProgressInfo: Value(showProgressInfo),
+      showSystemStatusBar: Value(showSystemStatusBar),
       statusBarMode: Value(statusBarMode),
       timeDisplayMode: Value(timeDisplayMode),
       showChapterInfo: Value(showChapterInfo),
@@ -5492,6 +5524,9 @@ class ReaderPreferencesRow extends DataClass
       showTopInfoBar: serializer.fromJson<bool>(json['showTopInfoBar']),
       showBottomInfoBar: serializer.fromJson<bool>(json['showBottomInfoBar']),
       showProgressInfo: serializer.fromJson<bool>(json['showProgressInfo']),
+      showSystemStatusBar: serializer.fromJson<bool>(
+        json['showSystemStatusBar'],
+      ),
       statusBarMode: serializer.fromJson<String>(json['statusBarMode']),
       timeDisplayMode: serializer.fromJson<String>(json['timeDisplayMode']),
       showChapterInfo: serializer.fromJson<bool>(json['showChapterInfo']),
@@ -5559,6 +5594,7 @@ class ReaderPreferencesRow extends DataClass
       'showTopInfoBar': serializer.toJson<bool>(showTopInfoBar),
       'showBottomInfoBar': serializer.toJson<bool>(showBottomInfoBar),
       'showProgressInfo': serializer.toJson<bool>(showProgressInfo),
+      'showSystemStatusBar': serializer.toJson<bool>(showSystemStatusBar),
       'statusBarMode': serializer.toJson<String>(statusBarMode),
       'timeDisplayMode': serializer.toJson<String>(timeDisplayMode),
       'showChapterInfo': serializer.toJson<bool>(showChapterInfo),
@@ -5614,6 +5650,7 @@ class ReaderPreferencesRow extends DataClass
     bool? showTopInfoBar,
     bool? showBottomInfoBar,
     bool? showProgressInfo,
+    bool? showSystemStatusBar,
     String? statusBarMode,
     String? timeDisplayMode,
     bool? showChapterInfo,
@@ -5672,6 +5709,7 @@ class ReaderPreferencesRow extends DataClass
     showTopInfoBar: showTopInfoBar ?? this.showTopInfoBar,
     showBottomInfoBar: showBottomInfoBar ?? this.showBottomInfoBar,
     showProgressInfo: showProgressInfo ?? this.showProgressInfo,
+    showSystemStatusBar: showSystemStatusBar ?? this.showSystemStatusBar,
     statusBarMode: statusBarMode ?? this.statusBarMode,
     timeDisplayMode: timeDisplayMode ?? this.timeDisplayMode,
     showChapterInfo: showChapterInfo ?? this.showChapterInfo,
@@ -5763,6 +5801,9 @@ class ReaderPreferencesRow extends DataClass
       showProgressInfo: data.showProgressInfo.present
           ? data.showProgressInfo.value
           : this.showProgressInfo,
+      showSystemStatusBar: data.showSystemStatusBar.present
+          ? data.showSystemStatusBar.value
+          : this.showSystemStatusBar,
       statusBarMode: data.statusBarMode.present
           ? data.statusBarMode.value
           : this.statusBarMode,
@@ -5840,6 +5881,7 @@ class ReaderPreferencesRow extends DataClass
           ..write('showTopInfoBar: $showTopInfoBar, ')
           ..write('showBottomInfoBar: $showBottomInfoBar, ')
           ..write('showProgressInfo: $showProgressInfo, ')
+          ..write('showSystemStatusBar: $showSystemStatusBar, ')
           ..write('statusBarMode: $statusBarMode, ')
           ..write('timeDisplayMode: $timeDisplayMode, ')
           ..write('showChapterInfo: $showChapterInfo, ')
@@ -5887,6 +5929,7 @@ class ReaderPreferencesRow extends DataClass
     showTopInfoBar,
     showBottomInfoBar,
     showProgressInfo,
+    showSystemStatusBar,
     statusBarMode,
     timeDisplayMode,
     showChapterInfo,
@@ -5933,6 +5976,7 @@ class ReaderPreferencesRow extends DataClass
           other.showTopInfoBar == this.showTopInfoBar &&
           other.showBottomInfoBar == this.showBottomInfoBar &&
           other.showProgressInfo == this.showProgressInfo &&
+          other.showSystemStatusBar == this.showSystemStatusBar &&
           other.statusBarMode == this.statusBarMode &&
           other.timeDisplayMode == this.timeDisplayMode &&
           other.showChapterInfo == this.showChapterInfo &&
@@ -5978,6 +6022,7 @@ class ReaderPreferencesRowsCompanion
   final Value<bool> showTopInfoBar;
   final Value<bool> showBottomInfoBar;
   final Value<bool> showProgressInfo;
+  final Value<bool> showSystemStatusBar;
   final Value<String> statusBarMode;
   final Value<String> timeDisplayMode;
   final Value<bool> showChapterInfo;
@@ -6021,6 +6066,7 @@ class ReaderPreferencesRowsCompanion
     this.showTopInfoBar = const Value.absent(),
     this.showBottomInfoBar = const Value.absent(),
     this.showProgressInfo = const Value.absent(),
+    this.showSystemStatusBar = const Value.absent(),
     this.statusBarMode = const Value.absent(),
     this.timeDisplayMode = const Value.absent(),
     this.showChapterInfo = const Value.absent(),
@@ -6065,6 +6111,7 @@ class ReaderPreferencesRowsCompanion
     this.showTopInfoBar = const Value.absent(),
     this.showBottomInfoBar = const Value.absent(),
     this.showProgressInfo = const Value.absent(),
+    this.showSystemStatusBar = const Value.absent(),
     this.statusBarMode = const Value.absent(),
     this.timeDisplayMode = const Value.absent(),
     this.showChapterInfo = const Value.absent(),
@@ -6120,6 +6167,7 @@ class ReaderPreferencesRowsCompanion
     Expression<bool>? showTopInfoBar,
     Expression<bool>? showBottomInfoBar,
     Expression<bool>? showProgressInfo,
+    Expression<bool>? showSystemStatusBar,
     Expression<String>? statusBarMode,
     Expression<String>? timeDisplayMode,
     Expression<bool>? showChapterInfo,
@@ -6171,6 +6219,8 @@ class ReaderPreferencesRowsCompanion
       if (showTopInfoBar != null) 'show_top_info_bar': showTopInfoBar,
       if (showBottomInfoBar != null) 'show_bottom_info_bar': showBottomInfoBar,
       if (showProgressInfo != null) 'show_progress_info': showProgressInfo,
+      if (showSystemStatusBar != null)
+        'show_system_status_bar': showSystemStatusBar,
       if (statusBarMode != null) 'status_bar_mode': statusBarMode,
       if (timeDisplayMode != null) 'time_display_mode': timeDisplayMode,
       if (showChapterInfo != null) 'show_chapter_info': showChapterInfo,
@@ -6224,6 +6274,7 @@ class ReaderPreferencesRowsCompanion
     Value<bool>? showTopInfoBar,
     Value<bool>? showBottomInfoBar,
     Value<bool>? showProgressInfo,
+    Value<bool>? showSystemStatusBar,
     Value<String>? statusBarMode,
     Value<String>? timeDisplayMode,
     Value<bool>? showChapterInfo,
@@ -6272,6 +6323,7 @@ class ReaderPreferencesRowsCompanion
       showTopInfoBar: showTopInfoBar ?? this.showTopInfoBar,
       showBottomInfoBar: showBottomInfoBar ?? this.showBottomInfoBar,
       showProgressInfo: showProgressInfo ?? this.showProgressInfo,
+      showSystemStatusBar: showSystemStatusBar ?? this.showSystemStatusBar,
       statusBarMode: statusBarMode ?? this.statusBarMode,
       timeDisplayMode: timeDisplayMode ?? this.timeDisplayMode,
       showChapterInfo: showChapterInfo ?? this.showChapterInfo,
@@ -6386,6 +6438,9 @@ class ReaderPreferencesRowsCompanion
     if (showProgressInfo.present) {
       map['show_progress_info'] = Variable<bool>(showProgressInfo.value);
     }
+    if (showSystemStatusBar.present) {
+      map['show_system_status_bar'] = Variable<bool>(showSystemStatusBar.value);
+    }
     if (statusBarMode.present) {
       map['status_bar_mode'] = Variable<String>(statusBarMode.value);
     }
@@ -6480,6 +6535,7 @@ class ReaderPreferencesRowsCompanion
           ..write('showTopInfoBar: $showTopInfoBar, ')
           ..write('showBottomInfoBar: $showBottomInfoBar, ')
           ..write('showProgressInfo: $showProgressInfo, ')
+          ..write('showSystemStatusBar: $showSystemStatusBar, ')
           ..write('statusBarMode: $statusBarMode, ')
           ..write('timeDisplayMode: $timeDisplayMode, ')
           ..write('showChapterInfo: $showChapterInfo, ')
@@ -11696,6 +11752,7 @@ typedef $$ReaderPreferencesRowsTableCreateCompanionBuilder =
       Value<bool> showTopInfoBar,
       Value<bool> showBottomInfoBar,
       Value<bool> showProgressInfo,
+      Value<bool> showSystemStatusBar,
       Value<String> statusBarMode,
       Value<String> timeDisplayMode,
       Value<bool> showChapterInfo,
@@ -11741,6 +11798,7 @@ typedef $$ReaderPreferencesRowsTableUpdateCompanionBuilder =
       Value<bool> showTopInfoBar,
       Value<bool> showBottomInfoBar,
       Value<bool> showProgressInfo,
+      Value<bool> showSystemStatusBar,
       Value<String> statusBarMode,
       Value<String> timeDisplayMode,
       Value<bool> showChapterInfo,
@@ -11922,6 +11980,11 @@ class $$ReaderPreferencesRowsTableFilterComposer
 
   ColumnFilters<bool> get showProgressInfo => $composableBuilder(
     column: $table.showProgressInfo,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get showSystemStatusBar => $composableBuilder(
+    column: $table.showSystemStatusBar,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -12158,6 +12221,11 @@ class $$ReaderPreferencesRowsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get showSystemStatusBar => $composableBuilder(
+    column: $table.showSystemStatusBar,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get statusBarMode => $composableBuilder(
     column: $table.statusBarMode,
     builder: (column) => ColumnOrderings(column),
@@ -12383,6 +12451,11 @@ class $$ReaderPreferencesRowsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<bool> get showSystemStatusBar => $composableBuilder(
+    column: $table.showSystemStatusBar,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<String> get statusBarMode => $composableBuilder(
     column: $table.statusBarMode,
     builder: (column) => column,
@@ -12550,6 +12623,7 @@ class $$ReaderPreferencesRowsTableTableManager
                 Value<bool> showTopInfoBar = const Value.absent(),
                 Value<bool> showBottomInfoBar = const Value.absent(),
                 Value<bool> showProgressInfo = const Value.absent(),
+                Value<bool> showSystemStatusBar = const Value.absent(),
                 Value<String> statusBarMode = const Value.absent(),
                 Value<String> timeDisplayMode = const Value.absent(),
                 Value<bool> showChapterInfo = const Value.absent(),
@@ -12593,6 +12667,7 @@ class $$ReaderPreferencesRowsTableTableManager
                 showTopInfoBar: showTopInfoBar,
                 showBottomInfoBar: showBottomInfoBar,
                 showProgressInfo: showProgressInfo,
+                showSystemStatusBar: showSystemStatusBar,
                 statusBarMode: statusBarMode,
                 timeDisplayMode: timeDisplayMode,
                 showChapterInfo: showChapterInfo,
@@ -12638,6 +12713,7 @@ class $$ReaderPreferencesRowsTableTableManager
                 Value<bool> showTopInfoBar = const Value.absent(),
                 Value<bool> showBottomInfoBar = const Value.absent(),
                 Value<bool> showProgressInfo = const Value.absent(),
+                Value<bool> showSystemStatusBar = const Value.absent(),
                 Value<String> statusBarMode = const Value.absent(),
                 Value<String> timeDisplayMode = const Value.absent(),
                 Value<bool> showChapterInfo = const Value.absent(),
@@ -12681,6 +12757,7 @@ class $$ReaderPreferencesRowsTableTableManager
                 showTopInfoBar: showTopInfoBar,
                 showBottomInfoBar: showBottomInfoBar,
                 showProgressInfo: showProgressInfo,
+                showSystemStatusBar: showSystemStatusBar,
                 statusBarMode: statusBarMode,
                 timeDisplayMode: timeDisplayMode,
                 showChapterInfo: showChapterInfo,

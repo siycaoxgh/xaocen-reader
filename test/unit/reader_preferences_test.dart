@@ -123,7 +123,26 @@ void main() {
       });
       expect(next.showTopInfoBar, isFalse);
       expect(next.statusBarMode, ReaderStatusBarMode.readerInfo);
+      expect(next.showSystemStatusBar, isFalse);
       expect(next.timeDisplayMode, ReaderTimeDisplayMode.twelveHour);
+    });
+
+    test('Android system status visibility is independent of Reader info', () {
+      final hiddenSystemBar = ReaderPreferences.defaults.copyWith(
+        showSystemStatusBar: false,
+      );
+      expect(hiddenSystemBar.showSystemStatusBar, isFalse);
+      expect(hiddenSystemBar.showTopInfoBar, isTrue);
+      expect(hiddenSystemBar.showBottomInfoBar, isTrue);
+      expect(hiddenSystemBar.statusBarMode, ReaderStatusBarMode.system);
+
+      final infoOff = hiddenSystemBar.copyWith(
+        showTopInfoBar: false,
+        showBottomInfoBar: false,
+      );
+      expect(infoOff.showSystemStatusBar, isFalse);
+      expect(infoOff.showTopInfoBar, isFalse);
+      expect(infoOff.showBottomInfoBar, isFalse);
     });
   });
 
@@ -275,6 +294,67 @@ void main() {
     await dir.delete(recursive: true);
   });
 
+  test(
+    'schema 13 -> 14 maps legacy status-bar modes without data loss',
+    () async {
+      final dir = await Directory.systemTemp.createTemp(
+        'm57s_status_bar_migration',
+      );
+      final file = File('${dir.path}${Platform.pathSeparator}db.sqlite');
+      var db = AppDatabase(NativeDatabase(file));
+      await seedBook(db, a);
+      await seedBook(db, b);
+      const c = 'local-txt:c';
+      await seedBook(db, c);
+      final repo = ReaderPreferencesRepository(db: db);
+      await repo.update(
+        a,
+        ReaderPreferences.defaults.copyWith(
+          statusBarMode: ReaderStatusBarMode.system,
+        ),
+      );
+      await repo.update(
+        b,
+        ReaderPreferences.defaults.copyWith(
+          statusBarMode: ReaderStatusBarMode.readerInfo,
+        ),
+      );
+      await repo.update(
+        c,
+        ReaderPreferences.defaults.copyWith(
+          statusBarMode: ReaderStatusBarMode.hidden,
+        ),
+      );
+      await db.close();
+
+      final raw = sqlite3.open(file.path);
+      raw.execute(
+        'ALTER TABLE reader_preferences DROP COLUMN show_system_status_bar',
+      );
+      raw.execute('PRAGMA user_version = 13');
+      raw.dispose();
+
+      db = AppDatabase(NativeDatabase(file));
+      final migrated = ReaderPreferencesRepository(db: db);
+      expect((await migrated.load(a)).showSystemStatusBar, isTrue);
+      expect((await migrated.load(b)).showSystemStatusBar, isFalse);
+      expect((await migrated.load(c)).showSystemStatusBar, isFalse);
+      expect((await migrated.load(c)).showTopInfoBar, isFalse);
+      expect((await migrated.load(c)).showBottomInfoBar, isFalse);
+      expect(
+        (await migrated.load(a)).fontSize,
+        ReaderPreferences.defaults.fontSize,
+      );
+      expect(
+        (await db.customSelect('PRAGMA user_version').getSingle())
+            .data['user_version'],
+        14,
+      );
+      await db.close();
+      await dir.delete(recursive: true);
+    },
+  );
+
   test('schema 6鈫?1 preserves typography and adds display defaults', () async {
     final dir = await Directory.systemTemp.createTemp('m55e_migration');
     final file = File('${dir.path}${Platform.pathSeparator}db.sqlite');
@@ -328,7 +408,7 @@ void main() {
     expect(
       (await db.customSelect('PRAGMA user_version').getSingle())
           .data['user_version'],
-      13,
+      14,
     );
     await db.close();
     await dir.delete(recursive: true);
@@ -416,7 +496,7 @@ void main() {
     expect(
       (await db.customSelect('PRAGMA user_version').getSingle())
           .data['user_version'],
-      13,
+      14,
     );
     expect((await db.select(db.contentCollections).get()).single.id, a);
     await db.close();
@@ -510,7 +590,7 @@ void main() {
       expect(
         (await db.customSelect('PRAGMA user_version').getSingle())
             .data['user_version'],
-        13,
+        14,
       );
       await db.close();
       await dir.delete(recursive: true);
@@ -600,7 +680,7 @@ void main() {
       expect(
         (await db.customSelect('PRAGMA user_version').getSingle())
             .data['user_version'],
-        13,
+        14,
       );
       await db.close();
       await dir.delete(recursive: true);

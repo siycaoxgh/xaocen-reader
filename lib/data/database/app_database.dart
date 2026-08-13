@@ -37,7 +37,7 @@ class AppDatabase extends _$AppDatabase {
       super(NativeDatabase.memory());
 
   @override
-  int get schemaVersion => 13;
+  int get schemaVersion => 14;
 
   /// 打开应用数据库（support 目录下）。
   static Future<AppDatabase> open({DataRoot? dataRoot}) async {
@@ -296,6 +296,30 @@ class AppDatabase extends _$AppDatabase {
           UPDATE reader_preferences
           SET show_top_info_divider = show_info_divider,
               show_bottom_info_divider = show_info_divider
+        ''');
+      }
+      // schema 13 -> 14: split Android OS status-bar visibility from the
+      // legacy statusBarMode value, which also used to gate Reader info.
+      // Preserve old semantics: system => visible, readerInfo/hidden => off.
+      if (from >= 5 && from < 14) {
+        await m.addColumn(
+          readerPreferencesRows,
+          readerPreferencesRows.showSystemStatusBar,
+        );
+        await customStatement('''
+          UPDATE reader_preferences
+          SET show_system_status_bar = CASE
+            WHEN status_bar_mode = 'system' THEN 1
+            ELSE 0
+          END,
+          show_top_info_bar = CASE
+            WHEN status_bar_mode = 'hidden' THEN 0
+            ELSE show_top_info_bar
+          END,
+          show_bottom_info_bar = CASE
+            WHEN status_bar_mode = 'hidden' THEN 0
+            ELSE show_bottom_info_bar
+          END
         ''');
       }
     },

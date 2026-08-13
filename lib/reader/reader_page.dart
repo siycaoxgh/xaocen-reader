@@ -226,6 +226,8 @@ class _ReaderPageState extends State<ReaderPage>
   PagedReaderController? _pagedController;
   final ChapterPageMetricsResolver _chapterPageMetricsResolver =
       ChapterPageMetricsResolver();
+  late final ValueNotifier<ReaderPreferences> _preferencesNotifier =
+      ValueNotifier(_preferences);
   ChapterPageMetrics? _chapterPageMetrics;
   int _chapterPageMetricsGeneration = 0;
   String? _chapterPageMetricsRequestKey;
@@ -919,8 +921,7 @@ class _ReaderPageState extends State<ReaderPage>
     if (defaultTargetPlatform != TargetPlatform.android) return;
     final brightness = _effectiveReaderTheme().brightness;
     final darkIcons = brightness == Brightness.light;
-    final barsVisible =
-        _preferences.statusBarMode == ReaderStatusBarMode.system;
+    final barsVisible = _preferences.showSystemStatusBar;
     unawaited(
       SystemChrome.setEnabledSystemUIMode(
         barsVisible ? SystemUiMode.edgeToEdge : SystemUiMode.immersiveSticky,
@@ -1059,6 +1060,7 @@ class _ReaderPageState extends State<ReaderPage>
     _metricsGeneration++;
     _invalidateChapterPageMetrics();
     _preferencesSubscription?.cancel();
+    _preferencesNotifier.dispose();
     WidgetsBinding.instance.removeObserver(this);
     _controller.removeListener(_onControllerChanged);
     final paged = _pagedController;
@@ -1115,7 +1117,8 @@ class _ReaderPageState extends State<ReaderPage>
     final previous = _preferences;
     final nextSignature = ReaderMetricsSignature.fromPreferences(next);
     _preferences = next;
-    if (next.statusBarMode != previous.statusBarMode ||
+    _preferencesNotifier.value = next;
+    if (next.showSystemStatusBar != previous.showSystemStatusBar ||
         next.themeMode != previous.themeMode) {
       _syncAndroidSystemUi();
     }
@@ -2325,6 +2328,7 @@ class _ReaderPageState extends State<ReaderPage>
                 showReaderSettings(
                   context,
                   preferences: _preferences,
+                  preferencesListenable: _preferencesNotifier,
                   mode: _mode,
                   onPreferencesCommitted: _commitPreferences,
                   onModeSelected: _selectMode,
@@ -2361,19 +2365,13 @@ class _ReaderPageState extends State<ReaderPage>
       !_chromeVisible &&
       (_autoReadController.state != AutoReadState.running ||
           _preferences.showAutoReadMinimalInfo) &&
-      (defaultTargetPlatform != TargetPlatform.android ||
-          _preferences.statusBarMode == ReaderStatusBarMode.readerInfo) &&
       (_preferences.showTopInfoBar || _preferences.showBottomInfoBar);
 
   Widget _buildReaderBodyWithInfoRegions(
     BuildContext context,
     Widget readerContent,
   ) {
-    final readerInfoAllowed =
-        defaultTargetPlatform != TargetPlatform.android ||
-        _preferences.statusBarMode == ReaderStatusBarMode.readerInfo;
     final reserveInfoRegions =
-        readerInfoAllowed &&
         (_preferences.showTopInfoBar || _preferences.showBottomInfoBar);
     if (!reserveInfoRegions) return readerContent;
     return ReaderInfoScaffold(
@@ -2436,40 +2434,42 @@ class _ReaderPageState extends State<ReaderPage>
                     return false;
                   },
                   child: SuperListView.builder(
-                  controller: _scroll,
-                  listController: _listController,
-                  itemCount: index.blockCount,
-                  itemBuilder: (context, i) {
-                    final block = index.blocks[i];
-                    final text = doc.text.substring(
-                      block.startCharacterOffset,
-                      block.endCharacterOffset,
-                    );
-                    final key = _blockKeys[i] ??= GlobalKey();
-                    return ReaderTextBlock(
-                      key: key,
-                      text: text,
-                      style: _bodyStyle,
-                      styleVersion: _appearance.textColor.toARGB32(),
-                      textDirection: TextDirection.ltr,
-                      paragraphSpacing: _preferences.paragraphSpacing,
-                      firstLineIndent: _preferences.firstLineIndent,
-                      startsAtParagraphBoundary:
-                          block.startCharacterOffset == 0 ||
-                          doc.text.codeUnitAt(block.startCharacterOffset - 1) ==
-                              0x0A,
-                      maxWidth:
-                          MediaQuery.of(context).size.width -
-                          _preferences.paddingLeft -
-                          _preferences.paddingRight,
-                      onLayout: (layout) {
-                        final ro = key.currentContext?.findRenderObject();
-                        if (ro is RenderReaderTextBlock) {
-                          _renderObjects[i] = ro;
-                        }
-                      },
-                    );
-                  },
+                    controller: _scroll,
+                    listController: _listController,
+                    itemCount: index.blockCount,
+                    itemBuilder: (context, i) {
+                      final block = index.blocks[i];
+                      final text = doc.text.substring(
+                        block.startCharacterOffset,
+                        block.endCharacterOffset,
+                      );
+                      final key = _blockKeys[i] ??= GlobalKey();
+                      return ReaderTextBlock(
+                        key: key,
+                        text: text,
+                        style: _bodyStyle,
+                        styleVersion: _appearance.textColor.toARGB32(),
+                        textDirection: TextDirection.ltr,
+                        paragraphSpacing: _preferences.paragraphSpacing,
+                        firstLineIndent: _preferences.firstLineIndent,
+                        startsAtParagraphBoundary:
+                            block.startCharacterOffset == 0 ||
+                            doc.text.codeUnitAt(
+                                  block.startCharacterOffset - 1,
+                                ) ==
+                                0x0A,
+                        maxWidth:
+                            MediaQuery.of(context).size.width -
+                            _preferences.paddingLeft -
+                            _preferences.paddingRight,
+                        onLayout: (layout) {
+                          final ro = key.currentContext?.findRenderObject();
+                          if (ro is RenderReaderTextBlock) {
+                            _renderObjects[i] = ro;
+                          }
+                        },
+                      );
+                    },
                   ),
                 ),
               ),

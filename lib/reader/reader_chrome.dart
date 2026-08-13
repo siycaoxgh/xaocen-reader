@@ -6,6 +6,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 import '../design/theme/app_typography.dart';
+import '../design/theme/app_theme.dart';
 import '../domain/reader/reader_bookmark.dart';
 import '../domain/reader/auto_read_controller.dart';
 import '../domain/reader/auto_read_preferences.dart';
@@ -249,7 +250,8 @@ class ReaderChrome extends StatelessWidget {
                               style: Theme.of(context).textTheme.labelSmall
                                   ?.copyWith(color: colorScheme.primary),
                             ),
-                            if (mode == ReaderMode.vertical &&
+                            if (visible &&
+                                mode == ReaderMode.vertical &&
                                 (currentChapterTitle != null ||
                                     progressPercent != null)) ...[
                               Text(
@@ -290,7 +292,8 @@ class ReaderChrome extends StatelessWidget {
                                     ),
                                 ],
                               ),
-                            ] else if (mode == ReaderMode.paged &&
+                            ] else if (visible &&
+                                mode == ReaderMode.paged &&
                                 (chapterPageNumber != null ||
                                     currentChapterTitle != null ||
                                     progressPercent != null)) ...[
@@ -428,8 +431,6 @@ class ReaderChrome extends StatelessWidget {
             !visible &&
             (autoReadState != AutoReadState.running ||
                 showAutoReadMinimalInfo) &&
-            (defaultTargetPlatform != TargetPlatform.android ||
-                statusBarMode == ReaderStatusBarMode.readerInfo) &&
             (showTopInfoBar || showBottomInfoBar))
           ReaderMinimalInfoLayer(
             mode: mode,
@@ -549,13 +550,9 @@ class ReaderInfoScaffold extends StatelessWidget {
     final systemInset = top
         ? MediaQuery.paddingOf(context).top
         : MediaQuery.paddingOf(context).bottom;
-    if (!showInfoContent) {
-      return SizedBox(
-        width: double.infinity,
-        height: readerInfoRegionExtent + systemInset,
-      );
-    }
     return SizedBox(
+      key: top ? readerTopInfoRegionKey : readerBottomInfoRegionKey,
+      width: double.infinity,
       height: readerInfoRegionExtent + systemInset,
       child: Padding(
         padding: EdgeInsets.only(
@@ -566,32 +563,35 @@ class ReaderInfoScaffold extends StatelessWidget {
           context: context,
           removeTop: true,
           removeBottom: true,
-          child: ReaderMinimalInfoLayer(
-            mode: mode,
-            currentChapterTitle: currentChapterTitle,
-            currentChapterNumber: currentChapterNumber,
-            chapterProgressPercent: chapterProgressPercent,
-            chapterPageNumber: chapterPageNumber,
-            chapterPageCount: chapterPageCount,
-            progressPercent: progressPercent,
-            showTopInfoBar: top,
-            showBottomInfoBar: !top,
-            showProgressInfo: showProgressInfo,
-            showChapterInfo: showChapterInfo,
-            showChapterProgressInfo: showChapterProgressInfo,
-            showClockInfo: showClockInfo,
-            showWholeBookProgressInfo: showWholeBookProgressInfo,
-            showInfoDivider: false,
-            chapterInfoSlot: chapterInfoSlot,
-            chapterProgressInfoSlot: chapterProgressInfoSlot,
-            clockInfoSlot: clockInfoSlot,
-            wholeBookProgressInfoSlot: wholeBookProgressInfoSlot,
-            infoDividerSlot: infoDividerSlot,
-            statusBarMode: statusBarMode,
-            timeDisplayMode: timeDisplayMode,
-            readerTextColor: readerTextColor,
-            readerBackgroundColor: readerBackgroundColor,
-          ),
+          child: showInfoContent
+              ? ReaderMinimalInfoLayer(
+                  mode: mode,
+                  currentChapterTitle: currentChapterTitle,
+                  currentChapterNumber: currentChapterNumber,
+                  chapterProgressPercent: chapterProgressPercent,
+                  chapterPageNumber: chapterPageNumber,
+                  chapterPageCount: chapterPageCount,
+                  progressPercent: progressPercent,
+                  showTopInfoBar: top,
+                  showBottomInfoBar: !top,
+                  showProgressInfo: showProgressInfo,
+                  showChapterInfo: showChapterInfo,
+                  showChapterProgressInfo: showChapterProgressInfo,
+                  showClockInfo: showClockInfo,
+                  showWholeBookProgressInfo: showWholeBookProgressInfo,
+                  showInfoDivider: false,
+                  chapterInfoSlot: chapterInfoSlot,
+                  chapterProgressInfoSlot: chapterProgressInfoSlot,
+                  clockInfoSlot: clockInfoSlot,
+                  wholeBookProgressInfoSlot: wholeBookProgressInfoSlot,
+                  infoDividerSlot: infoDividerSlot,
+                  statusBarMode: statusBarMode,
+                  timeDisplayMode: timeDisplayMode,
+                  readerTextColor: readerTextColor,
+                  readerBackgroundColor: readerBackgroundColor,
+                  useRegionKeys: false,
+                )
+              : const SizedBox.shrink(),
         ),
       ),
     );
@@ -683,6 +683,7 @@ class ReaderMinimalInfoLayer extends StatefulWidget {
     required this.timeDisplayMode,
     this.readerTextColor,
     this.readerBackgroundColor,
+    this.useRegionKeys = true,
   });
 
   final ReaderMode mode;
@@ -711,6 +712,7 @@ class ReaderMinimalInfoLayer extends StatefulWidget {
   final ReaderTimeDisplayMode timeDisplayMode;
   final Color? readerTextColor;
   final Color? readerBackgroundColor;
+  final bool useRegionKeys;
 
   @override
   State<ReaderMinimalInfoLayer> createState() => _ReaderMinimalInfoLayerState();
@@ -760,13 +762,13 @@ class _ReaderMinimalInfoLayerState extends State<ReaderMinimalInfoLayer> {
           children: [
             if (widget.showTopInfoBar)
               Align(
-                key: readerTopInfoRegionKey,
+                key: widget.useRegionKeys ? readerTopInfoRegionKey : null,
                 alignment: Alignment.topCenter,
                 child: _buildRow(context, top: true, style: style),
               ),
             if (widget.showBottomInfoBar)
               Align(
-                key: readerBottomInfoRegionKey,
+                key: widget.useRegionKeys ? readerBottomInfoRegionKey : null,
                 alignment: Alignment.bottomCenter,
                 child: _buildRow(context, top: false, style: style),
               ),
@@ -1383,6 +1385,7 @@ class _ChromeAction extends StatelessWidget {
 Future<void> showReaderSettings(
   BuildContext context, {
   required ReaderPreferences preferences,
+  ValueListenable<ReaderPreferences>? preferencesListenable,
   required ReaderMode mode,
   required ValueChanged<ReaderPreferences> onPreferencesCommitted,
   required ValueChanged<ReaderMode> onModeSelected,
@@ -1401,21 +1404,41 @@ Future<void> showReaderSettings(
     isScrollControlled: true,
     showDragHandle: true,
     constraints: BoxConstraints(maxWidth: isDesktop ? 960 : double.infinity),
-    builder: (context) => ReaderSettingsSheet(
-      preferences: preferences,
-      mode: mode,
-      onPreferencesCommitted: onPreferencesCommitted,
-      onModeSelected: onModeSelected,
-      onResetPreferences: onResetPreferences,
-      onPickBackgroundImage: onPickBackgroundImage,
-      onDeleteBackgroundImage: onDeleteBackgroundImage,
-      importedFonts: importedFonts,
-      systemFonts: systemFonts,
-      onImportFont: onImportFont,
-      onDeleteFont: onDeleteFont,
-      onPreviewFont: onPreviewFont,
-    ),
+    builder: (context) {
+      Widget sheet(ReaderPreferences current) => Theme(
+        data: _readerSettingsTheme(context, current.themeMode),
+        child: ReaderSettingsSheet(
+          preferences: current,
+          mode: mode,
+          onPreferencesCommitted: onPreferencesCommitted,
+          onModeSelected: onModeSelected,
+          onResetPreferences: onResetPreferences,
+          onPickBackgroundImage: onPickBackgroundImage,
+          onDeleteBackgroundImage: onDeleteBackgroundImage,
+          importedFonts: importedFonts,
+          systemFonts: systemFonts,
+          onImportFont: onImportFont,
+          onDeleteFont: onDeleteFont,
+          onPreviewFont: onPreviewFont,
+        ),
+      );
+      final source = preferencesListenable;
+      if (source == null) return sheet(preferences);
+      return ValueListenableBuilder<ReaderPreferences>(
+        valueListenable: source,
+        builder: (context, current, _) => sheet(current),
+      );
+    },
   );
+}
+
+ThemeData _readerSettingsTheme(BuildContext context, ReaderThemeMode mode) {
+  final brightness = switch (mode) {
+    ReaderThemeMode.light => Brightness.light,
+    ReaderThemeMode.dark => Brightness.dark,
+    ReaderThemeMode.system => MediaQuery.platformBrightnessOf(context),
+  };
+  return brightness == Brightness.dark ? AppTheme.dark() : AppTheme.light();
 }
 
 class ReaderSettingsSheet extends StatefulWidget {
@@ -2502,27 +2525,16 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
         ),
         if (defaultTargetPlatform == TargetPlatform.android) ...[
           const SizedBox(height: 8),
-          Text('系统栏模式', style: Theme.of(context).textTheme.labelLarge),
+          Text('系统状态栏', style: Theme.of(context).textTheme.labelLarge),
           const SizedBox(height: 6),
-          SegmentedButton<ReaderStatusBarMode>(
+          SwitchListTile.adaptive(
             key: readerStatusBarModeKey,
-            segments: const [
-              ButtonSegment(
-                value: ReaderStatusBarMode.system,
-                label: Text('系统状态栏'),
-              ),
-              ButtonSegment(
-                value: ReaderStatusBarMode.readerInfo,
-                label: Text('阅读器信息栏'),
-              ),
-              ButtonSegment(
-                value: ReaderStatusBarMode.hidden,
-                label: Text('隐藏'),
-              ),
-            ],
-            selected: {_draft.statusBarMode},
-            onSelectionChanged: (selection) =>
-                _commit(_draft.copyWith(statusBarMode: selection.single)),
+            contentPadding: EdgeInsets.zero,
+            title: const Text('显示系统状态栏'),
+            subtitle: const Text('仅控制 Android 系统状态栏，不影响阅读信息'),
+            value: _draft.showSystemStatusBar,
+            onChanged: (value) =>
+                _commit(_draft.copyWith(showSystemStatusBar: value)),
           ),
         ],
         const SizedBox(height: 12),

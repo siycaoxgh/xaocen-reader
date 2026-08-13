@@ -246,6 +246,8 @@ class ReaderPreferencesRows extends Table {
       boolean().withDefault(const Constant(true))();
   BoolColumn get showProgressInfo =>
       boolean().withDefault(const Constant(true))();
+  BoolColumn get showSystemStatusBar =>
+      boolean().withDefault(const Constant(true))();
   TextColumn get statusBarMode =>
       text().withDefault(const Constant('system'))();
   TextColumn get timeDisplayMode =>

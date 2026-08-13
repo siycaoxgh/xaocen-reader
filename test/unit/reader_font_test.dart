@@ -155,6 +155,9 @@ void main() {
       await old.customStatement(
         'ALTER TABLE reader_preferences DROP COLUMN show_bottom_info_divider',
       );
+      await old.customStatement(
+        'ALTER TABLE reader_preferences DROP COLUMN show_system_status_bar',
+      );
       await old.customStatement('DROP TABLE reader_font_asset_rows');
       await old.customStatement('PRAGMA user_version = 11');
       await old.close();
@@ -168,7 +171,7 @@ void main() {
       expect(
         (await migrated.customSelect('PRAGMA user_version').getSingle())
             .data['user_version'],
-        13,
+        14,
       );
       expect(
         await migrated.select(migrated.readerFontAssetRows).get(),

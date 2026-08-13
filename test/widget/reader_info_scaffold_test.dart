@@ -81,6 +81,35 @@ void main() {
     expect(hidden.height, greaterThan(withInfo.height));
   });
 
+  testWidgets('top and bottom information switches are independent', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_host(top: true, bottom: false, divider: false));
+    final topOnly = tester.getRect(find.byKey(const Key('reader-body')));
+    expect(find.byKey(readerTopInfoRegionKey), findsOneWidget);
+    expect(find.byKey(readerBottomInfoRegionKey), findsNothing);
+
+    await tester.pumpWidget(_host(top: false, bottom: true, divider: false));
+    final bottomOnly = tester.getRect(find.byKey(const Key('reader-body')));
+    expect(find.byKey(readerTopInfoRegionKey), findsNothing);
+    expect(find.byKey(readerBottomInfoRegionKey), findsOneWidget);
+    expect(bottomOnly.height, closeTo(topOnly.height, 0.01));
+
+    await tester.pumpWidget(_host(top: false, bottom: false, divider: false));
+    final neither = tester.getRect(find.byKey(const Key('reader-body')));
+    expect(neither.height, greaterThan(topOnly.height));
+  });
+
+  testWidgets('hidden info content still reserves independent regions', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _host(top: true, bottom: false, divider: false, showInfoContent: false),
+    );
+    expect(find.byKey(readerTopInfoRegionKey), findsOneWidget);
+    expect(find.byKey(readerBottomInfoRegionKey), findsNothing);
+  });
+
   testWidgets('divider visibility does not change body geometry', (
     tester,
   ) async {

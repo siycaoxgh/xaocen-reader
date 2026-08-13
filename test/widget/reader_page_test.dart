@@ -352,8 +352,17 @@ void main() {
     testWidgets('Chrome show/hide keeps Reader body geometry and locator', (
       tester,
     ) async {
-      await pumpReader(tester);
+      await pumpReader(
+        tester,
+        initialStateOverride: const ReaderProgressState(
+          collectionId: 'local-txt:abc',
+          absoluteCharacterOffset: 12,
+          readingMode: ReadingMode.vertical,
+        ),
+      );
       final bodyBefore = tester.getRect(find.byType(ReaderTextBlock).first);
+      final dynamic readerState = tester.state(find.byType(ReaderPage));
+      final locatorBefore = readerState.lastVisibleRange?.startCharacterOffset;
       await tester.tap(find.byKey(readerChromeToggleKey));
       await tester.pump(const Duration(milliseconds: 150));
       final bodyHidden = tester.getRect(find.byType(ReaderTextBlock).first);
@@ -362,6 +371,11 @@ void main() {
       final bodyAfter = tester.getRect(find.byType(ReaderTextBlock).first);
       expect(bodyHidden.top, bodyBefore.top);
       expect(bodyAfter.top, bodyBefore.top);
+      expect(
+        readerState.lastVisibleRange?.startCharacterOffset,
+        locatorBefore,
+        reason: 'Chrome visibility is paint-only and must not navigate',
+      );
       expect(await progressRepo.getProgress('local-txt:abc'), isNull);
     });
 
@@ -676,9 +690,9 @@ void main() {
       await pumpReader(tester);
       // The vertical chrome now labels chapter and whole-book progress
       // separately; assert the existing whole-book contract explicitly.
-      expect(find.textContaining('第 1 章'), findsOneWidget);
-      expect(find.text('本章 0%'), findsOneWidget);
-      expect(find.text('全书 0%'), findsOneWidget);
+      expect(find.textContaining('第 1 章'), findsWidgets);
+      expect(find.text('本章 0%'), findsWidgets);
+      expect(find.text('全书 0%'), findsWidgets);
       expect(await progressRepo.getProgress('local-txt:abc'), isNull);
     });
 

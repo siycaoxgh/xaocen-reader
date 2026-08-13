@@ -50,6 +50,7 @@ final class ReaderPreferences {
     required this.showTopInfoBar,
     required this.showBottomInfoBar,
     required this.showProgressInfo,
+    required this.showSystemStatusBar,
     required this.statusBarMode,
     required this.timeDisplayMode,
     required this.showChapterInfo,
@@ -113,6 +114,7 @@ final class ReaderPreferences {
   static const bool defaultShowTopInfoBar = true;
   static const bool defaultShowBottomInfoBar = true;
   static const bool defaultShowProgressInfo = true;
+  static const bool defaultShowSystemStatusBar = true;
   static const ReaderStatusBarMode defaultStatusBarMode =
       ReaderStatusBarMode.system;
   static const ReaderTimeDisplayMode defaultTimeDisplayMode =
@@ -154,6 +156,7 @@ final class ReaderPreferences {
     showTopInfoBar: defaultShowTopInfoBar,
     showBottomInfoBar: defaultShowBottomInfoBar,
     showProgressInfo: defaultShowProgressInfo,
+    showSystemStatusBar: defaultShowSystemStatusBar,
     statusBarMode: defaultStatusBarMode,
     timeDisplayMode: defaultTimeDisplayMode,
     showChapterInfo: defaultShowChapterInfo,
@@ -195,6 +198,7 @@ final class ReaderPreferences {
     bool showTopInfoBar = defaultShowTopInfoBar,
     bool showBottomInfoBar = defaultShowBottomInfoBar,
     bool showProgressInfo = defaultShowProgressInfo,
+    bool? showSystemStatusBar,
     ReaderStatusBarMode statusBarMode = defaultStatusBarMode,
     ReaderTimeDisplayMode timeDisplayMode = defaultTimeDisplayMode,
     bool? showChapterInfo,
@@ -296,6 +300,8 @@ final class ReaderPreferences {
     showProgressInfo:
         (showChapterProgressInfo ?? showProgressInfo) &&
         (showWholeBookProgressInfo ?? showProgressInfo),
+    showSystemStatusBar:
+        showSystemStatusBar ?? statusBarMode == ReaderStatusBarMode.system,
     statusBarMode: statusBarMode,
     timeDisplayMode: timeDisplayMode,
     showChapterInfo: showChapterInfo ?? defaultShowChapterInfo,
@@ -336,6 +342,11 @@ final class ReaderPreferences {
   final bool showTopInfoBar;
   final bool showBottomInfoBar;
   final bool showProgressInfo;
+
+  /// Android-only OS status-bar visibility. Reader information regions are
+  /// independent and are controlled by [showTopInfoBar]/[showBottomInfoBar].
+  final bool showSystemStatusBar;
+  @Deprecated('Use showSystemStatusBar; retained for legacy persistence/API.')
   final ReaderStatusBarMode statusBarMode;
   final ReaderTimeDisplayMode timeDisplayMode;
   final bool showChapterInfo;
@@ -394,6 +405,7 @@ final class ReaderPreferences {
     bool? showTopInfoBar,
     bool? showBottomInfoBar,
     bool? showProgressInfo,
+    bool? showSystemStatusBar,
     ReaderStatusBarMode? statusBarMode,
     ReaderTimeDisplayMode? timeDisplayMode,
     bool? showChapterInfo,
@@ -485,6 +497,11 @@ final class ReaderPreferences {
       showTopInfoBar: showTopInfoBar ?? this.showTopInfoBar,
       showBottomInfoBar: showBottomInfoBar ?? this.showBottomInfoBar,
       showProgressInfo: nextChapterProgress && nextWholeBookProgress,
+      showSystemStatusBar:
+          showSystemStatusBar ??
+          (statusBarMode == null
+              ? this.showSystemStatusBar
+              : statusBarMode == ReaderStatusBarMode.system),
       statusBarMode: statusBarMode ?? this.statusBarMode,
       timeDisplayMode: timeDisplayMode ?? this.timeDisplayMode,
       showChapterInfo: nextChapterInfo,
@@ -537,6 +554,7 @@ final class ReaderPreferences {
     if (showTopInfoBar != previous.showTopInfoBar ||
         showBottomInfoBar != previous.showBottomInfoBar ||
         showProgressInfo != previous.showProgressInfo ||
+        showSystemStatusBar != previous.showSystemStatusBar ||
         statusBarMode != previous.statusBarMode ||
         timeDisplayMode != previous.timeDisplayMode ||
         showChapterInfo != previous.showChapterInfo ||
@@ -602,6 +620,7 @@ final class ReaderPreferences {
       showTopInfoBar == other.showTopInfoBar &&
       showBottomInfoBar == other.showBottomInfoBar &&
       showProgressInfo == other.showProgressInfo &&
+      showSystemStatusBar == other.showSystemStatusBar &&
       statusBarMode == other.statusBarMode &&
       timeDisplayMode == other.timeDisplayMode &&
       showChapterInfo == other.showChapterInfo &&
@@ -641,6 +660,7 @@ final class ReaderPreferences {
     showTopInfoBar,
     showBottomInfoBar,
     showProgressInfo,
+    showSystemStatusBar,
     statusBarMode,
     timeDisplayMode,
     showChapterInfo,

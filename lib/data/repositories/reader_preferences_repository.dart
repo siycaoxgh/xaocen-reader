@@ -54,6 +54,7 @@ final class ReaderPreferencesRepository {
       showTopInfoBar: preferences.showTopInfoBar,
       showBottomInfoBar: preferences.showBottomInfoBar,
       showProgressInfo: preferences.showProgressInfo,
+      showSystemStatusBar: preferences.showSystemStatusBar,
       statusBarMode: preferences.statusBarMode,
       timeDisplayMode: preferences.timeDisplayMode,
       showChapterInfo: preferences.showChapterInfo,
@@ -100,6 +101,7 @@ final class ReaderPreferencesRepository {
             showTopInfoBar: Value(safe.showTopInfoBar),
             showBottomInfoBar: Value(safe.showBottomInfoBar),
             showProgressInfo: Value(safe.showProgressInfo),
+            showSystemStatusBar: Value(safe.showSystemStatusBar),
             statusBarMode: Value(safe.statusBarMode.name),
             timeDisplayMode: Value(safe.timeDisplayMode.name),
             showChapterInfo: Value(safe.showChapterInfo),
@@ -163,6 +165,7 @@ final class ReaderPreferencesRepository {
       showTopInfoBar: row.showTopInfoBar,
       showBottomInfoBar: row.showBottomInfoBar,
       showProgressInfo: row.showProgressInfo,
+      showSystemStatusBar: row.showSystemStatusBar,
       statusBarMode:
           ReaderStatusBarMode.values
               .where((value) => value.name == row.statusBarMode)
