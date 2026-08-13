@@ -222,6 +222,7 @@ class ReaderPreferencesRows extends Table {
   RealColumn get lineHeight => real()();
   RealColumn get paragraphSpacing => real()();
   RealColumn get firstLineIndent => real()();
+  TextColumn get textAlignment => text().withDefault(const Constant('left'))();
   RealColumn get paddingTop => real()();
   RealColumn get paddingBottom => real()();
   RealColumn get paddingLeft => real()();

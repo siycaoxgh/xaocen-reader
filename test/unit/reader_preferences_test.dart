@@ -56,6 +56,10 @@ void main() {
       expect(ReaderPreferences.firstLineIndentStep, .5);
       expect(ReaderPreferences.minFirstLineIndent, -2);
       expect(ReaderPreferences.paddingStep, 2);
+      expect(
+        ReaderPreferences.defaults.textAlignment,
+        ReaderTextAlignment.left,
+      );
     });
 
     test('every invalid field falls back independently', () {
@@ -80,6 +84,9 @@ void main() {
         ReaderPreferences.defaults.copyWith(lineHeight: 1.8),
         ReaderPreferences.defaults.copyWith(paragraphSpacing: 2),
         ReaderPreferences.defaults.copyWith(firstLineIndent: 2),
+        ReaderPreferences.defaults.copyWith(
+          textAlignment: ReaderTextAlignment.justify,
+        ),
         ReaderPreferences.defaults.copyWith(paddingTop: 10),
         ReaderPreferences.defaults.copyWith(paddingBottom: 10),
         ReaderPreferences.defaults.copyWith(paddingLeft: 18),
@@ -248,7 +255,7 @@ void main() {
   });
 
   test(
-    'schema 4鈫? preserves books and seeds legacy global settings per book',
+    'schema 4閳? preserves books and seeds legacy global settings per book',
     () async {
       final dir = await Directory.systemTemp.createTemp('m51e1_migration');
       final file = File('${dir.path}${Platform.pathSeparator}db.sqlite');
@@ -367,7 +374,7 @@ void main() {
       expect(
         (await db.customSelect('PRAGMA user_version').getSingle())
             .data['user_version'],
-        16,
+        17,
       );
       await db.close();
       await dir.delete(recursive: true);
@@ -402,7 +409,7 @@ void main() {
     expect(
       (await db.customSelect('PRAGMA user_version').getSingle())
           .data['user_version'],
-      16,
+      17,
     );
     await db.close();
     await dir.delete(recursive: true);
@@ -443,14 +450,38 @@ void main() {
       expect(
         (await db.customSelect('PRAGMA user_version').getSingle())
             .data['user_version'],
-        16,
+        17,
       );
       await db.close();
       await dir.delete(recursive: true);
     },
   );
 
-  test('schema 6鈫?1 preserves typography and adds display defaults', () async {
+  test('schema 16 -> 17 adds left-aligned body default', () async {
+    final dir = await Directory.systemTemp.createTemp(
+      'm57s_alignment_migration',
+    );
+    final file = File('${dir.path}${Platform.pathSeparator}db.sqlite');
+    var db = AppDatabase(NativeDatabase(file));
+    await seedBook(db, a);
+    await db.close();
+    final raw = sqlite3.open(file.path);
+    raw.execute('ALTER TABLE reader_preferences DROP COLUMN text_alignment');
+    raw.execute('PRAGMA user_version = 16');
+    raw.dispose();
+    db = AppDatabase(NativeDatabase(file));
+    final loaded = await ReaderPreferencesRepository(db: db).load(a);
+    expect(loaded.textAlignment, ReaderTextAlignment.left);
+    expect(
+      (await db.customSelect('PRAGMA user_version').getSingle())
+          .data['user_version'],
+      17,
+    );
+    await db.close();
+    await dir.delete(recursive: true);
+  });
+
+  test('schema 6閳?1 preserves typography and adds display defaults', () async {
     final dir = await Directory.systemTemp.createTemp('m55e_migration');
     final file = File('${dir.path}${Platform.pathSeparator}db.sqlite');
     var db = AppDatabase(NativeDatabase(file));
@@ -503,13 +534,13 @@ void main() {
     expect(
       (await db.customSelect('PRAGMA user_version').getSingle())
           .data['user_version'],
-      16,
+      17,
     );
     await db.close();
     await dir.delete(recursive: true);
   });
 
-  test('schema 7鈫?1 preserves legacy colors and image appearance', () async {
+  test('schema 7閳?1 preserves legacy colors and image appearance', () async {
     final dir = await Directory.systemTemp.createTemp('m55e_palette_migration');
     final file = File('${dir.path}${Platform.pathSeparator}db.sqlite');
     var db = AppDatabase(NativeDatabase(file));
@@ -591,7 +622,7 @@ void main() {
     expect(
       (await db.customSelect('PRAGMA user_version').getSingle())
           .data['user_version'],
-      16,
+      17,
     );
     expect((await db.select(db.contentCollections).get()).single.id, a);
     await db.close();
@@ -599,7 +630,7 @@ void main() {
   });
 
   test(
-    'schema 8鈫?1 adds display defaults without changing book preferences',
+    'schema 8閳?1 adds display defaults without changing book preferences',
     () async {
       final dir = await Directory.systemTemp.createTemp(
         'm55g_display_migration',
@@ -685,7 +716,7 @@ void main() {
       expect(
         (await db.customSelect('PRAGMA user_version').getSingle())
             .data['user_version'],
-        16,
+        17,
       );
       await db.close();
       await dir.delete(recursive: true);
@@ -693,7 +724,7 @@ void main() {
   );
 
   test(
-    'schema 9鈫?1 adds fixed info slots and AutoRead display choice',
+    'schema 9閳?1 adds fixed info slots and AutoRead display choice',
     () async {
       final dir = await Directory.systemTemp.createTemp('m56b_slots_migration');
       final file = File('${dir.path}${Platform.pathSeparator}db.sqlite');
@@ -775,7 +806,7 @@ void main() {
       expect(
         (await db.customSelect('PRAGMA user_version').getSingle())
             .data['user_version'],
-        16,
+        17,
       );
       await db.close();
       await dir.delete(recursive: true);

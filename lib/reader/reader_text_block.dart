@@ -29,6 +29,7 @@ class ReaderTextBlock extends LeafRenderObjectWidget {
     required this.maxWidth,
     this.paragraphSpacing = 0,
     this.firstLineIndent = 0,
+    this.textAlign = TextAlign.left,
     this.startsAtParagraphBoundary = true,
     this.onLayout,
   });
@@ -39,6 +40,7 @@ class ReaderTextBlock extends LeafRenderObjectWidget {
   final double maxWidth;
   final double paragraphSpacing;
   final double firstLineIndent;
+  final TextAlign textAlign;
   final bool startsAtParagraphBoundary;
   final ValueChanged<ReaderBlockLayout>? onLayout;
 
@@ -52,6 +54,7 @@ class ReaderTextBlock extends LeafRenderObjectWidget {
         maxWidth: maxWidth,
         paragraphSpacing: paragraphSpacing,
         firstLineIndent: firstLineIndent,
+        textAlign: textAlign,
         startsAtParagraphBoundary: startsAtParagraphBoundary,
         onLayout: onLayout,
       );
@@ -69,6 +72,7 @@ class ReaderTextBlock extends LeafRenderObjectWidget {
       ..maxWidth = maxWidth
       ..paragraphSpacing = paragraphSpacing
       ..firstLineIndent = firstLineIndent
+      ..textAlign = textAlign
       ..startsAtParagraphBoundary = startsAtParagraphBoundary
       ..onLayout = onLayout;
   }
@@ -83,6 +87,7 @@ class RenderReaderTextBlock extends RenderBox {
     required double maxWidth,
     double paragraphSpacing = 0,
     double firstLineIndent = 0,
+    TextAlign textAlign = TextAlign.left,
     bool startsAtParagraphBoundary = true,
     ValueChanged<ReaderBlockLayout>? onLayout,
   }) : _text = text,
@@ -92,6 +97,7 @@ class RenderReaderTextBlock extends RenderBox {
        _maxWidth = maxWidth,
        _paragraphSpacing = paragraphSpacing,
        _firstLineIndent = firstLineIndent,
+       _textAlign = textAlign,
        _startsAtParagraphBoundary = startsAtParagraphBoundary,
        _onLayout = onLayout;
 
@@ -102,6 +108,7 @@ class RenderReaderTextBlock extends RenderBox {
   double _maxWidth;
   double _paragraphSpacing;
   double _firstLineIndent;
+  TextAlign _textAlign;
   bool _startsAtParagraphBoundary;
   ValueChanged<ReaderBlockLayout>? _onLayout;
   ReaderTypographyLayout? _layout;
@@ -190,6 +197,14 @@ class RenderReaderTextBlock extends RenderBox {
     }
   }
 
+  TextAlign get textAlign => _textAlign;
+  set textAlign(TextAlign value) {
+    if (value != _textAlign) {
+      _textAlign = value;
+      markNeedsLayout();
+    }
+  }
+
   bool get startsAtParagraphBoundary => _startsAtParagraphBoundary;
   set startsAtParagraphBoundary(bool value) {
     if (value != _startsAtParagraphBoundary) {
@@ -214,6 +229,7 @@ class RenderReaderTextBlock extends RenderBox {
     width: width,
     paragraphSpacing: _paragraphSpacing,
     firstLineIndent: _firstLineIndent,
+    textAlign: _textAlign,
     startsAtParagraphBoundary: _startsAtParagraphBoundary,
   );
 

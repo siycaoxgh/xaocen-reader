@@ -37,7 +37,7 @@ class AppDatabase extends _$AppDatabase {
       super(NativeDatabase.memory());
 
   @override
-  int get schemaVersion => 16;
+  int get schemaVersion => 17;
 
   /// 打开应用数据库（support 目录下）。
   static Future<AppDatabase> open({DataRoot? dataRoot}) async {
@@ -365,6 +365,16 @@ class AppDatabase extends _$AppDatabase {
         if (await hasReaderPreferenceColumn('show_battery_info')) {
           await customStatement(
             'UPDATE reader_preferences SET show_battery_info = 0',
+          );
+        }
+      }
+      // schema 16 -> 17: per-book paragraph alignment. Existing books keep
+      // the historical left-aligned rendering contract.
+      if (from >= 5 && from < 17) {
+        if (!await hasReaderPreferenceColumn('text_alignment')) {
+          await m.addColumn(
+            readerPreferencesRows,
+            readerPreferencesRows.textAlignment,
           );
         }
       }

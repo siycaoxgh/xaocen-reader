@@ -63,6 +63,7 @@ class PagedReaderController extends ChangeNotifier {
     double? paddingRight,
     this.paragraphSpacing = 0,
     this.firstLineIndent = 0,
+    this.textAlign = TextAlign.left,
     this.chapterStartOffsets = const <int>[],
     this.previousWindowPages = 2,
     this.nextWindowPages = 3,
@@ -100,6 +101,7 @@ class PagedReaderController extends ChangeNotifier {
   late double paddingRight;
   late double paragraphSpacing;
   late double firstLineIndent;
+  late TextAlign textAlign;
   final List<int> chapterStartOffsets;
   final int previousWindowPages;
   final int nextWindowPages;
@@ -357,6 +359,7 @@ class PagedReaderController extends ChangeNotifier {
     double? paddingRight,
     double? paragraphSpacing,
     double? firstLineIndent,
+    TextAlign? textAlign,
   }) {
     final nextHorizontalPadding = horizontalPadding ?? this.horizontalPadding;
     final nextVerticalPadding = verticalPadding ?? this.verticalPadding;
@@ -374,6 +377,7 @@ class PagedReaderController extends ChangeNotifier {
         (horizontalPadding != null ? nextHorizontalPadding : this.paddingRight);
     final nextParagraphSpacing = paragraphSpacing ?? this.paragraphSpacing;
     final nextFirstLineIndent = firstLineIndent ?? this.firstLineIndent;
+    final nextTextAlign = textAlign ?? this.textAlign;
     final nextMetricsKey = textStyleMetricsKey(style);
     final metricsUnchanged =
         width == _width &&
@@ -386,7 +390,8 @@ class PagedReaderController extends ChangeNotifier {
         nextLeft == this.paddingLeft &&
         nextRight == this.paddingRight &&
         nextParagraphSpacing == this.paragraphSpacing &&
-        nextFirstLineIndent == this.firstLineIndent;
+        nextFirstLineIndent == this.firstLineIndent &&
+        nextTextAlign == this.textAlign;
     if (metricsUnchanged) {
       if (style == _style) return false;
       _style = style;
@@ -410,6 +415,7 @@ class PagedReaderController extends ChangeNotifier {
     this.paddingRight = nextRight;
     this.paragraphSpacing = nextParagraphSpacing;
     this.firstLineIndent = nextFirstLineIndent;
+    this.textAlign = nextTextAlign;
     _engine.dispose();
     _rebuildEngine();
 
@@ -443,6 +449,7 @@ class PagedReaderController extends ChangeNotifier {
     double? paddingRight,
     double? paragraphSpacing,
     double? firstLineIndent,
+    TextAlign? textAlign,
   }) {
     final nextHorizontalPadding = horizontalPadding ?? this.horizontalPadding;
     final nextVerticalPadding = verticalPadding ?? this.verticalPadding;
@@ -460,6 +467,7 @@ class PagedReaderController extends ChangeNotifier {
         (horizontalPadding != null ? nextHorizontalPadding : this.paddingRight);
     final nextParagraphSpacing = paragraphSpacing ?? this.paragraphSpacing;
     final nextFirstLineIndent = firstLineIndent ?? this.firstLineIndent;
+    final nextTextAlign = textAlign ?? this.textAlign;
     final nextMetricsKey = textStyleMetricsKey(style);
     final metricsUnchanged =
         width == _width &&
@@ -472,7 +480,8 @@ class PagedReaderController extends ChangeNotifier {
         nextLeft == this.paddingLeft &&
         nextRight == this.paddingRight &&
         nextParagraphSpacing == this.paragraphSpacing &&
-        nextFirstLineIndent == this.firstLineIndent;
+        nextFirstLineIndent == this.firstLineIndent &&
+        nextTextAlign == this.textAlign;
     if (metricsUnchanged) {
       if (style == _style) return false;
       _style = style;
@@ -495,6 +504,7 @@ class PagedReaderController extends ChangeNotifier {
     this.paddingRight = nextRight;
     this.paragraphSpacing = nextParagraphSpacing;
     this.firstLineIndent = nextFirstLineIndent;
+    this.textAlign = nextTextAlign;
     _engine.dispose();
     _rebuildEngine();
 
@@ -523,6 +533,7 @@ class PagedReaderController extends ChangeNotifier {
       paddingRight: paddingRight,
       paragraphSpacing: paragraphSpacing,
       firstLineIndent: firstLineIndent,
+      textAlign: textAlign,
       chapterStartOffsets: chapterStartOffsets,
     );
   }

@@ -4187,6 +4187,18 @@ class $ReaderPreferencesRowsTable extends ReaderPreferencesRows
     type: DriftSqlType.double,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _textAlignmentMeta = const VerificationMeta(
+    'textAlignment',
+  );
+  @override
+  late final GeneratedColumn<String> textAlignment = GeneratedColumn<String>(
+    'text_alignment',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('left'),
+  );
   static const VerificationMeta _paddingTopMeta = const VerificationMeta(
     'paddingTop',
   );
@@ -4705,6 +4717,7 @@ class $ReaderPreferencesRowsTable extends ReaderPreferencesRows
     lineHeight,
     paragraphSpacing,
     firstLineIndent,
+    textAlignment,
     paddingTop,
     paddingBottom,
     paddingLeft,
@@ -4823,6 +4836,15 @@ class $ReaderPreferencesRowsTable extends ReaderPreferencesRows
       );
     } else if (isInserting) {
       context.missing(_firstLineIndentMeta);
+    }
+    if (data.containsKey('text_alignment')) {
+      context.handle(
+        _textAlignmentMeta,
+        textAlignment.isAcceptableOrUnknown(
+          data['text_alignment']!,
+          _textAlignmentMeta,
+        ),
+      );
     }
     if (data.containsKey('padding_top')) {
       context.handle(
@@ -5221,6 +5243,10 @@ class $ReaderPreferencesRowsTable extends ReaderPreferencesRows
         DriftSqlType.double,
         data['${effectivePrefix}first_line_indent'],
       )!,
+      textAlignment: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}text_alignment'],
+      )!,
       paddingTop: attachedDatabase.typeMapping.read(
         DriftSqlType.double,
         data['${effectivePrefix}padding_top'],
@@ -5401,6 +5427,7 @@ class ReaderPreferencesRow extends DataClass
   final double lineHeight;
   final double paragraphSpacing;
   final double firstLineIndent;
+  final String textAlignment;
   final double paddingTop;
   final double paddingBottom;
   final double paddingLeft;
@@ -5449,6 +5476,7 @@ class ReaderPreferencesRow extends DataClass
     required this.lineHeight,
     required this.paragraphSpacing,
     required this.firstLineIndent,
+    required this.textAlignment,
     required this.paddingTop,
     required this.paddingBottom,
     required this.paddingLeft,
@@ -5502,6 +5530,7 @@ class ReaderPreferencesRow extends DataClass
     map['line_height'] = Variable<double>(lineHeight);
     map['paragraph_spacing'] = Variable<double>(paragraphSpacing);
     map['first_line_indent'] = Variable<double>(firstLineIndent);
+    map['text_alignment'] = Variable<String>(textAlignment);
     map['padding_top'] = Variable<double>(paddingTop);
     map['padding_bottom'] = Variable<double>(paddingBottom);
     map['padding_left'] = Variable<double>(paddingLeft);
@@ -5584,6 +5613,7 @@ class ReaderPreferencesRow extends DataClass
       lineHeight: Value(lineHeight),
       paragraphSpacing: Value(paragraphSpacing),
       firstLineIndent: Value(firstLineIndent),
+      textAlignment: Value(textAlignment),
       paddingTop: Value(paddingTop),
       paddingBottom: Value(paddingBottom),
       paddingLeft: Value(paddingLeft),
@@ -5654,6 +5684,7 @@ class ReaderPreferencesRow extends DataClass
       lineHeight: serializer.fromJson<double>(json['lineHeight']),
       paragraphSpacing: serializer.fromJson<double>(json['paragraphSpacing']),
       firstLineIndent: serializer.fromJson<double>(json['firstLineIndent']),
+      textAlignment: serializer.fromJson<String>(json['textAlignment']),
       paddingTop: serializer.fromJson<double>(json['paddingTop']),
       paddingBottom: serializer.fromJson<double>(json['paddingBottom']),
       paddingLeft: serializer.fromJson<double>(json['paddingLeft']),
@@ -5735,6 +5766,7 @@ class ReaderPreferencesRow extends DataClass
       'lineHeight': serializer.toJson<double>(lineHeight),
       'paragraphSpacing': serializer.toJson<double>(paragraphSpacing),
       'firstLineIndent': serializer.toJson<double>(firstLineIndent),
+      'textAlignment': serializer.toJson<String>(textAlignment),
       'paddingTop': serializer.toJson<double>(paddingTop),
       'paddingBottom': serializer.toJson<double>(paddingBottom),
       'paddingLeft': serializer.toJson<double>(paddingLeft),
@@ -5806,6 +5838,7 @@ class ReaderPreferencesRow extends DataClass
     double? lineHeight,
     double? paragraphSpacing,
     double? firstLineIndent,
+    String? textAlignment,
     double? paddingTop,
     double? paddingBottom,
     double? paddingLeft,
@@ -5854,6 +5887,7 @@ class ReaderPreferencesRow extends DataClass
     lineHeight: lineHeight ?? this.lineHeight,
     paragraphSpacing: paragraphSpacing ?? this.paragraphSpacing,
     firstLineIndent: firstLineIndent ?? this.firstLineIndent,
+    textAlignment: textAlignment ?? this.textAlignment,
     paddingTop: paddingTop ?? this.paddingTop,
     paddingBottom: paddingBottom ?? this.paddingBottom,
     paddingLeft: paddingLeft ?? this.paddingLeft,
@@ -5936,6 +5970,9 @@ class ReaderPreferencesRow extends DataClass
       firstLineIndent: data.firstLineIndent.present
           ? data.firstLineIndent.value
           : this.firstLineIndent,
+      textAlignment: data.textAlignment.present
+          ? data.textAlignment.value
+          : this.textAlignment,
       paddingTop: data.paddingTop.present
           ? data.paddingTop.value
           : this.paddingTop,
@@ -6063,6 +6100,7 @@ class ReaderPreferencesRow extends DataClass
           ..write('lineHeight: $lineHeight, ')
           ..write('paragraphSpacing: $paragraphSpacing, ')
           ..write('firstLineIndent: $firstLineIndent, ')
+          ..write('textAlignment: $textAlignment, ')
           ..write('paddingTop: $paddingTop, ')
           ..write('paddingBottom: $paddingBottom, ')
           ..write('paddingLeft: $paddingLeft, ')
@@ -6116,6 +6154,7 @@ class ReaderPreferencesRow extends DataClass
     lineHeight,
     paragraphSpacing,
     firstLineIndent,
+    textAlignment,
     paddingTop,
     paddingBottom,
     paddingLeft,
@@ -6168,6 +6207,7 @@ class ReaderPreferencesRow extends DataClass
           other.lineHeight == this.lineHeight &&
           other.paragraphSpacing == this.paragraphSpacing &&
           other.firstLineIndent == this.firstLineIndent &&
+          other.textAlignment == this.textAlignment &&
           other.paddingTop == this.paddingTop &&
           other.paddingBottom == this.paddingBottom &&
           other.paddingLeft == this.paddingLeft &&
@@ -6219,6 +6259,7 @@ class ReaderPreferencesRowsCompanion
   final Value<double> lineHeight;
   final Value<double> paragraphSpacing;
   final Value<double> firstLineIndent;
+  final Value<String> textAlignment;
   final Value<double> paddingTop;
   final Value<double> paddingBottom;
   final Value<double> paddingLeft;
@@ -6268,6 +6309,7 @@ class ReaderPreferencesRowsCompanion
     this.lineHeight = const Value.absent(),
     this.paragraphSpacing = const Value.absent(),
     this.firstLineIndent = const Value.absent(),
+    this.textAlignment = const Value.absent(),
     this.paddingTop = const Value.absent(),
     this.paddingBottom = const Value.absent(),
     this.paddingLeft = const Value.absent(),
@@ -6318,6 +6360,7 @@ class ReaderPreferencesRowsCompanion
     required double lineHeight,
     required double paragraphSpacing,
     required double firstLineIndent,
+    this.textAlignment = const Value.absent(),
     required double paddingTop,
     required double paddingBottom,
     required double paddingLeft,
@@ -6379,6 +6422,7 @@ class ReaderPreferencesRowsCompanion
     Expression<double>? lineHeight,
     Expression<double>? paragraphSpacing,
     Expression<double>? firstLineIndent,
+    Expression<String>? textAlignment,
     Expression<double>? paddingTop,
     Expression<double>? paddingBottom,
     Expression<double>? paddingLeft,
@@ -6429,6 +6473,7 @@ class ReaderPreferencesRowsCompanion
       if (lineHeight != null) 'line_height': lineHeight,
       if (paragraphSpacing != null) 'paragraph_spacing': paragraphSpacing,
       if (firstLineIndent != null) 'first_line_indent': firstLineIndent,
+      if (textAlignment != null) 'text_alignment': textAlignment,
       if (paddingTop != null) 'padding_top': paddingTop,
       if (paddingBottom != null) 'padding_bottom': paddingBottom,
       if (paddingLeft != null) 'padding_left': paddingLeft,
@@ -6497,6 +6542,7 @@ class ReaderPreferencesRowsCompanion
     Value<double>? lineHeight,
     Value<double>? paragraphSpacing,
     Value<double>? firstLineIndent,
+    Value<String>? textAlignment,
     Value<double>? paddingTop,
     Value<double>? paddingBottom,
     Value<double>? paddingLeft,
@@ -6547,6 +6593,7 @@ class ReaderPreferencesRowsCompanion
       lineHeight: lineHeight ?? this.lineHeight,
       paragraphSpacing: paragraphSpacing ?? this.paragraphSpacing,
       firstLineIndent: firstLineIndent ?? this.firstLineIndent,
+      textAlignment: textAlignment ?? this.textAlignment,
       paddingTop: paddingTop ?? this.paddingTop,
       paddingBottom: paddingBottom ?? this.paddingBottom,
       paddingLeft: paddingLeft ?? this.paddingLeft,
@@ -6625,6 +6672,9 @@ class ReaderPreferencesRowsCompanion
     }
     if (firstLineIndent.present) {
       map['first_line_indent'] = Variable<double>(firstLineIndent.value);
+    }
+    if (textAlignment.present) {
+      map['text_alignment'] = Variable<String>(textAlignment.value);
     }
     if (paddingTop.present) {
       map['padding_top'] = Variable<double>(paddingTop.value);
@@ -6786,6 +6836,7 @@ class ReaderPreferencesRowsCompanion
           ..write('lineHeight: $lineHeight, ')
           ..write('paragraphSpacing: $paragraphSpacing, ')
           ..write('firstLineIndent: $firstLineIndent, ')
+          ..write('textAlignment: $textAlignment, ')
           ..write('paddingTop: $paddingTop, ')
           ..write('paddingBottom: $paddingBottom, ')
           ..write('paddingLeft: $paddingLeft, ')
@@ -12008,6 +12059,7 @@ typedef $$ReaderPreferencesRowsTableCreateCompanionBuilder =
       required double lineHeight,
       required double paragraphSpacing,
       required double firstLineIndent,
+      Value<String> textAlignment,
       required double paddingTop,
       required double paddingBottom,
       required double paddingLeft,
@@ -12059,6 +12111,7 @@ typedef $$ReaderPreferencesRowsTableUpdateCompanionBuilder =
       Value<double> lineHeight,
       Value<double> paragraphSpacing,
       Value<double> firstLineIndent,
+      Value<String> textAlignment,
       Value<double> paddingTop,
       Value<double> paddingBottom,
       Value<double> paddingLeft,
@@ -12174,6 +12227,11 @@ class $$ReaderPreferencesRowsTableFilterComposer
 
   ColumnFilters<double> get firstLineIndent => $composableBuilder(
     column: $table.firstLineIndent,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get textAlignment => $composableBuilder(
+    column: $table.textAlignment,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -12440,6 +12498,11 @@ class $$ReaderPreferencesRowsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get textAlignment => $composableBuilder(
+    column: $table.textAlignment,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<double> get paddingTop => $composableBuilder(
     column: $table.paddingTop,
     builder: (column) => ColumnOrderings(column),
@@ -12696,6 +12759,11 @@ class $$ReaderPreferencesRowsTableAnnotationComposer
 
   GeneratedColumn<double> get firstLineIndent => $composableBuilder(
     column: $table.firstLineIndent,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get textAlignment => $composableBuilder(
+    column: $table.textAlignment,
     builder: (column) => column,
   );
 
@@ -12964,6 +13032,7 @@ class $$ReaderPreferencesRowsTableTableManager
                 Value<double> lineHeight = const Value.absent(),
                 Value<double> paragraphSpacing = const Value.absent(),
                 Value<double> firstLineIndent = const Value.absent(),
+                Value<String> textAlignment = const Value.absent(),
                 Value<double> paddingTop = const Value.absent(),
                 Value<double> paddingBottom = const Value.absent(),
                 Value<double> paddingLeft = const Value.absent(),
@@ -13013,6 +13082,7 @@ class $$ReaderPreferencesRowsTableTableManager
                 lineHeight: lineHeight,
                 paragraphSpacing: paragraphSpacing,
                 firstLineIndent: firstLineIndent,
+                textAlignment: textAlignment,
                 paddingTop: paddingTop,
                 paddingBottom: paddingBottom,
                 paddingLeft: paddingLeft,
@@ -13064,6 +13134,7 @@ class $$ReaderPreferencesRowsTableTableManager
                 required double lineHeight,
                 required double paragraphSpacing,
                 required double firstLineIndent,
+                Value<String> textAlignment = const Value.absent(),
                 required double paddingTop,
                 required double paddingBottom,
                 required double paddingLeft,
@@ -13113,6 +13184,7 @@ class $$ReaderPreferencesRowsTableTableManager
                 lineHeight: lineHeight,
                 paragraphSpacing: paragraphSpacing,
                 firstLineIndent: firstLineIndent,
+                textAlignment: textAlignment,
                 paddingTop: paddingTop,
                 paddingBottom: paddingBottom,
                 paddingLeft: paddingLeft,

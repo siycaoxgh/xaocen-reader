@@ -38,6 +38,7 @@ class PagedLayoutEngine {
     double? paddingRight,
     this.paragraphSpacing = 0,
     this.firstLineIndent = 0,
+    this.textAlign = TextAlign.left,
     Iterable<int> chapterStartOffsets = const <int>[],
     this.textScale = 1.0,
     this.policyVersion = pagedPolicyVersion,
@@ -69,6 +70,7 @@ class PagedLayoutEngine {
   final double paddingRight;
   final double paragraphSpacing;
   final double firstLineIndent;
+  final TextAlign textAlign;
 
   /// Real chapter starts in normalized UTF-16 offsets. Volumes are excluded.
   final List<int> chapterStartOffsets;
@@ -118,7 +120,7 @@ class PagedLayoutEngine {
     paddingRight: paddingRight,
     textScale: textScale,
     styleMetricsKey:
-        '${textStyleMetricsKey(style)};ps=$paragraphSpacing;fi=$firstLineIndent',
+        '${textStyleMetricsKey(style)};ps=$paragraphSpacing;fi=$firstLineIndent;ta=$textAlign',
     paginationPolicyVersion: policyVersion,
   );
 
@@ -134,6 +136,7 @@ class PagedLayoutEngine {
         width: contentWidth,
         paragraphSpacing: paragraphSpacing,
         firstLineIndent: firstLineIndent,
+        textAlign: textAlign,
         startsAtParagraphBoundary:
             globalStart == 0 || text.codeUnitAt(globalStart - 1) == 0x0A,
         buildFastLineRecords: false,

@@ -12,6 +12,7 @@ final class ReaderTypographyLayout {
     required this.width,
     required this.paragraphSpacing,
     required this.firstLineIndent,
+    this.textAlign = TextAlign.left,
     required this.startsAtParagraphBoundary,
     this.buildFastLineRecords = true,
   }) {
@@ -24,6 +25,7 @@ final class ReaderTypographyLayout {
   final double width;
   final double paragraphSpacing;
   final double firstLineIndent;
+  final TextAlign textAlign;
   final bool startsAtParagraphBoundary;
   final bool buildFastLineRecords;
   final List<ReaderTypographyLine> lines = [];
@@ -60,6 +62,7 @@ final class ReaderTypographyLayout {
       text: TextSpan(text: text, style: style),
       textDirection: textDirection,
       textScaler: TextScaler.noScaling,
+      textAlign: textAlign,
     )..layout(maxWidth: width);
     _fastPainter = painter;
     height = painter.height;
@@ -96,7 +99,7 @@ final class ReaderTypographyLayout {
     required bool indent,
   }) {
     if (contentEnd == start) {
-      _addLine(start, logicalEnd, '', 0);
+      _addLine(start, logicalEnd, '', 0, isLastLine: true);
       return;
     }
     var cursor = start;
@@ -116,6 +119,7 @@ final class ReaderTypographyLayout {
         text: TextSpan(text: remaining, style: style),
         textDirection: textDirection,
         textScaler: TextScaler.noScaling,
+        textAlign: textAlign,
       )..layout(maxWidth: available);
       final boundary = probe.getLineBoundary(const TextPosition(offset: 0));
       probe.dispose();
@@ -127,20 +131,31 @@ final class ReaderTypographyLayout {
         end,
         text.substring(cursor, math.min(end, contentEnd)),
         x,
+        isLastLine: end >= logicalEnd,
       );
       cursor = math.min(end, contentEnd);
       first = false;
     }
   }
 
-  void _addLine(int start, int end, String displayText, double x) {
+  void _addLine(
+    int start,
+    int end,
+    String displayText,
+    double x, {
+    required bool isLastLine,
+  }) {
+    // TextPainter applies justification only to non-final paragraph lines.
+    // A synthetic newline is paint/layout-only; the source UTF-16 offsets and
+    // ReaderLocator remain anchored to the original text.
+    final paintText = textAlign == TextAlign.justify && !isLastLine
+        ? '$displayText\n'
+        : displayText;
     final painter = TextPainter(
-      text: TextSpan(
-        text: displayText.isEmpty ? ' ' : displayText,
-        style: style,
-      ),
+      text: TextSpan(text: paintText.isEmpty ? ' ' : paintText, style: style),
       textDirection: textDirection,
       textScaler: TextScaler.noScaling,
+      textAlign: textAlign,
     )..layout(maxWidth: math.max(1.0, width - x));
     final lineHeight =
         painter.computeLineMetrics().firstOrNull?.height ??
@@ -154,7 +169,7 @@ final class ReaderTypographyLayout {
         x: x,
         painter: painter,
         displayLength: displayText.length,
-        displayText: displayText,
+        displayText: paintText,
       ),
     );
     height += lineHeight;

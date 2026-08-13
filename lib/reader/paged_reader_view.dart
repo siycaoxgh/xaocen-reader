@@ -356,6 +356,7 @@ class _PagedReaderViewState extends State<PagedReaderView> {
             width: w,
             height: h,
             style: appearance.baseTextStyle,
+            textAlign: widget.controller.textAlign,
           );
         }
         return _buildContent(context, win, doc, appearance);
@@ -409,6 +410,7 @@ class _PagedReaderViewState extends State<PagedReaderView> {
                       style: appearance.baseTextStyle,
                       paragraphSpacing: widget.controller.paragraphSpacing,
                       firstLineIndent: widget.controller.firstLineIndent,
+                      textAlign: widget.controller.textAlign,
                       startsAtParagraphBoundary:
                           page.startCharacterOffset == 0 ||
                           widget.controller.document.text.codeUnitAt(

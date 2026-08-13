@@ -1,4 +1,4 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 import 'dart:io';
 
 import 'package:drift/native.dart';
@@ -19,7 +19,7 @@ void main() {
   tearDown(() => db.close());
 
   test('defaults are platform-specific and schema remains stable', () async {
-    expect(db.schemaVersion, 16);
+    expect(db.schemaVersion, 17);
     final windows = await repository.load(ReaderInputPlatform.windows);
     final android = await repository.load(ReaderInputPlatform.android);
     expect(

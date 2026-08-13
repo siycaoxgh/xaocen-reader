@@ -11,6 +11,7 @@ final class ReaderMetricsSignature {
     required this.lineHeight,
     required this.paragraphSpacing,
     required this.firstLineIndent,
+    required this.textAlignment,
     required this.paddingTop,
     required this.paddingBottom,
     required this.paddingLeft,
@@ -25,6 +26,7 @@ final class ReaderMetricsSignature {
         lineHeight: value.lineHeight,
         paragraphSpacing: value.paragraphSpacing,
         firstLineIndent: value.firstLineIndent,
+        textAlignment: value.textAlignment,
         paddingTop: value.paddingTop,
         paddingBottom: value.paddingBottom,
         paddingLeft: value.paddingLeft,
@@ -37,6 +39,7 @@ final class ReaderMetricsSignature {
   final double lineHeight;
   final double paragraphSpacing;
   final double firstLineIndent;
+  final ReaderTextAlignment textAlignment;
   final double paddingTop;
   final double paddingBottom;
   final double paddingLeft;
@@ -51,6 +54,7 @@ final class ReaderMetricsSignature {
       lineHeight == other.lineHeight &&
       paragraphSpacing == other.paragraphSpacing &&
       firstLineIndent == other.firstLineIndent &&
+      textAlignment == other.textAlignment &&
       paddingTop == other.paddingTop &&
       paddingBottom == other.paddingBottom &&
       paddingLeft == other.paddingLeft &&
@@ -64,6 +68,7 @@ final class ReaderMetricsSignature {
     lineHeight,
     paragraphSpacing,
     firstLineIndent,
+    textAlignment,
     paddingTop,
     paddingBottom,
     paddingLeft,

@@ -17,6 +17,10 @@ enum ReaderScreenOrientation { system, autoRotate, portrait, landscape }
 /// Clock presentation used by the optional Reader information layer.
 enum ReaderTimeDisplayMode { twentyFourHour, twelveHour, hidden }
 
+/// Paragraph alignment for Reader body text. This is metrics-changing because
+/// justification can alter line wrapping.
+enum ReaderTextAlignment { left, justify }
+
 /// Fixed semantic slots for the minimal Reader information layer.  Slots are
 /// intentionally named rather than pixel coordinates so the layer remains
 /// safe across cutouts, window resizes and future responsive layouts.
@@ -39,6 +43,7 @@ final class ReaderPreferences {
     required this.lineHeight,
     required this.paragraphSpacing,
     required this.firstLineIndent,
+    required this.textAlignment,
     required this.paddingTop,
     required this.paddingBottom,
     required this.paddingLeft,
@@ -157,6 +162,7 @@ final class ReaderPreferences {
     lineHeight: defaultLineHeight,
     paragraphSpacing: defaultParagraphSpacing,
     firstLineIndent: defaultFirstLineIndent,
+    textAlignment: ReaderTextAlignment.left,
     paddingTop: defaultPaddingTop,
     paddingBottom: defaultPaddingBottom,
     paddingLeft: defaultPaddingLeft,
@@ -202,6 +208,7 @@ final class ReaderPreferences {
     double lineHeight = defaultLineHeight,
     double paragraphSpacing = defaultParagraphSpacing,
     double firstLineIndent = defaultFirstLineIndent,
+    ReaderTextAlignment textAlignment = ReaderTextAlignment.left,
     double paddingTop = defaultPaddingTop,
     double paddingBottom = defaultPaddingBottom,
     double paddingLeft = defaultPaddingLeft,
@@ -268,6 +275,7 @@ final class ReaderPreferences {
       maxFirstLineIndent,
       defaultFirstLineIndent,
     ),
+    textAlignment: textAlignment,
     paddingTop: _valid(
       paddingTop,
       minVerticalPadding,
@@ -360,6 +368,7 @@ final class ReaderPreferences {
   final double lineHeight;
   final double paragraphSpacing;
   final double firstLineIndent;
+  final ReaderTextAlignment textAlignment;
   final double paddingTop;
   final double paddingBottom;
   final double paddingLeft;
@@ -431,6 +440,7 @@ final class ReaderPreferences {
     double? lineHeight,
     double? paragraphSpacing,
     double? firstLineIndent,
+    ReaderTextAlignment? textAlignment,
     double? paddingTop,
     double? paddingBottom,
     double? paddingLeft,
@@ -531,6 +541,7 @@ final class ReaderPreferences {
       lineHeight: lineHeight ?? this.lineHeight,
       paragraphSpacing: paragraphSpacing ?? this.paragraphSpacing,
       firstLineIndent: firstLineIndent ?? this.firstLineIndent,
+      textAlignment: textAlignment ?? this.textAlignment,
       paddingTop: paddingTop ?? this.paddingTop,
       paddingBottom: paddingBottom ?? this.paddingBottom,
       paddingLeft: paddingLeft ?? this.paddingLeft,
@@ -591,6 +602,7 @@ final class ReaderPreferences {
         lineHeight != previous.lineHeight ||
         paragraphSpacing != previous.paragraphSpacing ||
         firstLineIndent != previous.firstLineIndent ||
+        textAlignment != previous.textAlignment ||
         paddingTop != previous.paddingTop ||
         paddingBottom != previous.paddingBottom ||
         paddingLeft != previous.paddingLeft ||
@@ -666,6 +678,7 @@ final class ReaderPreferences {
       lineHeight == other.lineHeight &&
       paragraphSpacing == other.paragraphSpacing &&
       firstLineIndent == other.firstLineIndent &&
+      textAlignment == other.textAlignment &&
       paddingTop == other.paddingTop &&
       paddingBottom == other.paddingBottom &&
       paddingLeft == other.paddingLeft &&
@@ -711,6 +724,7 @@ final class ReaderPreferences {
     lineHeight,
     paragraphSpacing,
     firstLineIndent,
+    textAlignment,
     paddingTop,
     paddingBottom,
     paddingLeft,

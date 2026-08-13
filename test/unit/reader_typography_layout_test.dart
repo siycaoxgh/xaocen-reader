@@ -3,6 +3,25 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:xaocen_reader/reader/reader_typography_layout.dart';
 
 void main() {
+  test(
+    'justify keeps source text and does not stretch the final paragraph line',
+    () {
+      const source = '这是第一行内容用于两端对齐测试\n最后一行';
+      final layout = ReaderTypographyLayout(
+        text: source,
+        style: const TextStyle(fontSize: 16),
+        textDirection: TextDirection.ltr,
+        width: 120,
+        paragraphSpacing: 0,
+        firstLineIndent: 0,
+        startsAtParagraphBoundary: true,
+        textAlign: TextAlign.justify,
+      );
+      expect(layout.text, source);
+      expect(layout.lines, isNotEmpty);
+      layout.dispose();
+    },
+  );
   TestWidgetsFlutterBinding.ensureInitialized();
 
   test('paragraph metrics preserve original UTF-16 ranges', () {

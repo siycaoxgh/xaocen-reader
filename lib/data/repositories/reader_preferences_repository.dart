@@ -38,6 +38,7 @@ final class ReaderPreferencesRepository {
       lineHeight: preferences.lineHeight,
       paragraphSpacing: preferences.paragraphSpacing,
       firstLineIndent: preferences.firstLineIndent,
+      textAlignment: preferences.textAlignment,
       paddingTop: preferences.paddingTop,
       paddingBottom: preferences.paddingBottom,
       paddingLeft: preferences.paddingLeft,
@@ -86,6 +87,7 @@ final class ReaderPreferencesRepository {
             lineHeight: Value(safe.lineHeight),
             paragraphSpacing: Value(safe.paragraphSpacing),
             firstLineIndent: Value(safe.firstLineIndent),
+            textAlignment: Value(safe.textAlignment.name),
             paddingTop: Value(safe.paddingTop),
             paddingBottom: Value(safe.paddingBottom),
             paddingLeft: Value(safe.paddingLeft),
@@ -149,6 +151,11 @@ final class ReaderPreferencesRepository {
       lineHeight: row.lineHeight,
       paragraphSpacing: row.paragraphSpacing,
       firstLineIndent: row.firstLineIndent,
+      textAlignment:
+          ReaderTextAlignment.values
+              .where((value) => value.name == row.textAlignment)
+              .firstOrNull ??
+          ReaderTextAlignment.left,
       paddingTop: row.paddingTop,
       paddingBottom: row.paddingBottom,
       paddingLeft: row.paddingLeft,

@@ -2125,6 +2125,24 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
               _commit(_draft.copyWith(firstLineIndent: value)),
         ),
         const SizedBox(height: _aaSectionGap),
+        Text('正文对齐', style: Theme.of(context).textTheme.titleSmall),
+        const SizedBox(height: 6),
+        SegmentedButton<ReaderTextAlignment>(
+          segments: const [
+            ButtonSegment(value: ReaderTextAlignment.left, label: Text('左对齐')),
+            ButtonSegment(
+              value: ReaderTextAlignment.justify,
+              label: Text('两端对齐'),
+            ),
+          ],
+          selected: {_draft.textAlignment},
+          onSelectionChanged: (selection) {
+            if (selection.isNotEmpty) {
+              _commit(_draft.copyWith(textAlignment: selection.first));
+            }
+          },
+        ),
+        const SizedBox(height: _aaSectionGap),
         Text('正文边距', style: Theme.of(context).textTheme.titleSmall),
         paddingControls,
       ],
