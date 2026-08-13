@@ -315,7 +315,11 @@ Win32Window::MessageHandler(HWND hwnd,
   if (message == TaskbarCreatedMessage()) {
     // Explorer can restart and discard tray icons. Re-add the tray entry or
     // force the taskbar entry back as the safe recovery path.
-    tray_icon_added_ = false;
+    // Delete the previous registration first. This is intentionally
+    // idempotent: Explorer may broadcast TaskbarCreated more than once, and
+    // blindly clearing the flag would allow repeated NIM_ADD calls to create
+    // duplicate icons when the previous registration is still present.
+    RemoveTrayIcon();
     if (tray_enabled_ && !AddTrayIcon()) {
       tray_enabled_ = false;
       SetShellVisibility(true, false);
