@@ -49,9 +49,9 @@ Final APK was rebuilt and installed non-destructively:
 
 No `uninstall`, `pm clear`, database deletion, or book deletion was used.
 
-Captured artifacts are under:
-
-`C:\Users\TOM\Desktop\xaocen-reader-v4\xaocen_reader\artifacts\m5_7s_7c_1_2\`
+Screenshots and pixel probes were captured during the gate in a temporary
+`artifacts/m5_7s_7c_1_2` directory and removed after review; they are not
+source or product data.
 
 - `reader_chrome.png`: operation Chrome visible; top and bottom are separate
   layers, with the top operation surface rendered using the same Chrome color
