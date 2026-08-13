@@ -35,8 +35,12 @@ until the device is exercised with the requested checklist.
 
 - `flutter analyze`: PASS
 - targeted platform/search/divider tests: PASS
-- full Flutter tests: previous baseline PASS; after this pass rerun is required
-  before final acceptance if any environment failure occurs
-- Windows Release: pending final native rebuild
+- full Flutter tests: PASS (540 tests)
+- Windows Release: PASS
 - Android Debug: PASS
 - Engine/DComp: still paused
+
+The full `integration_test` suite was attempted against the USB device but did
+not complete within the unattended timeout. This is recorded as DEFERRED, not
+as a product PASS. The requested visual, physical-volume, and long-press
+checks remain manual device acceptance items.
