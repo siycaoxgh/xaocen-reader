@@ -743,6 +743,10 @@ bool Win32Window::ShowFromTray() {
 bool Win32Window::QuitApplication() {
   if (window_handle_ == nullptr) return false;
   quit_requested_ = true;
+  // An explicit tray Exit is a process-level shutdown request, even when
+  // the caller did not configure close-to-quit for ordinary window closes.
+  // WM_CLOSE still follows the normal DefWindowProc/WM_DESTROY lifecycle.
+  quit_on_close_ = true;
   RemoveTrayIcon();
   SaveCurrentState();
   PostMessage(window_handle_, WM_CLOSE, 0, 0);

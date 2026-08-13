@@ -409,6 +409,13 @@ FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
       return 0;
     }
     SaveCurrentState();
+    // A tray Exit command is an explicit application shutdown request. Do
+    // not let an optional Flutter top-level handler consume WM_CLOSE before
+    // the native window reaches DefWindowProc/WM_DESTROY. That native path
+    // owns Flutter controller disposal, tray cleanup, and PostQuitMessage.
+    if (IsQuitRequested()) {
+      return Win32Window::MessageHandler(hwnd, message, wparam, lparam);
+    }
   }
   // Give Flutter, including plugins, an opportunity to handle window messages.
   if (flutter_controller_) {
