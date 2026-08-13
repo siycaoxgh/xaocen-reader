@@ -37,7 +37,7 @@ class AppDatabase extends _$AppDatabase {
       super(NativeDatabase.memory());
 
   @override
-  int get schemaVersion => 14;
+  int get schemaVersion => 15;
 
   /// 打开应用数据库（support 目录下）。
   static Future<AppDatabase> open({DataRoot? dataRoot}) async {
@@ -321,6 +321,23 @@ class AppDatabase extends _$AppDatabase {
             ELSE show_bottom_info_bar
           END
         ''');
+      }
+      // schema 14 -> 15: independent Android navigation-bar, display-cutout,
+      // and screen-orientation preferences. These are per-book presentation
+      // choices only; no Locator/progress data is changed.
+      if (from >= 5 && from < 15) {
+        await m.addColumn(
+          readerPreferencesRows,
+          readerPreferencesRows.hideNavigationBar,
+        );
+        await m.addColumn(
+          readerPreferencesRows,
+          readerPreferencesRows.extendIntoDisplayCutout,
+        );
+        await m.addColumn(
+          readerPreferencesRows,
+          readerPreferencesRows.screenOrientation,
+        );
       }
     },
     beforeOpen: (details) async {

@@ -64,6 +64,7 @@ import 'vertical_auto_read_driver.dart';
 import 'paged_auto_read_driver.dart';
 import 'reader_keep_awake.dart';
 import 'reader_font_runtime.dart';
+import 'android_reader_window.dart';
 
 /// 打开 Reader 所需上下文（由书架页组装）。
 class ReaderLaunchContext {
@@ -922,10 +923,34 @@ class _ReaderPageState extends State<ReaderPage>
     final brightness = _effectiveReaderTheme().brightness;
     final darkIcons = brightness == Brightness.light;
     final barsVisible = _preferences.showSystemStatusBar;
+    final overlays = <SystemUiOverlay>[
+      if (barsVisible) SystemUiOverlay.top,
+      if (!_preferences.hideNavigationBar) SystemUiOverlay.bottom,
+    ];
+    final systemUiMode = overlays.length == 2
+        ? SystemUiMode.edgeToEdge
+        : overlays.isEmpty
+        ? SystemUiMode.immersiveSticky
+        : SystemUiMode.manual;
     unawaited(
       SystemChrome.setEnabledSystemUIMode(
-        barsVisible ? SystemUiMode.edgeToEdge : SystemUiMode.immersiveSticky,
+        systemUiMode,
+        overlays: systemUiMode == SystemUiMode.manual ? overlays : null,
       ),
+    );
+    unawaited(
+      AndroidReaderWindow.setSystemBars(
+        showStatusBar: barsVisible,
+        hideNavigationBar: _preferences.hideNavigationBar,
+      ),
+    );
+    unawaited(
+      AndroidReaderWindow.setDisplayCutout(
+        extend: !barsVisible && _preferences.extendIntoDisplayCutout,
+      ),
+    );
+    unawaited(
+      AndroidReaderWindow.applyOrientation(_preferences.screenOrientation),
     );
     SystemChrome.setSystemUIOverlayStyle(
       SystemUiOverlayStyle(
@@ -1050,6 +1075,8 @@ class _ReaderPageState extends State<ReaderPage>
     unawaited(ReaderKeepAwake.release());
     if (defaultTargetPlatform == TargetPlatform.android) {
       unawaited(SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge));
+      unawaited(SystemChrome.setPreferredOrientations(const []));
+      unawaited(AndroidReaderWindow.setDisplayCutout(extend: false));
     }
     _modeGeneration++;
     _invalidateChapterNavigation();
@@ -1118,9 +1145,26 @@ class _ReaderPageState extends State<ReaderPage>
     final nextSignature = ReaderMetricsSignature.fromPreferences(next);
     _preferences = next;
     _preferencesNotifier.value = next;
-    if (next.showSystemStatusBar != previous.showSystemStatusBar ||
-        next.themeMode != previous.themeMode) {
+    final androidWindowChanged =
+        next.showSystemStatusBar != previous.showSystemStatusBar ||
+        next.hideNavigationBar != previous.hideNavigationBar ||
+        next.extendIntoDisplayCutout != previous.extendIntoDisplayCutout ||
+        next.screenOrientation != previous.screenOrientation;
+    if (androidWindowChanged || next.themeMode != previous.themeMode) {
       _syncAndroidSystemUi();
+    }
+    if (androidWindowChanged) {
+      // Window bars/orientation change the actual Reader viewport. Let the
+      // platform settle its insets first, then use the existing Locator
+      // capture/restore relayout transaction.
+      _metricsSignature = nextSignature;
+      _pauseAutoRead(AutoReadPauseReason.relayout);
+      _inputRouter.invalidatePendingInput();
+      _invalidateChapterNavigation();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) unawaited(_beginMetricsRelayout(next));
+      });
+      return;
     }
     if (nextSignature == _metricsSignature) {
       final changes = next.changesFrom(previous);
@@ -2307,6 +2351,8 @@ class _ReaderPageState extends State<ReaderPage>
             timeDisplayMode: _preferences.timeDisplayMode,
             readerTextColor: _appearance.textColor,
             readerBackgroundColor: _appearance.backgroundColor,
+            extendIntoDisplayCutout: _preferences.extendIntoDisplayCutout,
+            hideNavigationBar: _preferences.hideNavigationBar,
             autoReadState: _autoReadController.state,
             autoReadSpeedPixelsPerSecond:
                 _autoReadController.preferences.verticalVelocityPixelsPerSecond,
@@ -2373,7 +2419,22 @@ class _ReaderPageState extends State<ReaderPage>
   ) {
     final reserveInfoRegions =
         (_preferences.showTopInfoBar || _preferences.showBottomInfoBar);
-    if (!reserveInfoRegions) return readerContent;
+    if (!reserveInfoRegions) {
+      final safe = AndroidReaderWindow.safeInsets(
+        View.of(context),
+        extendIntoDisplayCutout: _preferences.extendIntoDisplayCutout,
+        hideNavigationBar: _preferences.hideNavigationBar,
+      );
+      return Padding(
+        padding: EdgeInsets.only(
+          left: safe.left,
+          right: safe.right,
+          top: safe.top,
+          bottom: safe.bottom,
+        ),
+        child: readerContent,
+      );
+    }
     return ReaderInfoScaffold(
       body: readerContent,
       mode: _mode,
@@ -2404,6 +2465,8 @@ class _ReaderPageState extends State<ReaderPage>
       timeDisplayMode: _preferences.timeDisplayMode,
       readerTextColor: _appearance.textColor,
       readerBackgroundColor: _appearance.backgroundColor,
+      extendIntoDisplayCutout: _preferences.extendIntoDisplayCutout,
+      hideNavigationBar: _preferences.hideNavigationBar,
     );
   }
 
@@ -2426,50 +2489,49 @@ class _ReaderPageState extends State<ReaderPage>
             ),
             child: Listener(
               onPointerSignal: _onVerticalPointerSignal,
-              child: Scrollbar(
-                controller: _scroll,
-                child: NotificationListener<ScrollNotification>(
-                  onNotification: (n) {
-                    _onUserScroll(n);
-                    return false;
-                  },
-                  child: SuperListView.builder(
-                    controller: _scroll,
-                    listController: _listController,
-                    itemCount: index.blockCount,
-                    itemBuilder: (context, i) {
-                      final block = index.blocks[i];
-                      final text = doc.text.substring(
-                        block.startCharacterOffset,
-                        block.endCharacterOffset,
-                      );
-                      final key = _blockKeys[i] ??= GlobalKey();
-                      return ReaderTextBlock(
-                        key: key,
-                        text: text,
-                        style: _bodyStyle,
-                        styleVersion: _appearance.textColor.toARGB32(),
-                        textDirection: TextDirection.ltr,
-                        paragraphSpacing: _preferences.paragraphSpacing,
-                        firstLineIndent: _preferences.firstLineIndent,
-                        startsAtParagraphBoundary:
-                            block.startCharacterOffset == 0 ||
-                            doc.text.codeUnitAt(
-                                  block.startCharacterOffset - 1,
-                                ) ==
-                                0x0A,
-                        maxWidth:
-                            MediaQuery.of(context).size.width -
-                            _preferences.paddingLeft -
-                            _preferences.paddingRight,
-                        onLayout: (layout) {
-                          final ro = key.currentContext?.findRenderObject();
-                          if (ro is RenderReaderTextBlock) {
-                            _renderObjects[i] = ro;
-                          }
-                        },
-                      );
+              child: LayoutBuilder(
+                builder: (context, constraints) => Scrollbar(
+                  controller: _scroll,
+                  child: NotificationListener<ScrollNotification>(
+                    onNotification: (n) {
+                      _onUserScroll(n);
+                      return false;
                     },
+                    child: SuperListView.builder(
+                      controller: _scroll,
+                      listController: _listController,
+                      itemCount: index.blockCount,
+                      itemBuilder: (context, i) {
+                        final block = index.blocks[i];
+                        final text = doc.text.substring(
+                          block.startCharacterOffset,
+                          block.endCharacterOffset,
+                        );
+                        final key = _blockKeys[i] ??= GlobalKey();
+                        return ReaderTextBlock(
+                          key: key,
+                          text: text,
+                          style: _bodyStyle,
+                          styleVersion: _appearance.textColor.toARGB32(),
+                          textDirection: TextDirection.ltr,
+                          paragraphSpacing: _preferences.paragraphSpacing,
+                          firstLineIndent: _preferences.firstLineIndent,
+                          startsAtParagraphBoundary:
+                              block.startCharacterOffset == 0 ||
+                              doc.text.codeUnitAt(
+                                    block.startCharacterOffset - 1,
+                                  ) ==
+                                  0x0A,
+                          maxWidth: constraints.maxWidth,
+                          onLayout: (layout) {
+                            final ro = key.currentContext?.findRenderObject();
+                            if (ro is RenderReaderTextBlock) {
+                              _renderObjects[i] = ro;
+                            }
+                          },
+                        );
+                      },
+                    ),
                   ),
                 ),
               ),

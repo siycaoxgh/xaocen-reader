@@ -248,6 +248,12 @@ class ReaderPreferencesRows extends Table {
       boolean().withDefault(const Constant(true))();
   BoolColumn get showSystemStatusBar =>
       boolean().withDefault(const Constant(true))();
+  BoolColumn get hideNavigationBar =>
+      boolean().withDefault(const Constant(false))();
+  BoolColumn get extendIntoDisplayCutout =>
+      boolean().withDefault(const Constant(false))();
+  TextColumn get screenOrientation =>
+      text().withDefault(const Constant('system'))();
   TextColumn get statusBarMode =>
       text().withDefault(const Constant('system'))();
   TextColumn get timeDisplayMode =>

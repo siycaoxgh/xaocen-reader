@@ -84,17 +84,23 @@ class _AppShellPageState extends ConsumerState<AppShellPage> {
     );
 
     return Scaffold(
-      body: isDesktop
-          ? Row(
-              children: [
-                _DesktopSidebar(
-                  selectedIndex: _selectedIndex,
-                  onSelect: _select,
-                ),
-                Expanded(child: body),
-              ],
-            )
-          : body,
+      body: SafeArea(
+        // App Shell always avoids OS bars/cutouts. Reader applies its own
+        // per-book immersive policy only while the Reader route is active.
+        top: true,
+        bottom: false,
+        child: isDesktop
+            ? Row(
+                children: [
+                  _DesktopSidebar(
+                    selectedIndex: _selectedIndex,
+                    onSelect: _select,
+                  ),
+                  Expanded(child: body),
+                ],
+              )
+            : body,
+      ),
       bottomNavigationBar: isDesktop
           ? null
           : NavigationBar(

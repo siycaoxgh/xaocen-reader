@@ -4412,6 +4412,49 @@ class $ReaderPreferencesRowsTable extends ReaderPreferencesRows
     ),
     defaultValue: const Constant(true),
   );
+  static const VerificationMeta _hideNavigationBarMeta = const VerificationMeta(
+    'hideNavigationBar',
+  );
+  @override
+  late final GeneratedColumn<bool> hideNavigationBar = GeneratedColumn<bool>(
+    'hide_navigation_bar',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("hide_navigation_bar" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _extendIntoDisplayCutoutMeta =
+      const VerificationMeta('extendIntoDisplayCutout');
+  @override
+  late final GeneratedColumn<bool> extendIntoDisplayCutout =
+      GeneratedColumn<bool>(
+        'extend_into_display_cutout',
+        aliasedName,
+        false,
+        type: DriftSqlType.bool,
+        requiredDuringInsert: false,
+        defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'CHECK ("extend_into_display_cutout" IN (0, 1))',
+        ),
+        defaultValue: const Constant(false),
+      );
+  static const VerificationMeta _screenOrientationMeta = const VerificationMeta(
+    'screenOrientation',
+  );
+  @override
+  late final GeneratedColumn<String> screenOrientation =
+      GeneratedColumn<String>(
+        'screen_orientation',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+        defaultValue: const Constant('system'),
+      );
   static const VerificationMeta _statusBarModeMeta = const VerificationMeta(
     'statusBarMode',
   );
@@ -4654,6 +4697,9 @@ class $ReaderPreferencesRowsTable extends ReaderPreferencesRows
     showBottomInfoBar,
     showProgressInfo,
     showSystemStatusBar,
+    hideNavigationBar,
+    extendIntoDisplayCutout,
+    screenOrientation,
     statusBarMode,
     timeDisplayMode,
     showChapterInfo,
@@ -4921,6 +4967,33 @@ class $ReaderPreferencesRowsTable extends ReaderPreferencesRows
         ),
       );
     }
+    if (data.containsKey('hide_navigation_bar')) {
+      context.handle(
+        _hideNavigationBarMeta,
+        hideNavigationBar.isAcceptableOrUnknown(
+          data['hide_navigation_bar']!,
+          _hideNavigationBarMeta,
+        ),
+      );
+    }
+    if (data.containsKey('extend_into_display_cutout')) {
+      context.handle(
+        _extendIntoDisplayCutoutMeta,
+        extendIntoDisplayCutout.isAcceptableOrUnknown(
+          data['extend_into_display_cutout']!,
+          _extendIntoDisplayCutoutMeta,
+        ),
+      );
+    }
+    if (data.containsKey('screen_orientation')) {
+      context.handle(
+        _screenOrientationMeta,
+        screenOrientation.isAcceptableOrUnknown(
+          data['screen_orientation']!,
+          _screenOrientationMeta,
+        ),
+      );
+    }
     if (data.containsKey('status_bar_mode')) {
       context.handle(
         _statusBarModeMeta,
@@ -5177,6 +5250,18 @@ class $ReaderPreferencesRowsTable extends ReaderPreferencesRows
         DriftSqlType.bool,
         data['${effectivePrefix}show_system_status_bar'],
       )!,
+      hideNavigationBar: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}hide_navigation_bar'],
+      )!,
+      extendIntoDisplayCutout: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}extend_into_display_cutout'],
+      )!,
+      screenOrientation: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}screen_orientation'],
+      )!,
       statusBarMode: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}status_bar_mode'],
@@ -5280,6 +5365,9 @@ class ReaderPreferencesRow extends DataClass
   final bool showBottomInfoBar;
   final bool showProgressInfo;
   final bool showSystemStatusBar;
+  final bool hideNavigationBar;
+  final bool extendIntoDisplayCutout;
+  final String screenOrientation;
   final String statusBarMode;
   final String timeDisplayMode;
   final bool showChapterInfo;
@@ -5323,6 +5411,9 @@ class ReaderPreferencesRow extends DataClass
     required this.showBottomInfoBar,
     required this.showProgressInfo,
     required this.showSystemStatusBar,
+    required this.hideNavigationBar,
+    required this.extendIntoDisplayCutout,
+    required this.screenOrientation,
     required this.statusBarMode,
     required this.timeDisplayMode,
     required this.showChapterInfo,
@@ -5391,6 +5482,9 @@ class ReaderPreferencesRow extends DataClass
     map['show_bottom_info_bar'] = Variable<bool>(showBottomInfoBar);
     map['show_progress_info'] = Variable<bool>(showProgressInfo);
     map['show_system_status_bar'] = Variable<bool>(showSystemStatusBar);
+    map['hide_navigation_bar'] = Variable<bool>(hideNavigationBar);
+    map['extend_into_display_cutout'] = Variable<bool>(extendIntoDisplayCutout);
+    map['screen_orientation'] = Variable<String>(screenOrientation);
     map['status_bar_mode'] = Variable<String>(statusBarMode);
     map['time_display_mode'] = Variable<String>(timeDisplayMode);
     map['show_chapter_info'] = Variable<bool>(showChapterInfo);
@@ -5462,6 +5556,9 @@ class ReaderPreferencesRow extends DataClass
       showBottomInfoBar: Value(showBottomInfoBar),
       showProgressInfo: Value(showProgressInfo),
       showSystemStatusBar: Value(showSystemStatusBar),
+      hideNavigationBar: Value(hideNavigationBar),
+      extendIntoDisplayCutout: Value(extendIntoDisplayCutout),
+      screenOrientation: Value(screenOrientation),
       statusBarMode: Value(statusBarMode),
       timeDisplayMode: Value(timeDisplayMode),
       showChapterInfo: Value(showChapterInfo),
@@ -5527,6 +5624,11 @@ class ReaderPreferencesRow extends DataClass
       showSystemStatusBar: serializer.fromJson<bool>(
         json['showSystemStatusBar'],
       ),
+      hideNavigationBar: serializer.fromJson<bool>(json['hideNavigationBar']),
+      extendIntoDisplayCutout: serializer.fromJson<bool>(
+        json['extendIntoDisplayCutout'],
+      ),
+      screenOrientation: serializer.fromJson<String>(json['screenOrientation']),
       statusBarMode: serializer.fromJson<String>(json['statusBarMode']),
       timeDisplayMode: serializer.fromJson<String>(json['timeDisplayMode']),
       showChapterInfo: serializer.fromJson<bool>(json['showChapterInfo']),
@@ -5595,6 +5697,11 @@ class ReaderPreferencesRow extends DataClass
       'showBottomInfoBar': serializer.toJson<bool>(showBottomInfoBar),
       'showProgressInfo': serializer.toJson<bool>(showProgressInfo),
       'showSystemStatusBar': serializer.toJson<bool>(showSystemStatusBar),
+      'hideNavigationBar': serializer.toJson<bool>(hideNavigationBar),
+      'extendIntoDisplayCutout': serializer.toJson<bool>(
+        extendIntoDisplayCutout,
+      ),
+      'screenOrientation': serializer.toJson<String>(screenOrientation),
       'statusBarMode': serializer.toJson<String>(statusBarMode),
       'timeDisplayMode': serializer.toJson<String>(timeDisplayMode),
       'showChapterInfo': serializer.toJson<bool>(showChapterInfo),
@@ -5651,6 +5758,9 @@ class ReaderPreferencesRow extends DataClass
     bool? showBottomInfoBar,
     bool? showProgressInfo,
     bool? showSystemStatusBar,
+    bool? hideNavigationBar,
+    bool? extendIntoDisplayCutout,
+    String? screenOrientation,
     String? statusBarMode,
     String? timeDisplayMode,
     bool? showChapterInfo,
@@ -5710,6 +5820,10 @@ class ReaderPreferencesRow extends DataClass
     showBottomInfoBar: showBottomInfoBar ?? this.showBottomInfoBar,
     showProgressInfo: showProgressInfo ?? this.showProgressInfo,
     showSystemStatusBar: showSystemStatusBar ?? this.showSystemStatusBar,
+    hideNavigationBar: hideNavigationBar ?? this.hideNavigationBar,
+    extendIntoDisplayCutout:
+        extendIntoDisplayCutout ?? this.extendIntoDisplayCutout,
+    screenOrientation: screenOrientation ?? this.screenOrientation,
     statusBarMode: statusBarMode ?? this.statusBarMode,
     timeDisplayMode: timeDisplayMode ?? this.timeDisplayMode,
     showChapterInfo: showChapterInfo ?? this.showChapterInfo,
@@ -5804,6 +5918,15 @@ class ReaderPreferencesRow extends DataClass
       showSystemStatusBar: data.showSystemStatusBar.present
           ? data.showSystemStatusBar.value
           : this.showSystemStatusBar,
+      hideNavigationBar: data.hideNavigationBar.present
+          ? data.hideNavigationBar.value
+          : this.hideNavigationBar,
+      extendIntoDisplayCutout: data.extendIntoDisplayCutout.present
+          ? data.extendIntoDisplayCutout.value
+          : this.extendIntoDisplayCutout,
+      screenOrientation: data.screenOrientation.present
+          ? data.screenOrientation.value
+          : this.screenOrientation,
       statusBarMode: data.statusBarMode.present
           ? data.statusBarMode.value
           : this.statusBarMode,
@@ -5882,6 +6005,9 @@ class ReaderPreferencesRow extends DataClass
           ..write('showBottomInfoBar: $showBottomInfoBar, ')
           ..write('showProgressInfo: $showProgressInfo, ')
           ..write('showSystemStatusBar: $showSystemStatusBar, ')
+          ..write('hideNavigationBar: $hideNavigationBar, ')
+          ..write('extendIntoDisplayCutout: $extendIntoDisplayCutout, ')
+          ..write('screenOrientation: $screenOrientation, ')
           ..write('statusBarMode: $statusBarMode, ')
           ..write('timeDisplayMode: $timeDisplayMode, ')
           ..write('showChapterInfo: $showChapterInfo, ')
@@ -5930,6 +6056,9 @@ class ReaderPreferencesRow extends DataClass
     showBottomInfoBar,
     showProgressInfo,
     showSystemStatusBar,
+    hideNavigationBar,
+    extendIntoDisplayCutout,
+    screenOrientation,
     statusBarMode,
     timeDisplayMode,
     showChapterInfo,
@@ -5977,6 +6106,9 @@ class ReaderPreferencesRow extends DataClass
           other.showBottomInfoBar == this.showBottomInfoBar &&
           other.showProgressInfo == this.showProgressInfo &&
           other.showSystemStatusBar == this.showSystemStatusBar &&
+          other.hideNavigationBar == this.hideNavigationBar &&
+          other.extendIntoDisplayCutout == this.extendIntoDisplayCutout &&
+          other.screenOrientation == this.screenOrientation &&
           other.statusBarMode == this.statusBarMode &&
           other.timeDisplayMode == this.timeDisplayMode &&
           other.showChapterInfo == this.showChapterInfo &&
@@ -6023,6 +6155,9 @@ class ReaderPreferencesRowsCompanion
   final Value<bool> showBottomInfoBar;
   final Value<bool> showProgressInfo;
   final Value<bool> showSystemStatusBar;
+  final Value<bool> hideNavigationBar;
+  final Value<bool> extendIntoDisplayCutout;
+  final Value<String> screenOrientation;
   final Value<String> statusBarMode;
   final Value<String> timeDisplayMode;
   final Value<bool> showChapterInfo;
@@ -6067,6 +6202,9 @@ class ReaderPreferencesRowsCompanion
     this.showBottomInfoBar = const Value.absent(),
     this.showProgressInfo = const Value.absent(),
     this.showSystemStatusBar = const Value.absent(),
+    this.hideNavigationBar = const Value.absent(),
+    this.extendIntoDisplayCutout = const Value.absent(),
+    this.screenOrientation = const Value.absent(),
     this.statusBarMode = const Value.absent(),
     this.timeDisplayMode = const Value.absent(),
     this.showChapterInfo = const Value.absent(),
@@ -6112,6 +6250,9 @@ class ReaderPreferencesRowsCompanion
     this.showBottomInfoBar = const Value.absent(),
     this.showProgressInfo = const Value.absent(),
     this.showSystemStatusBar = const Value.absent(),
+    this.hideNavigationBar = const Value.absent(),
+    this.extendIntoDisplayCutout = const Value.absent(),
+    this.screenOrientation = const Value.absent(),
     this.statusBarMode = const Value.absent(),
     this.timeDisplayMode = const Value.absent(),
     this.showChapterInfo = const Value.absent(),
@@ -6168,6 +6309,9 @@ class ReaderPreferencesRowsCompanion
     Expression<bool>? showBottomInfoBar,
     Expression<bool>? showProgressInfo,
     Expression<bool>? showSystemStatusBar,
+    Expression<bool>? hideNavigationBar,
+    Expression<bool>? extendIntoDisplayCutout,
+    Expression<String>? screenOrientation,
     Expression<String>? statusBarMode,
     Expression<String>? timeDisplayMode,
     Expression<bool>? showChapterInfo,
@@ -6221,6 +6365,10 @@ class ReaderPreferencesRowsCompanion
       if (showProgressInfo != null) 'show_progress_info': showProgressInfo,
       if (showSystemStatusBar != null)
         'show_system_status_bar': showSystemStatusBar,
+      if (hideNavigationBar != null) 'hide_navigation_bar': hideNavigationBar,
+      if (extendIntoDisplayCutout != null)
+        'extend_into_display_cutout': extendIntoDisplayCutout,
+      if (screenOrientation != null) 'screen_orientation': screenOrientation,
       if (statusBarMode != null) 'status_bar_mode': statusBarMode,
       if (timeDisplayMode != null) 'time_display_mode': timeDisplayMode,
       if (showChapterInfo != null) 'show_chapter_info': showChapterInfo,
@@ -6275,6 +6423,9 @@ class ReaderPreferencesRowsCompanion
     Value<bool>? showBottomInfoBar,
     Value<bool>? showProgressInfo,
     Value<bool>? showSystemStatusBar,
+    Value<bool>? hideNavigationBar,
+    Value<bool>? extendIntoDisplayCutout,
+    Value<String>? screenOrientation,
     Value<String>? statusBarMode,
     Value<String>? timeDisplayMode,
     Value<bool>? showChapterInfo,
@@ -6324,6 +6475,10 @@ class ReaderPreferencesRowsCompanion
       showBottomInfoBar: showBottomInfoBar ?? this.showBottomInfoBar,
       showProgressInfo: showProgressInfo ?? this.showProgressInfo,
       showSystemStatusBar: showSystemStatusBar ?? this.showSystemStatusBar,
+      hideNavigationBar: hideNavigationBar ?? this.hideNavigationBar,
+      extendIntoDisplayCutout:
+          extendIntoDisplayCutout ?? this.extendIntoDisplayCutout,
+      screenOrientation: screenOrientation ?? this.screenOrientation,
       statusBarMode: statusBarMode ?? this.statusBarMode,
       timeDisplayMode: timeDisplayMode ?? this.timeDisplayMode,
       showChapterInfo: showChapterInfo ?? this.showChapterInfo,
@@ -6441,6 +6596,17 @@ class ReaderPreferencesRowsCompanion
     if (showSystemStatusBar.present) {
       map['show_system_status_bar'] = Variable<bool>(showSystemStatusBar.value);
     }
+    if (hideNavigationBar.present) {
+      map['hide_navigation_bar'] = Variable<bool>(hideNavigationBar.value);
+    }
+    if (extendIntoDisplayCutout.present) {
+      map['extend_into_display_cutout'] = Variable<bool>(
+        extendIntoDisplayCutout.value,
+      );
+    }
+    if (screenOrientation.present) {
+      map['screen_orientation'] = Variable<String>(screenOrientation.value);
+    }
     if (statusBarMode.present) {
       map['status_bar_mode'] = Variable<String>(statusBarMode.value);
     }
@@ -6536,6 +6702,9 @@ class ReaderPreferencesRowsCompanion
           ..write('showBottomInfoBar: $showBottomInfoBar, ')
           ..write('showProgressInfo: $showProgressInfo, ')
           ..write('showSystemStatusBar: $showSystemStatusBar, ')
+          ..write('hideNavigationBar: $hideNavigationBar, ')
+          ..write('extendIntoDisplayCutout: $extendIntoDisplayCutout, ')
+          ..write('screenOrientation: $screenOrientation, ')
           ..write('statusBarMode: $statusBarMode, ')
           ..write('timeDisplayMode: $timeDisplayMode, ')
           ..write('showChapterInfo: $showChapterInfo, ')
@@ -11753,6 +11922,9 @@ typedef $$ReaderPreferencesRowsTableCreateCompanionBuilder =
       Value<bool> showBottomInfoBar,
       Value<bool> showProgressInfo,
       Value<bool> showSystemStatusBar,
+      Value<bool> hideNavigationBar,
+      Value<bool> extendIntoDisplayCutout,
+      Value<String> screenOrientation,
       Value<String> statusBarMode,
       Value<String> timeDisplayMode,
       Value<bool> showChapterInfo,
@@ -11799,6 +11971,9 @@ typedef $$ReaderPreferencesRowsTableUpdateCompanionBuilder =
       Value<bool> showBottomInfoBar,
       Value<bool> showProgressInfo,
       Value<bool> showSystemStatusBar,
+      Value<bool> hideNavigationBar,
+      Value<bool> extendIntoDisplayCutout,
+      Value<String> screenOrientation,
       Value<String> statusBarMode,
       Value<String> timeDisplayMode,
       Value<bool> showChapterInfo,
@@ -11985,6 +12160,21 @@ class $$ReaderPreferencesRowsTableFilterComposer
 
   ColumnFilters<bool> get showSystemStatusBar => $composableBuilder(
     column: $table.showSystemStatusBar,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get hideNavigationBar => $composableBuilder(
+    column: $table.hideNavigationBar,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get extendIntoDisplayCutout => $composableBuilder(
+    column: $table.extendIntoDisplayCutout,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get screenOrientation => $composableBuilder(
+    column: $table.screenOrientation,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -12226,6 +12416,21 @@ class $$ReaderPreferencesRowsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get hideNavigationBar => $composableBuilder(
+    column: $table.hideNavigationBar,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get extendIntoDisplayCutout => $composableBuilder(
+    column: $table.extendIntoDisplayCutout,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get screenOrientation => $composableBuilder(
+    column: $table.screenOrientation,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get statusBarMode => $composableBuilder(
     column: $table.statusBarMode,
     builder: (column) => ColumnOrderings(column),
@@ -12456,6 +12661,21 @@ class $$ReaderPreferencesRowsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<bool> get hideNavigationBar => $composableBuilder(
+    column: $table.hideNavigationBar,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get extendIntoDisplayCutout => $composableBuilder(
+    column: $table.extendIntoDisplayCutout,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get screenOrientation => $composableBuilder(
+    column: $table.screenOrientation,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<String> get statusBarMode => $composableBuilder(
     column: $table.statusBarMode,
     builder: (column) => column,
@@ -12624,6 +12844,9 @@ class $$ReaderPreferencesRowsTableTableManager
                 Value<bool> showBottomInfoBar = const Value.absent(),
                 Value<bool> showProgressInfo = const Value.absent(),
                 Value<bool> showSystemStatusBar = const Value.absent(),
+                Value<bool> hideNavigationBar = const Value.absent(),
+                Value<bool> extendIntoDisplayCutout = const Value.absent(),
+                Value<String> screenOrientation = const Value.absent(),
                 Value<String> statusBarMode = const Value.absent(),
                 Value<String> timeDisplayMode = const Value.absent(),
                 Value<bool> showChapterInfo = const Value.absent(),
@@ -12668,6 +12891,9 @@ class $$ReaderPreferencesRowsTableTableManager
                 showBottomInfoBar: showBottomInfoBar,
                 showProgressInfo: showProgressInfo,
                 showSystemStatusBar: showSystemStatusBar,
+                hideNavigationBar: hideNavigationBar,
+                extendIntoDisplayCutout: extendIntoDisplayCutout,
+                screenOrientation: screenOrientation,
                 statusBarMode: statusBarMode,
                 timeDisplayMode: timeDisplayMode,
                 showChapterInfo: showChapterInfo,
@@ -12714,6 +12940,9 @@ class $$ReaderPreferencesRowsTableTableManager
                 Value<bool> showBottomInfoBar = const Value.absent(),
                 Value<bool> showProgressInfo = const Value.absent(),
                 Value<bool> showSystemStatusBar = const Value.absent(),
+                Value<bool> hideNavigationBar = const Value.absent(),
+                Value<bool> extendIntoDisplayCutout = const Value.absent(),
+                Value<String> screenOrientation = const Value.absent(),
                 Value<String> statusBarMode = const Value.absent(),
                 Value<String> timeDisplayMode = const Value.absent(),
                 Value<bool> showChapterInfo = const Value.absent(),
@@ -12758,6 +12987,9 @@ class $$ReaderPreferencesRowsTableTableManager
                 showBottomInfoBar: showBottomInfoBar,
                 showProgressInfo: showProgressInfo,
                 showSystemStatusBar: showSystemStatusBar,
+                hideNavigationBar: hideNavigationBar,
+                extendIntoDisplayCutout: extendIntoDisplayCutout,
+                screenOrientation: screenOrientation,
                 statusBarMode: statusBarMode,
                 timeDisplayMode: timeDisplayMode,
                 showChapterInfo: showChapterInfo,

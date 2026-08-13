@@ -9,6 +9,11 @@ enum ReaderThemeMode { system, light, dark }
 /// display-only: it never participates in metrics or Locator persistence.
 enum ReaderStatusBarMode { system, readerInfo, hidden }
 
+/// Reader-specific Android screen orientation policy.  The value is stored as
+/// a semantic preference; the platform adapter maps it to native orientation
+/// requests without becoming part of the ReaderLocator contract.
+enum ReaderScreenOrientation { system, autoRotate, portrait, landscape }
+
 /// Clock presentation used by the optional Reader information layer.
 enum ReaderTimeDisplayMode { twentyFourHour, twelveHour, hidden }
 
@@ -51,6 +56,9 @@ final class ReaderPreferences {
     required this.showBottomInfoBar,
     required this.showProgressInfo,
     required this.showSystemStatusBar,
+    required this.hideNavigationBar,
+    required this.extendIntoDisplayCutout,
+    required this.screenOrientation,
     required this.statusBarMode,
     required this.timeDisplayMode,
     required this.showChapterInfo,
@@ -115,6 +123,10 @@ final class ReaderPreferences {
   static const bool defaultShowBottomInfoBar = true;
   static const bool defaultShowProgressInfo = true;
   static const bool defaultShowSystemStatusBar = true;
+  static const bool defaultHideNavigationBar = false;
+  static const bool defaultExtendIntoDisplayCutout = false;
+  static const ReaderScreenOrientation defaultScreenOrientation =
+      ReaderScreenOrientation.system;
   static const ReaderStatusBarMode defaultStatusBarMode =
       ReaderStatusBarMode.system;
   static const ReaderTimeDisplayMode defaultTimeDisplayMode =
@@ -157,6 +169,9 @@ final class ReaderPreferences {
     showBottomInfoBar: defaultShowBottomInfoBar,
     showProgressInfo: defaultShowProgressInfo,
     showSystemStatusBar: defaultShowSystemStatusBar,
+    hideNavigationBar: defaultHideNavigationBar,
+    extendIntoDisplayCutout: defaultExtendIntoDisplayCutout,
+    screenOrientation: defaultScreenOrientation,
     statusBarMode: defaultStatusBarMode,
     timeDisplayMode: defaultTimeDisplayMode,
     showChapterInfo: defaultShowChapterInfo,
@@ -199,6 +214,9 @@ final class ReaderPreferences {
     bool showBottomInfoBar = defaultShowBottomInfoBar,
     bool showProgressInfo = defaultShowProgressInfo,
     bool? showSystemStatusBar,
+    bool hideNavigationBar = defaultHideNavigationBar,
+    bool extendIntoDisplayCutout = defaultExtendIntoDisplayCutout,
+    ReaderScreenOrientation screenOrientation = defaultScreenOrientation,
     ReaderStatusBarMode statusBarMode = defaultStatusBarMode,
     ReaderTimeDisplayMode timeDisplayMode = defaultTimeDisplayMode,
     bool? showChapterInfo,
@@ -302,6 +320,11 @@ final class ReaderPreferences {
         (showWholeBookProgressInfo ?? showProgressInfo),
     showSystemStatusBar:
         showSystemStatusBar ?? statusBarMode == ReaderStatusBarMode.system,
+    hideNavigationBar: hideNavigationBar,
+    extendIntoDisplayCutout:
+        extendIntoDisplayCutout &&
+        !(showSystemStatusBar ?? statusBarMode == ReaderStatusBarMode.system),
+    screenOrientation: screenOrientation,
     statusBarMode: statusBarMode,
     timeDisplayMode: timeDisplayMode,
     showChapterInfo: showChapterInfo ?? defaultShowChapterInfo,
@@ -346,6 +369,14 @@ final class ReaderPreferences {
   /// Android-only OS status-bar visibility. Reader information regions are
   /// independent and are controlled by [showTopInfoBar]/[showBottomInfoBar].
   final bool showSystemStatusBar;
+
+  /// Android-only immersive navigation-bar visibility.
+  final bool hideNavigationBar;
+
+  /// Android-only cutout policy.  It is effective only while the system
+  /// status bar is hidden; the settings UI enforces that dependency.
+  final bool extendIntoDisplayCutout;
+  final ReaderScreenOrientation screenOrientation;
   @Deprecated('Use showSystemStatusBar; retained for legacy persistence/API.')
   final ReaderStatusBarMode statusBarMode;
   final ReaderTimeDisplayMode timeDisplayMode;
@@ -406,6 +437,9 @@ final class ReaderPreferences {
     bool? showBottomInfoBar,
     bool? showProgressInfo,
     bool? showSystemStatusBar,
+    bool? hideNavigationBar,
+    bool? extendIntoDisplayCutout,
+    ReaderScreenOrientation? screenOrientation,
     ReaderStatusBarMode? statusBarMode,
     ReaderTimeDisplayMode? timeDisplayMode,
     bool? showChapterInfo,
@@ -470,6 +504,11 @@ final class ReaderPreferences {
         showWholeBookProgressInfo ??
         showProgressInfo ??
         this.showWholeBookProgressInfo;
+    final nextShowSystemStatusBar =
+        showSystemStatusBar ??
+        (statusBarMode == null
+            ? this.showSystemStatusBar
+            : statusBarMode == ReaderStatusBarMode.system);
     return ReaderPreferences(
       fontId: identical(fontId, _unset) ? this.fontId : fontId as String?,
       fontSize: fontSize ?? this.fontSize,
@@ -497,11 +536,12 @@ final class ReaderPreferences {
       showTopInfoBar: showTopInfoBar ?? this.showTopInfoBar,
       showBottomInfoBar: showBottomInfoBar ?? this.showBottomInfoBar,
       showProgressInfo: nextChapterProgress && nextWholeBookProgress,
-      showSystemStatusBar:
-          showSystemStatusBar ??
-          (statusBarMode == null
-              ? this.showSystemStatusBar
-              : statusBarMode == ReaderStatusBarMode.system),
+      showSystemStatusBar: nextShowSystemStatusBar,
+      hideNavigationBar: hideNavigationBar ?? this.hideNavigationBar,
+      extendIntoDisplayCutout:
+          (extendIntoDisplayCutout ?? this.extendIntoDisplayCutout) &&
+          !nextShowSystemStatusBar,
+      screenOrientation: screenOrientation ?? this.screenOrientation,
       statusBarMode: statusBarMode ?? this.statusBarMode,
       timeDisplayMode: timeDisplayMode ?? this.timeDisplayMode,
       showChapterInfo: nextChapterInfo,
@@ -555,6 +595,9 @@ final class ReaderPreferences {
         showBottomInfoBar != previous.showBottomInfoBar ||
         showProgressInfo != previous.showProgressInfo ||
         showSystemStatusBar != previous.showSystemStatusBar ||
+        hideNavigationBar != previous.hideNavigationBar ||
+        extendIntoDisplayCutout != previous.extendIntoDisplayCutout ||
+        screenOrientation != previous.screenOrientation ||
         statusBarMode != previous.statusBarMode ||
         timeDisplayMode != previous.timeDisplayMode ||
         showChapterInfo != previous.showChapterInfo ||
@@ -621,6 +664,9 @@ final class ReaderPreferences {
       showBottomInfoBar == other.showBottomInfoBar &&
       showProgressInfo == other.showProgressInfo &&
       showSystemStatusBar == other.showSystemStatusBar &&
+      hideNavigationBar == other.hideNavigationBar &&
+      extendIntoDisplayCutout == other.extendIntoDisplayCutout &&
+      screenOrientation == other.screenOrientation &&
       statusBarMode == other.statusBarMode &&
       timeDisplayMode == other.timeDisplayMode &&
       showChapterInfo == other.showChapterInfo &&
@@ -661,6 +707,9 @@ final class ReaderPreferences {
     showBottomInfoBar,
     showProgressInfo,
     showSystemStatusBar,
+    hideNavigationBar,
+    extendIntoDisplayCutout,
+    screenOrientation,
     statusBarMode,
     timeDisplayMode,
     showChapterInfo,

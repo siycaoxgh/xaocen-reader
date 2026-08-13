@@ -55,6 +55,9 @@ final class ReaderPreferencesRepository {
       showBottomInfoBar: preferences.showBottomInfoBar,
       showProgressInfo: preferences.showProgressInfo,
       showSystemStatusBar: preferences.showSystemStatusBar,
+      hideNavigationBar: preferences.hideNavigationBar,
+      extendIntoDisplayCutout: preferences.extendIntoDisplayCutout,
+      screenOrientation: preferences.screenOrientation,
       statusBarMode: preferences.statusBarMode,
       timeDisplayMode: preferences.timeDisplayMode,
       showChapterInfo: preferences.showChapterInfo,
@@ -102,6 +105,9 @@ final class ReaderPreferencesRepository {
             showBottomInfoBar: Value(safe.showBottomInfoBar),
             showProgressInfo: Value(safe.showProgressInfo),
             showSystemStatusBar: Value(safe.showSystemStatusBar),
+            hideNavigationBar: Value(safe.hideNavigationBar),
+            extendIntoDisplayCutout: Value(safe.extendIntoDisplayCutout),
+            screenOrientation: Value(safe.screenOrientation.name),
             statusBarMode: Value(safe.statusBarMode.name),
             timeDisplayMode: Value(safe.timeDisplayMode.name),
             showChapterInfo: Value(safe.showChapterInfo),
@@ -166,6 +172,13 @@ final class ReaderPreferencesRepository {
       showBottomInfoBar: row.showBottomInfoBar,
       showProgressInfo: row.showProgressInfo,
       showSystemStatusBar: row.showSystemStatusBar,
+      hideNavigationBar: row.hideNavigationBar,
+      extendIntoDisplayCutout: row.extendIntoDisplayCutout,
+      screenOrientation:
+          ReaderScreenOrientation.values
+              .where((value) => value.name == row.screenOrientation)
+              .firstOrNull ??
+          ReaderPreferences.defaultScreenOrientation,
       statusBarMode:
           ReaderStatusBarMode.values
               .where((value) => value.name == row.statusBarMode)

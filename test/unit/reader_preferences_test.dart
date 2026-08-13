@@ -117,6 +117,8 @@ void main() {
         showProgressInfo: false,
         statusBarMode: ReaderStatusBarMode.readerInfo,
         timeDisplayMode: ReaderTimeDisplayMode.twelveHour,
+        hideNavigationBar: true,
+        screenOrientation: ReaderScreenOrientation.landscape,
       );
       expect(next.changesFrom(ReaderPreferences.defaults), {
         ReaderPreferenceChangeKind.display,
@@ -125,6 +127,8 @@ void main() {
       expect(next.statusBarMode, ReaderStatusBarMode.readerInfo);
       expect(next.showSystemStatusBar, isFalse);
       expect(next.timeDisplayMode, ReaderTimeDisplayMode.twelveHour);
+      expect(next.hideNavigationBar, isTrue);
+      expect(next.screenOrientation, ReaderScreenOrientation.landscape);
     });
 
     test('Android system status visibility is independent of Reader info', () {
@@ -331,6 +335,15 @@ void main() {
       raw.execute(
         'ALTER TABLE reader_preferences DROP COLUMN show_system_status_bar',
       );
+      raw.execute(
+        'ALTER TABLE reader_preferences DROP COLUMN hide_navigation_bar',
+      );
+      raw.execute(
+        'ALTER TABLE reader_preferences DROP COLUMN extend_into_display_cutout',
+      );
+      raw.execute(
+        'ALTER TABLE reader_preferences DROP COLUMN screen_orientation',
+      );
       raw.execute('PRAGMA user_version = 13');
       raw.dispose();
 
@@ -348,12 +361,44 @@ void main() {
       expect(
         (await db.customSelect('PRAGMA user_version').getSingle())
             .data['user_version'],
-        14,
+        15,
       );
       await db.close();
       await dir.delete(recursive: true);
     },
   );
+
+  test('schema 14 -> 15 adds Android window defaults', () async {
+    final dir = await Directory.systemTemp.createTemp('m57s_window_migration');
+    final file = File('${dir.path}${Platform.pathSeparator}db.sqlite');
+    var db = AppDatabase(NativeDatabase(file));
+    await seedBook(db, a);
+    await db.close();
+    final raw = sqlite3.open(file.path);
+    raw.execute(
+      'ALTER TABLE reader_preferences DROP COLUMN hide_navigation_bar',
+    );
+    raw.execute(
+      'ALTER TABLE reader_preferences DROP COLUMN extend_into_display_cutout',
+    );
+    raw.execute(
+      'ALTER TABLE reader_preferences DROP COLUMN screen_orientation',
+    );
+    raw.execute('PRAGMA user_version = 14');
+    raw.dispose();
+    db = AppDatabase(NativeDatabase(file));
+    final loaded = await ReaderPreferencesRepository(db: db).load(a);
+    expect(loaded.hideNavigationBar, isFalse);
+    expect(loaded.extendIntoDisplayCutout, isFalse);
+    expect(loaded.screenOrientation, ReaderScreenOrientation.system);
+    expect(
+      (await db.customSelect('PRAGMA user_version').getSingle())
+          .data['user_version'],
+      15,
+    );
+    await db.close();
+    await dir.delete(recursive: true);
+  });
 
   test('schema 6鈫?1 preserves typography and adds display defaults', () async {
     final dir = await Directory.systemTemp.createTemp('m55e_migration');
@@ -408,7 +453,7 @@ void main() {
     expect(
       (await db.customSelect('PRAGMA user_version').getSingle())
           .data['user_version'],
-      14,
+      15,
     );
     await db.close();
     await dir.delete(recursive: true);
@@ -496,7 +541,7 @@ void main() {
     expect(
       (await db.customSelect('PRAGMA user_version').getSingle())
           .data['user_version'],
-      14,
+      15,
     );
     expect((await db.select(db.contentCollections).get()).single.id, a);
     await db.close();
@@ -590,7 +635,7 @@ void main() {
       expect(
         (await db.customSelect('PRAGMA user_version').getSingle())
             .data['user_version'],
-        14,
+        15,
       );
       await db.close();
       await dir.delete(recursive: true);
@@ -680,7 +725,7 @@ void main() {
       expect(
         (await db.customSelect('PRAGMA user_version').getSingle())
             .data['user_version'],
-        14,
+        15,
       );
       await db.close();
       await dir.delete(recursive: true);

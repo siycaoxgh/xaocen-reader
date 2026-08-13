@@ -12,6 +12,7 @@ import '../domain/reader/auto_read_controller.dart';
 import '../domain/reader/auto_read_preferences.dart';
 import '../domain/reader/reader_palette.dart';
 import '../domain/reader/reader_preferences.dart';
+import 'android_reader_window.dart';
 import '../domain/reader/reader_font.dart';
 import '../data/repositories/reader_system_font_repository.dart';
 import '../domain/reader/reader_search.dart';
@@ -32,8 +33,16 @@ const double readerInfoRegionExtent = 38;
 double readerInfoRegionInset(BuildContext context, {required bool top}) =>
     readerInfoRegionExtent +
     (top
-        ? MediaQuery.paddingOf(context).top
-        : MediaQuery.paddingOf(context).bottom);
+        ? AndroidReaderWindow.safeInsets(
+            View.of(context),
+            extendIntoDisplayCutout: false,
+            hideNavigationBar: false,
+          ).top
+        : AndroidReaderWindow.safeInsets(
+            View.of(context),
+            extendIntoDisplayCutout: false,
+            hideNavigationBar: false,
+          ).bottom);
 const readerTocActionKey = Key('reader-toc-action');
 const readerAppearanceActionKey = Key('reader-appearance-action');
 const readerMoreActionKey = Key('reader-more-action');
@@ -75,6 +84,11 @@ const readerShowAutoReadMinimalInfoKey = Key(
   'reader-show-auto-read-minimal-info',
 );
 const readerStatusBarModeKey = Key('reader-status-bar-mode');
+const readerHideNavigationBarKey = Key('reader-hide-navigation-bar');
+const readerExtendIntoDisplayCutoutKey = Key(
+  'reader-extend-into-display-cutout',
+);
+const readerScreenOrientationKey = Key('reader-screen-orientation');
 const readerTimeDisplayModeKey = Key('reader-time-display-mode');
 const readerTopInfoDividerKey = Key('reader-top-info-divider');
 const readerBottomInfoDividerKey = Key('reader-bottom-info-divider');
@@ -142,6 +156,8 @@ class ReaderChrome extends StatelessWidget {
     this.timeDisplayMode = ReaderTimeDisplayMode.twentyFourHour,
     this.readerTextColor,
     this.readerBackgroundColor,
+    this.extendIntoDisplayCutout = false,
+    this.hideNavigationBar = false,
   });
 
   final bool visible;
@@ -197,6 +213,8 @@ class ReaderChrome extends StatelessWidget {
   final ReaderTimeDisplayMode timeDisplayMode;
   final Color? readerTextColor;
   final Color? readerBackgroundColor;
+  final bool extendIntoDisplayCutout;
+  final bool hideNavigationBar;
 
   @override
   Widget build(BuildContext context) {
@@ -513,6 +531,8 @@ class ReaderInfoScaffold extends StatelessWidget {
     required this.timeDisplayMode,
     this.readerTextColor,
     this.readerBackgroundColor,
+    this.extendIntoDisplayCutout = false,
+    this.hideNavigationBar = false,
   });
 
   final Widget body;
@@ -545,11 +565,16 @@ class ReaderInfoScaffold extends StatelessWidget {
   final ReaderTimeDisplayMode timeDisplayMode;
   final Color? readerTextColor;
   final Color? readerBackgroundColor;
+  final bool extendIntoDisplayCutout;
+  final bool hideNavigationBar;
 
   Widget _region(BuildContext context, {required bool top}) {
-    final systemInset = top
-        ? MediaQuery.paddingOf(context).top
-        : MediaQuery.paddingOf(context).bottom;
+    final safe = AndroidReaderWindow.safeInsets(
+      View.of(context),
+      extendIntoDisplayCutout: extendIntoDisplayCutout,
+      hideNavigationBar: hideNavigationBar,
+    );
+    final systemInset = top ? safe.top : safe.bottom;
     return SizedBox(
       key: top ? readerTopInfoRegionKey : readerBottomInfoRegionKey,
       width: double.infinity,
@@ -637,7 +662,12 @@ class ReaderInfoScaffold extends StatelessWidget {
   Widget build(BuildContext context) {
     final reserveTop = showTopInfoBar;
     final reserveBottom = showBottomInfoBar;
-    return Column(
+    final safe = AndroidReaderWindow.safeInsets(
+      View.of(context),
+      extendIntoDisplayCutout: extendIntoDisplayCutout,
+      hideNavigationBar: hideNavigationBar,
+    );
+    final content = Column(
       children: [
         if (reserveTop) _region(context, top: true),
         if (reserveTop) _divider(context, top: true),
@@ -647,6 +677,15 @@ class ReaderInfoScaffold extends StatelessWidget {
         if (reserveBottom) _divider(context, top: false),
         if (reserveBottom) _region(context, top: false),
       ],
+    );
+    return Padding(
+      padding: EdgeInsets.only(
+        left: safe.left,
+        right: safe.right,
+        top: reserveTop ? 0 : safe.top,
+        bottom: reserveBottom ? 0 : safe.bottom,
+      ),
+      child: content,
     );
   }
 }
@@ -2535,6 +2574,62 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
             value: _draft.showSystemStatusBar,
             onChanged: (value) =>
                 _commit(_draft.copyWith(showSystemStatusBar: value)),
+          ),
+          SwitchListTile.adaptive(
+            key: readerHideNavigationBarKey,
+            contentPadding: EdgeInsets.zero,
+            title: const Text('\u9690\u85cf\u7cfb\u7edf\u5bfc\u822a\u680f'),
+            subtitle: const Text(
+              '\u4fdd\u7559\u7cfb\u7edf\u8fb9\u7f18\u624b\u52bf\u53ef\u4e34\u65f6\u5524\u56de',
+            ),
+            value: _draft.hideNavigationBar,
+            onChanged: (value) =>
+                _commit(_draft.copyWith(hideNavigationBar: value)),
+          ),
+          SwitchListTile.adaptive(
+            key: readerExtendIntoDisplayCutoutKey,
+            contentPadding: EdgeInsets.zero,
+            title: const Text('\u6269\u5c55\u5230\u5218\u6d77\u533a\u57df'),
+            subtitle: Text(
+              _draft.showSystemStatusBar
+                  ? '\u9690\u85cf\u7cfb\u7edf\u72b6\u6001\u680f\u540e\u53ef\u7528'
+                  : '\u5141\u8bb8 Reader \u4f7f\u7528\u5218\u6d77\u533a\u57df',
+            ),
+            value: _draft.extendIntoDisplayCutout,
+            onChanged: _draft.showSystemStatusBar
+                ? null
+                : (value) =>
+                      _commit(_draft.copyWith(extendIntoDisplayCutout: value)),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '\u5c4f\u5e55\u65b9\u5411',
+            style: Theme.of(context).textTheme.labelLarge,
+          ),
+          const SizedBox(height: 6),
+          SegmentedButton<ReaderScreenOrientation>(
+            key: readerScreenOrientationKey,
+            segments: const [
+              ButtonSegment(
+                value: ReaderScreenOrientation.system,
+                label: Text('\u8ddf\u968f\u7cfb\u7edf'),
+              ),
+              ButtonSegment(
+                value: ReaderScreenOrientation.autoRotate,
+                label: Text('\u81ea\u52a8\u65cb\u8f6c'),
+              ),
+              ButtonSegment(
+                value: ReaderScreenOrientation.portrait,
+                label: Text('\u9501\u5b9a\u7ad6\u5c4f'),
+              ),
+              ButtonSegment(
+                value: ReaderScreenOrientation.landscape,
+                label: Text('\u9501\u5b9a\u6a2a\u5c4f'),
+              ),
+            ],
+            selected: {_draft.screenOrientation},
+            onSelectionChanged: (selection) =>
+                _commit(_draft.copyWith(screenOrientation: selection.single)),
           ),
         ],
         const SizedBox(height: 12),
