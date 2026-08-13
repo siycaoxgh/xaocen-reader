@@ -92,4 +92,23 @@ void main() {
     expect(second.x, lessThan(0));
     expect(layout.lines.last.end, text.length);
   });
+
+  test('negative indent never expands the paragraph width', () {
+    final layout = ReaderTypographyLayout(
+      text: '第一段包含足够多的中文字符用于换行和两端对齐。第二行继续。',
+      style: const TextStyle(fontSize: 20, height: 1.5),
+      textDirection: TextDirection.ltr,
+      width: 180,
+      paragraphSpacing: 0,
+      firstLineIndent: -2,
+      startsAtParagraphBoundary: true,
+      textAlign: TextAlign.justify,
+    );
+    addTearDown(layout.dispose);
+    expect(layout.lines, isNotEmpty);
+    for (final line in layout.lines) {
+      expect(line.painter.width, lessThanOrEqualTo(180));
+    }
+    expect(layout.lines.first.x, lessThan(0));
+  });
 }

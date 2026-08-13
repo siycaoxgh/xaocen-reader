@@ -151,12 +151,13 @@ final class ReaderTypographyLayout {
     final paintText = textAlign == TextAlign.justify && !isLastLine
         ? '$displayText\n'
         : displayText;
+    final lineWidth = x < 0 ? width : math.max(1.0, width - x);
     final painter = TextPainter(
       text: TextSpan(text: paintText.isEmpty ? ' ' : paintText, style: style),
       textDirection: textDirection,
       textScaler: TextScaler.noScaling,
       textAlign: textAlign,
-    )..layout(maxWidth: math.max(1.0, width - x));
+    )..layout(maxWidth: lineWidth);
     final lineHeight =
         painter.computeLineMetrics().firstOrNull?.height ??
         (style.fontSize ?? 17) * (style.height ?? 1);
@@ -224,7 +225,9 @@ final class ReaderTypographyLayout {
         text: line.displayText.isEmpty ? ' ' : line.displayText,
         style: value,
       );
-      line.painter.layout(maxWidth: math.max(1.0, width - line.x));
+      line.painter.layout(
+        maxWidth: line.x < 0 ? width : math.max(1.0, width - line.x),
+      );
     }
   }
 

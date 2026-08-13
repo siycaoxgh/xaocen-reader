@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../domain/reader/reading_history.dart';
@@ -83,38 +84,54 @@ class _AppShellPageState extends ConsumerState<AppShellPage> {
       ],
     );
 
-    return Scaffold(
-      body: SafeArea(
-        // App Shell always avoids OS bars/cutouts. Reader applies its own
-        // per-book immersive policy only while the Reader route is active.
-        top: true,
-        bottom: false,
-        child: isDesktop
-            ? Row(
-                children: [
-                  _DesktopSidebar(
-                    selectedIndex: _selectedIndex,
-                    onSelect: _select,
-                  ),
-                  Expanded(child: body),
-                ],
-              )
-            : body,
+    final scheme = Theme.of(context).colorScheme;
+    final shellSurface = scheme.surface;
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: shellSurface.computeLuminance() > .5
+            ? Brightness.dark
+            : Brightness.light,
+        systemNavigationBarColor: scheme.surface,
+        systemNavigationBarIconBrightness: scheme.brightness == Brightness.light
+            ? Brightness.dark
+            : Brightness.light,
+        systemStatusBarContrastEnforced: false,
+        systemNavigationBarContrastEnforced: false,
       ),
-      bottomNavigationBar: isDesktop
-          ? null
-          : NavigationBar(
-              selectedIndex: _selectedIndex,
-              onDestinationSelected: _select,
-              destinations: [
-                for (final destination in _destinations)
-                  NavigationDestination(
-                    icon: Icon(destination.icon),
-                    selectedIcon: Icon(destination.selectedIcon),
-                    label: destination.label,
-                  ),
-              ],
-            ),
+      child: Scaffold(
+        body: SafeArea(
+          // App Shell always avoids OS bars/cutouts. Reader applies its own
+          // per-book immersive policy only while the Reader route is active.
+          top: true,
+          bottom: false,
+          child: isDesktop
+              ? Row(
+                  children: [
+                    _DesktopSidebar(
+                      selectedIndex: _selectedIndex,
+                      onSelect: _select,
+                    ),
+                    Expanded(child: body),
+                  ],
+                )
+              : body,
+        ),
+        bottomNavigationBar: isDesktop
+            ? null
+            : NavigationBar(
+                selectedIndex: _selectedIndex,
+                onDestinationSelected: _select,
+                destinations: [
+                  for (final destination in _destinations)
+                    NavigationDestination(
+                      icon: Icon(destination.icon),
+                      selectedIcon: Icon(destination.selectedIcon),
+                      label: destination.label,
+                    ),
+                ],
+              ),
+      ),
     );
   }
 

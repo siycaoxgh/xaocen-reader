@@ -938,7 +938,6 @@ class _ReaderPageState extends State<ReaderPage>
     // The Reader route is the final owner of system-bar appearance while it
     // is mounted.  Icon contrast follows the actual surface under the bar,
     // rather than only the app theme (custom Reader palettes may differ).
-    final darkIcons = _readerTopSurface.computeLuminance() > .5;
     final barsVisible = _preferences.showSystemStatusBar;
     final overlays = <SystemUiOverlay>[
       if (barsVisible) SystemUiOverlay.top,
@@ -969,19 +968,11 @@ class _ReaderPageState extends State<ReaderPage>
     unawaited(
       AndroidReaderWindow.applyOrientation(_preferences.screenOrientation),
     );
-    SystemChrome.setSystemUIOverlayStyle(
-      SystemUiOverlayStyle(
-        statusBarColor: Colors.transparent,
-        systemNavigationBarColor: Colors.transparent,
-        systemNavigationBarDividerColor: Colors.transparent,
-        statusBarIconBrightness: darkIcons ? Brightness.dark : Brightness.light,
-        systemNavigationBarIconBrightness: darkIcons
-            ? Brightness.dark
-            : Brightness.light,
-        systemStatusBarContrastEnforced: false,
-        systemNavigationBarContrastEnforced: false,
-      ),
-    );
+    // Visibility/orientation is imperative platform state. The actual bar
+    // colors and icon brightness have one declarative owner below:
+    // AnnotatedRegion<SystemUiOverlayStyle> in the mounted Reader subtree.
+    // Keeping both writers here caused the first-frame style to be replaced
+    // after the Reader theme/palette resolved.
   }
 
   @override
@@ -2315,6 +2306,7 @@ class _ReaderPageState extends State<ReaderPage>
         ? _buildPagedBody(context)
         : _buildVerticalBody(context, index, doc);
     final readerBody = _buildReaderBodyWithInfoRegions(context, readerContent);
+    final readerTheme = _effectiveReaderTheme();
     final overlayStyle = SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
       systemNavigationBarColor: Colors.transparent,
@@ -2329,143 +2321,148 @@ class _ReaderPageState extends State<ReaderPage>
       systemStatusBarContrastEnforced: false,
       systemNavigationBarContrastEnforced: false,
     );
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: overlayStyle,
-      child: Scaffold(
-        extendBody: true,
-        extendBodyBehindAppBar: true,
-        backgroundColor: _appearance.backgroundColor,
-        body: Stack(
-          fit: StackFit.expand,
-          children: [
-            _buildReaderBackground(),
-            if (defaultTargetPlatform == TargetPlatform.android)
-              Positioned(
-                key: const Key('reader-status-bar-surface'),
-                top: 0,
-                left: 0,
-                right: 0,
-                height: MediaQuery.viewPaddingOf(context).top,
-                child: ColoredBox(color: _readerTopSurface),
-              ),
-            Listener(
-              onPointerDown: (event) {
-                if (_mode != ReaderMode.vertical ||
-                    defaultTargetPlatform != TargetPlatform.windows ||
-                    event.kind != PointerDeviceKind.mouse ||
-                    event.buttons & kMiddleMouseButton == 0) {
-                  return;
-                }
-                _inputRouter.handlePhysicalInput(
-                  PhysicalInputId.mouseMiddleButton,
-                );
-              },
-              child: GestureDetector(
-                key: readerChromeToggleKey,
-                behavior: HitTestBehavior.translucent,
-                onTap: _toggleChrome,
-                child: Focus(
-                  autofocus: _mode == ReaderMode.vertical,
-                  onKeyEvent: _mode == ReaderMode.vertical
-                      ? _onVerticalKeyEvent
-                      : null,
-                  child: readerBody,
+    return Theme(
+      data: readerTheme,
+      child: AnnotatedRegion<SystemUiOverlayStyle>(
+        value: overlayStyle,
+        child: Scaffold(
+          extendBody: true,
+          extendBodyBehindAppBar: true,
+          backgroundColor: _appearance.backgroundColor,
+          body: Stack(
+            fit: StackFit.expand,
+            children: [
+              _buildReaderBackground(),
+              if (defaultTargetPlatform == TargetPlatform.android)
+                Positioned(
+                  key: const Key('reader-status-bar-surface'),
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: MediaQuery.viewPaddingOf(context).top,
+                  child: ColoredBox(color: _readerTopSurface),
+                ),
+              Listener(
+                onPointerDown: (event) {
+                  if (_mode != ReaderMode.vertical ||
+                      defaultTargetPlatform != TargetPlatform.windows ||
+                      event.kind != PointerDeviceKind.mouse ||
+                      event.buttons & kMiddleMouseButton == 0) {
+                    return;
+                  }
+                  _inputRouter.handlePhysicalInput(
+                    PhysicalInputId.mouseMiddleButton,
+                  );
+                },
+                child: GestureDetector(
+                  key: readerChromeToggleKey,
+                  behavior: HitTestBehavior.translucent,
+                  onTap: _toggleChrome,
+                  child: Focus(
+                    autofocus: _mode == ReaderMode.vertical,
+                    onKeyEvent: _mode == ReaderMode.vertical
+                        ? _onVerticalKeyEvent
+                        : null,
+                    child: readerBody,
+                  ),
                 ),
               ),
-            ),
-            ReaderChrome(
-              visible: _chromeVisible,
-              title: widget.launch.collection.title,
-              mode: _mode,
-              currentChapterTitle: _currentChapterTitle,
-              currentChapterNumber: _currentChapterBoundary?.chapterNumber,
-              chapterProgressPercent: _chapterProgressPercent,
-              chapterPageNumber: _chapterPageMetrics?.currentPageNumber,
-              chapterPageCount: _chapterPageMetrics?.totalPageCount,
-              progressPercent: _progressPercent,
-              showTopInfoBar: _preferences.showTopInfoBar,
-              showBottomInfoBar: _preferences.showBottomInfoBar,
-              showProgressInfo: _preferences.showProgressInfo,
-              showChapterInfo: _preferences.showChapterInfo,
-              showChapterProgressInfo: _preferences.showChapterProgressInfo,
-              showClockInfo: _preferences.showClockInfo,
-              showBatteryInfo: _preferences.showBatteryInfo,
-              showWholeBookProgressInfo: _preferences.showWholeBookProgressInfo,
-              showTopInfoDivider: _preferences.showTopInfoDivider,
-              showBottomInfoDivider: _preferences.showBottomInfoDivider,
-              showAutoReadMinimalInfo: _preferences.showAutoReadMinimalInfo,
-              showMinimalInfoOverlay: false,
-              chapterInfoSlot: _preferences.chapterInfoSlot,
-              chapterProgressInfoSlot: _preferences.chapterProgressInfoSlot,
-              clockInfoSlot: _preferences.clockInfoSlot,
-              batteryInfoSlot: _preferences.batteryInfoSlot,
-              wholeBookProgressInfoSlot: _preferences.wholeBookProgressInfoSlot,
-              infoDividerSlot: _preferences.infoDividerSlot,
-              statusBarMode: _preferences.statusBarMode,
-              timeDisplayMode: _preferences.timeDisplayMode,
-              readerTextColor: _appearance.textColor,
-              readerBackgroundColor: _appearance.backgroundColor,
-              batteryStatus: _batteryStatus,
-              extendIntoDisplayCutout: _preferences.extendIntoDisplayCutout,
-              hideNavigationBar: _preferences.hideNavigationBar,
-              autoReadState: _autoReadController.state,
-              autoReadSpeedPixelsPerSecond: _autoReadController
-                  .preferences
-                  .verticalVelocityPixelsPerSecond,
-              autoReadPagedIntervalSeconds:
-                  _autoReadController.preferences.pagedIntervalSeconds,
-              onPauseAutoRead: _pauseAutoReadForManualNavigation,
-              onResumeAutoRead: _resumeAutoRead,
-              onStopAutoRead: _stopAutoRead,
-              onBack: () => Navigator.of(context).pop(),
-              onToc: () {
-                _showChrome();
-                _pauseAutoRead(AutoReadPauseReason.toc);
-                unawaited(_openToc());
-              },
-              onAppearance: () {
-                _showChrome();
-                _pauseAutoRead(AutoReadPauseReason.settingsPanel);
-                unawaited(
-                  showReaderSettings(
-                    context,
-                    preferences: _preferences,
-                    preferencesListenable: _preferencesNotifier,
-                    mode: _mode,
-                    onPreferencesCommitted: _commitPreferences,
-                    onModeSelected: _selectMode,
-                    onResetPreferences: _resetPreferences,
-                    onPickBackgroundImage: _pickReaderBackgroundImage,
-                    onDeleteBackgroundImage: _deleteReaderBackgroundImage,
-                    importedFonts: _importedFonts,
-                    systemFonts: _systemFonts,
-                    onImportFont: _pickReaderFont,
-                    onDeleteFont: _deleteReaderFont,
-                    onPreviewFont: _previewReaderFont,
-                  ).whenComplete(_requestPagedInputFocus),
-                );
-              },
-              onMore: () {
-                _showChrome();
-                _pauseAutoRead(AutoReadPauseReason.settingsPanel);
-                showReaderMorePreview(context, onSearch: _openSearch);
-              },
-              onBookmarks: _openBookmarks,
-              onSearch: _openSearch,
-              onAutoRead: _openAutoReadControls,
-              onModeSelected: (mode) {
-                _showChrome();
-                _selectMode(mode);
-              },
-            ),
-          ],
+              ReaderChrome(
+                visible: _chromeVisible,
+                title: widget.launch.collection.title,
+                mode: _mode,
+                currentChapterTitle: _currentChapterTitle,
+                currentChapterNumber: _currentChapterBoundary?.chapterNumber,
+                chapterProgressPercent: _chapterProgressPercent,
+                chapterPageNumber: _chapterPageMetrics?.currentPageNumber,
+                chapterPageCount: _chapterPageMetrics?.totalPageCount,
+                progressPercent: _progressPercent,
+                showTopInfoBar: _preferences.showTopInfoBar,
+                showBottomInfoBar: _preferences.showBottomInfoBar,
+                showProgressInfo: _preferences.showProgressInfo,
+                showChapterInfo: _preferences.showChapterInfo,
+                showChapterProgressInfo: _preferences.showChapterProgressInfo,
+                showClockInfo: _preferences.showClockInfo,
+                showBatteryInfo: _preferences.showBatteryInfo,
+                showWholeBookProgressInfo:
+                    _preferences.showWholeBookProgressInfo,
+                showTopInfoDivider: _preferences.showTopInfoDivider,
+                showBottomInfoDivider: _preferences.showBottomInfoDivider,
+                showAutoReadMinimalInfo: _preferences.showAutoReadMinimalInfo,
+                showMinimalInfoOverlay: false,
+                chapterInfoSlot: _preferences.chapterInfoSlot,
+                chapterProgressInfoSlot: _preferences.chapterProgressInfoSlot,
+                clockInfoSlot: _preferences.clockInfoSlot,
+                batteryInfoSlot: _preferences.batteryInfoSlot,
+                wholeBookProgressInfoSlot:
+                    _preferences.wholeBookProgressInfoSlot,
+                infoDividerSlot: _preferences.infoDividerSlot,
+                statusBarMode: _preferences.statusBarMode,
+                timeDisplayMode: _preferences.timeDisplayMode,
+                readerTextColor: _appearance.textColor,
+                readerBackgroundColor: _appearance.backgroundColor,
+                batteryStatus: _batteryStatus,
+                extendIntoDisplayCutout: _preferences.extendIntoDisplayCutout,
+                hideNavigationBar: _preferences.hideNavigationBar,
+                autoReadState: _autoReadController.state,
+                autoReadSpeedPixelsPerSecond: _autoReadController
+                    .preferences
+                    .verticalVelocityPixelsPerSecond,
+                autoReadPagedIntervalSeconds:
+                    _autoReadController.preferences.pagedIntervalSeconds,
+                onPauseAutoRead: _pauseAutoReadForManualNavigation,
+                onResumeAutoRead: _resumeAutoRead,
+                onStopAutoRead: _stopAutoRead,
+                onBack: () => Navigator.of(context).pop(),
+                onToc: () {
+                  _showChrome();
+                  _pauseAutoRead(AutoReadPauseReason.toc);
+                  unawaited(_openToc());
+                },
+                onAppearance: () {
+                  _showChrome();
+                  _pauseAutoRead(AutoReadPauseReason.settingsPanel);
+                  unawaited(
+                    showReaderSettings(
+                      context,
+                      preferences: _preferences,
+                      preferencesListenable: _preferencesNotifier,
+                      mode: _mode,
+                      onPreferencesCommitted: _commitPreferences,
+                      onModeSelected: _selectMode,
+                      onResetPreferences: _resetPreferences,
+                      onPickBackgroundImage: _pickReaderBackgroundImage,
+                      onDeleteBackgroundImage: _deleteReaderBackgroundImage,
+                      importedFonts: _importedFonts,
+                      systemFonts: _systemFonts,
+                      onImportFont: _pickReaderFont,
+                      onDeleteFont: _deleteReaderFont,
+                      onPreviewFont: _previewReaderFont,
+                    ).whenComplete(_requestPagedInputFocus),
+                  );
+                },
+                onMore: () {
+                  _showChrome();
+                  _pauseAutoRead(AutoReadPauseReason.settingsPanel);
+                  showReaderMorePreview(context, onSearch: _openSearch);
+                },
+                onBookmarks: _openBookmarks,
+                onSearch: _openSearch,
+                onAutoRead: _openAutoReadControls,
+                onModeSelected: (mode) {
+                  _showChrome();
+                  _selectMode(mode);
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
   Color get _readerTopSurface => _chromeVisible
-      ? Theme.of(context).colorScheme.surface
+      ? _effectiveReaderTheme().colorScheme.surface
       : _appearance.backgroundColor;
 
   bool get _minimalReaderInfoVisible =>
