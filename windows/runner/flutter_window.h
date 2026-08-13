@@ -8,6 +8,7 @@
 #include <memory>
 
 #include "win32_window.h"
+#include "windows_eyedropper_native.h"
 
 // A window that does nothing but host a Flutter view.
 class FlutterWindow : public Win32Window {
@@ -35,6 +36,9 @@ class FlutterWindow : public Win32Window {
       fonts_channel_;
   std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>>
       desktop_color_sampler_channel_;
+  std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>>
+      eyedropper_channel_;
+  windows_eyedropper::Controller eyedropper_controller_;
 };
 
 #endif  // RUNNER_FLUTTER_WINDOW_H_

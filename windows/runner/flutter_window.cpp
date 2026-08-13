@@ -432,6 +432,54 @@ bool FlutterWindow::OnCreate() {
         }
         result->Success(DesktopColorSampleMap(sample));
       });
+  eyedropper_channel_ = std::make_unique<
+      flutter::MethodChannel<flutter::EncodableValue>>(
+      flutter_controller_->engine()->messenger(), "xaocen/windows_eyedropper",
+      &flutter::StandardMethodCodec::GetInstance());
+  eyedropper_channel_->SetMethodCallHandler(
+      [this](const flutter::MethodCall<flutter::EncodableValue>& call,
+             std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>>
+                 result) {
+        if (call.method_name() == "cancelPicking") {
+          eyedropper_controller_.Stop();
+          result->Success();
+          return;
+        }
+        if (call.method_name() != "startPicking") {
+          result->NotImplemented();
+          return;
+        }
+        auto send_sample = [this](const char* method,
+                                  const desktop_color_sampler::Sample& sample) {
+          if (!eyedropper_channel_) return;
+          eyedropper_channel_->InvokeMethod(
+              method,
+              std::make_unique<flutter::EncodableValue>(
+                  DesktopColorSampleMap(sample)));
+        };
+        std::string error;
+        const bool started = eyedropper_controller_.Start(
+            GetHandle(),
+            [send_sample](const desktop_color_sampler::Sample& sample) {
+              send_sample("sampleUpdated", sample);
+            },
+            [send_sample](const desktop_color_sampler::Sample& sample) {
+              send_sample("confirmed", sample);
+            },
+            [this]() {
+              if (eyedropper_channel_) {
+                eyedropper_channel_->InvokeMethod(
+                    "cancelled",
+                    std::make_unique<flutter::EncodableValue>());
+              }
+            },
+            &error);
+        if (!started) {
+          result->Error("start_failed", error);
+          return;
+        }
+        result->Success(true);
+      });
   SetChildContent(flutter_controller_->view()->GetNativeWindow());
 
   flutter_controller_->engine()->SetNextFrameCallback([&]() {
@@ -447,6 +495,7 @@ bool FlutterWindow::OnCreate() {
 }
 
 void FlutterWindow::OnDestroy() {
+  eyedropper_controller_.Stop();
   if (shell_channel_) {
     shell_channel_->SetMethodCallHandler(nullptr);
     shell_channel_.reset();
@@ -458,6 +507,10 @@ void FlutterWindow::OnDestroy() {
   if (desktop_color_sampler_channel_) {
     desktop_color_sampler_channel_->SetMethodCallHandler(nullptr);
     desktop_color_sampler_channel_.reset();
+  }
+  if (eyedropper_channel_) {
+    eyedropper_channel_->SetMethodCallHandler(nullptr);
+    eyedropper_channel_.reset();
   }
   if (flutter_controller_) {
     flutter_controller_ = nullptr;
@@ -503,6 +556,9 @@ FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
   }
 
   switch (message) {
+    case WM_TIMER:
+      eyedropper_controller_.OnTimer(static_cast<UINT_PTR>(wparam));
+      break;
     case WM_FONTCHANGE:
       flutter_controller_->engine()->ReloadSystemFonts();
       break;
