@@ -246,9 +246,16 @@ class ReaderChrome extends StatelessWidget {
                   height: 78,
                   padding: EdgeInsets.symmetric(horizontal: isDesktop ? 20 : 8),
                   decoration: BoxDecoration(
-                    color: colorScheme.surface.withValues(alpha: 0.96),
+                    // Operation chrome uses the same surface as the bottom
+                    // operation chrome.  Reader background belongs to the
+                    // body/minimal-info layer and must not leak into the
+                    // chrome palette.
+                    color: colorScheme.surface,
                     border: Border(
-                      bottom: BorderSide(color: colorScheme.outlineVariant),
+                      bottom: BorderSide(
+                        color: (readerTextColor ?? colorScheme.onSurface)
+                            .withValues(alpha: .28),
+                      ),
                     ),
                   ),
                   child: Row(
@@ -398,7 +405,7 @@ class ReaderChrome extends StatelessWidget {
                   ),
                   child: Material(
                     key: readerBottomChromeKey,
-                    color: colorScheme.surface.withValues(alpha: 0.97),
+                    color: colorScheme.surface,
                     elevation: 4,
                     shadowColor: Colors.black26,
                     borderRadius: BorderRadius.circular(isDesktop ? 18 : 14),
@@ -645,23 +652,19 @@ class ReaderInfoScaffold extends StatelessWidget {
     final devicePixelRatio = MediaQuery.devicePixelRatioOf(context);
     final scheme = Theme.of(context).colorScheme;
     final background = readerBackgroundColor ?? scheme.surface;
-    final text = readerTextColor ?? scheme.onSurface;
     // Dividers are paint-only, but must remain visible on custom palettes.
     // Blend the text/on-surface color over the actual reader background and
     // strengthen it when the two luminances are too close to distinguish.
-    var color = Color.alphaBlend(text.withValues(alpha: .24), background);
+    final contrastSource = background.computeLuminance() > .5
+        ? const Color(0xff303030)
+        : const Color(0xffe7e7e7);
+    var color = Color.alphaBlend(
+      contrastSource.withValues(alpha: .42),
+      background,
+    );
     if ((color.computeLuminance() - background.computeLuminance()).abs() <
         .12) {
-      final contrastSource = background.computeLuminance() > .5
-          ? Colors.black
-          : Colors.white;
-      color = Color.alphaBlend(
-        contrastSource.withValues(alpha: .42),
-        background,
-      );
-    }
-    if (color == background) {
-      color = background.computeLuminance() > .5 ? Colors.black : Colors.white;
+      color = contrastSource;
     }
     final dividerExtent = math.max(1.0, 1.0 / devicePixelRatio);
     return SizedBox(
@@ -669,9 +672,10 @@ class ReaderInfoScaffold extends StatelessWidget {
       child: ColoredBox(
         key: top ? readerTopInfoDividerKey : readerBottomInfoDividerKey,
         color:
-            (top
-                ? (showTopInfoDivider ?? showInfoDivider)
-                : (showBottomInfoDivider ?? showInfoDivider))
+            (showInfoContent &&
+                (top
+                    ? (showTopInfoDivider ?? showInfoDivider)
+                    : (showBottomInfoDivider ?? showInfoDivider)))
             ? color
             : Colors.transparent,
       ),
