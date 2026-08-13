@@ -8,10 +8,31 @@
 #include <wrl/client.h>
 
 #include "flutter/generated_plugin_registrant.h"
+#include "desktop_color_sampler.h"
 #include <flutter/standard_method_codec.h>
 
 namespace {
 using Microsoft::WRL::ComPtr;
+
+flutter::EncodableMap DesktopColorSampleMap(
+    const desktop_color_sampler::Sample& sample) {
+  const COLORREF color = sample.color;
+  char hex[8]{};
+  sprintf_s(hex, "#%02X%02X%02X", static_cast<unsigned>(GetRValue(color)),
+            static_cast<unsigned>(GetGValue(color)),
+            static_cast<unsigned>(GetBValue(color)));
+  return flutter::EncodableMap{
+      {flutter::EncodableValue("x"), flutter::EncodableValue(sample.point.x)},
+      {flutter::EncodableValue("y"), flutter::EncodableValue(sample.point.y)},
+      {flutter::EncodableValue("r"),
+       flutter::EncodableValue(static_cast<int>(GetRValue(color)))},
+      {flutter::EncodableValue("g"),
+       flutter::EncodableValue(static_cast<int>(GetGValue(color)))},
+      {flutter::EncodableValue("b"),
+       flutter::EncodableValue(static_cast<int>(GetBValue(color)))},
+      {flutter::EncodableValue("hex"), flutter::EncodableValue(hex)},
+  };
+}
 
 UINT VirtualKeyForBossId(const std::string& id) {
   if (id.rfind("keyboard.key", 0) == 0 && id.size() == 13) {
@@ -361,6 +382,56 @@ bool FlutterWindow::OnCreate() {
         }
         result->NotImplemented();
       });
+  desktop_color_sampler_channel_ = std::make_unique<
+      flutter::MethodChannel<flutter::EncodableValue>>(
+      flutter_controller_->engine()->messenger(),
+      "xaocen/windows_desktop_color_sampler",
+      &flutter::StandardMethodCodec::GetInstance());
+  desktop_color_sampler_channel_->SetMethodCallHandler(
+      [](const flutter::MethodCall<flutter::EncodableValue>& call,
+         std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result) {
+        POINT point{};
+        if (call.method_name() == "sampleDesktopPixelAtCursor") {
+          if (!GetCursorPos(&point)) {
+            result->Error("cursor_unavailable", "GetCursorPos failed");
+            return;
+          }
+        } else if (call.method_name() == "sampleDesktopPixel") {
+          const auto* args = call.arguments();
+          const auto* map = args == nullptr
+              ? nullptr
+              : std::get_if<flutter::EncodableMap>(args);
+          if (map == nullptr) {
+            result->Error("invalid_arguments", "Expected x/y coordinates");
+            return;
+          }
+          const auto x_it = map->find(flutter::EncodableValue("x"));
+          const auto y_it = map->find(flutter::EncodableValue("y"));
+          const auto* x = x_it == map->end()
+              ? nullptr
+              : std::get_if<int32_t>(&x_it->second);
+          const auto* y = y_it == map->end()
+              ? nullptr
+              : std::get_if<int32_t>(&y_it->second);
+          if (x == nullptr || y == nullptr) {
+            result->Error("invalid_arguments", "x/y must be integers");
+            return;
+          }
+          point = POINT{*x, *y};
+        } else {
+          result->NotImplemented();
+          return;
+        }
+
+        desktop_color_sampler::Sample sample;
+        std::string error;
+        if (!desktop_color_sampler::SamplePixel(point.x, point.y, &sample,
+                                                &error)) {
+          result->Error("sample_failed", error);
+          return;
+        }
+        result->Success(DesktopColorSampleMap(sample));
+      });
   SetChildContent(flutter_controller_->view()->GetNativeWindow());
 
   flutter_controller_->engine()->SetNextFrameCallback([&]() {
@@ -383,6 +454,10 @@ void FlutterWindow::OnDestroy() {
   if (fonts_channel_) {
     fonts_channel_->SetMethodCallHandler(nullptr);
     fonts_channel_.reset();
+  }
+  if (desktop_color_sampler_channel_) {
+    desktop_color_sampler_channel_->SetMethodCallHandler(nullptr);
+    desktop_color_sampler_channel_.reset();
   }
   if (flutter_controller_) {
     flutter_controller_ = nullptr;
