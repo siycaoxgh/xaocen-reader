@@ -2328,20 +2328,18 @@ class _ReaderPageState extends State<ReaderPage>
         child: Scaffold(
           extendBody: true,
           extendBodyBehindAppBar: true,
-          backgroundColor: _appearance.backgroundColor,
+          // When operation chrome is visible, the complete area from the
+          // Android status bar through the top chrome belongs to the chrome
+          // surface.  The reader background is painted by
+          // [_buildReaderBackground] below, so this underlay must not leak a
+          // second colour into the inset between them.
+          backgroundColor: _chromeVisible
+              ? _readerTopSurface
+              : _appearance.backgroundColor,
           body: Stack(
             fit: StackFit.expand,
             children: [
               _buildReaderBackground(),
-              if (defaultTargetPlatform == TargetPlatform.android)
-                Positioned(
-                  key: const Key('reader-status-bar-surface'),
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  height: MediaQuery.viewPaddingOf(context).top,
-                  child: ColoredBox(color: _readerTopSurface),
-                ),
               Listener(
                 onPointerDown: (event) {
                   if (_mode != ReaderMode.vertical ||
@@ -2525,6 +2523,9 @@ class _ReaderPageState extends State<ReaderPage>
       timeDisplayMode: _preferences.timeDisplayMode,
       readerTextColor: _appearance.textColor,
       readerBackgroundColor: _appearance.backgroundColor,
+      regionBackgroundColor: _chromeVisible
+          ? _readerTopSurface
+          : _appearance.backgroundColor,
       batteryStatus: _batteryStatus,
       extendIntoDisplayCutout: _preferences.extendIntoDisplayCutout,
       hideNavigationBar: _preferences.hideNavigationBar,

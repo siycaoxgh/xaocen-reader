@@ -15,8 +15,11 @@ Widget _host({
   EdgeInsets padding = EdgeInsets.zero,
   Color readerTextColor = Colors.black,
   Color readerBackgroundColor = Colors.white,
+  Color? regionBackgroundColor,
+  Brightness brightness = Brightness.light,
 }) {
   return MaterialApp(
+    theme: ThemeData(brightness: brightness),
     home: MediaQuery(
       data: MediaQueryData(size: const Size(800, 600), padding: padding),
       child: Scaffold(
@@ -50,6 +53,7 @@ Widget _host({
           timeDisplayMode: ReaderTimeDisplayMode.hidden,
           readerTextColor: readerTextColor,
           readerBackgroundColor: readerBackgroundColor,
+          regionBackgroundColor: regionBackgroundColor,
         ),
       ),
     ),
@@ -57,6 +61,42 @@ Widget _host({
 }
 
 void main() {
+  for (final platform in [TargetPlatform.android, TargetPlatform.windows]) {
+    for (final brightness in Brightness.values) {
+      testWidgets('Reader info owns the Reader palette background on '
+          '${platform.name} ${brightness.name}', (tester) async {
+        const readerBackground = Color(0xff16323c);
+        await tester.pumpWidget(
+          _host(
+            top: true,
+            bottom: true,
+            divider: false,
+            brightness: brightness,
+            readerBackgroundColor: readerBackground,
+          ),
+        );
+        final topRegion = tester.widget<ColoredBox>(
+          find
+              .ancestor(
+                of: find.byKey(readerTopInfoRegionKey),
+                matching: find.byType(ColoredBox),
+              )
+              .first,
+        );
+        final bottomRegion = tester.widget<ColoredBox>(
+          find
+              .ancestor(
+                of: find.byKey(readerBottomInfoRegionKey),
+                matching: find.byType(ColoredBox),
+              )
+              .first,
+        );
+        expect(topRegion.color, readerBackground);
+        expect(bottomRegion.color, readerBackground);
+      });
+    }
+  }
+
   testWidgets('top and bottom regions never intersect Reader body', (
     tester,
   ) async {
@@ -185,6 +225,8 @@ void main() {
     );
     expect(top.height, lessThanOrEqualTo(1));
     expect(bottom.height, lessThanOrEqualTo(1));
+    expect(top.width, 800);
+    expect(bottom.width, 800);
     expect(top.bottom, lessThanOrEqualTo(body.top));
     expect(body.bottom, lessThanOrEqualTo(bottom.top));
   });

@@ -4,6 +4,55 @@ import 'package:xaocen_reader/reader/reader_chrome.dart';
 import 'package:xaocen_reader/reader/reader_mode.dart';
 
 void main() {
+  testWidgets('top chrome surface paints the SafeArea inset', (tester) async {
+    const surface = Color(0xff123456);
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: surface,
+          ).copyWith(surface: surface),
+        ),
+        home: MediaQuery(
+          data: const MediaQueryData(
+            size: Size(390, 844),
+            padding: EdgeInsets.only(top: 32),
+          ),
+          child: Scaffold(
+            body: ReaderChrome(
+              visible: true,
+              title: 'Book',
+              mode: ReaderMode.vertical,
+              onBack: () {},
+              onToc: () {},
+              onAppearance: () {},
+              onMore: () {},
+              onBookmarks: () {},
+              onSearch: () {},
+              onModeSelected: (_) {},
+            ),
+          ),
+        ),
+      ),
+    );
+
+    final surfaceBox = tester.widget<ColoredBox>(
+      find.byKey(readerTopChromeSurfaceKey),
+    );
+    final surfaceRect = tester.getRect(find.byKey(readerTopChromeSurfaceKey));
+    final chromeRect = tester.getRect(find.byKey(readerTopChromeKey));
+    final chrome = tester.widget<Container>(find.byKey(readerTopChromeKey));
+    final bottomChrome = tester.widget<Material>(
+      find.byKey(readerBottomChromeKey),
+    );
+    expect(surfaceBox.color, surface);
+    expect(bottomChrome.color, surface);
+    expect((chrome.decoration! as BoxDecoration).border, isNull);
+    expect(surfaceRect.top, 0);
+    expect(chromeRect.top, 32);
+    expect(surfaceRect.bottom, chromeRect.bottom);
+  });
+
   testWidgets(
     'mobile Reader keeps primary chrome compact and groups low-frequency actions',
     (tester) async {

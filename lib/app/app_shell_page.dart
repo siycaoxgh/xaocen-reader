@@ -100,6 +100,10 @@ class _AppShellPageState extends ConsumerState<AppShellPage> {
         systemNavigationBarContrastEnforced: false,
       ),
       child: Scaffold(
+        // The transparent Android status bar is painted by the route below
+        // the system inset.  Keep that underlay equal to the header surface;
+        // the content area gets its own background inside the shell.
+        backgroundColor: shellSurface,
         body: SafeArea(
           // App Shell always avoids OS bars/cutouts. Reader applies its own
           // per-book immersive policy only while the Reader route is active.
@@ -112,10 +116,12 @@ class _AppShellPageState extends ConsumerState<AppShellPage> {
                       selectedIndex: _selectedIndex,
                       onSelect: _select,
                     ),
-                    Expanded(child: body),
+                    Expanded(
+                      child: Material(color: scheme.surface, child: body),
+                    ),
                   ],
                 )
-              : body,
+              : Material(color: scheme.surface, child: body),
         ),
         bottomNavigationBar: isDesktop
             ? null
