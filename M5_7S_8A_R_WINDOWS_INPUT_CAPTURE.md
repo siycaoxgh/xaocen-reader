@@ -31,6 +31,13 @@ Binding identity came from `LogicalKeyboardKey`, allowing layout/IME interpretat
 - EXISTING NUMPAD = PROTECTED; full regression PASS.
 - Mouse chord and Keyboard V remain separate inputs.
 - Reader shortcut conflicts with the keyboard Boss binding now require cancel or explicit replacement.
+- Windows settings now expose separate controls: keyboard Boss shortcut (configurable) and the fixed mouse Boss gesture (independent switch). LMB+RMB is not offered in normal shortcut capture.
+- Shortcut help is backed by `SupportedShortcutKeyRegistry`, which delegates to the same physical-key resolver used by runtime dispatch. It documents letters, digits, F1-F12, navigation, numpad, OEM punctuation, and Ctrl/Alt/Shift combinations.
+- Unsupported capture keys show `此按键不能作为 XAOCEN 快捷键` and capture remains active; Esc cancels.
+
+SUPPORTED KEY CATEGORIES = letters A-Z; digits 0-9; F1-F12; Arrow/PageUp/PageDown/Home/End/Space/Enter; Numpad digits and operators; OEM `- = [ ] \\ ; ' \` , . /`; Ctrl/Alt/Shift modifier combinations.
+
+UNSUPPORTED / RESERVED KEY CATEGORIES = modifier-only events, Escape as a binding, mouse gestures in Keyboard Shortcut capture, and any physical key not present in `PhysicalInputId.windowsInputs`.
 
 ## Verification
 

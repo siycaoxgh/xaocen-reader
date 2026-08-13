@@ -13,6 +13,7 @@ import '../domain/reader/reader_input_capture_workflow.dart';
 import '../domain/windows_shell_preferences.dart';
 import '../reader/reader_input.dart';
 import '../reader/reader_input_router.dart';
+import '../reader/supported_shortcut_key_registry.dart';
 import 'windows_shell.dart';
 import 'providers.dart';
 import 'router.dart';
@@ -336,6 +337,13 @@ class _WindowsShellSettingsPageState
     await WindowsShellBridge.apply(value);
   }
 
+  Future<void> _setMouseBossEnabled(bool enabled) async {
+    final value = await _repository.updateMouseBoss(enabled);
+    if (!mounted) return;
+    setState(() => _preferences = value);
+    await WindowsShellBridge.apply(value);
+  }
+
   void _startCapture() {
     setState(() {
       _capturing = true;
@@ -377,8 +385,16 @@ class _WindowsShellSettingsPageState
       _cancelCapture();
       return KeyEventResult.handled;
     }
-    final key = windowsShellKeyForLogicalKey(event.logicalKey);
-    if (key == null) return KeyEventResult.handled;
+    final input =
+        SupportedShortcutKeyRegistry.inputFor(event.physicalKey) ??
+        physicalInputIdForKey(event.logicalKey);
+    final key = input == null ? null : WindowsShellKey.parse(input.value);
+    if (key == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('此按键不能作为 XAOCEN 快捷键')));
+      return KeyEventResult.handled;
+    }
     final modifiers = <WindowsShellModifier>{
       if (HardwareKeyboard.instance.isControlPressed) WindowsShellModifier.ctrl,
       if (HardwareKeyboard.instance.isAltPressed) WindowsShellModifier.alt,
@@ -529,22 +545,42 @@ class _WindowsShellSettingsPageState
                 Card(
                   child: Column(
                     children: [
-                      SwitchListTile.adaptive(
-                        title: const Text('启用老板键'),
+                      ListTile(
+                        leading: const Icon(Icons.keyboard_alt_outlined),
+                        title: const Text('键盘老板键'),
                         subtitle: Text(
-                          '当前绑定：${_preferences.bossKeyGesture.label}',
+                          _preferences.bossKeyGesture.isKeyboard
+                              ? '老板键快捷键：${_preferences.bossKeyGesture.label}'
+                              : '老板键快捷键：未设置',
                         ),
-                        value: _preferences.bossKeyEnabled,
-                        onChanged: (value) => unawaited(_setBossEnabled(value)),
+                        trailing: Wrap(
+                          spacing: 8,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            Switch.adaptive(
+                              value:
+                                  _preferences.bossKeyEnabled &&
+                                  _preferences.bossKeyGesture.isKeyboard,
+                              onChanged: _preferences.bossKeyGesture.isKeyboard
+                                  ? (value) => unawaited(_setBossEnabled(value))
+                                  : null,
+                            ),
+                            OutlinedButton(
+                              onPressed: _capturing ? null : _startCapture,
+                              child: const Text('修改'),
+                            ),
+                          ],
+                        ),
                       ),
                       const Divider(height: 1),
-                      ListTile(
-                        title: const Text('当前绑定'),
-                        subtitle: Text(_preferences.bossKeyGesture.label),
-                        trailing: OutlinedButton(
-                          onPressed: _capturing ? null : _startCapture,
-                          child: const Text('修改绑定'),
+                      SwitchListTile.adaptive(
+                        title: const Text('鼠标老板手势'),
+                        subtitle: const Text(
+                          '左右键同时按下显示/隐藏窗口。鼠标左右键为固定手势，不参与普通快捷键录入。',
                         ),
+                        value: _preferences.mouseBossEnabled,
+                        onChanged: (value) =>
+                            unawaited(_setMouseBossEnabled(value)),
                       ),
                       if (_capturing)
                         _BossKeyCapturePanel(
@@ -843,7 +879,12 @@ class _ReaderInputSettingsPageState
       shift: HardwareKeyboard.instance.isShiftPressed,
     );
     // A modifier on its own is deliberately not a complete gesture.
-    if (gesture == null) return KeyEventResult.handled;
+    if (gesture == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('此按键不能作为 XAOCEN 快捷键')));
+      return KeyEventResult.handled;
+    }
     _router.handlePhysicalGesture(gesture);
     return KeyEventResult.handled;
   }
@@ -1006,6 +1047,8 @@ class _ReaderInputSettingsPageState
                               },
                             )
                         else ...[
+                          const _SupportedShortcutHelp(),
+                          const SizedBox(height: 12),
                           for (final command in ReaderCommand.values)
                             _CommandSection(
                               command: command,
@@ -1070,6 +1113,47 @@ class _PlatformHeader extends StatelessWidget {
       ),
       title: Text(platformLabel(platform)),
       subtitle: const Text('仅显示当前平台支持的物理输入'),
+    ),
+  );
+}
+
+class _SupportedShortcutHelp extends StatelessWidget {
+  const _SupportedShortcutHelp();
+
+  @override
+  Widget build(BuildContext context) => Card(
+    child: ExpansionTile(
+      leading: const Icon(Icons.keyboard_alt_outlined),
+      title: const Text('查看支持的按键'),
+      subtitle: const Text('支持字母、数字、功能键、导航键、小键盘、常用符号键及 Ctrl / Alt / Shift 组合。'),
+      children: [
+        for (final entry in SupportedShortcutKeyRegistry.categories.entries)
+          ListTile(
+            dense: true,
+            title: Text(entry.key),
+            subtitle: Text(
+              entry.value
+                  .map(SupportedShortcutKeyRegistry.displayName)
+                  .join('、'),
+            ),
+          ),
+        const ListTile(
+          dense: true,
+          title: Text('修饰键'),
+          subtitle: Text(SupportedShortcutKeyRegistry.modifierDescription),
+        ),
+        const ListTile(
+          dense: true,
+          title: Text('鼠标手势'),
+          subtitle: Text(
+            '${SupportedShortcutKeyRegistry.mouseGestureDescription}。属于 Mouse Gesture，不参与普通 Keyboard Shortcut 捕获。',
+          ),
+        ),
+        const Padding(
+          padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
+          child: Text('部分系统保留键不能作为 XAOCEN 快捷键。'),
+        ),
+      ],
     ),
   );
 }

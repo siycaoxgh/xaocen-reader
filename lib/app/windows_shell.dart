@@ -27,6 +27,7 @@ final class WindowsShellBridge {
         'tray': preferences.showTrayIcon,
         'bossEnabled': preferences.bossKeyEnabled,
         'boss': preferences.bossKeyGesture.toJson(),
+        'mouseBossEnabled': preferences.mouseBossEnabled,
       });
       final visibilityApplied = result ?? false;
       final borderApplied = await _channel.invokeMethod<bool>(

@@ -32,6 +32,38 @@ UINT VirtualKeyForBossId(const std::string& id) {
   if (id == "keyboard.end") return VK_END;
   if (id == "keyboard.space") return VK_SPACE;
   if (id == "keyboard.enter") return VK_RETURN;
+  if (id == "keyboard.numpad0") return VK_NUMPAD0;
+  if (id == "keyboard.numpad1") return VK_NUMPAD1;
+  if (id == "keyboard.numpad2") return VK_NUMPAD2;
+  if (id == "keyboard.numpad3") return VK_NUMPAD3;
+  if (id == "keyboard.numpad4") return VK_NUMPAD4;
+  if (id == "keyboard.numpad5") return VK_NUMPAD5;
+  if (id == "keyboard.numpad6") return VK_NUMPAD6;
+  if (id == "keyboard.numpad7") return VK_NUMPAD7;
+  if (id == "keyboard.numpad8") return VK_NUMPAD8;
+  if (id == "keyboard.numpad9") return VK_NUMPAD9;
+  if (id == "keyboard.numpadAdd") return VK_ADD;
+  if (id == "keyboard.numpadSubtract") return VK_SUBTRACT;
+  if (id == "keyboard.numpadMultiply") return VK_MULTIPLY;
+  if (id == "keyboard.numpadDivide") return VK_DIVIDE;
+  if (id.rfind("keyboard.f", 0) == 0) {
+    const int function_key =
+        std::stoi(id.substr(std::string("keyboard.f").size()));
+    if (function_key >= 1 && function_key <= 12) {
+      return VK_F1 + function_key - 1;
+    }
+  }
+  if (id == "keyboard.comma") return VK_OEM_COMMA;
+  if (id == "keyboard.period") return VK_OEM_PERIOD;
+  if (id == "keyboard.slash") return VK_OEM_2;
+  if (id == "keyboard.semicolon") return VK_OEM_1;
+  if (id == "keyboard.quote") return VK_OEM_7;
+  if (id == "keyboard.bracketLeft") return VK_OEM_4;
+  if (id == "keyboard.bracketRight") return VK_OEM_6;
+  if (id == "keyboard.backslash") return VK_OEM_5;
+  if (id == "keyboard.minus") return VK_OEM_MINUS;
+  if (id == "keyboard.equal") return VK_OEM_PLUS;
+  if (id == "keyboard.backquote") return VK_OEM_3;
   return 0;
 }
 
@@ -198,6 +230,7 @@ bool FlutterWindow::OnCreate() {
           bool taskbar = true;
           bool tray = false;
           bool boss_enabled = false;
+          bool mouse_boss_enabled = true;
           UINT boss_modifiers = 0;
           UINT boss_virtual_key = 0;
           const auto* args = call.arguments();
@@ -211,6 +244,8 @@ bool FlutterWindow::OnCreate() {
                   map->find(flutter::EncodableValue("bossEnabled"));
               const auto boss_it =
                   map->find(flutter::EncodableValue("boss"));
+              const auto mouse_boss_enabled_it =
+                  map->find(flutter::EncodableValue("mouseBossEnabled"));
               if (taskbar_it != map->end()) {
                 if (const auto* value =
                         std::get_if<bool>(&taskbar_it->second)) {
@@ -226,6 +261,12 @@ bool FlutterWindow::OnCreate() {
                 if (const auto* value =
                         std::get_if<bool>(&boss_enabled_it->second)) {
                   boss_enabled = *value;
+                }
+              }
+              if (mouse_boss_enabled_it != map->end()) {
+                if (const auto* value =
+                        std::get_if<bool>(&mouse_boss_enabled_it->second)) {
+                  mouse_boss_enabled = *value;
                 }
               }
               if (boss_it != map->end()) {
@@ -261,7 +302,8 @@ bool FlutterWindow::OnCreate() {
               ? true
               : SetGlobalBossKey(boss_modifiers, boss_virtual_key);
           if (!boss_enabled || boss_virtual_key == 0) ClearGlobalBossKey();
-          const bool mouse_boss_ok = SetMouseBossChordEnabled(boss_enabled);
+          const bool mouse_boss_ok =
+              SetMouseBossChordEnabled(mouse_boss_enabled);
           result->Success(flutter::EncodableValue(
               visibility_ok && boss_ok && mouse_boss_ok));
           return;

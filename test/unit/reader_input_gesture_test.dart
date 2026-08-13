@@ -1,6 +1,7 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:xaocen_reader/reader/reader_input.dart';
+import 'package:xaocen_reader/reader/supported_shortcut_key_registry.dart';
 
 void main() {
   test('supported plain Windows primary keys map predictably', () {
@@ -115,4 +116,22 @@ void main() {
       expect(physicalInputIdForPhysicalKey(entry.key), entry.value);
     }
   });
+
+  test(
+    'shortcut capability registry is sourced from physical input support',
+    () {
+      expect(
+        SupportedShortcutKeyRegistry.inputFor(PhysicalKeyboardKey.slash),
+        PhysicalInputId.keyboardSlash,
+      );
+      expect(
+        SupportedShortcutKeyRegistry.categories['小键盘'],
+        contains(PhysicalInputId.keyboardNumpadAdd),
+      );
+      expect(
+        SupportedShortcutKeyRegistry.displayName(PhysicalInputId.keyboardSlash),
+        '/',
+      );
+    },
+  );
 }

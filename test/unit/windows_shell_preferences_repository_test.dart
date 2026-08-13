@@ -26,6 +26,7 @@ void main() {
     expect(value.hasRecoveryEntry, isTrue);
     expect(value.bossKeyEnabled, isTrue);
     expect(value.bossKeyGesture.mouseChord, isTrue);
+    expect(value.mouseBossEnabled, isTrue);
     expect(value.version, WindowsShellPreferences.currentVersion);
   });
 
@@ -34,6 +35,15 @@ void main() {
     final reloaded = await repository.load();
     expect(reloaded.showTaskbarIcon, isFalse);
     expect(reloaded.showTrayIcon, isTrue);
+  });
+
+  test('mouse Boss gesture has an independent persisted switch', () async {
+    await repository.updateMouseBoss(false);
+    final value = await repository.load();
+    expect(value.mouseBossEnabled, isFalse);
+    expect(value.bossKeyGesture.mouseChord, isTrue);
+    await repository.updateMouseBoss(true);
+    expect((await repository.load()).mouseBossEnabled, isTrue);
   });
 
   test(

@@ -29,6 +29,7 @@ final class WindowsShellPreferencesRepository {
     bool? showWindowBorder,
     bool? bossKeyEnabled,
     WindowsBossKeyGesture? bossKeyGesture,
+    bool? mouseBossEnabled,
   }) async {
     if (!showTaskbarIcon && !showTrayIcon) {
       throw const WindowsShellVisibilityException();
@@ -40,6 +41,7 @@ final class WindowsShellPreferencesRepository {
       showWindowBorder: showWindowBorder ?? current.showWindowBorder,
       bossKeyEnabled: bossKeyEnabled ?? current.bossKeyEnabled,
       bossKeyGesture: bossKeyGesture ?? current.bossKeyGesture,
+      mouseBossEnabled: mouseBossEnabled ?? current.mouseBossEnabled,
       version: WindowsShellPreferences.currentVersion,
       updatedAt: DateTime.now().toUtc(),
     );
@@ -72,6 +74,17 @@ final class WindowsShellPreferencesRepository {
     );
   }
 
+  Future<WindowsShellPreferences> updateMouseBoss(bool enabled) async {
+    final current = await load();
+    return _write(
+      current.copyWith(
+        mouseBossEnabled: enabled,
+        version: WindowsShellPreferences.currentVersion,
+        updatedAt: DateTime.now().toUtc(),
+      ),
+    );
+  }
+
   Future<WindowsShellPreferences> _write(WindowsShellPreferences next) async {
     await _db
         .into(_db.appSettings)
@@ -97,6 +110,7 @@ final class WindowsShellPreferencesRepository {
     'showWindowBorder': preferences.showWindowBorder,
     'bossKeyEnabled': preferences.bossKeyEnabled,
     'bossKeyGesture': preferences.bossKeyGesture.toJson(),
+    'mouseBossEnabled': preferences.mouseBossEnabled,
     'updatedAt': preferences.updatedAt.toUtc().toIso8601String(),
   };
 
@@ -130,6 +144,9 @@ final class WindowsShellPreferencesRepository {
             : true,
         bossKeyEnabled: bossEnabled is bool ? bossEnabled : true,
         bossKeyGesture: bossGesture ?? const WindowsBossKeyGesture.mouseChord(),
+        mouseBossEnabled: decoded['mouseBossEnabled'] is bool
+            ? decoded['mouseBossEnabled'] as bool
+            : true,
         version: WindowsShellPreferences.currentVersion,
         updatedAt: _parseDate(decoded['updatedAt']) ?? DateTime.now().toUtc(),
       );

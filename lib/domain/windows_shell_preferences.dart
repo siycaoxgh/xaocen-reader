@@ -7,6 +7,7 @@ final class WindowsShellPreferences {
     required this.showWindowBorder,
     required this.bossKeyEnabled,
     required this.bossKeyGesture,
+    required this.mouseBossEnabled,
     required this.updatedAt,
     this.version = currentVersion,
   });
@@ -20,6 +21,7 @@ final class WindowsShellPreferences {
     showWindowBorder: true,
     bossKeyEnabled: true,
     bossKeyGesture: WindowsBossKeyGesture.mouseChord(),
+    mouseBossEnabled: true,
     updatedAt: _defaultUpdatedAt,
   );
 
@@ -35,6 +37,9 @@ final class WindowsShellPreferences {
   final bool showWindowBorder;
   final bool bossKeyEnabled;
   final WindowsBossKeyGesture bossKeyGesture;
+
+  /// Fixed LMB+RMB Raw Input gesture; never a keyboard binding.
+  final bool mouseBossEnabled;
   final int version;
   final DateTime updatedAt;
 
@@ -46,6 +51,7 @@ final class WindowsShellPreferences {
     bool? showWindowBorder,
     bool? bossKeyEnabled,
     WindowsBossKeyGesture? bossKeyGesture,
+    bool? mouseBossEnabled,
     int? version,
     DateTime? updatedAt,
   }) {
@@ -55,6 +61,7 @@ final class WindowsShellPreferences {
       showWindowBorder: showWindowBorder ?? this.showWindowBorder,
       bossKeyEnabled: bossKeyEnabled ?? this.bossKeyEnabled,
       bossKeyGesture: bossKeyGesture ?? this.bossKeyGesture,
+      mouseBossEnabled: mouseBossEnabled ?? this.mouseBossEnabled,
       version: version ?? this.version,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -68,6 +75,7 @@ final class WindowsShellPreferences {
       other.showWindowBorder == showWindowBorder &&
       other.bossKeyEnabled == bossKeyEnabled &&
       other.bossKeyGesture == bossKeyGesture &&
+      other.mouseBossEnabled == mouseBossEnabled &&
       other.version == version &&
       other.updatedAt == updatedAt;
 
@@ -78,6 +86,7 @@ final class WindowsShellPreferences {
     showWindowBorder,
     bossKeyEnabled,
     bossKeyGesture,
+    mouseBossEnabled,
     version,
     updatedAt,
   );
@@ -133,7 +142,44 @@ enum WindowsShellKey {
   home('keyboard.home', 'Home'),
   end('keyboard.end', 'End'),
   space('keyboard.space', 'Space'),
-  enter('keyboard.enter', 'Enter');
+  enter('keyboard.enter', 'Enter'),
+  numpad0('keyboard.numpad0', 'Numpad 0'),
+  numpad1('keyboard.numpad1', 'Numpad 1'),
+  numpad2('keyboard.numpad2', 'Numpad 2'),
+  numpad3('keyboard.numpad3', 'Numpad 3'),
+  numpad4('keyboard.numpad4', 'Numpad 4'),
+  numpad5('keyboard.numpad5', 'Numpad 5'),
+  numpad6('keyboard.numpad6', 'Numpad 6'),
+  numpad7('keyboard.numpad7', 'Numpad 7'),
+  numpad8('keyboard.numpad8', 'Numpad 8'),
+  numpad9('keyboard.numpad9', 'Numpad 9'),
+  numpadAdd('keyboard.numpadAdd', 'Numpad +'),
+  numpadSubtract('keyboard.numpadSubtract', 'Numpad -'),
+  numpadMultiply('keyboard.numpadMultiply', 'Numpad *'),
+  numpadDivide('keyboard.numpadDivide', 'Numpad /'),
+  f1('keyboard.f1', 'F1'),
+  f2('keyboard.f2', 'F2'),
+  f3('keyboard.f3', 'F3'),
+  f4('keyboard.f4', 'F4'),
+  f5('keyboard.f5', 'F5'),
+  f6('keyboard.f6', 'F6'),
+  f7('keyboard.f7', 'F7'),
+  f8('keyboard.f8', 'F8'),
+  f9('keyboard.f9', 'F9'),
+  f10('keyboard.f10', 'F10'),
+  f11('keyboard.f11', 'F11'),
+  f12('keyboard.f12', 'F12'),
+  comma('keyboard.comma', ','),
+  period('keyboard.period', '.'),
+  slash('keyboard.slash', '/'),
+  semicolon('keyboard.semicolon', ';'),
+  quote('keyboard.quote', "'"),
+  bracketLeft('keyboard.bracketLeft', '['),
+  bracketRight('keyboard.bracketRight', ']'),
+  backslash('keyboard.backslash', '\\'),
+  minus('keyboard.minus', '-'),
+  equal('keyboard.equal', '='),
+  backquote('keyboard.backquote', '`');
 
   const WindowsShellKey(this.id, this.label);
   final String id;
