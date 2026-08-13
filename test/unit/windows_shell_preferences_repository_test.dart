@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter/services.dart';
 import 'package:xaocen_reader/app/windows_shell.dart';
 import 'package:xaocen_reader/data/database/app_database.dart';
 import 'package:xaocen_reader/data/repositories/windows_shell_preferences_repository.dart';
@@ -159,12 +160,71 @@ void main() {
   test('boss key tracker triggers once until both buttons release', () {
     final tracker = BossKeyTracker();
     expect(tracker.update(left: true, right: false), isFalse);
+    tracker.clear();
+    expect(tracker.update(left: false, right: true), isFalse);
+    tracker.clear();
+    expect(tracker.update(left: false, right: false), isFalse);
     expect(tracker.update(left: true, right: true), isTrue);
     expect(tracker.update(left: true, right: true), isFalse);
     expect(tracker.update(left: true, right: false), isFalse);
+    expect(tracker.update(left: false, right: false), isFalse);
     expect(tracker.update(left: true, right: true), isTrue);
     tracker.clear();
     expect(tracker.update(left: true, right: true), isTrue);
+  });
+
+  test('mouse chord accepts either order and only once per press cycle', () {
+    var now = DateTime.utc(2026, 1, 1);
+    final tracker = BossKeyTracker(now: () => now);
+
+    // LMB -> RMB.
+    expect(tracker.update(left: true, right: false), isFalse);
+    now = now.add(const Duration(milliseconds: 100));
+    expect(tracker.update(left: true, right: true), isTrue);
+    expect(tracker.update(left: true, right: true), isFalse);
+    now = now.add(const Duration(seconds: 2));
+    expect(tracker.update(left: true, right: true), isFalse);
+    expect(tracker.update(left: false, right: false), isFalse);
+
+    // RMB -> LMB after release.
+    now = now.add(const Duration(milliseconds: 50));
+    expect(tracker.update(left: false, right: true), isFalse);
+    now = now.add(const Duration(milliseconds: 249));
+    expect(tracker.update(left: true, right: true), isTrue);
+  });
+
+  test('mouse chord rejects buttons outside the threshold until release', () {
+    var now = DateTime.utc(2026, 1, 1);
+    final tracker = BossKeyTracker(now: () => now);
+    expect(tracker.update(left: true, right: false), isFalse);
+    now = now.add(const Duration(milliseconds: 251));
+    expect(tracker.update(left: true, right: true), isFalse);
+    expect(tracker.update(left: true, right: true), isFalse);
+    expect(tracker.update(left: false, right: false), isFalse);
+    now = now.add(const Duration(milliseconds: 1));
+    expect(tracker.update(left: true, right: false), isFalse);
+    expect(tracker.update(left: true, right: true), isTrue);
+  });
+
+  test('mouse chord is not represented as keyboard V', () {
+    const mouse = WindowsBossKeyGesture.mouseChord();
+    final keyboard = WindowsBossKeyGesture.keyboard(WindowsShellKey.keyV);
+    expect(mouse.isKeyboard, isFalse);
+    expect(mouse.primaryKey, isNull);
+    expect(mouse.toJson()['type'], 'mouseChord');
+    expect(keyboard.toJson()['type'], 'keyboard');
+    expect(keyboard.primaryKey, WindowsShellKey.keyV);
+
+    final tracker = BossKeyTracker();
+    expect(tracker.update(left: true, right: false), isFalse);
+    expect(
+      tracker.updateKeyboard(
+        keyboard,
+        key: WindowsShellKey.keyV,
+        modifiers: const {},
+      ),
+      isFalse,
+    );
   });
 
   test('boss key keyboard gesture requires primary and exact modifiers', () {
@@ -201,6 +261,40 @@ void main() {
     expect(
       tracker.updateKeyboard(gesture, key: WindowsShellKey.keyB, modifiers: {}),
       isFalse,
+    );
+  });
+
+  test('keyboard V remains an independent keyboard gesture', () {
+    final tracker = BossKeyTracker();
+    final gesture = WindowsBossKeyGesture.keyboard(WindowsShellKey.keyV);
+    expect(
+      windowsShellKeyForLogicalKey(LogicalKeyboardKey.keyV),
+      WindowsShellKey.keyV,
+    );
+    expect(
+      tracker.updateKeyboard(
+        gesture,
+        key: WindowsShellKey.keyV,
+        modifiers: const {},
+      ),
+      isTrue,
+    );
+    expect(
+      tracker.updateKeyboard(
+        gesture,
+        key: WindowsShellKey.keyV,
+        modifiers: const {},
+      ),
+      isFalse,
+    );
+    tracker.releaseKeyboard();
+    expect(
+      tracker.updateKeyboard(
+        gesture,
+        key: WindowsShellKey.keyV,
+        modifiers: const {},
+      ),
+      isTrue,
     );
   });
 }

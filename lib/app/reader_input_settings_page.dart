@@ -272,6 +272,7 @@ class _WindowsShellSettingsPageState
   late final FocusNode _captureFocus = FocusNode(
     debugLabel: 'boss-key-capture',
   );
+  final BossKeyTracker _captureMouseTracker = BossKeyTracker();
   bool _capturing = false;
   WindowsBossKeyGesture? _candidate;
 
@@ -297,6 +298,7 @@ class _WindowsShellSettingsPageState
     final subscription = _subscription;
     if (subscription != null) unawaited(subscription.cancel());
     WindowsShellBridge.setCaptureActive(false);
+    _captureMouseTracker.clear();
     _captureFocus.dispose();
     super.dispose();
   }
@@ -342,6 +344,7 @@ class _WindowsShellSettingsPageState
       _candidate = null;
     });
     WindowsShellBridge.setCaptureActive(true);
+    _captureMouseTracker.clear();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted && _capturing) _captureFocus.requestFocus();
     });
@@ -349,6 +352,7 @@ class _WindowsShellSettingsPageState
 
   void _cancelCapture() {
     WindowsShellBridge.setCaptureActive(false);
+    _captureMouseTracker.clear();
     if (!mounted) return;
     setState(() {
       _capturing = false;
@@ -358,6 +362,7 @@ class _WindowsShellSettingsPageState
 
   void _retryCapture() {
     if (!mounted) return;
+    _captureMouseTracker.clear();
     setState(() => _candidate = null);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted && _capturing) _captureFocus.requestFocus();
@@ -366,10 +371,17 @@ class _WindowsShellSettingsPageState
 
   KeyEventResult _captureKey(FocusNode node, KeyEvent event) {
     if (!_capturing) return KeyEventResult.ignored;
-    if (event is KeyUpEvent || event is KeyRepeatEvent) {
+    if (event is KeyUpEvent) {
+      _captureMouseTracker.releaseKeyboard();
+      return KeyEventResult.handled;
+    }
+    if (event is KeyRepeatEvent) {
       return KeyEventResult.handled;
     }
     if (event is! KeyDownEvent) return KeyEventResult.handled;
+    // Mouse chords are a separate capture domain. A pointing driver must not
+    // overwrite the candidate with a synthetic keyboard key such as V.
+    if (_captureMouseTracker.mouseButtonsDown) return KeyEventResult.handled;
     if (event.logicalKey == LogicalKeyboardKey.escape) {
       _cancelCapture();
       return KeyEventResult.handled;
@@ -391,10 +403,10 @@ class _WindowsShellSettingsPageState
   }
 
   void _capturePointer(PointerEvent event) {
-    if (!_capturing || event is! PointerDownEvent) return;
+    if (!_capturing || event.kind != PointerDeviceKind.mouse) return;
     final left = event.buttons & kPrimaryMouseButton != 0;
     final right = event.buttons & kSecondaryMouseButton != 0;
-    if (left && right) {
+    if (_captureMouseTracker.update(left: left, right: right)) {
       setState(() => _candidate = const WindowsBossKeyGesture.mouseChord());
     }
   }
@@ -466,6 +478,9 @@ class _WindowsShellSettingsPageState
         onKeyEvent: _captureKey,
         child: Listener(
           onPointerDown: _capturePointer,
+          onPointerMove: _capturePointer,
+          onPointerUp: _capturePointer,
+          onPointerCancel: _capturePointer,
           child: Center(
             child: ConstrainedBox(
               constraints: BoxConstraints(

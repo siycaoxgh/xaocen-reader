@@ -95,21 +95,32 @@ final class WindowsShellBridge {
 /// App-local left+right mouse chord recognizer. It is intentionally scoped to
 /// the Flutter window and never installs a global mouse hook.
 final class BossKeyTracker {
+  BossKeyTracker({DateTime Function()? now}) : _now = now ?? DateTime.now;
+
+  final DateTime Function() _now;
   bool _leftDown = false;
   bool _rightDown = false;
-  bool _triggered = false;
+  bool _mouseTriggered = false;
+  bool _keyboardTriggered = false;
   DateTime? _leftDownAt;
   DateTime? _rightDownAt;
 
   static const chordWindow = Duration(milliseconds: 250);
 
   void clear() {
+    clearMouse();
+    releaseKeyboard();
+  }
+
+  void clearMouse() {
     _leftDown = false;
     _rightDown = false;
-    _triggered = false;
+    _mouseTriggered = false;
     _leftDownAt = null;
     _rightDownAt = null;
   }
+
+  bool get mouseButtonsDown => _leftDown || _rightDown;
 
   bool updateMouse(
     WindowsBossKeyGesture gesture, {
@@ -117,16 +128,23 @@ final class BossKeyTracker {
     required bool right,
   }) {
     if (!gesture.mouseChord) {
-      clear();
+      clearMouse();
       return false;
     }
-    final now = DateTime.now();
+    final now = _now();
     if (left && !_leftDown) _leftDownAt = now;
     if (right && !_rightDown) _rightDownAt = now;
     _leftDown = left;
     _rightDown = right;
     if (!_leftDown || !_rightDown) {
-      _triggered = false;
+      // A chord press cycle ends only after both buttons are released. This
+      // prevents releasing/re-pressing one button while holding the other
+      // from retriggering the command.
+      if (!_leftDown && !_rightDown) {
+        _mouseTriggered = false;
+        _leftDownAt = null;
+        _rightDownAt = null;
+      }
       return false;
     }
     final leftAt = _leftDownAt;
@@ -134,11 +152,11 @@ final class BossKeyTracker {
     if (leftAt == null ||
         rightAt == null ||
         leftAt.difference(rightAt).abs() > chordWindow) {
-      _triggered = false;
+      _mouseTriggered = false;
       return false;
     }
-    if (_triggered) return false;
-    _triggered = true;
+    if (_mouseTriggered) return false;
+    _mouseTriggered = true;
     return true;
   }
 
@@ -155,20 +173,21 @@ final class BossKeyTracker {
     required WindowsShellKey key,
     required Set<WindowsShellModifier> modifiers,
   }) {
+    if (mouseButtonsDown) return false;
     if (!gesture.isKeyboard ||
         gesture.primaryKey != key ||
         gesture.modifiers.length != modifiers.length ||
         !gesture.modifiers.containsAll(modifiers)) {
       return false;
     }
-    if (_triggered) return false;
-    _triggered = true;
+    if (_keyboardTriggered) return false;
+    _keyboardTriggered = true;
     return true;
   }
 
   /// A keyboard gesture is one press cycle. Key repeat and a held modifier
   /// cannot retrigger until the physical key is released.
-  void releaseKeyboard() => _triggered = false;
+  void releaseKeyboard() => _keyboardTriggered = false;
 }
 
 void unawaitedShell(Future<void> future) => unawaited(future);
@@ -205,6 +224,7 @@ class _WindowsShellHostState extends ConsumerState<WindowsShellHost> {
   void _onPointer(PointerEvent event) {
     if (!Platform.isWindows) return;
     if (WindowsShellBridge.captureActive) return;
+    if (event.kind != PointerDeviceKind.mouse) return;
     final buttons = event.buttons;
     final left = buttons & kPrimaryMouseButton != 0;
     final right = buttons & kSecondaryMouseButton != 0;
@@ -222,10 +242,14 @@ class _WindowsShellHostState extends ConsumerState<WindowsShellHost> {
       return KeyEventResult.ignored;
     }
     if (event is KeyUpEvent || event is KeyRepeatEvent) {
-      _tracker.clear();
+      if (event is KeyUpEvent) _tracker.releaseKeyboard();
       return KeyEventResult.ignored;
     }
     if (event is! KeyDownEvent) return KeyEventResult.ignored;
+    // Some pointing drivers emit a synthetic key event while both buttons
+    // are held. A mouse chord is a separate domain and must never become a
+    // keyboard V (or any other keyboard) binding.
+    if (_tracker.mouseButtonsDown) return KeyEventResult.ignored;
     final preferences = WindowsShellBridge.currentPreferences ?? _preferences;
     if (preferences?.bossKeyEnabled != true) return KeyEventResult.ignored;
     final key = windowsShellKeyForLogicalKey(event.logicalKey);
@@ -269,6 +293,7 @@ class _WindowsShellHostState extends ConsumerState<WindowsShellHost> {
       child: Listener(
         behavior: HitTestBehavior.translucent,
         onPointerDown: _onPointer,
+        onPointerMove: _onPointer,
         onPointerUp: _onPointer,
         onPointerCancel: _onPointer,
         child: widget.child,
