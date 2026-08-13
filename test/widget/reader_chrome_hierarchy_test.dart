@@ -1,9 +1,58 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'dart:ui';
 import 'package:xaocen_reader/reader/reader_chrome.dart';
 import 'package:xaocen_reader/reader/reader_mode.dart';
 
 void main() {
+  testWidgets('cutout-aware metadata grows Chrome instead of overflowing', (
+    tester,
+  ) async {
+    const cutout = DisplayFeature(
+      bounds: Rect.fromLTWH(180, 0, 30, 42),
+      type: DisplayFeatureType.cutout,
+      state: DisplayFeatureState.unknown,
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MediaQuery(
+          data: const MediaQueryData(
+            size: Size(390, 260),
+            displayFeatures: [cutout],
+          ),
+          child: Scaffold(
+            body: ReaderChrome(
+              visible: true,
+              title: 'A long title that must remain bounded',
+              mode: ReaderMode.paged,
+              currentChapterTitle: 'City Edge',
+              currentChapterNumber: 53,
+              chapterPageNumber: 7,
+              chapterPageCount: 12,
+              chapterProgressPercent: .58,
+              progressPercent: .37,
+              extendIntoDisplayCutout: true,
+              onBack: () {},
+              onToc: () {},
+              onAppearance: () {},
+              onMore: () {},
+              onBookmarks: () {},
+              onSearch: () {},
+              onModeSelected: (_) {},
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    final surface = tester.getRect(find.byKey(readerTopChromeSurfaceKey));
+    final chrome = tester.getRect(find.byKey(readerTopChromeKey));
+    expect(chrome.top, greaterThanOrEqualTo(surface.top));
+    expect(chrome.bottom, lessThanOrEqualTo(surface.bottom));
+  });
+
   testWidgets('top chrome surface paints the SafeArea inset', (tester) async {
     const surface = Color(0xff123456);
     await tester.pumpWidget(

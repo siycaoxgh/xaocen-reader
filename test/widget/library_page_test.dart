@@ -48,6 +48,15 @@ void main() {
       expect(find.widgetWithText(FilledButton, '导入 TXT'), findsOneWidget);
     });
 
+    testWidgets('书架大面积主体使用 App Shell surface', (tester) async {
+      await pump(tester);
+      final scaffold = tester.widget<Scaffold>(find.byType(Scaffold));
+      final surface = Theme.of(
+        tester.element(find.byType(Scaffold)),
+      ).colorScheme.surface;
+      expect(scaffold.backgroundColor, surface);
+    });
+
     testWidgets('有书时显示卡片（标题/章数/编码）', (tester) async {
       final collection = LibraryCollection(
         id: 'local-txt:abc',

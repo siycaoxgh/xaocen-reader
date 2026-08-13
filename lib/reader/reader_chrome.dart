@@ -237,12 +237,11 @@ class ReaderChrome extends StatelessWidget {
     final chromeTextInset = extendIntoDisplayCutout
         ? AndroidReaderWindow.topChromeTextClearanceForData(media)
         : 0.0;
-    final cutoutAwareTopLayout =
-        extendIntoDisplayCutout &&
-        AndroidReaderWindow.cutoutBoundsForData(media).isNotEmpty;
-    final textTopInset = cutoutAwareTopLayout
-        ? math.max(chromeTextInset, 44.0)
-        : 0.0;
+    final cutoutAwareTopLayout = extendIntoDisplayCutout && chromeTextInset > 0;
+    // Use the real cutout clearance without adding a device-specific minimum.
+    // The top chrome below is content-sized when this inset is present, so the
+    // metadata column is never forced into the old 78px box.
+    final textTopInset = cutoutAwareTopLayout ? chromeTextInset : 0.0;
     final topContentInset = extendIntoDisplayCutout
         ? 0.0
         : AndroidReaderWindow.safeInsetsForData(
@@ -250,6 +249,11 @@ class ReaderChrome extends StatelessWidget {
             extendIntoDisplayCutout: false,
             hideNavigationBar: hideNavigationBar,
           ).top;
+    // The top surface remains a bounded hit-test region. When a real center
+    // cutout consumes the text lane, its measured clearance is added to the
+    // content-sized operation surface rather than overflowing a 78px box.
+    final topChromeHeight =
+        78.0 + topContentInset + (cutoutAwareTopLayout ? textTopInset : 0.0);
     final chrome = IgnorePointer(
       ignoring: !visible,
       child: AnimatedOpacity(
@@ -267,183 +271,196 @@ class ReaderChrome extends StatelessWidget {
                 // separated by a reader-background strip.
                 color: colorScheme.surface,
                 child: SizedBox(
-                  height: 78 + topContentInset,
-                  child: Padding(
-                    padding: EdgeInsets.only(
-                      top: topContentInset,
-                      left: chromeSidePadding.left,
-                      right: chromeSidePadding.right,
-                    ),
-                    child: Container(
-                      key: readerTopChromeKey,
-                      // Vertical mode shows a second line for chapter and book
-                      // progress, so reserve enough room for the extra row while
-                      // keeping the paged chrome at its existing height.
-                      height: 78,
-                      padding: EdgeInsets.symmetric(
-                        horizontal: isDesktop ? 20 : 8,
+                  width: double.infinity,
+                  height: topChromeHeight,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(minHeight: topChromeHeight),
+                    child: Padding(
+                      padding: EdgeInsets.only(
+                        top: topContentInset,
+                        left: chromeSidePadding.left,
+                        right: chromeSidePadding.right,
                       ),
-                      decoration: BoxDecoration(
-                        // Operation chrome uses the same surface as the bottom
-                        // operation chrome. Reader background belongs to the
-                        // body/minimal-info layer and must not leak into the
-                        // chrome palette.
-                        color: colorScheme.surface,
-                      ),
-                      child: Row(
-                        crossAxisAlignment: cutoutAwareTopLayout
-                            ? CrossAxisAlignment.start
-                            : CrossAxisAlignment.center,
-                        children: [
-                          IconButton(
-                            tooltip: '返回书架',
-                            onPressed: onBack,
-                            icon: const Icon(Icons.arrow_back),
-                          ),
-                          const SizedBox(width: 4),
-                          Expanded(
-                            child: Padding(
-                              padding: EdgeInsets.only(top: textTopInset),
-                              child: Column(
-                                mainAxisAlignment: cutoutAwareTopLayout
-                                    ? MainAxisAlignment.start
-                                    : MainAxisAlignment.center,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    title,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: Theme.of(
-                                      context,
-                                    ).textTheme.titleSmall,
-                                  ),
-                                  Text(
-                                    mode == ReaderMode.paged ? '分页阅读' : '滚动阅读',
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .labelSmall
-                                        ?.copyWith(color: colorScheme.primary),
-                                  ),
-                                  if (visible &&
-                                      mode == ReaderMode.vertical &&
-                                      (currentChapterTitle != null ||
-                                          progressPercent != null)) ...[
-                                    Text(
-                                      currentChapterNumber == null
-                                          ? (currentChapterTitle ??
-                                                ReaderProgressLabels
-                                                    .wholeDocument)
-                                          : '\u7b2c $currentChapterNumber \u7ae0  ${currentChapterTitle ?? ''}',
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .labelSmall
-                                          ?.copyWith(
-                                            color: colorScheme.onSurfaceVariant,
-                                          ),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Row(
-                                      children: [
-                                        if (chapterProgressPercent != null)
-                                          Text(
-                                            '${ReaderProgressLabels.chapter} ${(chapterProgressPercent! * 100).round()}%',
-                                            style: Theme.of(context)
-                                                .textTheme
-                                                .labelSmall
-                                                ?.copyWith(
-                                                  color: colorScheme
-                                                      .onSurfaceVariant,
-                                                ),
-                                          ),
-                                        const Spacer(),
-                                        if (progressPercent != null)
-                                          Text(
-                                            '${ReaderProgressLabels.wholeBook} ${(progressPercent! * 100).round()}%',
-                                            style: Theme.of(context)
-                                                .textTheme
-                                                .labelSmall
-                                                ?.copyWith(
-                                                  color: colorScheme
-                                                      .onSurfaceVariant,
-                                                ),
-                                          ),
-                                      ],
-                                    ),
-                                  ] else if (visible &&
-                                      mode == ReaderMode.paged &&
-                                      (chapterPageNumber != null ||
-                                          currentChapterTitle != null ||
-                                          progressPercent != null)) ...[
-                                    Text(
-                                      currentChapterNumber == null
-                                          ? (currentChapterTitle ??
-                                                ReaderProgressLabels
-                                                    .wholeDocument)
-                                          : '\u7b2c $currentChapterNumber \u7ae0  ${currentChapterTitle ?? ''}',
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .labelSmall
-                                          ?.copyWith(
-                                            color: colorScheme.onSurfaceVariant,
-                                          ),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Row(
-                                      children: [
-                                        if (chapterPageNumber != null &&
-                                            chapterPageCount != null)
-                                          Text(
-                                            '${ReaderProgressLabels.chapter} $chapterPageNumber / $chapterPageCount ${ReaderProgressLabels.pages}',
-                                            style: Theme.of(context)
-                                                .textTheme
-                                                .labelSmall
-                                                ?.copyWith(
-                                                  color: colorScheme
-                                                      .onSurfaceVariant,
-                                                ),
-                                          ),
-                                        const Spacer(),
-                                        if (progressPercent != null)
-                                          Text(
-                                            '${ReaderProgressLabels.wholeBook} ${(progressPercent! * 100).round()}%',
-                                            style: Theme.of(context)
-                                                .textTheme
-                                                .labelSmall
-                                                ?.copyWith(
-                                                  color: colorScheme
-                                                      .onSurfaceVariant,
-                                                ),
-                                          ),
-                                      ],
-                                    ),
-                                  ],
-                                ],
-                              ),
+                      child: Container(
+                        key: readerTopChromeKey,
+                        // Keep the compact chrome at its normal minimum, but let
+                        // cutout-aware metadata grow the operation surface from
+                        // its actual content instead of overflowing a fixed box.
+                        constraints: BoxConstraints(
+                          minHeight: topChromeHeight - topContentInset,
+                          maxHeight: topChromeHeight - topContentInset,
+                        ),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: isDesktop ? 20 : 8,
+                        ),
+                        decoration: BoxDecoration(
+                          // Operation chrome uses the same surface as the bottom
+                          // operation chrome. Reader background belongs to the
+                          // body/minimal-info layer and must not leak into the
+                          // chrome palette.
+                          color: colorScheme.surface,
+                        ),
+                        child: Row(
+                          crossAxisAlignment: cutoutAwareTopLayout
+                              ? CrossAxisAlignment.start
+                              : CrossAxisAlignment.center,
+                          children: [
+                            IconButton(
+                              tooltip: '返回书架',
+                              onPressed: onBack,
+                              icon: const Icon(Icons.arrow_back),
                             ),
-                          ),
-                          Semantics(
-                            button: false,
-                            label: '当前阅读方式：${_readerModeLabel(mode)}',
-                            child: Tooltip(
-                              message: '当前阅读方式：${_readerModeLabel(mode)}',
+                            const SizedBox(width: 4),
+                            Expanded(
                               child: Padding(
-                                key: readerModeActionKey,
-                                padding: const EdgeInsets.all(12),
-                                child: Icon(
-                                  mode == ReaderMode.paged
-                                      ? Icons.menu_book_rounded
-                                      : Icons.view_stream_rounded,
-                                  color: colorScheme.onSurfaceVariant,
+                                padding: EdgeInsets.only(top: textTopInset),
+                                child: Column(
+                                  mainAxisAlignment: cutoutAwareTopLayout
+                                      ? MainAxisAlignment.start
+                                      : MainAxisAlignment.center,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      title,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: Theme.of(
+                                        context,
+                                      ).textTheme.titleSmall,
+                                    ),
+                                    Text(
+                                      mode == ReaderMode.paged
+                                          ? '分页阅读'
+                                          : '滚动阅读',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .labelSmall
+                                          ?.copyWith(
+                                            color: colorScheme.primary,
+                                          ),
+                                    ),
+                                    if (visible &&
+                                        mode == ReaderMode.vertical &&
+                                        (currentChapterTitle != null ||
+                                            progressPercent != null)) ...[
+                                      Text(
+                                        currentChapterNumber == null
+                                            ? (currentChapterTitle ??
+                                                  ReaderProgressLabels
+                                                      .wholeDocument)
+                                            : '\u7b2c $currentChapterNumber \u7ae0  ${currentChapterTitle ?? ''}',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .labelSmall
+                                            ?.copyWith(
+                                              color:
+                                                  colorScheme.onSurfaceVariant,
+                                            ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Row(
+                                        children: [
+                                          if (chapterProgressPercent != null)
+                                            Text(
+                                              '${ReaderProgressLabels.chapter} ${(chapterProgressPercent! * 100).round()}%',
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .labelSmall
+                                                  ?.copyWith(
+                                                    color: colorScheme
+                                                        .onSurfaceVariant,
+                                                  ),
+                                            ),
+                                          const Spacer(),
+                                          if (progressPercent != null)
+                                            Text(
+                                              '${ReaderProgressLabels.wholeBook} ${(progressPercent! * 100).round()}%',
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .labelSmall
+                                                  ?.copyWith(
+                                                    color: colorScheme
+                                                        .onSurfaceVariant,
+                                                  ),
+                                            ),
+                                        ],
+                                      ),
+                                    ] else if (visible &&
+                                        mode == ReaderMode.paged &&
+                                        (chapterPageNumber != null ||
+                                            currentChapterTitle != null ||
+                                            progressPercent != null)) ...[
+                                      Text(
+                                        currentChapterNumber == null
+                                            ? (currentChapterTitle ??
+                                                  ReaderProgressLabels
+                                                      .wholeDocument)
+                                            : '\u7b2c $currentChapterNumber \u7ae0  ${currentChapterTitle ?? ''}',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .labelSmall
+                                            ?.copyWith(
+                                              color:
+                                                  colorScheme.onSurfaceVariant,
+                                            ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Row(
+                                        children: [
+                                          if (chapterPageNumber != null &&
+                                              chapterPageCount != null)
+                                            Text(
+                                              '${ReaderProgressLabels.chapter} $chapterPageNumber / $chapterPageCount ${ReaderProgressLabels.pages}',
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .labelSmall
+                                                  ?.copyWith(
+                                                    color: colorScheme
+                                                        .onSurfaceVariant,
+                                                  ),
+                                            ),
+                                          const Spacer(),
+                                          if (progressPercent != null)
+                                            Text(
+                                              '${ReaderProgressLabels.wholeBook} ${(progressPercent! * 100).round()}%',
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .labelSmall
+                                                  ?.copyWith(
+                                                    color: colorScheme
+                                                        .onSurfaceVariant,
+                                                  ),
+                                            ),
+                                        ],
+                                      ),
+                                    ],
+                                  ],
                                 ),
                               ),
                             ),
-                          ),
-                        ],
+                            Semantics(
+                              button: false,
+                              label: '当前阅读方式：${_readerModeLabel(mode)}',
+                              child: Tooltip(
+                                message: '当前阅读方式：${_readerModeLabel(mode)}',
+                                child: Padding(
+                                  key: readerModeActionKey,
+                                  padding: const EdgeInsets.all(12),
+                                  child: Icon(
+                                    mode == ReaderMode.paged
+                                        ? Icons.menu_book_rounded
+                                        : Icons.view_stream_rounded,
+                                    color: colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),

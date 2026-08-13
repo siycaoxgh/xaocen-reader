@@ -31,7 +31,11 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
     final collections = ref.watch(collectionsProvider);
     final importState = ref.watch(importProgressProvider);
 
+    final shellSurface = Theme.of(context).colorScheme.surface;
     return Scaffold(
+      // Embedded library pages must use the shell's effective surface for
+      // their large canvas. Cards and list items retain their own surfaces.
+      backgroundColor: shellSurface,
       appBar: widget.embedded
           ? null
           : AppBar(
