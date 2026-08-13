@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
@@ -14,6 +15,8 @@ import '../domain/reader/reader_palette.dart';
 import '../domain/reader/reader_preferences.dart';
 import '../domain/reader/reader_screen_awake.dart';
 import 'android_reader_window.dart';
+import '../platform/windows_eyedropper_controller.dart';
+import '../platform/desktop_color_sampler.dart';
 import '../domain/reader/reader_font.dart';
 import '../data/repositories/reader_system_font_repository.dart';
 import '../domain/reader/reader_search.dart';
@@ -1739,6 +1742,69 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
   bool _brightnessInitialized = false;
   String? _textColorError;
   String? _backgroundColorError;
+  late final WindowsEyedropperController _eyedropper =
+      WindowsEyedropperController()..addListener(_onEyedropperChanged);
+  String? _eyedropperTarget;
+  int _eyedropperTransition = 0;
+  ColorSample? _eyedropperSample;
+
+  void _onEyedropperChanged() {
+    if (!mounted) return;
+    final transition = _eyedropper.completedTransitions;
+    setState(() {
+      if (_eyedropper.state == WindowsEyedropperState.picking) {
+        _eyedropperSample = _eyedropper.currentSample;
+      }
+      if (transition != _eyedropperTransition) {
+        _eyedropperTransition = transition;
+        final confirmed = _eyedropper.confirmedSample;
+        if (confirmed != null && _eyedropperTarget != null) {
+          _applyEyedropperSample(_eyedropperTarget == 'text', confirmed);
+        }
+        _eyedropperTarget = null;
+        _eyedropperSample = null;
+      }
+    });
+  }
+
+  void _applyEyedropperSample(bool text, ColorSample sample) {
+    final argb = 0xff000000 | (sample.r << 16) | (sample.g << 8) | sample.b;
+    final light = _editingBrightness == Brightness.light;
+    final next = text
+        ? _draft.copyWith(
+            paletteId: ReaderPaletteId.custom,
+            lightTextColorArgb: light ? argb : _draft.lightTextColorArgb,
+            darkTextColorArgb: light ? _draft.darkTextColorArgb : argb,
+          )
+        : _draft.copyWith(
+            paletteId: ReaderPaletteId.custom,
+            lightBackgroundColorArgb: light
+                ? argb
+                : _draft.lightBackgroundColorArgb,
+            darkBackgroundColorArgb: light
+                ? _draft.darkBackgroundColorArgb
+                : argb,
+          );
+    _draft = next;
+    _syncBrightnessControllers();
+    widget.onPreferencesCommitted(next);
+  }
+
+  Future<void> _startEyedropper(String target) async {
+    if (!Platform.isWindows ||
+        _eyedropper.state == WindowsEyedropperState.picking) {
+      return;
+    }
+    _eyedropperTarget = target;
+    _eyedropperSample = null;
+    final started = await _eyedropper.start();
+    if (!started && mounted) {
+      setState(() {
+        _eyedropperTarget = null;
+        _eyedropperSample = null;
+      });
+    }
+  }
 
   void _commit(ReaderPreferences value) {
     setState(() => _draft = value);
@@ -1819,6 +1885,9 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
     _lightBackgroundColorController.dispose();
     _darkTextColorController.dispose();
     _darkBackgroundColorController.dispose();
+    _eyedropper
+      ..removeListener(_onEyedropperChanged)
+      ..dispose();
     super.dispose();
   }
 
@@ -2383,6 +2452,14 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
             _draft.copyWith(paletteId: palette),
           ),
         ),
+        if (_eyedropper.state == WindowsEyedropperState.picking &&
+            _eyedropperSample != null) ...[
+          const SizedBox(height: 8),
+          Text(
+            '吸管预览：${_eyedropperSample!.hex} · RGB(${_eyedropperSample!.r},${_eyedropperSample!.g},${_eyedropperSample!.b})',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ],
         const SizedBox(height: 14),
         Text('自定义配色', style: Theme.of(context).textTheme.titleSmall),
         const SizedBox(height: 8),
@@ -2468,6 +2545,9 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
               ),
             );
           },
+          onEyedropper: Platform.isWindows
+              ? () => _startEyedropper('text')
+              : null,
         ),
         if (contrastWarning)
           Text(
@@ -2511,6 +2591,9 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
               ),
             );
           },
+          onEyedropper: Platform.isWindows
+              ? () => _startEyedropper('background')
+              : null,
         ),
         const SizedBox(height: 10),
         Row(
@@ -3189,6 +3272,7 @@ class _ColorInput extends StatelessWidget {
     required this.onChanged,
     required this.onSubmitted,
     this.onPick,
+    this.onEyedropper,
   });
 
   final TextEditingController controller;
@@ -3198,6 +3282,7 @@ class _ColorInput extends StatelessWidget {
   final ValueChanged<String> onChanged;
   final ValueChanged<String> onSubmitted;
   final VoidCallback? onPick;
+  final VoidCallback? onEyedropper;
 
   @override
   Widget build(BuildContext context) {
@@ -3232,10 +3317,19 @@ class _ColorInput extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
+          if (onEyedropper != null)
+            IconButton(
+              tooltip: '桌面吸管',
+              onPressed: onEyedropper,
+              icon: const Icon(Icons.colorize),
+            ),
           OutlinedButton.icon(
             onPressed: onPick,
-            icon: const Icon(Icons.colorize),
-            label: const Text('\u53d6\u8272'),
+            icon: const Icon(Icons.palette_outlined),
+            // Keep the established action label for existing tests and
+            // Android parity; Windows adds the separate desktop eyedropper
+            // icon immediately before this color-picker action.
+            label: const Text('取色'),
           ),
         ],
       ),
