@@ -10,11 +10,13 @@ Device: `ce8df63f` / `23013RK75C` / Android 15 / `arm64-v8a`
   device flow uses `install -r`, `am force-stop`, and Launcher/`monkey` start.
   A destructive cleanup that would explain removal of the user package could
   not be proven, so it is not claimed.
-- **White screen: stale integration-test APK risk confirmed.** The project
+- **White-screen mechanism: not directly reproducible in this run.** The project
   engineering record documents that `flutter test integration_test` can
   overwrite `build/app/outputs/flutter-apk/app-debug.apk` with a test-runner
   entry point. Installing that artifact as the normal application can leave a
-  live process with no normal Reader home UI. The recovery procedure now
+  live process with no normal Reader home UI. This is the documented/probable
+  mechanism for the earlier white-screen report, but no command log proves it
+  was the exact artifact installed in that incident. The recovery procedure
   rebuilds the ordinary APK after tests and installs only that artifact.
 
 ## Audit and non-destructive install
@@ -75,5 +77,6 @@ code change was necessary.
 `C:\Users\TOM\Desktop\xaocen-reader-v4\xaocen_reader\build\app\outputs\flutter-apk\app-debug.apk`
 
 `ANDROID STARTUP = PASS`  
-`ROOT CAUSE = stale integration-test APK for the white screen; app disappearance UNKNOWN`
-
+`ROOT CAUSE = UNKNOWN for the specific incident; documented stale
+integration-test APK mechanism is the probable white-screen cause; app
+disappearance remains UNKNOWN`
