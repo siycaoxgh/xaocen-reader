@@ -272,7 +272,6 @@ class _WindowsShellSettingsPageState
   late final FocusNode _captureFocus = FocusNode(
     debugLabel: 'boss-key-capture',
   );
-  final BossKeyTracker _captureMouseTracker = BossKeyTracker();
   bool _capturing = false;
   WindowsBossKeyGesture? _candidate;
 
@@ -298,7 +297,6 @@ class _WindowsShellSettingsPageState
     final subscription = _subscription;
     if (subscription != null) unawaited(subscription.cancel());
     WindowsShellBridge.setCaptureActive(false);
-    _captureMouseTracker.clear();
     _captureFocus.dispose();
     super.dispose();
   }
@@ -344,7 +342,6 @@ class _WindowsShellSettingsPageState
       _candidate = null;
     });
     WindowsShellBridge.setCaptureActive(true);
-    _captureMouseTracker.clear();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted && _capturing) _captureFocus.requestFocus();
     });
@@ -352,7 +349,6 @@ class _WindowsShellSettingsPageState
 
   void _cancelCapture() {
     WindowsShellBridge.setCaptureActive(false);
-    _captureMouseTracker.clear();
     if (!mounted) return;
     setState(() {
       _capturing = false;
@@ -362,7 +358,6 @@ class _WindowsShellSettingsPageState
 
   void _retryCapture() {
     if (!mounted) return;
-    _captureMouseTracker.clear();
     setState(() => _candidate = null);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted && _capturing) _captureFocus.requestFocus();
@@ -372,16 +367,12 @@ class _WindowsShellSettingsPageState
   KeyEventResult _captureKey(FocusNode node, KeyEvent event) {
     if (!_capturing) return KeyEventResult.ignored;
     if (event is KeyUpEvent) {
-      _captureMouseTracker.releaseKeyboard();
       return KeyEventResult.handled;
     }
     if (event is KeyRepeatEvent) {
       return KeyEventResult.handled;
     }
     if (event is! KeyDownEvent) return KeyEventResult.handled;
-    // Mouse chords are a separate capture domain. A pointing driver must not
-    // overwrite the candidate with a synthetic keyboard key such as V.
-    if (_captureMouseTracker.mouseButtonsDown) return KeyEventResult.handled;
     if (event.logicalKey == LogicalKeyboardKey.escape) {
       _cancelCapture();
       return KeyEventResult.handled;
@@ -400,15 +391,6 @@ class _WindowsShellSettingsPageState
       ),
     );
     return KeyEventResult.handled;
-  }
-
-  void _capturePointer(PointerEvent event) {
-    if (!_capturing || event.kind != PointerDeviceKind.mouse) return;
-    final left = event.buttons & kPrimaryMouseButton != 0;
-    final right = event.buttons & kSecondaryMouseButton != 0;
-    if (_captureMouseTracker.update(left: left, right: right)) {
-      setState(() => _candidate = const WindowsBossKeyGesture.mouseChord());
-    }
   }
 
   Future<void> _confirmCapture() async {
@@ -476,120 +458,111 @@ class _WindowsShellSettingsPageState
       body: Focus(
         focusNode: _captureFocus,
         onKeyEvent: _captureKey,
-        child: Listener(
-          onPointerDown: _capturePointer,
-          onPointerMove: _capturePointer,
-          onPointerUp: _capturePointer,
-          onPointerCancel: _capturePointer,
-          child: Center(
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                maxWidth: desktop ? 720 : double.infinity,
+        child: Center(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: desktop ? 720 : double.infinity,
+            ),
+            child: ListView(
+              padding: EdgeInsets.fromLTRB(
+                desktop ? 32 : 16,
+                20,
+                desktop ? 32 : 16,
+                32,
               ),
-              child: ListView(
-                padding: EdgeInsets.fromLTRB(
-                  desktop ? 32 : 16,
-                  20,
-                  desktop ? 32 : 16,
-                  32,
+              children: [
+                Text(
+                  'Windows 窗口入口',
+                  style: Theme.of(context).textTheme.headlineSmall,
                 ),
-                children: [
-                  Text(
-                    'Windows 窗口入口',
-                    style: Theme.of(context).textTheme.headlineSmall,
+                const SizedBox(height: 8),
+                Text(
+                  '至少保留任务栏或托盘中的一个入口，避免隐藏窗口后无法找回。',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '至少保留任务栏或托盘中的一个入口，避免隐藏窗口后无法找回。',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
+                ),
+                const SizedBox(height: 20),
+                Card(
+                  child: Column(
+                    children: [
+                      SwitchListTile.adaptive(
+                        title: const Text('显示任务栏图标'),
+                        value: _preferences.showTaskbarIcon,
+                        onChanged: (value) =>
+                            unawaited(_setVisibility(taskbar: value)),
+                      ),
+                      const Divider(height: 1),
+                      SwitchListTile.adaptive(
+                        title: const Text('显示托盘图标'),
+                        subtitle: const Text('关闭窗口时可隐藏到托盘'),
+                        value: _preferences.showTrayIcon,
+                        onChanged: (value) =>
+                            unawaited(_setVisibility(tray: value)),
+                      ),
+                      const Divider(height: 1),
+                      SwitchListTile.adaptive(
+                        title: const Text('显示窗口边框'),
+                        subtitle: const Text('关闭后进入可拖动、可调整大小的无边框阅读模式'),
+                        value: _preferences.showWindowBorder,
+                        onChanged: (value) =>
+                            unawaited(_setWindowBorder(value)),
+                      ),
+                      const Divider(height: 1),
+                      const ListTile(
+                        title: Text('阅读背景/窗口透明度'),
+                        subtitle: Text(
+                          '当前 Flutter Windows surface 尚不支持安全的原生透明；功能 deferred。',
+                        ),
+                        trailing: Icon(Icons.info_outline),
+                      ),
+                      const Divider(height: 1),
+                      const ListTile(
+                        title: Text('正文文字透明度'),
+                        subtitle: Text('独立文字 alpha 需要透明渲染合成；当前未启用，不会偷偷改变正文颜色。'),
+                        trailing: Icon(Icons.info_outline),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 20),
-                  Card(
-                    child: Column(
-                      children: [
-                        SwitchListTile.adaptive(
-                          title: const Text('显示任务栏图标'),
-                          value: _preferences.showTaskbarIcon,
-                          onChanged: (value) =>
-                              unawaited(_setVisibility(taskbar: value)),
+                ),
+                const SizedBox(height: 16),
+                Card(
+                  child: Column(
+                    children: [
+                      SwitchListTile.adaptive(
+                        title: const Text('启用老板键'),
+                        subtitle: Text(
+                          '当前绑定：${_preferences.bossKeyGesture.label}',
                         ),
-                        const Divider(height: 1),
-                        SwitchListTile.adaptive(
-                          title: const Text('显示托盘图标'),
-                          subtitle: const Text('关闭窗口时可隐藏到托盘'),
-                          value: _preferences.showTrayIcon,
-                          onChanged: (value) =>
-                              unawaited(_setVisibility(tray: value)),
+                        value: _preferences.bossKeyEnabled,
+                        onChanged: (value) => unawaited(_setBossEnabled(value)),
+                      ),
+                      const Divider(height: 1),
+                      ListTile(
+                        title: const Text('当前绑定'),
+                        subtitle: Text(_preferences.bossKeyGesture.label),
+                        trailing: OutlinedButton(
+                          onPressed: _capturing ? null : _startCapture,
+                          child: const Text('修改绑定'),
                         ),
-                        const Divider(height: 1),
-                        SwitchListTile.adaptive(
-                          title: const Text('显示窗口边框'),
-                          subtitle: const Text('关闭后进入可拖动、可调整大小的无边框阅读模式'),
-                          value: _preferences.showWindowBorder,
-                          onChanged: (value) =>
-                              unawaited(_setWindowBorder(value)),
+                      ),
+                      if (_capturing)
+                        _BossKeyCapturePanel(
+                          candidate: _candidate,
+                          onConfirm: _confirmCapture,
+                          onRetry: _retryCapture,
+                          onCancel: _cancelCapture,
                         ),
-                        const Divider(height: 1),
-                        const ListTile(
-                          title: Text('阅读背景/窗口透明度'),
-                          subtitle: Text(
-                            '当前 Flutter Windows surface 尚不支持安全的原生透明；功能 deferred。',
-                          ),
-                          trailing: Icon(Icons.info_outline),
-                        ),
-                        const Divider(height: 1),
-                        const ListTile(
-                          title: Text('正文文字透明度'),
-                          subtitle: Text(
-                            '独立文字 alpha 需要透明渲染合成；当前未启用，不会偷偷改变正文颜色。',
-                          ),
-                          trailing: Icon(Icons.info_outline),
-                        ),
-                      ],
-                    ),
+                    ],
                   ),
-                  const SizedBox(height: 16),
-                  Card(
-                    child: Column(
-                      children: [
-                        SwitchListTile.adaptive(
-                          title: const Text('启用老板键'),
-                          subtitle: Text(
-                            '当前绑定：${_preferences.bossKeyGesture.label}',
-                          ),
-                          value: _preferences.bossKeyEnabled,
-                          onChanged: (value) =>
-                              unawaited(_setBossEnabled(value)),
-                        ),
-                        const Divider(height: 1),
-                        ListTile(
-                          title: const Text('当前绑定'),
-                          subtitle: Text(_preferences.bossKeyGesture.label),
-                          trailing: OutlinedButton(
-                            onPressed: _capturing ? null : _startCapture,
-                            child: const Text('修改绑定'),
-                          ),
-                        ),
-                        if (_capturing)
-                          _BossKeyCapturePanel(
-                            candidate: _candidate,
-                            onConfirm: _confirmCapture,
-                            onRetry: _retryCapture,
-                            onCancel: _cancelCapture,
-                          ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  OutlinedButton.icon(
-                    onPressed: () => unawaited(_reset()),
-                    icon: const Icon(Icons.restore),
-                    label: const Text('恢复 Windows 默认设置'),
-                  ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 16),
+                OutlinedButton.icon(
+                  onPressed: () => unawaited(_reset()),
+                  icon: const Icon(Icons.restore),
+                  label: const Text('恢复 Windows 默认设置'),
+                ),
+              ],
             ),
           ),
         ),
@@ -713,6 +686,7 @@ class _ReaderInputSettingsPageState
 
   @override
   void dispose() {
+    WindowsShellBridge.setCaptureActive(false);
     unawaited(_router.dispose());
     _captureFocusNode.dispose();
     if (Platform.isAndroid) unawaited(ReaderInputBridge.deactivate());
@@ -740,6 +714,7 @@ class _ReaderInputSettingsPageState
         captured != null &&
         _captureCommand != null &&
         _captureWorkflow.capture(captured)) {
+      WindowsShellBridge.setCaptureActive(false);
       if (mounted) setState(() => _candidate = captured);
     } else if (mounted) {
       setState(() {});
@@ -754,6 +729,7 @@ class _ReaderInputSettingsPageState
     });
     _captureWorkflow.start();
     _router.startCapture();
+    WindowsShellBridge.setCaptureActive(true);
     _captureFocusNode.requestFocus();
   }
 
@@ -762,10 +738,12 @@ class _ReaderInputSettingsPageState
     _captureWorkflow.retry();
     setState(() => _candidate = null);
     _router.startCapture();
+    WindowsShellBridge.setCaptureActive(true);
     _captureFocusNode.requestFocus();
   }
 
   void _cancelCapture() {
+    WindowsShellBridge.setCaptureActive(false);
     _router.cancelCapture();
     _captureWorkflow.cancel();
     setState(() {
@@ -778,7 +756,60 @@ class _ReaderInputSettingsPageState
     final gesture = _candidate;
     final command = _captureCommand;
     if (gesture == null || command == null) return;
+    if (_platform == ReaderInputPlatform.windows) {
+      final shellRepository = ref.read(
+        windowsShellPreferencesRepositoryProvider,
+      );
+      final shell = await shellRepository.load();
+      if (!mounted) return;
+      final bossGesture = shell.bossKeyGesture;
+      final shellInput = bossGesture.primaryKey == null
+          ? null
+          : PhysicalInputId.parse(bossGesture.primaryKey!.id);
+      final sameModifiers =
+          bossGesture.modifiers.length == gesture.modifiers.length &&
+          bossGesture.modifiers.every(
+            (modifier) => gesture.modifiers.contains(switch (modifier) {
+              WindowsShellModifier.ctrl => ReaderInputModifier.ctrl,
+              WindowsShellModifier.alt => ReaderInputModifier.alt,
+              WindowsShellModifier.shift => ReaderInputModifier.shift,
+            }),
+          );
+      if (shell.bossKeyEnabled &&
+          bossGesture.isKeyboard &&
+          shellInput == gesture.primaryInput &&
+          sameModifiers) {
+        final replace =
+            await showDialog<bool>(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: const Text('快捷键冲突'),
+                content: Text(
+                  '${gestureLabel(gesture)} 已用于 显示/隐藏窗口。是否替换为当前阅读操作？',
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    child: const Text('取消'),
+                  ),
+                  FilledButton(
+                    onPressed: () => Navigator.pop(context, true),
+                    child: const Text('确认替换'),
+                  ),
+                ],
+              ),
+            ) ??
+            false;
+        if (!replace || !mounted) return;
+        final updated = await shellRepository.updateBossKey(
+          enabled: true,
+          gesture: const WindowsBossKeyGesture.mouseChord(),
+        );
+        await WindowsShellBridge.apply(updated);
+      }
+    }
     await _repository.bind(_platform, gesture, command);
+    WindowsShellBridge.setCaptureActive(false);
     final latest = await _repository.load(_platform);
     if (!mounted) return;
     _captureWorkflow.confirm();
@@ -805,8 +836,8 @@ class _ReaderInputSettingsPageState
       _cancelCapture();
       return KeyEventResult.handled;
     }
-    final gesture = readerInputGestureForKey(
-      event.logicalKey,
+    final gesture = readerInputGestureForEvent(
+      event,
       control: HardwareKeyboard.instance.isControlPressed,
       alt: HardwareKeyboard.instance.isAltPressed,
       shift: HardwareKeyboard.instance.isShiftPressed,

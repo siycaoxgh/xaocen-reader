@@ -6,6 +6,7 @@
 #include <windowsx.h>
 
 #include <algorithm>
+#include <vector>
 
 #include "resource.h"
 
@@ -386,16 +387,18 @@ Win32Window::MessageHandler(HWND hwnd,
 
     case WM_HOTKEY:
       if (wparam == kBossHotKeyId) {
-        if (IsWindowVisible(window_handle_) != FALSE) {
-          // A registered global Boss Key is itself a recovery channel. It
-          // may therefore hide even when the tray is disabled.
-          if (!HideToTray()) ShowWindow(window_handle_, SW_HIDE);
-        } else {
-          ShowFromTray();
-        }
+        if (!boss_capture_active_) ToggleBossWindow();
         return 0;
       }
       break;
+
+    case WM_INPUT:
+      if (mouse_boss_enabled_ && !boss_capture_active_) {
+        HandleRawMouseInput(reinterpret_cast<HRAWINPUT>(lparam));
+      } else if (boss_capture_active_) {
+        ResetMouseBossChord();
+      }
+      return 0;
 
     case WM_COMMAND:
       if (LOWORD(wparam) == kTrayShowCommand) {
@@ -450,6 +453,7 @@ void Win32Window::Destroy() {
   OnDestroy();
 
   ClearGlobalBossKey();
+  SetMouseBossChordEnabled(false);
   RemoveTrayIcon();
 
   if (window_handle_) {
@@ -570,6 +574,112 @@ void Win32Window::ClearGlobalBossKey() {
   if (!boss_hotkey_registered_ || window_handle_ == nullptr) return;
   UnregisterHotKey(window_handle_, kBossHotKeyId);
   boss_hotkey_registered_ = false;
+}
+
+bool Win32Window::RegisterMouseRawInput() {
+  if (window_handle_ == nullptr) return false;
+  RAWINPUTDEVICE device{};
+  device.usUsagePage = 0x01;
+  device.usUsage = 0x02;
+  device.dwFlags = RIDEV_INPUTSINK;
+  device.hwndTarget = window_handle_;
+  return RegisterRawInputDevices(&device, 1, sizeof(device)) == TRUE;
+}
+
+bool Win32Window::SetMouseBossChordEnabled(bool enabled) {
+  if (!enabled) {
+    if (mouse_boss_enabled_) {
+      RAWINPUTDEVICE device{};
+      device.usUsagePage = 0x01;
+      device.usUsage = 0x02;
+      device.dwFlags = RIDEV_REMOVE;
+      device.hwndTarget = nullptr;
+      RegisterRawInputDevices(&device, 1, sizeof(device));
+    }
+    mouse_boss_enabled_ = false;
+    ResetMouseBossChord();
+    return true;
+  }
+  if (!RegisterMouseRawInput()) return false;
+  mouse_boss_enabled_ = true;
+  ResetMouseBossChord();
+  return true;
+}
+
+void Win32Window::SetBossCaptureActive(bool active) {
+  boss_capture_active_ = active;
+  ResetMouseBossChord();
+}
+
+void Win32Window::ResetMouseBossChord() {
+  mouse_boss_left_down_ = false;
+  mouse_boss_right_down_ = false;
+  mouse_boss_latched_ = false;
+  mouse_boss_left_down_at_ = 0;
+  mouse_boss_right_down_at_ = 0;
+}
+
+void Win32Window::HandleRawMouseInput(HRAWINPUT input_handle) {
+  UINT size = 0;
+  if (GetRawInputData(input_handle, RID_INPUT, nullptr, &size,
+                      sizeof(RAWINPUTHEADER)) != 0 ||
+      size < sizeof(RAWINPUT)) {
+    return;
+  }
+  std::vector<BYTE> data(size);
+  if (GetRawInputData(input_handle, RID_INPUT, data.data(), &size,
+                      sizeof(RAWINPUTHEADER)) != size) {
+    return;
+  }
+  const auto* input = reinterpret_cast<const RAWINPUT*>(data.data());
+  if (input->header.dwType != RIM_TYPEMOUSE) return;
+
+  const USHORT flags = input->data.mouse.usButtonFlags;
+  const ULONGLONG now = GetTickCount64();
+  bool invalidated = false;
+  if ((flags & RI_MOUSE_LEFT_BUTTON_DOWN) != 0) {
+    if (!mouse_boss_left_down_) mouse_boss_left_down_at_ = now;
+    mouse_boss_left_down_ = true;
+  }
+  if ((flags & RI_MOUSE_RIGHT_BUTTON_DOWN) != 0) {
+    if (!mouse_boss_right_down_) mouse_boss_right_down_at_ = now;
+    mouse_boss_right_down_ = true;
+  }
+  if ((flags & RI_MOUSE_LEFT_BUTTON_UP) != 0) {
+    mouse_boss_left_down_ = false;
+    invalidated = true;
+  }
+  if ((flags & RI_MOUSE_RIGHT_BUTTON_UP) != 0) {
+    mouse_boss_right_down_ = false;
+    invalidated = true;
+  }
+  if (!mouse_boss_left_down_ && !mouse_boss_right_down_) {
+    ResetMouseBossChord();
+    return;
+  }
+  if (invalidated || mouse_boss_latched_ || !mouse_boss_left_down_ ||
+      !mouse_boss_right_down_) {
+    return;
+  }
+  const ULONGLONG delta = mouse_boss_left_down_at_ > mouse_boss_right_down_at_
+                              ? mouse_boss_left_down_at_ -
+                                    mouse_boss_right_down_at_
+                              : mouse_boss_right_down_at_ -
+                                    mouse_boss_left_down_at_;
+  if (delta > kBossMouseChordThresholdMs) return;
+  mouse_boss_latched_ = true;
+  ToggleBossWindow();
+}
+
+void Win32Window::ToggleBossWindow() {
+  if (window_handle_ == nullptr) return;
+  if (IsWindowVisible(window_handle_) != FALSE) {
+    // A registered Boss input is itself a recovery channel, so hiding remains
+    // safe even when the tray is disabled.
+    if (!HideToTray()) ShowWindow(window_handle_, SW_HIDE);
+  } else {
+    ShowFromTray();
+  }
 }
 
 bool Win32Window::SetWindowBorder(bool show_border) {

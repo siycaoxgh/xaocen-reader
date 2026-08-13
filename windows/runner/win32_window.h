@@ -70,6 +70,10 @@ class Win32Window {
   // remains process-owned and is cleared when the gesture changes.
   bool SetGlobalBossKey(UINT modifiers, UINT virtual_key);
   void ClearGlobalBossKey();
+  // Fixed left+right mouse Boss chord. Raw Input observes input without
+  // suppressing legacy mouse delivery to this or any other application.
+  bool SetMouseBossChordEnabled(bool enabled);
+  void SetBossCaptureActive(bool active);
   // Toggle the native frame while retaining resize/maximize affordances.
   bool SetWindowBorder(bool show_border);
   bool IsWindowBorderVisible() const { return window_border_visible_; }
@@ -124,6 +128,13 @@ class Win32Window {
   bool tray_icon_added_ = false;
   bool window_border_visible_ = true;
   bool boss_hotkey_registered_ = false;
+  bool mouse_boss_enabled_ = false;
+  bool mouse_boss_left_down_ = false;
+  bool mouse_boss_right_down_ = false;
+  bool mouse_boss_latched_ = false;
+  bool boss_capture_active_ = false;
+  ULONGLONG mouse_boss_left_down_at_ = 0;
+  ULONGLONG mouse_boss_right_down_at_ = 0;
 
   // window handle for top level window.
   HWND window_handle_ = nullptr;
@@ -137,10 +148,15 @@ class Win32Window {
   static constexpr UINT kTrayHideCommand = 0x5002;
   static constexpr UINT kTrayExitCommand = 0x5003;
   static constexpr int kBossHotKeyId = 0x6A;
+  static constexpr ULONGLONG kBossMouseChordThresholdMs = 30;
 
   bool AddTrayIcon();
   void RemoveTrayIcon();
   void ShowTrayMenu();
+  bool RegisterMouseRawInput();
+  void HandleRawMouseInput(HRAWINPUT input);
+  void ResetMouseBossChord();
+  void ToggleBossWindow();
 };
 
 #endif  // RUNNER_WIN32_WINDOW_H_

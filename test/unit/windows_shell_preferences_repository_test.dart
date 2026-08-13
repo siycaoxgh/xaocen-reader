@@ -179,7 +179,7 @@ void main() {
 
     // LMB -> RMB.
     expect(tracker.update(left: true, right: false), isFalse);
-    now = now.add(const Duration(milliseconds: 100));
+    now = now.add(const Duration(milliseconds: 30));
     expect(tracker.update(left: true, right: true), isTrue);
     expect(tracker.update(left: true, right: true), isFalse);
     now = now.add(const Duration(seconds: 2));
@@ -189,7 +189,7 @@ void main() {
     // RMB -> LMB after release.
     now = now.add(const Duration(milliseconds: 50));
     expect(tracker.update(left: false, right: true), isFalse);
-    now = now.add(const Duration(milliseconds: 249));
+    now = now.add(const Duration(milliseconds: 29));
     expect(tracker.update(left: true, right: true), isTrue);
   });
 
@@ -197,7 +197,7 @@ void main() {
     var now = DateTime.utc(2026, 1, 1);
     final tracker = BossKeyTracker(now: () => now);
     expect(tracker.update(left: true, right: false), isFalse);
-    now = now.add(const Duration(milliseconds: 251));
+    now = now.add(const Duration(milliseconds: 31));
     expect(tracker.update(left: true, right: true), isFalse);
     expect(tracker.update(left: true, right: true), isFalse);
     expect(tracker.update(left: false, right: false), isFalse);

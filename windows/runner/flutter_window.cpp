@@ -261,7 +261,9 @@ bool FlutterWindow::OnCreate() {
               ? true
               : SetGlobalBossKey(boss_modifiers, boss_virtual_key);
           if (!boss_enabled || boss_virtual_key == 0) ClearGlobalBossKey();
-          result->Success(flutter::EncodableValue(visibility_ok && boss_ok));
+          const bool mouse_boss_ok = SetMouseBossChordEnabled(boss_enabled);
+          result->Success(flutter::EncodableValue(
+              visibility_ok && boss_ok && mouse_boss_ok));
           return;
         }
         if (call.method_name() == "setWindowBorder") {
@@ -282,6 +284,12 @@ bool FlutterWindow::OnCreate() {
           }
           result->Success(
               flutter::EncodableValue(SetWindowBorder(show_border)));
+          return;
+        }
+        if (call.method_name() == "setBossCaptureActive") {
+          const auto* active = std::get_if<bool>(call.arguments());
+          SetBossCaptureActive(active != nullptr && *active);
+          result->Success();
           return;
         }
         if (call.method_name() == "hideWindow") {

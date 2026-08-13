@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -89,7 +88,21 @@ final class WindowsShellBridge {
     }
   }
 
-  static void setCaptureActive(bool value) => captureActive = value;
+  static void setCaptureActive(bool value) {
+    captureActive = value;
+    if (!supported) return;
+    unawaited(_setNativeCaptureActive(value));
+  }
+
+  static Future<void> _setNativeCaptureActive(bool value) async {
+    try {
+      await _channel.invokeMethod<void>('setBossCaptureActive', value);
+    } on MissingPluginException {
+      // Unit/widget hosts do not load the Windows runner.
+    } on PlatformException {
+      // Capture still remains exclusive on the Flutter side.
+    }
+  }
 }
 
 /// App-local left+right mouse chord recognizer. It is intentionally scoped to
@@ -105,7 +118,7 @@ final class BossKeyTracker {
   DateTime? _leftDownAt;
   DateTime? _rightDownAt;
 
-  static const chordWindow = Duration(milliseconds: 250);
+  static const chordWindow = Duration(milliseconds: 30);
 
   void clear() {
     clearMouse();
@@ -221,22 +234,6 @@ class _WindowsShellHostState extends ConsumerState<WindowsShellHost> {
     unawaited(WindowsShellBridge.apply(value));
   }
 
-  void _onPointer(PointerEvent event) {
-    if (!Platform.isWindows) return;
-    if (WindowsShellBridge.captureActive) return;
-    if (event.kind != PointerDeviceKind.mouse) return;
-    final buttons = event.buttons;
-    final left = buttons & kPrimaryMouseButton != 0;
-    final right = buttons & kSecondaryMouseButton != 0;
-    final preferences = WindowsShellBridge.currentPreferences ?? _preferences;
-    final gesture = preferences?.bossKeyGesture;
-    if (preferences?.bossKeyEnabled != true || gesture == null) return;
-    if (!_tracker.updateMouse(gesture, left: left, right: right)) return;
-    if (preferences?.hasRecoveryEntry == true) {
-      unawaited(WindowsShellBridge.hideWindow());
-    }
-  }
-
   KeyEventResult _onKeyEvent(FocusNode node, KeyEvent event) {
     if (!Platform.isWindows || WindowsShellBridge.captureActive) {
       return KeyEventResult.ignored;
@@ -290,14 +287,7 @@ class _WindowsShellHostState extends ConsumerState<WindowsShellHost> {
       onFocusChange: (focused) {
         if (!focused) _tracker.clear();
       },
-      child: Listener(
-        behavior: HitTestBehavior.translucent,
-        onPointerDown: _onPointer,
-        onPointerMove: _onPointer,
-        onPointerUp: _onPointer,
-        onPointerCancel: _onPointer,
-        child: widget.child,
-      ),
+      child: widget.child,
     );
   }
 }

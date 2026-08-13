@@ -125,6 +125,97 @@ PhysicalInputId? physicalInputIdForKey(LogicalKeyboardKey key) => switch (key) {
   _ => null,
 };
 
+/// Resolves the hardware position before the logical/IME-produced key. This
+/// keeps OEM punctuation and numpad bindings stable across keyboard layouts.
+PhysicalInputId? physicalInputIdForPhysicalKey(
+  PhysicalKeyboardKey key,
+) => switch (key) {
+  PhysicalKeyboardKey.arrowRight => PhysicalInputId.keyboardArrowRight,
+  PhysicalKeyboardKey.arrowLeft => PhysicalInputId.keyboardArrowLeft,
+  PhysicalKeyboardKey.arrowUp => PhysicalInputId.keyboardArrowUp,
+  PhysicalKeyboardKey.arrowDown => PhysicalInputId.keyboardArrowDown,
+  PhysicalKeyboardKey.pageUp => PhysicalInputId.keyboardPageUp,
+  PhysicalKeyboardKey.pageDown => PhysicalInputId.keyboardPageDown,
+  PhysicalKeyboardKey.home => PhysicalInputId.keyboardHome,
+  PhysicalKeyboardKey.end => PhysicalInputId.keyboardEnd,
+  PhysicalKeyboardKey.space => PhysicalInputId.keyboardSpace,
+  PhysicalKeyboardKey.enter => PhysicalInputId.keyboardEnter,
+  PhysicalKeyboardKey.keyA => PhysicalInputId.keyboardKeyA,
+  PhysicalKeyboardKey.keyB => PhysicalInputId.keyboardKeyB,
+  PhysicalKeyboardKey.keyC => PhysicalInputId.keyboardKeyC,
+  PhysicalKeyboardKey.keyD => PhysicalInputId.keyboardKeyD,
+  PhysicalKeyboardKey.keyE => PhysicalInputId.keyboardKeyE,
+  PhysicalKeyboardKey.keyF => PhysicalInputId.keyboardKeyF,
+  PhysicalKeyboardKey.keyG => PhysicalInputId.keyboardKeyG,
+  PhysicalKeyboardKey.keyH => PhysicalInputId.keyboardKeyH,
+  PhysicalKeyboardKey.keyI => PhysicalInputId.keyboardKeyI,
+  PhysicalKeyboardKey.keyJ => PhysicalInputId.keyboardKeyJ,
+  PhysicalKeyboardKey.keyK => PhysicalInputId.keyboardKeyK,
+  PhysicalKeyboardKey.keyL => PhysicalInputId.keyboardKeyL,
+  PhysicalKeyboardKey.keyM => PhysicalInputId.keyboardKeyM,
+  PhysicalKeyboardKey.keyN => PhysicalInputId.keyboardKeyN,
+  PhysicalKeyboardKey.keyO => PhysicalInputId.keyboardKeyO,
+  PhysicalKeyboardKey.keyP => PhysicalInputId.keyboardKeyP,
+  PhysicalKeyboardKey.keyQ => PhysicalInputId.keyboardKeyQ,
+  PhysicalKeyboardKey.keyR => PhysicalInputId.keyboardKeyR,
+  PhysicalKeyboardKey.keyS => PhysicalInputId.keyboardKeyS,
+  PhysicalKeyboardKey.keyT => PhysicalInputId.keyboardKeyT,
+  PhysicalKeyboardKey.keyU => PhysicalInputId.keyboardKeyU,
+  PhysicalKeyboardKey.keyV => PhysicalInputId.keyboardKeyV,
+  PhysicalKeyboardKey.keyW => PhysicalInputId.keyboardKeyW,
+  PhysicalKeyboardKey.keyX => PhysicalInputId.keyboardKeyX,
+  PhysicalKeyboardKey.keyY => PhysicalInputId.keyboardKeyY,
+  PhysicalKeyboardKey.keyZ => PhysicalInputId.keyboardKeyZ,
+  PhysicalKeyboardKey.digit0 => PhysicalInputId.keyboardDigit0,
+  PhysicalKeyboardKey.digit1 => PhysicalInputId.keyboardDigit1,
+  PhysicalKeyboardKey.digit2 => PhysicalInputId.keyboardDigit2,
+  PhysicalKeyboardKey.digit3 => PhysicalInputId.keyboardDigit3,
+  PhysicalKeyboardKey.digit4 => PhysicalInputId.keyboardDigit4,
+  PhysicalKeyboardKey.digit5 => PhysicalInputId.keyboardDigit5,
+  PhysicalKeyboardKey.digit6 => PhysicalInputId.keyboardDigit6,
+  PhysicalKeyboardKey.digit7 => PhysicalInputId.keyboardDigit7,
+  PhysicalKeyboardKey.digit8 => PhysicalInputId.keyboardDigit8,
+  PhysicalKeyboardKey.digit9 => PhysicalInputId.keyboardDigit9,
+  PhysicalKeyboardKey.numpad0 => PhysicalInputId.keyboardNumpad0,
+  PhysicalKeyboardKey.numpad1 => PhysicalInputId.keyboardNumpad1,
+  PhysicalKeyboardKey.numpad2 => PhysicalInputId.keyboardNumpad2,
+  PhysicalKeyboardKey.numpad3 => PhysicalInputId.keyboardNumpad3,
+  PhysicalKeyboardKey.numpad4 => PhysicalInputId.keyboardNumpad4,
+  PhysicalKeyboardKey.numpad5 => PhysicalInputId.keyboardNumpad5,
+  PhysicalKeyboardKey.numpad6 => PhysicalInputId.keyboardNumpad6,
+  PhysicalKeyboardKey.numpad7 => PhysicalInputId.keyboardNumpad7,
+  PhysicalKeyboardKey.numpad8 => PhysicalInputId.keyboardNumpad8,
+  PhysicalKeyboardKey.numpad9 => PhysicalInputId.keyboardNumpad9,
+  PhysicalKeyboardKey.numpadAdd => PhysicalInputId.keyboardNumpadAdd,
+  PhysicalKeyboardKey.numpadSubtract => PhysicalInputId.keyboardNumpadSubtract,
+  PhysicalKeyboardKey.numpadMultiply => PhysicalInputId.keyboardNumpadMultiply,
+  PhysicalKeyboardKey.numpadDivide => PhysicalInputId.keyboardNumpadDivide,
+  PhysicalKeyboardKey.comma => PhysicalInputId.keyboardComma,
+  PhysicalKeyboardKey.period => PhysicalInputId.keyboardPeriod,
+  PhysicalKeyboardKey.slash => PhysicalInputId.keyboardSlash,
+  PhysicalKeyboardKey.semicolon => PhysicalInputId.keyboardSemicolon,
+  PhysicalKeyboardKey.quote => PhysicalInputId.keyboardQuote,
+  PhysicalKeyboardKey.bracketLeft => PhysicalInputId.keyboardBracketLeft,
+  PhysicalKeyboardKey.bracketRight => PhysicalInputId.keyboardBracketRight,
+  PhysicalKeyboardKey.backslash => PhysicalInputId.keyboardBackslash,
+  PhysicalKeyboardKey.minus => PhysicalInputId.keyboardMinus,
+  PhysicalKeyboardKey.equal => PhysicalInputId.keyboardEqual,
+  PhysicalKeyboardKey.backquote => PhysicalInputId.keyboardBackquote,
+  PhysicalKeyboardKey.f1 => PhysicalInputId.keyboardF1,
+  PhysicalKeyboardKey.f2 => PhysicalInputId.keyboardF2,
+  PhysicalKeyboardKey.f3 => PhysicalInputId.keyboardF3,
+  PhysicalKeyboardKey.f4 => PhysicalInputId.keyboardF4,
+  PhysicalKeyboardKey.f5 => PhysicalInputId.keyboardF5,
+  PhysicalKeyboardKey.f6 => PhysicalInputId.keyboardF6,
+  PhysicalKeyboardKey.f7 => PhysicalInputId.keyboardF7,
+  PhysicalKeyboardKey.f8 => PhysicalInputId.keyboardF8,
+  PhysicalKeyboardKey.f9 => PhysicalInputId.keyboardF9,
+  PhysicalKeyboardKey.f10 => PhysicalInputId.keyboardF10,
+  PhysicalKeyboardKey.f11 => PhysicalInputId.keyboardF11,
+  PhysicalKeyboardKey.f12 => PhysicalInputId.keyboardF12,
+  _ => null,
+};
+
 ReaderInputGesture? readerInputGestureForKey(
   LogicalKeyboardKey key, {
   bool control = false,
@@ -132,6 +223,26 @@ ReaderInputGesture? readerInputGestureForKey(
   bool shift = false,
 }) {
   final primary = physicalInputIdForKey(key);
+  if (primary == null) return null;
+  return ReaderInputGesture(
+    primaryInput: primary,
+    modifiers: [
+      if (control) ReaderInputModifier.ctrl,
+      if (alt) ReaderInputModifier.alt,
+      if (shift) ReaderInputModifier.shift,
+    ],
+  );
+}
+
+ReaderInputGesture? readerInputGestureForEvent(
+  KeyEvent event, {
+  bool control = false,
+  bool alt = false,
+  bool shift = false,
+}) {
+  final primary =
+      physicalInputIdForPhysicalKey(event.physicalKey) ??
+      physicalInputIdForKey(event.logicalKey);
   if (primary == null) return null;
   return ReaderInputGesture(
     primaryInput: primary,

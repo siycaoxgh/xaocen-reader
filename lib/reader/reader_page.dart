@@ -2667,8 +2667,8 @@ class _ReaderPageState extends State<ReaderPage>
 
   KeyEventResult _onVerticalKeyEvent(FocusNode node, KeyEvent event) {
     if (event is! KeyDownEvent) return KeyEventResult.ignored;
-    final input = readerInputGestureForKey(
-      event.logicalKey,
+    final input = readerInputGestureForEvent(
+      event,
       control: HardwareKeyboard.instance.isControlPressed,
       alt: HardwareKeyboard.instance.isAltPressed,
       shift: HardwareKeyboard.instance.isShiftPressed,
