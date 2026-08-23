@@ -13,7 +13,7 @@ index 09b52a96fb0..af6077668d4 100644
      "egl/manager.cc",
 @@ -148,7 +150,10 @@ source_set("flutter_windows_source") {
    ]
- 
+
    libs = [
 +    "dcomp.lib",
 +    "d3d11.lib",
@@ -21,7 +21,7 @@ index 09b52a96fb0..af6077668d4 100644
 +    "dxgi.lib",
      "imm32.lib",
    ]
- 
+
 diff --git a/engine/src/flutter/shell/platform/windows/egl/dcomp_window_surface.cc b/engine/src/flutter/shell/platform/windows/egl/dcomp_window_surface.cc
 new file mode 100644
 index 00000000000..383c9db7f28
@@ -402,16 +402,16 @@ index 64fb765bf54..27c8fab2be1 100644
 +++ b/engine/src/flutter/shell/platform/windows/egl/manager.cc
 @@ -7,6 +7,7 @@
  #include <vector>
- 
+
  #include "flutter/fml/logging.h"
 +#include "flutter/shell/platform/windows/egl/dcomp_window_surface.h"
  #include "flutter/shell/platform/windows/egl/egl.h"
- 
+
  namespace flutter {
 @@ -310,6 +311,16 @@ std::unique_ptr<WindowSurface> Manager::CreateWindowSurface(HWND hwnd,
                                           surface, width, height);
  }
- 
+
 +std::unique_ptr<WindowSurface> Manager::CreateDcompWindowSurface(
 +    HWND hwnd,
 +    size_t width,
@@ -432,7 +432,7 @@ index 420b0060452..6398c23ca8a 100644
 @@ -60,6 +60,15 @@ class Manager {
                                                               size_t width,
                                                               size_t height);
- 
+
 +  // Creates a DirectComposition-backed surface that imports the swapchain
 +  // backbuffer into ANGLE through the D3D shared-handle client-buffer path.
 +  // Returns nullptr when the platform/driver/ANGLE combination cannot prove
@@ -444,7 +444,7 @@ index 420b0060452..6398c23ca8a 100644
 +
    // Check if the current thread has a context bound.
    bool HasContextCurrent();
- 
+
 diff --git a/engine/src/flutter/shell/platform/windows/flutter_windows_engine.cc b/engine/src/flutter/shell/platform/windows/flutter_windows_engine.cc
 index 785a83d642d..45b4826e46a 100644
 --- a/engine/src/flutter/shell/platform/windows/flutter_windows_engine.cc
@@ -460,7 +460,7 @@ index 785a83d642d..45b4826e46a 100644
 +    FML_LOG(INFO) << "Windows alpha surface requested; transparent creation "
 +                     "will fall back to opaque before first frame on failure";
 +  }
- 
+
    egl_manager_ = egl::Manager::Create(
        static_cast<egl::GpuPreference>(project_->gpu_preference()));
 diff --git a/engine/src/flutter/shell/platform/windows/flutter_windows_engine.h b/engine/src/flutter/shell/platform/windows/flutter_windows_engine.h
@@ -470,7 +470,7 @@ index 720a65a7dd8..548ec2a8fec 100644
 @@ -182,6 +182,14 @@ class FlutterWindowsEngine {
    // rendering using software instead of OpenGL.
    egl::Manager* egl_manager() const { return egl_manager_.get(); }
- 
+
 +  // Windows-only opt-in used by the isolated alpha-surface spike. The normal
 +  // runner leaves this false, preserving the stock opaque surface path.
 +  bool transparent_surface_requested() const {
@@ -483,9 +483,9 @@ index 720a65a7dd8..548ec2a8fec 100644
      return window_proc_delegate_manager_.get();
    }
 @@ -511,6 +519,11 @@ class FlutterWindowsEngine {
- 
+
    bool enable_impeller_ = false;
- 
+
 +  // Set from the pre-engine switch --enable-windows-alpha-surface. This is an
 +  // engine/runner concern and is intentionally not exposed to Dart/Reader.
 +  bool transparent_surface_requested_ = false;
@@ -493,45 +493,86 @@ index 720a65a7dd8..548ec2a8fec 100644
 +
    // The manager for WindowProc delegate registration and callbacks.
    std::unique_ptr<WindowProcDelegateManager> window_proc_delegate_manager_;
- 
+
 diff --git a/engine/src/flutter/shell/platform/windows/flutter_windows_view.cc b/engine/src/flutter/shell/platform/windows/flutter_windows_view.cc
 index 5fa04fe1bf8..00d5f9973a5 100644
 --- a/engine/src/flutter/shell/platform/windows/flutter_windows_view.cc
 +++ b/engine/src/flutter/shell/platform/windows/flutter_windows_view.cc
+@@ -7,6 +7,8 @@
+ #include <chrono>
+ #include <cmath>
+
++#include <windows.h>
++
+ #include "flutter/common/constants.h"
+ #include "flutter/fml/make_copyable.h"
+ #include "flutter/fml/platform/win/wstring_conversion.h"
 @@ -805,8 +805,20 @@ void FlutterWindowsView::CreateRenderSurface() {
- 
+
    if (engine_->egl_manager()) {
      PhysicalWindowBounds bounds = binding_handler_->GetPhysicalWindowBounds();
 -    surface_ = engine_->egl_manager()->CreateWindowSurface(
 -        GetWindowHandle(), bounds.width, bounds.height);
 +    if (engine_->transparent_surface_requested()) {
-+      surface_ = engine_->egl_manager()->CreateDcompWindowSurface(
-+          GetWindowHandle(), bounds.width, bounds.height);
++      // A DirectComposition swapchain attached to an HWND must opt out of the
++      // legacy redirection bitmap. Without this style the compositor keeps
++      // presenting the runner's opaque class surface even when the
++      // premultiplied swapchain contains transparent pixels.
++      const HWND view_hwnd = GetWindowHandle();
++      const HWND hwnd = ::GetAncestor(view_hwnd, GA_ROOT);
++      if (hwnd == nullptr) {
++        FML_LOG(WARNING)
++            << "Windows true transparency unavailable; no root HWND";
++      }
++      const LONG_PTR existing_style =
++          ::GetWindowLongPtr(hwnd, GWL_EXSTYLE);
++      const bool added_no_redirection =
++          hwnd != nullptr &&
++          (existing_style & WS_EX_NOREDIRECTIONBITMAP) == 0;
++      if (added_no_redirection) {
++        ::SetWindowLongPtr(hwnd, GWL_EXSTYLE,
++                           existing_style | WS_EX_NOREDIRECTIONBITMAP);
++        ::SetWindowPos(hwnd, nullptr, 0, 0, 0, 0,
++                       SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER |
++                           SWP_NOACTIVATE | SWP_FRAMECHANGED);
++      }
++      if (hwnd != nullptr) {
++        surface_ = engine_->egl_manager()->CreateDcompWindowSurface(
++            hwnd, bounds.width, bounds.height);
++      }
 +      if (!surface_) {
++        if (added_no_redirection) {
++          ::SetWindowLongPtr(hwnd, GWL_EXSTYLE, existing_style);
++          ::SetWindowPos(hwnd, nullptr, 0, 0, 0, 0,
++                         SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER |
++                             SWP_NOACTIVATE | SWP_FRAMECHANGED);
++        }
 +        engine_->DisableTransparentSurface();
 +        FML_LOG(WARNING)
-+            << "Windows alpha surface unavailable; using opaque ANGLE "
-+               "surface";
++            << "Windows true transparency unavailable; falling back to "
++               "opaque surface";
 +      }
 +    }
 +    if (!surface_) {
 +      surface_ = engine_->egl_manager()->CreateWindowSurface(
 +          GetWindowHandle(), bounds.width, bounds.height);
 +    }
- 
+
      UpdateVsync(*engine_, surface_.get(), NeedsVsync());
- 
+
 @@ -833,9 +845,18 @@ bool FlutterWindowsView::ResizeRenderSurface(size_t width, size_t height) {
      return false;
    }
- 
+
 -  std::unique_ptr<egl::WindowSurface> resized_surface =
 -      engine_->egl_manager()->CreateWindowSurface(GetWindowHandle(), width,
 -                                                  height);
 +  std::unique_ptr<egl::WindowSurface> resized_surface;
 +  if (engine_->transparent_surface_requested()) {
++    const HWND view_hwnd = GetWindowHandle();
++    const HWND hwnd = ::GetAncestor(view_hwnd, GA_ROOT);
 +    resized_surface = engine_->egl_manager()->CreateDcompWindowSurface(
-+        GetWindowHandle(), width, height);
++        hwnd != nullptr ? hwnd : view_hwnd, width, height);
 +    if (!resized_surface) {
 +      engine_->DisableTransparentSurface();
 +    }
@@ -551,4 +592,3 @@ warning: in the working copy of 'engine/src/flutter/shell/platform/windows/flutt
 warning: in the working copy of 'engine/src/flutter/shell/platform/windows/flutter_windows_view.cc', LF will be replaced by CRLF the next time Git touches it
 warning: in the working copy of 'engine/src/flutter/shell/platform/windows/egl/dcomp_window_surface.cc', LF will be replaced by CRLF the next time Git touches it
 warning: in the working copy of 'engine/src/flutter/shell/platform/windows/egl/dcomp_window_surface.h', LF will be replaced by CRLF the next time Git touches it
-

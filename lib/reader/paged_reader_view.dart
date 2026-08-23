@@ -14,10 +14,15 @@
 // ignore_for_file: prefer_initializing_formals
 library;
 
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+
+import '../domain/reader/reader_rendering.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 
+import '../domain/reader/tts_readable_text.dart';
 import 'normalized_document_loader.dart';
 import 'page_window.dart';
 import 'paged_reader_controller.dart';
@@ -25,6 +30,7 @@ import 'reader_appearance.dart';
 import 'reader_text_block.dart';
 import 'reader_input.dart';
 import 'reader_input_router.dart';
+import 'reader_epub_image.dart';
 
 /// 分页阅读视图。
 class PagedReaderView extends StatefulWidget {
@@ -35,6 +41,9 @@ class PagedReaderView extends StatefulWidget {
     this.inputRouter,
     this.onUserNavigation,
     this.focusNode,
+    this.activeTtsSegment,
+    this.ttsHighlightColor,
+    this.resolveStoragePath,
   });
 
   final PagedReaderController controller;
@@ -45,6 +54,9 @@ class PagedReaderView extends StatefulWidget {
   /// Optional route-owned focus node.  ReaderPage uses this to restore
   /// shortcut focus after Aa/TOC (or another modal) closes.
   final FocusNode? focusNode;
+  final ReadableTextSegment? activeTtsSegment;
+  final Color? ttsHighlightColor;
+  final File Function(String storagePath)? resolveStoragePath;
 
   @override
   State<PagedReaderView> createState() => _PagedReaderViewState();
@@ -56,15 +68,14 @@ class _PagedReaderViewState extends State<PagedReaderView> {
   late FocusNode _focusNode;
   bool _ownsFocusNode = false;
   final InputBinding _inputBinding = InputBinding.defaults;
-  DateTime? _lastWheelTurn;
+  final ReaderKeyEventGate _keyEventGate = ReaderKeyEventGate();
+  final ReaderWheelEventGate _wheelEventGate = ReaderWheelEventGate();
   bool _userGestureActive = false;
   bool _navigationNotified = false;
   int? _gestureWindowGeneration;
   int? _programmaticTargetIndex;
   int? _edgeFallbackGeneration;
   Offset? _pointerDownPosition;
-
-  static const _wheelThrottle = Duration(milliseconds: 140);
 
   @override
   void initState() {
@@ -82,6 +93,8 @@ class _PagedReaderViewState extends State<PagedReaderView> {
   void dispose() {
     widget.controller.removeListener(_onControllerChanged);
     _pageController.dispose();
+    _keyEventGate.clear();
+    _wheelEventGate.clear();
     if (_ownsFocusNode) _focusNode.dispose();
     super.dispose();
   }
@@ -94,6 +107,7 @@ class _PagedReaderViewState extends State<PagedReaderView> {
     _focusNode =
         widget.focusNode ?? FocusNode(debugLabel: 'paged-reader-input');
     _ownsFocusNode = widget.focusNode == null;
+    _keyEventGate.clear();
   }
 
   /// 窗口变化（generation++ / select / extend）后保持视觉页：
@@ -244,7 +258,8 @@ class _PagedReaderViewState extends State<PagedReaderView> {
 
   /// Windows 键盘翻页（§二十二）。
   KeyEventResult _onKeyEvent(FocusNode node, KeyEvent event) {
-    if (event is! KeyDownEvent) return KeyEventResult.ignored;
+    final accepted = _keyEventGate.accept(event);
+    if (event is KeyUpEvent) return KeyEventResult.ignored;
     final router = widget.inputRouter;
     if (router != null) {
       final input = readerInputGestureForEvent(
@@ -253,11 +268,14 @@ class _PagedReaderViewState extends State<PagedReaderView> {
         alt: HardwareKeyboard.instance.isAltPressed,
         shift: HardwareKeyboard.instance.isShiftPressed,
       );
-      if (input != null && router.handlePhysicalGesture(input)) {
+      if (input == null) return KeyEventResult.ignored;
+      if (!accepted) return KeyEventResult.handled;
+      if (router.handlePhysicalGesture(input)) {
         return KeyEventResult.handled;
       }
       return KeyEventResult.ignored;
     }
+    if (!accepted) return KeyEventResult.handled;
     final key = event.logicalKey;
     final input = switch (key) {
       LogicalKeyboardKey.arrowRight => PhysicalInput.arrowRight,
@@ -310,13 +328,10 @@ class _PagedReaderViewState extends State<PagedReaderView> {
     if (event is! PointerScrollEvent) return;
     final dy = event.scrollDelta.dy;
     if (dy == 0) return;
+    // Apply the wheel gate before notifying navigation. A burst from one
+    // detent must not repeatedly pause AutoRead/TTS or enqueue page commands.
+    if (!_wheelEventGate.accept(dy)) return;
     widget.onUserNavigation?.call();
-    final now = DateTime.now();
-    if (_lastWheelTurn != null &&
-        now.difference(_lastWheelTurn!) < _wheelThrottle) {
-      return;
-    }
-    _lastWheelTurn = now;
     _dispatchInput(dy < 0 ? PhysicalInput.wheelUp : PhysicalInput.wheelDown);
   }
 
@@ -378,6 +393,9 @@ class _PagedReaderViewState extends State<PagedReaderView> {
       child: Focus(
         focusNode: _focusNode,
         autofocus: true,
+        onFocusChange: (focused) {
+          if (!focused) _keyEventGate.clear();
+        },
         onKeyEvent: _onKeyEvent,
         child: NotificationListener<ScrollNotification>(
           onNotification: _onScrollNotification,
@@ -392,6 +410,63 @@ class _PagedReaderViewState extends State<PagedReaderView> {
                 page.startCharacterOffset,
                 page.endCharacterOffset,
               );
+              final pageText = Align(
+                alignment: Alignment.topLeft,
+                child: ReaderTextBlock(
+                  text: text,
+                  style: appearance.baseTextStyle,
+                  paragraphSpacing: widget.controller.paragraphSpacing,
+                  firstLineIndent: widget.controller.firstLineIndent,
+                  textAlign: widget.controller.textAlign,
+                  startsAtParagraphBoundary:
+                      page.startCharacterOffset == 0 ||
+                      widget.controller.document.text.codeUnitAt(
+                            page.startCharacterOffset - 1,
+                          ) ==
+                          0x0A,
+                  styleVersion: appearance.textColor.toARGB32(),
+                  highlightStart: widget.activeTtsSegment == null
+                      ? null
+                      : (widget.activeTtsSegment!.startCharacterOffset -
+                                page.startCharacterOffset)
+                            .clamp(
+                              0,
+                              page.endCharacterOffset -
+                                  page.startCharacterOffset,
+                            )
+                            .toInt(),
+                  highlightEnd: widget.activeTtsSegment == null
+                      ? null
+                      : (widget.activeTtsSegment!.endCharacterOffset -
+                                page.startCharacterOffset)
+                            .clamp(
+                              0,
+                              page.endCharacterOffset -
+                                  page.startCharacterOffset,
+                            )
+                            .toInt(),
+                  highlightColor: widget.ttsHighlightColor,
+                  styleRuns: _styleRunsForRange(
+                    doc.rendering,
+                    page.startCharacterOffset,
+                    page.endCharacterOffset,
+                  ),
+                  textDirection: TextDirection.ltr,
+                  maxWidth: widget.controller.engine.contentWidth,
+                ),
+              );
+              // Images are sidecar presentation data, so they do not consume
+              // UTF-16 offsets.  A paged surface renders every image whose
+              // anchor falls in this page before the text block.  This keeps
+              // the image visible without inventing placeholder characters or
+              // changing pagination/Locator truth.
+              final images = doc.rendering?.images
+                  .where(
+                    (image) =>
+                        image.characterOffset >= page.startCharacterOffset &&
+                        image.characterOffset < page.endCharacterOffset,
+                  )
+                  .toList(growable: false);
               return ColoredBox(
                 color: appearance.hasBackgroundImage
                     ? Colors.transparent
@@ -403,26 +478,47 @@ class _PagedReaderViewState extends State<PagedReaderView> {
                     widget.controller.paddingRight,
                     widget.controller.paddingBottom,
                   ),
-                  child: Align(
-                    alignment: Alignment.topLeft,
-                    child: ReaderTextBlock(
-                      text: text,
-                      style: appearance.baseTextStyle,
-                      paragraphSpacing: widget.controller.paragraphSpacing,
-                      firstLineIndent: widget.controller.firstLineIndent,
-                      textAlign: widget.controller.textAlign,
-                      startsAtParagraphBoundary:
-                          page.startCharacterOffset == 0 ||
-                          widget.controller.document.text.codeUnitAt(
-                                page.startCharacterOffset - 1,
-                              ) ==
-                              0x0A,
-                      styleVersion: appearance.textColor.toARGB32(),
-                      textDirection: TextDirection.ltr,
-                      // §八：显示与测量同一宽度（引擎 contentWidth）。
-                      maxWidth: widget.controller.engine.contentWidth,
-                    ),
-                  ),
+                  child: images == null || images.isEmpty
+                      ? pageText
+                      : Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            // The text page was already measured against the
+                            // viewport. Give images the remaining bounded
+                            // area instead of appending their intrinsic height
+                            // and overflowing the PageView child.
+                            Expanded(
+                              child: LayoutBuilder(
+                                builder: (context, constraints) {
+                                  final maxImageHeight =
+                                      pagedEpubImageMaxHeight(
+                                        availableHeight: constraints.maxHeight,
+                                        imageCount: images.length,
+                                      );
+                                  if (maxImageHeight <= 0) {
+                                    return const SizedBox.shrink();
+                                  }
+                                  return Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      for (final image in images)
+                                        ReaderEpubImage(
+                                          placement: image,
+                                          maxHeight: maxImageHeight,
+                                          file:
+                                              widget.resolveStoragePath?.call(
+                                                image.storagePath,
+                                              ) ??
+                                              File(image.storagePath),
+                                        ),
+                                    ],
+                                  );
+                                },
+                              ),
+                            ),
+                            pageText,
+                          ],
+                        ),
                 ),
               );
             },
@@ -430,5 +526,34 @@ class _PagedReaderViewState extends State<PagedReaderView> {
         ),
       ),
     );
+  }
+
+  List<ReaderInlineStyleRun> _styleRunsForRange(
+    ReaderRenderingMetadata? rendering,
+    int start,
+    int end,
+  ) {
+    if (rendering == null) return const <ReaderInlineStyleRun>[];
+    return rendering.styleRuns
+        .where(
+          (run) =>
+              run.endCharacterOffset > start && run.startCharacterOffset < end,
+        )
+        .map(
+          (run) => ReaderInlineStyleRun(
+            startCharacterOffset: (run.startCharacterOffset - start).clamp(
+              0,
+              end - start,
+            ),
+            endCharacterOffset: (run.endCharacterOffset - start).clamp(
+              0,
+              end - start,
+            ),
+            bold: run.bold,
+            italic: run.italic,
+            headingLevel: run.headingLevel,
+          ),
+        )
+        .toList(growable: false);
   }
 }

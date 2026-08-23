@@ -68,7 +68,7 @@ void main() {
       ),
     );
     await tester.pump(const Duration(milliseconds: 300));
-    expect(find.text('书库为空，点击“导入 TXT”开始'), findsOneWidget);
+    expect(find.text('书库为空，点击“导入书籍”开始'), findsOneWidget);
 
     final repo = container.read(libraryRepositoryProvider);
     final r1 = await repo.importTxt(

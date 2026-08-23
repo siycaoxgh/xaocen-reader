@@ -14,16 +14,21 @@ import '../domain/windows_shell_preferences.dart';
 import '../reader/reader_input.dart';
 import '../reader/reader_input_router.dart';
 import '../reader/supported_shortcut_key_registry.dart';
+import '../platform/windows_true_transparency.dart';
 import 'windows_shell.dart';
+import 'windows_shortcut_guide.dart';
 import 'providers.dart';
 import 'router.dart';
+import '../domain/app_theme_mode.dart';
 
-class ReaderSettingsPage extends StatelessWidget {
+class ReaderSettingsPage extends ConsumerWidget {
   const ReaderSettingsPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final desktop = MediaQuery.sizeOf(context).width >= 720;
+    final appTheme =
+        ref.watch(appThemeModeProvider).valueOrNull ?? AppThemeMode.system;
     return Scaffold(
       appBar: AppBar(title: const Text('阅读设置')),
       body: Center(
@@ -48,6 +53,48 @@ class ReaderSettingsPage extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 24),
+              Card(
+                key: const ValueKey('app-theme-settings-card'),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '应用主题',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '只影响首页、书架和设置页面；阅读正文主题仍在 Reader 的 Aa 面板中独立设置。',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      SegmentedButton<AppThemeMode>(
+                        key: const ValueKey('app-theme-mode-selector'),
+                        segments: [
+                          for (final mode in AppThemeMode.values)
+                            ButtonSegment<AppThemeMode>(
+                              value: mode,
+                              label: Text(mode.label),
+                            ),
+                        ],
+                        selected: {appTheme},
+                        onSelectionChanged: (selection) {
+                          if (selection.isNotEmpty) {
+                            ref
+                                .read(appThemeModeProvider.notifier)
+                                .setMode(selection.first);
+                          }
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
               if (kDebugMode || Platform.isWindows || Platform.isAndroid) ...[
                 Card(
                   child: ListTile(
@@ -270,9 +317,11 @@ class _WindowsShellSettingsPageState
   );
   WindowsShellPreferences _preferences = WindowsShellPreferences.defaults;
   StreamSubscription<WindowsShellPreferences>? _subscription;
+  bool _supportsWindowsTrueTransparency = false;
   late final FocusNode _captureFocus = FocusNode(
     debugLabel: 'boss-key-capture',
   );
+  final ReaderKeyEventGate _captureKeyEventGate = ReaderKeyEventGate();
   bool _capturing = false;
   WindowsBossKeyGesture? _candidate;
 
@@ -280,10 +329,17 @@ class _WindowsShellSettingsPageState
   void initState() {
     super.initState();
     unawaited(_load());
+    unawaited(_loadWindowsTrueTransparencyCapability());
     _subscription = _repository.watch().listen((value) {
       if (mounted) setState(() => _preferences = value);
       unawaited(WindowsShellBridge.apply(value));
     });
+  }
+
+  Future<void> _loadWindowsTrueTransparencyCapability() async {
+    final supported = await WindowsTrueTransparencyCapability.load();
+    if (!mounted) return;
+    setState(() => _supportsWindowsTrueTransparency = supported);
   }
 
   Future<void> _load() async {
@@ -298,6 +354,7 @@ class _WindowsShellSettingsPageState
     final subscription = _subscription;
     if (subscription != null) unawaited(subscription.cancel());
     WindowsShellBridge.setCaptureActive(false);
+    _captureKeyEventGate.clear();
     _captureFocus.dispose();
     super.dispose();
   }
@@ -345,6 +402,7 @@ class _WindowsShellSettingsPageState
   }
 
   void _startCapture() {
+    _captureKeyEventGate.clear();
     setState(() {
       _capturing = true;
       _candidate = null;
@@ -356,6 +414,7 @@ class _WindowsShellSettingsPageState
   }
 
   void _cancelCapture() {
+    _captureKeyEventGate.clear();
     WindowsShellBridge.setCaptureActive(false);
     if (!mounted) return;
     setState(() {
@@ -374,6 +433,7 @@ class _WindowsShellSettingsPageState
 
   KeyEventResult _captureKey(FocusNode node, KeyEvent event) {
     if (!_capturing) return KeyEventResult.ignored;
+    final accepted = _captureKeyEventGate.accept(event, allowRepeat: false);
     if (event is KeyUpEvent) {
       return KeyEventResult.handled;
     }
@@ -381,18 +441,19 @@ class _WindowsShellSettingsPageState
       return KeyEventResult.handled;
     }
     if (event is! KeyDownEvent) return KeyEventResult.handled;
+    if (!accepted) return KeyEventResult.handled;
     if (event.logicalKey == LogicalKeyboardKey.escape) {
       _cancelCapture();
       return KeyEventResult.handled;
     }
-    final input =
-        SupportedShortcutKeyRegistry.inputFor(event.physicalKey) ??
-        physicalInputIdForKey(event.logicalKey);
+    final input = SupportedShortcutKeyRegistry.inputFor(event.physicalKey);
     final key = input == null ? null : WindowsShellKey.parse(input.value);
     if (key == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('此按键不能作为 XAOCEN 快捷键')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(SupportedShortcutKeyRegistry.unsupportedMessage),
+        ),
+      );
       return KeyEventResult.handled;
     }
     final modifiers = <WindowsShellModifier>{
@@ -473,6 +534,9 @@ class _WindowsShellSettingsPageState
       appBar: AppBar(title: const Text('窗口、托盘与老板键')),
       body: Focus(
         focusNode: _captureFocus,
+        onFocusChange: (focused) {
+          if (!focused) _captureKeyEventGate.clear();
+        },
         onKeyEvent: _captureKey,
         child: Center(
           child: ConstrainedBox(
@@ -525,12 +589,18 @@ class _WindowsShellSettingsPageState
                             unawaited(_setWindowBorder(value)),
                       ),
                       const Divider(height: 1),
-                      const ListTile(
-                        title: Text('阅读背景/窗口透明度'),
+                      ListTile(
+                        title: const Text('阅读背景/窗口透明度'),
                         subtitle: Text(
-                          '当前 Flutter Windows surface 尚不支持安全的原生透明；功能 deferred。',
+                          _supportsWindowsTrueTransparency
+                              ? '当前已启用 Windows 真透明渲染；请在 Reader 的 Aa → 阅读外观中调整背景透明度。'
+                              : '当前 Windows 引擎不支持真透明渲染；请使用 XAOCEN Patched Engine 构建。',
                         ),
-                        trailing: Icon(Icons.info_outline),
+                        trailing: Icon(
+                          _supportsWindowsTrueTransparency
+                              ? Icons.check_circle_outline
+                              : Icons.info_outline,
+                        ),
                       ),
                       const Divider(height: 1),
                       const ListTile(
@@ -574,13 +644,27 @@ class _WindowsShellSettingsPageState
                       ),
                       const Divider(height: 1),
                       SwitchListTile.adaptive(
-                        title: const Text('鼠标老板手势'),
-                        subtitle: const Text(
-                          '左右键同时按下显示/隐藏窗口。鼠标左右键为固定手势，不参与普通快捷键录入。',
+                        title: const Text('左右键同时按下显示/隐藏窗口'),
+                        subtitle: Text(
+                          '鼠标左右键为固定手势，不参与普通快捷键录入。',
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
+                              ),
                         ),
                         value: _preferences.mouseBossEnabled,
                         onChanged: (value) =>
                             unawaited(_setMouseBossEnabled(value)),
+                      ),
+                      const Divider(height: 1),
+                      ListTile(
+                        leading: const Icon(Icons.keyboard_alt_outlined),
+                        title: const Text('查看支持的按键'),
+                        subtitle: const Text('查看已验证可稳定录入、保存并触发的快捷键范围'),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () => showWindowsShortcutGuide(context),
                       ),
                       if (_capturing)
                         _BossKeyCapturePanel(
@@ -705,6 +789,7 @@ class _ReaderInputSettingsPageState
   );
   final ReaderInputCaptureWorkflow _captureWorkflow =
       ReaderInputCaptureWorkflow();
+  final ReaderKeyEventGate _keyEventGate = ReaderKeyEventGate();
 
   ReaderInputProfile? _profile;
   ReaderCommand? _captureCommand;
@@ -724,6 +809,7 @@ class _ReaderInputSettingsPageState
   void dispose() {
     WindowsShellBridge.setCaptureActive(false);
     unawaited(_router.dispose());
+    _keyEventGate.clear();
     _captureFocusNode.dispose();
     if (Platform.isAndroid) unawaited(ReaderInputBridge.deactivate());
     super.dispose();
@@ -865,11 +951,22 @@ class _ReaderInputSettingsPageState
 
   KeyEventResult _onKeyEvent(FocusNode node, KeyEvent event) {
     if (_platform != ReaderInputPlatform.windows || !_router.capture.isActive) {
+      _keyEventGate.clear();
       return KeyEventResult.ignored;
     }
+    final accepted = _keyEventGate.accept(event, allowRepeat: false);
     if (event is! KeyDownEvent) return KeyEventResult.handled;
+    if (!accepted) return KeyEventResult.handled;
     if (event.logicalKey == LogicalKeyboardKey.escape) {
       _cancelCapture();
+      return KeyEventResult.handled;
+    }
+    if (!SupportedShortcutKeyRegistry.supports(event.physicalKey)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(SupportedShortcutKeyRegistry.unsupportedMessage),
+        ),
+      );
       return KeyEventResult.handled;
     }
     final gesture = readerInputGestureForEvent(
@@ -880,9 +977,11 @@ class _ReaderInputSettingsPageState
     );
     // A modifier on its own is deliberately not a complete gesture.
     if (gesture == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('此按键不能作为 XAOCEN 快捷键')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(SupportedShortcutKeyRegistry.unsupportedMessage),
+        ),
+      );
       return KeyEventResult.handled;
     }
     _router.handlePhysicalGesture(gesture);
@@ -983,6 +1082,9 @@ class _ReaderInputSettingsPageState
       body: Focus(
         focusNode: _captureFocusNode,
         autofocus: true,
+        onFocusChange: (focused) {
+          if (!focused) _keyEventGate.clear();
+        },
         onKeyEvent: _onKeyEvent,
         child: Stack(
           fit: StackFit.expand,
@@ -1122,38 +1224,12 @@ class _SupportedShortcutHelp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Card(
-    child: ExpansionTile(
+    child: ListTile(
       leading: const Icon(Icons.keyboard_alt_outlined),
       title: const Text('查看支持的按键'),
-      subtitle: const Text('支持字母、数字、功能键、导航键、小键盘、常用符号键及 Ctrl / Alt / Shift 组合。'),
-      children: [
-        for (final entry in SupportedShortcutKeyRegistry.categories.entries)
-          ListTile(
-            dense: true,
-            title: Text(entry.key),
-            subtitle: Text(
-              entry.value
-                  .map(SupportedShortcutKeyRegistry.displayName)
-                  .join('、'),
-            ),
-          ),
-        const ListTile(
-          dense: true,
-          title: Text('修饰键'),
-          subtitle: Text(SupportedShortcutKeyRegistry.modifierDescription),
-        ),
-        const ListTile(
-          dense: true,
-          title: Text('鼠标手势'),
-          subtitle: Text(
-            '${SupportedShortcutKeyRegistry.mouseGestureDescription}。属于 Mouse Gesture，不参与普通 Keyboard Shortcut 捕获。',
-          ),
-        ),
-        const Padding(
-          padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
-          child: Text('部分系统保留键不能作为 XAOCEN 快捷键。'),
-        ),
-      ],
+      subtitle: const Text('支持字母、数字、功能键、导航键、小键盘及 Ctrl / Alt / Shift 组合。'),
+      trailing: const Icon(Icons.chevron_right),
+      onTap: () => showWindowsShortcutGuide(context),
     ),
   );
 }

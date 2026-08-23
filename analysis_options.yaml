@@ -9,6 +9,17 @@
 # packages, and plugins designed to encourage good coding practices.
 include: package:flutter_lints/flutter.yaml
 
+# The vendored flutter_tts package is a dependency, not application source.
+# Its example imports a package-local example target that is intentionally not
+# part of the production dependency tree.
+analyzer:
+  exclude:
+    - third_party/flutter_tts/**
+    # The pre-4.0 source is retained for historical reference only. It has
+    # its own dependency graph and must not be analyzed as current production
+    # code.
+    - archive/**
+
 linter:
   # The lint rules applied to this project can be customized in the
   # section below to disable rules from the `package:flutter_lints/flutter.yaml`

@@ -1,12 +1,17 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:drift/native.dart';
 import 'package:xaocen_reader/data/database/app_database.dart';
 import 'package:xaocen_reader/data/repositories/encoding_index_provider.dart';
 import 'package:xaocen_reader/data/repositories/library_file_manager.dart';
 import 'package:xaocen_reader/data/repositories/local_library_repository.dart';
+import 'package:xaocen_reader/data/repositories/local_book_cover_repository.dart';
+import 'package:xaocen_reader/data/repositories/reading_progress_repository.dart';
 import 'package:xaocen_reader/domain/library/library_import_models.dart';
+import 'package:xaocen_reader/domain/library/local_txt_metadata.dart';
 import 'package:xaocen_reader/domain/local_txt/pipeline_progress.dart';
+import 'package:xaocen_reader/domain/reader/reader_locator.dart';
 import 'package:xaocen_reader/sources/local_txt/gb18030_index_data.dart';
 import 'package:xaocen_reader/sources/local_txt/gb18030_index_loader.dart';
 import 'package:xaocen_reader/sources/local_txt/txt_cancellation.dart';
@@ -16,6 +21,34 @@ import 'package:xaocen_reader/sources/local_txt/txt_cancellation.dart';
 /// 使用自包含 fixture（test/fixtures/txt）与内存数据库 + 临时目录，
 /// 不读取外部 TXT，不提交正文。
 void main() {
+  group('保守 TXT metadata 推断', () {
+    test('明确书名/作者优先，文件名范围后缀仅保守清理', () {
+      final metadata = LocalTxtMetadataInferer.fromText(
+        '《苟在初圣魔门当人材》\n作者：鹤守月满池\n第一章',
+        '苟在初圣魔门当人材(1-500章).txt',
+      );
+      expect(metadata.title, '苟在初圣魔门当人材');
+      expect(metadata.author, '鹤守月满池');
+      expect(metadata.titleSource, 'explicitText');
+      expect(metadata.authorSource, 'explicitText');
+    });
+
+    test('无可信作者不猜，普通文件名只去扩展名', () {
+      final metadata = LocalTxtMetadataInferer.fromText(
+        '作品相关\n第一卷 诡异蓝光\n第一章',
+        '因果快递-20260625.txt',
+      );
+      expect(metadata.title, '因果快递-20260625');
+      expect(metadata.author, isNull);
+      expect(metadata.authorSource, 'unknown');
+    });
+
+    test('范围清理不误删真实书名尾部数字', () {
+      expect(LocalTxtMetadataInferer.cleanFileName('青山2024.txt'), '青山2024');
+      expect(LocalTxtMetadataInferer.cleanFileName('青山(501-809章).txt'), '青山');
+    });
+  });
+
   late AppDatabase db;
   late Directory libRoot;
   late LocalLibraryRepository repo;
@@ -71,6 +104,8 @@ void main() {
       final r = await importFixture('utf8_chapters.txt');
       expect(r.alreadyImported, isFalse);
       expect(r.collection.itemCount, 3);
+      expect(r.collection.titleSource, 'fileName');
+      expect(r.collection.author, isNull);
 
       final items = await repo.getItems(r.collection.id);
       expect(items.length, 3);
@@ -132,6 +167,197 @@ void main() {
       );
     });
   });
+
+  test('metadata is persisted without changing collection identity', () async {
+    final file = File('${libRoot.path}${Platform.pathSeparator}book.txt')
+      ..writeAsStringSync('《测试书》\n作者：测试作者\n第一章\n正文');
+    final result = await repo.importTxt(
+      ImportTxtRequest(externalFile: file, confirmLargeFile: true),
+    );
+    final loaded = await repo.getCollection(result.collection.id);
+    expect(loaded?.title, '测试书');
+    expect(loaded?.author, '测试作者');
+    expect(loaded?.sourcePath, contains('library'));
+    expect(loaded?.fileName, 'book.txt');
+    expect(loaded?.id, result.collection.id);
+    expect(await repo.getItems(result.collection.id), isNotEmpty);
+  });
+
+  test('real four TXT corpus receives conservative metadata', () async {
+    final corpus = Directory(r'C:\Users\TOM\Desktop\测试');
+    if (!await corpus.exists()) return;
+    final files = await corpus
+        .list()
+        .where(
+          (entry) => entry is File && entry.path.toLowerCase().endsWith('.txt'),
+        )
+        .cast<File>()
+        .toList();
+    expect(files, hasLength(4));
+    final expected = <String, String>{
+      '苟在初圣魔门当人材(1-500章).txt': '苟在初圣魔门当人材',
+      '青山(501-809章).txt': '青山',
+      '因果快递-20260625.txt': '因果快递-20260625',
+      '无章节数字测试.txt': '苟在武道世界成圣',
+    };
+    for (final file in files) {
+      final metadata = await LocalTxtMetadataInferer.fromFile(file);
+      expect(metadata.title, expected[file.uri.pathSegments.last]);
+      expect(metadata.metadataSource, 'localInference');
+    }
+  });
+
+  test(
+    'manual metadata overrides persist and restore without changing identity or progress',
+    () async {
+      final imported = await importFixture('utf8_chapters.txt');
+      final original = imported.collection;
+      final progress = ReadingProgressRepository(db: db);
+      await progress.saveLocator(
+        ReaderLocator(
+          collectionId: original.id,
+          absoluteCharacterOffset: 42,
+          itemIdHint: null,
+        ),
+      );
+
+      final edited = await repo.updateManualMetadata(
+        original.id,
+        title: '手动书名',
+        author: '手动作者',
+        description: '手动简介',
+        titleChanged: true,
+        authorChanged: true,
+        descriptionChanged: true,
+      );
+      expect(edited.id, original.id);
+      expect(edited.sourcePath, original.sourcePath);
+      expect(edited.title, '手动书名');
+      expect(edited.titleSource, 'manual');
+      expect(edited.authorSource, 'manual');
+      expect(
+        (await progress.getProgress(original.id))!.absoluteCharacterOffset,
+        42,
+      );
+
+      final rescanned = await importFixture('utf8_chapters.txt');
+      expect(rescanned.collection.id, original.id);
+      final afterRescan = await repo.getCollection(original.id);
+      expect(afterRescan!.title, '手动书名');
+      expect(afterRescan.author, '手动作者');
+
+      final restored = await repo.restoreAutomaticMetadata(original.id);
+      expect(restored.id, original.id);
+      expect(restored.title, original.title);
+      expect(restored.author, isNull);
+      expect(restored.titleSource, 'fileName');
+      expect(restored.metadataSource, 'localInference');
+      expect(
+        (await progress.getProgress(original.id))!.absoluteCharacterOffset,
+        42,
+      );
+    },
+  );
+
+  test(
+    'schema 18 to 20 adds metadata and cover defaults without touching progress',
+    () async {
+      final temp = await Directory.systemTemp.createTemp(
+        'xaocen-metadata-migration-',
+      );
+      final file = File(
+        '${temp.path}${Platform.pathSeparator}migration.sqlite',
+      );
+      final old = AppDatabase(NativeDatabase(file));
+      await old.customStatement('''
+      INSERT INTO content_sources
+        (id, type, display_name, content_hash, managed_source_path,
+         source_size, detected_encoding, created_at, updated_at)
+      VALUES ('source', 'localTxt', 'legacy.txt', 'hash',
+              'library/local_txt/hash/source.txt', 1, 'utf8', 0, 0)
+    ''');
+      await old.customStatement('''
+      INSERT INTO content_collections
+        (id, source_id, title, item_count, normalized_character_length,
+         imported_at, updated_at)
+      VALUES ('book', 'source', 'Legacy', 1, 12, 0, 0)
+    ''');
+      await old.customStatement('''
+      INSERT INTO reading_progress
+        (collection_id, absolute_character_offset, reading_mode, item_id_hint,
+         updated_at, locator_version, normalization_version)
+      VALUES ('book', 194, 'vertical', NULL, 0, 1, 'v1')
+    ''');
+      for (final column in [
+        'author',
+        'description',
+        'metadata_source',
+        'title_source',
+        'author_source',
+        'cover_path',
+        'cover_source',
+      ]) {
+        await old.customStatement(
+          'ALTER TABLE content_collections DROP COLUMN $column',
+        );
+      }
+      await old.customStatement('PRAGMA user_version = 18');
+      await old.close();
+
+      final migrated = AppDatabase(NativeDatabase(file));
+      final row = await migrated
+          .select(migrated.contentCollections)
+          .getSingle();
+      final progress = await migrated
+          .select(migrated.readingProgress)
+          .getSingle();
+      expect(row.title, 'Legacy');
+      expect(row.metadataSource, 'legacy');
+      expect(row.titleSource, 'legacy');
+      expect(row.author, isNull);
+      expect(row.coverPath, isNull);
+      expect(row.coverSource, 'placeholder');
+      expect(progress.absoluteCharacterOffset, 194);
+      expect(
+        (await migrated.customSelect('PRAGMA user_version').getSingle())
+            .data['user_version'],
+        21,
+      );
+      await migrated.close();
+      await temp.delete(recursive: true);
+    },
+  );
+
+  test(
+    'local cover is copied into managed storage and safely falls back',
+    () async {
+      final imported = await importFixture('utf8_chapters.txt');
+      final source = File('${libRoot.path}${Platform.pathSeparator}picked.png');
+      await source.writeAsBytes(const [137, 80, 78, 71, 13, 10, 26, 10]);
+      final covers = LocalBookCoverRepository(
+        database: db,
+        fileManager: LibraryFileManager(libraryRoot: libRoot),
+      );
+
+      final relative = await covers.importCover(
+        collectionId: imported.collection.id,
+        source: source,
+      );
+      expect(relative, startsWith(LocalBookCoverRepository.prefix));
+      final managed = covers.resolve(relative);
+      expect(managed, isNotNull);
+      expect(await managed!.readAsBytes(), await source.readAsBytes());
+      final saved = await repo.getCollection(imported.collection.id);
+      expect(saved!.coverPath, relative);
+      expect(saved.coverSource, 'manual');
+
+      await covers.removeCover(imported.collection.id, relative);
+      expect(covers.resolve(relative), isNull);
+      final reverted = await repo.getCollection(imported.collection.id);
+      expect(reverted!.coverPath, isNull);
+      expect(reverted.coverSource, 'placeholder');
+    },
+  );
 
   group('无章节导入', () {
     test('no_chapters：1 个 whole item，0 章', () async {

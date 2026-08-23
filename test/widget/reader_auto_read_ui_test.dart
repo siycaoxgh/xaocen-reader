@@ -4,6 +4,7 @@ import 'package:xaocen_reader/domain/reader/auto_read_controller.dart';
 import 'package:xaocen_reader/domain/reader/auto_read_preferences.dart';
 import 'package:xaocen_reader/domain/reader/reader_preferences.dart';
 import 'package:xaocen_reader/reader/reader_chrome.dart';
+import 'package:xaocen_reader/reader/reader_automation_overlay.dart';
 import 'package:xaocen_reader/reader/reader_mode.dart';
 
 void main() {
@@ -68,7 +69,10 @@ void main() {
       const Offset(-37, 0),
     );
     await tester.pump();
-    expect(find.byKey(const Key('reader-auto-read-speed-value')), findsOneWidget);
+    expect(
+      find.byKey(const Key('reader-auto-read-speed-value')),
+      findsOneWidget,
+    );
     expect(find.textContaining('px/s'), findsWidgets);
 
     await tester.tap(find.byKey(const Key('reader-auto-read-stop')));
@@ -148,7 +152,7 @@ void main() {
     expect(stopped, isTrue);
   });
 
-  testWidgets('AutoRead status bar follows Reader Chrome visibility', (
+  testWidgets('Automatic control strip remains available in immersive mode', (
     tester,
   ) async {
     Widget chrome(bool visible) => MaterialApp(
@@ -174,9 +178,10 @@ void main() {
     );
 
     await tester.pumpWidget(chrome(false));
+    expect(find.byKey(readerAutomationOverlayKey), findsOneWidget);
     expect(
       find.byKey(const Key('reader-auto-read-status-pause')),
-      findsNothing,
+      findsOneWidget,
     );
     await tester.pumpWidget(chrome(true));
     await tester.pump();

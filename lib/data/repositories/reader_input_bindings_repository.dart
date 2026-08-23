@@ -117,6 +117,7 @@ final class ReaderInputBindingsRepository {
       for (final entry in profile.autoReadVolumeActions.entries)
         entry.key.value: entry.value.name,
     },
+    'autoModeVolumeBehavior': profile.autoModeVolumeBehavior.name,
   };
 
   ReaderInputProfile _decode(String? raw, ReaderInputPlatform platform) {
@@ -135,14 +136,22 @@ final class ReaderInputBindingsRepository {
         return defaults;
       }
       final merged = <ReaderInputGesture, ReaderCommand?>{...defaults.bindings};
-      final autoReadActions = <PhysicalInputId,
-          AndroidAutoReadVolumeAction>{...defaults.autoReadVolumeActions};
+      final autoReadActions = <PhysicalInputId, AndroidAutoReadVolumeAction>{
+        ...defaults.autoReadVolumeActions,
+      };
+      var autoModeVolumeBehavior = defaults.autoModeVolumeBehavior;
+      final rawAutoModeBehavior = decoded['autoModeVolumeBehavior'];
+      autoModeVolumeBehavior =
+          _parseAutoModeVolumeBehavior(rawAutoModeBehavior) ??
+          _migrateLegacyAutoModeBehavior(decoded['autoReadVolumeActions']);
       final rawAutoReadActions = decoded['autoReadVolumeActions'];
-      if (rawAutoReadActions is Map && platform == ReaderInputPlatform.android) {
+      if (rawAutoReadActions is Map &&
+          platform == ReaderInputPlatform.android) {
         for (final entry in rawAutoReadActions.entries) {
           final input = PhysicalInputId.parse(entry.key.toString());
           final action = _parseAutoReadAction(entry.value);
-          if (input != null && action != null &&
+          if (input != null &&
+              action != null &&
               input.platform == ReaderInputPlatform.android) {
             autoReadActions[input] = action;
           }
@@ -189,6 +198,7 @@ final class ReaderInputBindingsRepository {
         version: migrated,
         bindings: Map.unmodifiable(merged),
         autoReadVolumeActions: Map.unmodifiable(autoReadActions),
+        autoModeVolumeBehavior: autoModeVolumeBehavior,
         updatedAt: timestamp,
       );
     } catch (_) {
@@ -214,6 +224,7 @@ final class ReaderInputBindingsRepository {
       version: ReaderInputProfile.currentVersion,
       bindings: Map.unmodifiable(bindings),
       autoReadVolumeActions: profile.autoReadVolumeActions,
+      autoModeVolumeBehavior: profile.autoModeVolumeBehavior,
       updatedAt: profile.updatedAt,
     );
   }
@@ -232,6 +243,53 @@ final class ReaderInputBindingsRepository {
       if (action.name == value) return action;
     }
     return null;
+  }
+
+  Future<void> setAndroidAutoModeVolumeBehavior(
+    AndroidAutoModeVolumeBehavior behavior,
+  ) async {
+    final current = await load(ReaderInputPlatform.android);
+    await update(
+      ReaderInputPlatform.android,
+      current.copyWith(
+        autoModeVolumeBehavior: behavior,
+        // The legacy per-key map predates the unified policy. Clear it when
+        // the new setting is written so an old custom value cannot override
+        // the single shared Android AutoRead/TTS truth at runtime.
+        autoReadVolumeActions: ReaderInputProfile.defaults(
+          ReaderInputPlatform.android,
+        ).autoReadVolumeActions,
+        updatedAt: DateTime.now().toUtc(),
+      ),
+    );
+  }
+
+  AndroidAutoModeVolumeBehavior? _parseAutoModeVolumeBehavior(Object? value) {
+    if (value is! String) return null;
+    for (final behavior in AndroidAutoModeVolumeBehavior.values) {
+      if (behavior.name == value) return behavior;
+    }
+    return null;
+  }
+
+  AndroidAutoModeVolumeBehavior _migrateLegacyAutoModeBehavior(Object? raw) {
+    if (raw is! Map) return AndroidAutoModeVolumeBehavior.followNormal;
+    final actions = raw.values
+        .map(_parseAutoReadAction)
+        .whereType<AndroidAutoReadVolumeAction>()
+        .toList();
+    if (actions.isNotEmpty &&
+        actions.every(
+          (action) => action == AndroidAutoReadVolumeAction.systemVolume,
+        )) {
+      return AndroidAutoModeVolumeBehavior.systemVolume;
+    }
+    if (actions.any(
+      (action) => action != AndroidAutoReadVolumeAction.followNormal,
+    )) {
+      return AndroidAutoModeVolumeBehavior.controlAutomaticMode;
+    }
+    return AndroidAutoModeVolumeBehavior.followNormal;
   }
 
   DateTime? _parseDate(Object? value) => switch (value) {

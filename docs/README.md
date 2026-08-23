@@ -1,5 +1,12 @@
 # XAOCEN Reader v4 — 文档索引
 
+## 当前基线（优先阅读）
+
+| 文件 | 说明 |
+|---|---|
+| `../M5_7_PRODUCT_CONSOLIDATED_STATUS.md` | 当前功能状态、最新 Windows/Android 构建地址、待补充项 |
+| `PRODUCT_BASELINE_FREEZE.md` | 已完成合同、回归闸门与后续改动规则 |
+
 本目录存放工程内文档。
 
 ## 权威输入（工程外，位于仓库父目录 `xaocen-reader-v4/`）
@@ -39,3 +46,5 @@
 | `KNOWN_ISSUES.md` | 已知问题 / 限制 / 延后 / 回归敏感项 |
 | `TEST_VALIDATION_MATRIX.md` | 验证矩阵（自动 vs 真人，Win vs Android） |
 | `CONTENT_NAVIGATION_CONTRACT.md` | 全局内容导航合同（长期产品规则） |
+| `REPOSITORY_LAYOUT.md` | 唯一项目根目录、构建产物、数据目录和 GitHub 整理规则 |
+| `LEGACY_PRE_4_0_SUMMARY.md` | 已归档的 4.0 以前工程、文档与废弃产物摘要 |

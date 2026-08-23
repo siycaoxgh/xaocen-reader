@@ -67,7 +67,11 @@ IDI_APP_ICON            ICON                    "resources\\app_icon.ico"
 #endif
 
 #if defined(FLUTTER_VERSION)
-#define VERSION_AS_STRING FLUTTER_VERSION
+#define XAOCEN_STRINGIFY_VALUE(value) #value
+#define XAOCEN_STRINGIFY(value) XAOCEN_STRINGIFY_VALUE(value)
+// Keep the user-visible Windows version semantic (4.5.8); the numeric build
+// component remains in FILEVERSION as the internal build number.
+#define VERSION_AS_STRING XAOCEN_STRINGIFY(FLUTTER_VERSION_MAJOR) "." XAOCEN_STRINGIFY(FLUTTER_VERSION_MINOR) "." XAOCEN_STRINGIFY(FLUTTER_VERSION_PATCH)
 #else
 #define VERSION_AS_STRING "1.0.0"
 #endif
@@ -89,13 +93,13 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "com.xaocen" "\0"
-            VALUE "FileDescription", "xaocen_reader" "\0"
+            VALUE "CompanyName", "XAOCEN" "\0"
+            VALUE "FileDescription", "XAOCEN Reader" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "xaocen_reader" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2026 com.xaocen. All rights reserved." "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2026 XAOCEN. All rights reserved." "\0"
             VALUE "OriginalFilename", "xaocen_reader.exe" "\0"
-            VALUE "ProductName", "xaocen_reader" "\0"
+            VALUE "ProductName", "XAOCEN Reader" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

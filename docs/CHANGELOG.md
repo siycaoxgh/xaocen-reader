@@ -12,6 +12,71 @@ Legend for validation columns:
 
 ---
 
+## M5.9 — Profile-aware local storage foundation (2026-08-16)
+
+- Fixed the standard Windows data root at `%LOCALAPPDATA%\\XAOCEN\\Reader\\profiles\\<profileId>`;
+  explicit portable mode uses `<exe>\\user_data\\profiles\\<profileId>`.
+- Added non-destructive migration from the known legacy XAOCEN roots,
+  including SQLite WAL/SHM sidecars and managed books. Legacy sources are not
+  deleted and existing target databases are never overwritten.
+- Added restart-scoped profile selection through `--profile=<id>`,
+  `XAOCEN_PROFILE`, and an `active_profile.json` pointer. The default profile
+  remains `default`.
+- Added hash-verified profile export/import naming over the existing staged
+  backup service and a local-only metadata sync outbox. No account, network
+  sync, or conflict resolution was introduced.
+
+Validation: 650 full Flutter tests, `flutter analyze --no-pub`, and
+`git diff --check` passed.
+
+## M5.8 — App Identity / Icon / Version Consolidation (2026-08-15)
+
+- Unified the product identity at version `4.5.8` (Android build number `5`).
+- Windows keeps the official English name `XAOCEN Reader`; Android launcher,
+  recents, app information, and TTS media surfaces use `晓枨阅读`.
+- Replaced Windows and Android launcher/adaptive icon resources from the
+  provided rounded ICO source while preserving the existing platform behavior.
+- Preserved Android applicationId `com.xaocen.xaocen_reader`.
+
+## M5.8s.8-FINAL — TTS / AutoRead baseline freeze (2026-08-15)
+
+- Froze the existing Windows/Android TTS and AutoRead contract without adding
+  functionality: current-locator start, mutual exclusion, shared `自动`
+  entry, shared automation overlay, continuous segment/chapter follow,
+  sleep-timer stop, live speech-rate continuity, and cleanup.
+- The shared automation overlay's production inactivity timeout is **2.5
+  seconds**. Earlier 25-second wording is historical and is superseded by
+  this freeze.
+- Android uses one automatic-volume-key policy with the three existing
+  profiles; Windows KeyboardBinding is unchanged.
+- Android MediaSession and notification actions were verified on
+  `emulator-5554`. Physical lock-screen/earbud behavior and the AVD-injected
+  `KEYCODE_MEDIA_*` route remain `MANUAL REQUIRED`; Windows native system media
+  control remains `DEFERRED`.
+- Final gates: `flutter analyze --no-pub` PASS, full Flutter tests PASS (642),
+  Android Release PASS, Windows Patched Release build/launch smoke PASS, and
+  `git diff --check` PASS (line-ending warnings only).
+- No EPUB/RSS work and no changes to Locator, ReaderProgress, pagination or
+  the frozen Windows true-transparency path.
+
+## M5.8s.7 — TTS final validation and baseline freeze (2026-08-15)
+
+- Frozen the first-generation system TTS contract: current-locator start,
+  pause/resume/stop, previous/next, continuous segment/chapter follow,
+  vertical/paged follow, end-of-book stop, sleep timer and cleanup.
+- Voice and speech-rate preferences persist through the formal app settings
+  store, with safe fallback when a saved system voice is unavailable.
+- Android MediaSession, foreground-service notification actions and unified TTS
+  command routing are built and covered by automated validation.
+- Physical Android screen-off/background, Bluetooth/lock-screen media keys and
+  live Windows minimize/Tray speech remain `MANUAL REQUIRED`; Windows native
+  media-control integration remains `DEFERRED`.
+- No Reader locator/progress/pagination, true-transparency, EPUB or RSS changes.
+
+Validation: `flutter analyze --no-pub`, 626 unit/widget/contract/fixture tests,
+Windows Release, Android Release, Emulator install/launcher smoke and
+`git diff --check` passed.
+
 ## M5.6e — Reader Font System (2026-08-12)
 
 - Added per-book `fontId` with system-default fallback and a schema 11→12
@@ -994,3 +1059,12 @@ deferred.
   existing `library/...` storage paths root-relative.
 - Added legacy Application Support migration, SHA-256 manifest export/verify,
   and staged atomic restore. Drift schema remains 11.
+
+## M5.7s.8d-4-FINAL — Windows True Transparency baseline freeze (2026-08-15)
+
+- Promoted Windows true transparency from deferred/planned to completed after manual acceptance.
+- Frozen production path: Patched Engine → ANGLE app-owned D3D11 texture → GPU CopyResource → premultiplied DirectComposition → real desktop transparency.
+- Confirmed background opacity is independent from Reader foreground/text RGB; BG 0% keeps Reader Theme/custom text visible and opaque.
+- Confirmed borderless DWM border/top-line cleanup with native drag and resize preserved.
+- Retained Standard Engine as the opaque fallback.
+- Canonical Windows Release output: `C:\Users\TOM\Desktop\xaocen-reader-v4\xaocen_reader\artifacts\windows\current\Release\`.

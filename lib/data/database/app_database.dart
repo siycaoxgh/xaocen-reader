@@ -37,7 +37,7 @@ class AppDatabase extends _$AppDatabase {
       super(NativeDatabase.memory());
 
   @override
-  int get schemaVersion => 18;
+  int get schemaVersion => 21;
 
   /// 打开应用数据库（support 目录下）。
   static Future<AppDatabase> open({DataRoot? dataRoot}) async {
@@ -74,6 +74,20 @@ class AppDatabase extends _$AppDatabase {
           'PRAGMA table_info(reader_preferences)',
         ).get();
         return rows.any((row) => row.data['name'] == name);
+      }
+
+      Future<bool> hasCollectionColumn(String name) async {
+        final rows = await customSelect(
+          'PRAGMA table_info(content_collections)',
+        ).get();
+        return rows.any((row) => row.data['name'] == name);
+      }
+
+      Future<bool> hasTable(String name) async {
+        final rows = await customSelect(
+          "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = '$name'",
+        ).get();
+        return rows.isNotEmpty;
       }
 
       // schema 1 → 2：仅新增 reading_progress 表，不触碰 M2 既有数据。
@@ -394,6 +408,53 @@ class AppDatabase extends _$AppDatabase {
           await m.addColumn(
             readerPreferencesRows,
             readerPreferencesRows.screenAwakeInactivityMinutes,
+          );
+        }
+      }
+      // schema 18 -> 19: local book metadata is separated from file/source
+      // identity. Existing collections retain their title and receive legacy
+      // source markers; no progress, locator, bookmark, or history rows move.
+      if (from < 19 && await hasTable('content_collections')) {
+        if (!await hasCollectionColumn('author')) {
+          await m.addColumn(contentCollections, contentCollections.author);
+        }
+        if (!await hasCollectionColumn('description')) {
+          await m.addColumn(contentCollections, contentCollections.description);
+        }
+        if (!await hasCollectionColumn('metadata_source')) {
+          await m.addColumn(
+            contentCollections,
+            contentCollections.metadataSource,
+          );
+        }
+        if (!await hasCollectionColumn('title_source')) {
+          await m.addColumn(contentCollections, contentCollections.titleSource);
+        }
+        if (!await hasCollectionColumn('author_source')) {
+          await m.addColumn(
+            contentCollections,
+            contentCollections.authorSource,
+          );
+        }
+      }
+      // schema 19 -> 20: managed local cover metadata. The path is relative
+      // to DataRoot and never points at the user's original TXT directory.
+      if (from < 20 && await hasTable('content_collections')) {
+        if (!await hasCollectionColumn('cover_path')) {
+          await m.addColumn(contentCollections, contentCollections.coverPath);
+        }
+        if (!await hasCollectionColumn('cover_source')) {
+          await m.addColumn(contentCollections, contentCollections.coverSource);
+        }
+      }
+      // schema 20 → 21: independent Reader background transparency. This is
+      // paint-only; existing books keep the fully opaque default and no
+      // locator/progress/geometry data is changed.
+      if (from >= 5 && from < 21) {
+        if (!await hasReaderPreferenceColumn('background_opacity')) {
+          await m.addColumn(
+            readerPreferencesRows,
+            readerPreferencesRows.backgroundOpacity,
           );
         }
       }

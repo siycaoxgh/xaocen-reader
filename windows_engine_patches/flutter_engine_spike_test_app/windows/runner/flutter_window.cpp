@@ -25,6 +25,15 @@ bool FlutterWindow::OnCreate() {
     return false;
   }
   RegisterPlugins(flutter_controller_->engine());
+  // The patched DComp surface targets Flutter's child HWND.  Keep that
+  // composition target out of the legacy DWM redirection path as well as the
+  // host window; this is fixture-only setup for the isolated alpha contract.
+  HWND flutter_view = flutter_controller_->view()->GetNativeWindow();
+  if (flutter_view != nullptr) {
+    LONG_PTR ex_style = GetWindowLongPtr(flutter_view, GWL_EXSTYLE);
+    SetWindowLongPtr(flutter_view, GWL_EXSTYLE,
+                     ex_style | WS_EX_NOREDIRECTIONBITMAP);
+  }
   SetChildContent(flutter_controller_->view()->GetNativeWindow());
 
   flutter_controller_->engine()->SetNextFrameCallback([&]() {

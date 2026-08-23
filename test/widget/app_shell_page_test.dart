@@ -57,8 +57,12 @@ void main() {
 
     expect(find.byType(NavigationBar), findsOneWidget);
     expect(find.text('首页'), findsAtLeastNWidgets(1));
+    expect(find.text('首页'), findsNWidgets(1));
+    expect(find.text('内容订阅'), findsOneWidget);
+    expect(find.text('订阅'), findsNothing);
     await tester.tap(find.text('我的').last);
     await tester.pump();
+    expect(find.text('我的'), findsNWidgets(1));
     expect(find.text('阅读历史'), findsOneWidget);
     expect(find.text('阅读设置'), findsOneWidget);
   });

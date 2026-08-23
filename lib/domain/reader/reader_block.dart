@@ -88,6 +88,7 @@ class ReaderBlockIndex {
   static ReaderBlockIndex build({
     required String text,
     required int targetBlockSize,
+    Iterable<int> visualBreakOffsets = const <int>[],
   }) {
     assert(targetBlockSize >= 1, 'targetBlockSize too small');
     final blocks = <ReaderBlock>[];
@@ -151,6 +152,29 @@ class ReaderBlockIndex {
       index++;
     }
 
-    return ReaderBlockIndex._(blocks, length, readerBlockPolicyVersion);
+    if (visualBreakOffsets.isEmpty || blocks.isEmpty) {
+      return ReaderBlockIndex._(blocks, length, readerBlockPolicyVersion);
+    }
+    final boundaries = <int>{0, length};
+    for (final block in blocks) {
+      boundaries.add(block.startCharacterOffset);
+      boundaries.add(block.endCharacterOffset);
+    }
+    for (final offset in visualBreakOffsets) {
+      if (offset > 0 && offset < length) boundaries.add(offset);
+    }
+    final sorted = boundaries.toList()..sort();
+    final split = <ReaderBlock>[];
+    for (var i = 0; i + 1 < sorted.length; i++) {
+      if (sorted[i] == sorted[i + 1]) continue;
+      split.add(
+        ReaderBlock(
+          index: split.length,
+          startCharacterOffset: sorted[i],
+          endCharacterOffset: sorted[i + 1],
+        ),
+      );
+    }
+    return ReaderBlockIndex._(split, length, readerBlockPolicyVersion);
   }
 }

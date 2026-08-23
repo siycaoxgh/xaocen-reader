@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "engineRevision": "69c8c61792f04cc809dfef0c910414fb9afc06cd",
+  "engineConfiguration": "host_release",
+  "artifactPath": "C:\\xaocen-engine\\src\\engine\\src\\out\\host_release\\flutter_windows.dll",
+  "artifactSha256": "CB8F352A516D7751FDD852C5E150EBBA9F53360B12894E7283991A0CDD17F08E",
+  "gnOutputDir": "C:\\xaocen-engine\\src\\engine\\src\\out\\host_release",
+  "ninjaPath": "C:\\xaocen-engine\\src\\third_party\\ninja\\ninja.exe",
+  "patchObjectPath": "C:\\xaocen-engine\\src\\engine\\src\\out\\host_release\\obj\\flutter\\shell\\platform\\windows\\egl\\flutter_windows_source.dcomp_window_surface.obj",
+  "patchSourcePaths": [
+    "C:\\xaocen-engine\\src\\engine\\src\\flutter\\shell\\platform\\windows\\egl\\dcomp_window_surface.cc",
+    "C:\\xaocen-engine\\src\\engine\\src\\flutter\\shell\\platform\\windows\\egl\\dcomp_window_surface.h",
+    "C:\\xaocen-engine\\src\\engine\\src\\flutter\\shell\\platform\\windows\\egl\\manager.cc",
+    "C:\\xaocen-engine\\src\\engine\\src\\flutter\\shell\\platform\\windows\\egl\\manager.h",
+    "C:\\xaocen-engine\\src\\engine\\src\\flutter\\shell\\platform\\windows\\flutter_windows_engine.cc",
+    "C:\\xaocen-engine\\src\\engine\\src\\flutter\\shell\\platform\\windows\\flutter_windows_engine.h",
+    "C:\\xaocen-engine\\src\\engine\\src\\flutter\\shell\\platform\\windows\\flutter_windows_view.cc"
+    ,
+    "C:\\xaocen-engine\\src\\engine\\src\\flutter\\shell\\platform\\common\\engine_switches.cc"
+  ],
+  "sourceCheckout": "C:\\xaocen-engine\\src",
+  "validatedFrom": "M5_7S_8D_3R_PATCHED_ENGINE_BUILD_DCOMP.md and M5_7S_8D_3R_2_DCOMP_INTEROP_PATH.md"
+}

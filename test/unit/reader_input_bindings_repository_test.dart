@@ -1,4 +1,4 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:drift/native.dart';
@@ -19,7 +19,7 @@ void main() {
   tearDown(() => db.close());
 
   test('defaults are platform-specific and schema remains stable', () async {
-    expect(db.schemaVersion, 18);
+    expect(db.schemaVersion, 21);
     final windows = await repository.load(ReaderInputPlatform.windows);
     final android = await repository.load(ReaderInputPlatform.android);
     expect(
@@ -37,6 +37,56 @@ void main() {
     expect(android.commandFor(PhysicalInputId.keyboardArrowLeft), isNull);
     expect(windows.platform, ReaderInputPlatform.windows);
     expect(android.platform, ReaderInputPlatform.android);
+    expect(
+      android.autoModeVolumeBehavior,
+      AndroidAutoModeVolumeBehavior.followNormal,
+    );
+  });
+
+  test('unified Android auto volume behavior persists across reloads', () async {
+    await repository.setAndroidAutoModeVolumeBehavior(
+      AndroidAutoModeVolumeBehavior.controlAutomaticMode,
+    );
+    var profile = await repository.load(ReaderInputPlatform.android);
+    expect(
+      profile.autoModeVolumeBehavior,
+      AndroidAutoModeVolumeBehavior.controlAutomaticMode,
+    );
+    // Writing the unified policy clears legacy per-key overrides.
+    expect(
+      profile.autoReadVolumeActions.values,
+      everyElement(AndroidAutoReadVolumeAction.followNormal),
+    );
+
+    await repository.setAndroidAutoModeVolumeBehavior(
+      AndroidAutoModeVolumeBehavior.systemVolume,
+    );
+    profile = await repository.load(ReaderInputPlatform.android);
+    expect(
+      profile.autoModeVolumeBehavior,
+      AndroidAutoModeVolumeBehavior.systemVolume,
+    );
+  });
+
+  test('legacy per-key Android policy migrates to the shared behavior', () async {
+    await _putRaw(
+      db,
+      'reader.inputBindings.android.v1',
+      jsonEncode({
+        'version': 2,
+        'platform': 'android',
+        'bindings': <Object>[],
+        'autoReadVolumeActions': {
+          'android.volumeUp': 'systemVolume',
+          'android.volumeDown': 'systemVolume',
+        },
+      }),
+    );
+    final profile = await repository.load(ReaderInputPlatform.android);
+    expect(
+      profile.autoModeVolumeBehavior,
+      AndroidAutoModeVolumeBehavior.systemVolume,
+    );
   });
 
   test('bind, unbind/null, and reset are strongly typed', () async {

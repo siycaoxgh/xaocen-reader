@@ -3,7 +3,7 @@ description: "XAOCEN Reader v4 - unified content reading & subscription platform
 publish_to: 'none'
 
 # 0.1.0-dev.3+3 — M3 纵向滚动 Reader + 精确位置恢复
-version: 0.1.0-dev.4+4
+version: 4.5.8+5
 
 environment:
   sdk: ^3.12.2
@@ -12,7 +12,7 @@ environment:
 # - flutter_riverpod: 状态管理（第一版手写 Provider，不启用 codegen）
 # - drift / sqlite3_flutter_libs: 数据库（Drift + SQLite；build_runner 仅 Drift 确有需要时使用）
 # - path: 路径处理
-# 不引入：RSS / 网络书源 / TTS / 同步 / 插件 / EPUB
+# RSS / 网络书源 / 同步仍未实现；EPUB 仅提供本轮最小本地解析基础
 dependencies:
   flutter:
     sdk: flutter
@@ -25,6 +25,13 @@ dependencies:
   file_picker: ^11.0.3
   path_provider: ^2.1.6
   super_sliver_list: 0.4.1
+  flutter_tts: ^4.2.5
+  archive: ^3.6.1
+  xml: ^6.6.1
+  html: ^0.15.6
+dependency_overrides:
+  flutter_tts:
+    path: third_party/flutter_tts
 
 # sqlite3 native assets hook：默认从 github.com 下载预编译库；
 # 本环境 github.com 不可达（超时），改用 ghproxy.net 镜像。
@@ -48,3 +55,5 @@ flutter:
   uses-material-design: true
   assets:
     - assets/encoding/
+    - assets/shortcuts/
+    - assets/branding/

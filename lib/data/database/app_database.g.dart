@@ -644,6 +644,85 @@ class $ContentCollectionsTable extends ContentCollections
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _authorMeta = const VerificationMeta('author');
+  @override
+  late final GeneratedColumn<String> author = GeneratedColumn<String>(
+    'author',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _descriptionMeta = const VerificationMeta(
+    'description',
+  );
+  @override
+  late final GeneratedColumn<String> description = GeneratedColumn<String>(
+    'description',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _metadataSourceMeta = const VerificationMeta(
+    'metadataSource',
+  );
+  @override
+  late final GeneratedColumn<String> metadataSource = GeneratedColumn<String>(
+    'metadata_source',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('legacy'),
+  );
+  static const VerificationMeta _titleSourceMeta = const VerificationMeta(
+    'titleSource',
+  );
+  @override
+  late final GeneratedColumn<String> titleSource = GeneratedColumn<String>(
+    'title_source',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('legacy'),
+  );
+  static const VerificationMeta _authorSourceMeta = const VerificationMeta(
+    'authorSource',
+  );
+  @override
+  late final GeneratedColumn<String> authorSource = GeneratedColumn<String>(
+    'author_source',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('unknown'),
+  );
+  static const VerificationMeta _coverPathMeta = const VerificationMeta(
+    'coverPath',
+  );
+  @override
+  late final GeneratedColumn<String> coverPath = GeneratedColumn<String>(
+    'cover_path',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _coverSourceMeta = const VerificationMeta(
+    'coverSource',
+  );
+  @override
+  late final GeneratedColumn<String> coverSource = GeneratedColumn<String>(
+    'cover_source',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('placeholder'),
+  );
   static const VerificationMeta _itemCountMeta = const VerificationMeta(
     'itemCount',
   );
@@ -694,6 +773,13 @@ class $ContentCollectionsTable extends ContentCollections
     sourceId,
     title,
     subtitle,
+    author,
+    description,
+    metadataSource,
+    titleSource,
+    authorSource,
+    coverPath,
+    coverSource,
     itemCount,
     normalizedCharacterLength,
     importedAt,
@@ -736,6 +822,63 @@ class $ContentCollectionsTable extends ContentCollections
       context.handle(
         _subtitleMeta,
         subtitle.isAcceptableOrUnknown(data['subtitle']!, _subtitleMeta),
+      );
+    }
+    if (data.containsKey('author')) {
+      context.handle(
+        _authorMeta,
+        author.isAcceptableOrUnknown(data['author']!, _authorMeta),
+      );
+    }
+    if (data.containsKey('description')) {
+      context.handle(
+        _descriptionMeta,
+        description.isAcceptableOrUnknown(
+          data['description']!,
+          _descriptionMeta,
+        ),
+      );
+    }
+    if (data.containsKey('metadata_source')) {
+      context.handle(
+        _metadataSourceMeta,
+        metadataSource.isAcceptableOrUnknown(
+          data['metadata_source']!,
+          _metadataSourceMeta,
+        ),
+      );
+    }
+    if (data.containsKey('title_source')) {
+      context.handle(
+        _titleSourceMeta,
+        titleSource.isAcceptableOrUnknown(
+          data['title_source']!,
+          _titleSourceMeta,
+        ),
+      );
+    }
+    if (data.containsKey('author_source')) {
+      context.handle(
+        _authorSourceMeta,
+        authorSource.isAcceptableOrUnknown(
+          data['author_source']!,
+          _authorSourceMeta,
+        ),
+      );
+    }
+    if (data.containsKey('cover_path')) {
+      context.handle(
+        _coverPathMeta,
+        coverPath.isAcceptableOrUnknown(data['cover_path']!, _coverPathMeta),
+      );
+    }
+    if (data.containsKey('cover_source')) {
+      context.handle(
+        _coverSourceMeta,
+        coverSource.isAcceptableOrUnknown(
+          data['cover_source']!,
+          _coverSourceMeta,
+        ),
       );
     }
     if (data.containsKey('item_count')) {
@@ -798,6 +941,34 @@ class $ContentCollectionsTable extends ContentCollections
         DriftSqlType.string,
         data['${effectivePrefix}subtitle'],
       ),
+      author: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}author'],
+      ),
+      description: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}description'],
+      ),
+      metadataSource: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}metadata_source'],
+      )!,
+      titleSource: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}title_source'],
+      )!,
+      authorSource: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}author_source'],
+      )!,
+      coverPath: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}cover_path'],
+      ),
+      coverSource: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}cover_source'],
+      )!,
       itemCount: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}item_count'],
@@ -830,6 +1001,13 @@ class ContentCollection extends DataClass
   final String sourceId;
   final String title;
   final String? subtitle;
+  final String? author;
+  final String? description;
+  final String metadataSource;
+  final String titleSource;
+  final String authorSource;
+  final String? coverPath;
+  final String coverSource;
 
   /// 章节 item 数（volume 不计入）。
   final int itemCount;
@@ -841,6 +1019,13 @@ class ContentCollection extends DataClass
     required this.sourceId,
     required this.title,
     this.subtitle,
+    this.author,
+    this.description,
+    required this.metadataSource,
+    required this.titleSource,
+    required this.authorSource,
+    this.coverPath,
+    required this.coverSource,
     required this.itemCount,
     required this.normalizedCharacterLength,
     required this.importedAt,
@@ -855,6 +1040,19 @@ class ContentCollection extends DataClass
     if (!nullToAbsent || subtitle != null) {
       map['subtitle'] = Variable<String>(subtitle);
     }
+    if (!nullToAbsent || author != null) {
+      map['author'] = Variable<String>(author);
+    }
+    if (!nullToAbsent || description != null) {
+      map['description'] = Variable<String>(description);
+    }
+    map['metadata_source'] = Variable<String>(metadataSource);
+    map['title_source'] = Variable<String>(titleSource);
+    map['author_source'] = Variable<String>(authorSource);
+    if (!nullToAbsent || coverPath != null) {
+      map['cover_path'] = Variable<String>(coverPath);
+    }
+    map['cover_source'] = Variable<String>(coverSource);
     map['item_count'] = Variable<int>(itemCount);
     map['normalized_character_length'] = Variable<int>(
       normalizedCharacterLength,
@@ -872,6 +1070,19 @@ class ContentCollection extends DataClass
       subtitle: subtitle == null && nullToAbsent
           ? const Value.absent()
           : Value(subtitle),
+      author: author == null && nullToAbsent
+          ? const Value.absent()
+          : Value(author),
+      description: description == null && nullToAbsent
+          ? const Value.absent()
+          : Value(description),
+      metadataSource: Value(metadataSource),
+      titleSource: Value(titleSource),
+      authorSource: Value(authorSource),
+      coverPath: coverPath == null && nullToAbsent
+          ? const Value.absent()
+          : Value(coverPath),
+      coverSource: Value(coverSource),
       itemCount: Value(itemCount),
       normalizedCharacterLength: Value(normalizedCharacterLength),
       importedAt: Value(importedAt),
@@ -889,6 +1100,13 @@ class ContentCollection extends DataClass
       sourceId: serializer.fromJson<String>(json['sourceId']),
       title: serializer.fromJson<String>(json['title']),
       subtitle: serializer.fromJson<String?>(json['subtitle']),
+      author: serializer.fromJson<String?>(json['author']),
+      description: serializer.fromJson<String?>(json['description']),
+      metadataSource: serializer.fromJson<String>(json['metadataSource']),
+      titleSource: serializer.fromJson<String>(json['titleSource']),
+      authorSource: serializer.fromJson<String>(json['authorSource']),
+      coverPath: serializer.fromJson<String?>(json['coverPath']),
+      coverSource: serializer.fromJson<String>(json['coverSource']),
       itemCount: serializer.fromJson<int>(json['itemCount']),
       normalizedCharacterLength: serializer.fromJson<int>(
         json['normalizedCharacterLength'],
@@ -905,6 +1123,13 @@ class ContentCollection extends DataClass
       'sourceId': serializer.toJson<String>(sourceId),
       'title': serializer.toJson<String>(title),
       'subtitle': serializer.toJson<String?>(subtitle),
+      'author': serializer.toJson<String?>(author),
+      'description': serializer.toJson<String?>(description),
+      'metadataSource': serializer.toJson<String>(metadataSource),
+      'titleSource': serializer.toJson<String>(titleSource),
+      'authorSource': serializer.toJson<String>(authorSource),
+      'coverPath': serializer.toJson<String?>(coverPath),
+      'coverSource': serializer.toJson<String>(coverSource),
       'itemCount': serializer.toJson<int>(itemCount),
       'normalizedCharacterLength': serializer.toJson<int>(
         normalizedCharacterLength,
@@ -919,6 +1144,13 @@ class ContentCollection extends DataClass
     String? sourceId,
     String? title,
     Value<String?> subtitle = const Value.absent(),
+    Value<String?> author = const Value.absent(),
+    Value<String?> description = const Value.absent(),
+    String? metadataSource,
+    String? titleSource,
+    String? authorSource,
+    Value<String?> coverPath = const Value.absent(),
+    String? coverSource,
     int? itemCount,
     int? normalizedCharacterLength,
     DateTime? importedAt,
@@ -928,6 +1160,13 @@ class ContentCollection extends DataClass
     sourceId: sourceId ?? this.sourceId,
     title: title ?? this.title,
     subtitle: subtitle.present ? subtitle.value : this.subtitle,
+    author: author.present ? author.value : this.author,
+    description: description.present ? description.value : this.description,
+    metadataSource: metadataSource ?? this.metadataSource,
+    titleSource: titleSource ?? this.titleSource,
+    authorSource: authorSource ?? this.authorSource,
+    coverPath: coverPath.present ? coverPath.value : this.coverPath,
+    coverSource: coverSource ?? this.coverSource,
     itemCount: itemCount ?? this.itemCount,
     normalizedCharacterLength:
         normalizedCharacterLength ?? this.normalizedCharacterLength,
@@ -940,6 +1179,23 @@ class ContentCollection extends DataClass
       sourceId: data.sourceId.present ? data.sourceId.value : this.sourceId,
       title: data.title.present ? data.title.value : this.title,
       subtitle: data.subtitle.present ? data.subtitle.value : this.subtitle,
+      author: data.author.present ? data.author.value : this.author,
+      description: data.description.present
+          ? data.description.value
+          : this.description,
+      metadataSource: data.metadataSource.present
+          ? data.metadataSource.value
+          : this.metadataSource,
+      titleSource: data.titleSource.present
+          ? data.titleSource.value
+          : this.titleSource,
+      authorSource: data.authorSource.present
+          ? data.authorSource.value
+          : this.authorSource,
+      coverPath: data.coverPath.present ? data.coverPath.value : this.coverPath,
+      coverSource: data.coverSource.present
+          ? data.coverSource.value
+          : this.coverSource,
       itemCount: data.itemCount.present ? data.itemCount.value : this.itemCount,
       normalizedCharacterLength: data.normalizedCharacterLength.present
           ? data.normalizedCharacterLength.value
@@ -958,6 +1214,13 @@ class ContentCollection extends DataClass
           ..write('sourceId: $sourceId, ')
           ..write('title: $title, ')
           ..write('subtitle: $subtitle, ')
+          ..write('author: $author, ')
+          ..write('description: $description, ')
+          ..write('metadataSource: $metadataSource, ')
+          ..write('titleSource: $titleSource, ')
+          ..write('authorSource: $authorSource, ')
+          ..write('coverPath: $coverPath, ')
+          ..write('coverSource: $coverSource, ')
           ..write('itemCount: $itemCount, ')
           ..write('normalizedCharacterLength: $normalizedCharacterLength, ')
           ..write('importedAt: $importedAt, ')
@@ -972,6 +1235,13 @@ class ContentCollection extends DataClass
     sourceId,
     title,
     subtitle,
+    author,
+    description,
+    metadataSource,
+    titleSource,
+    authorSource,
+    coverPath,
+    coverSource,
     itemCount,
     normalizedCharacterLength,
     importedAt,
@@ -985,6 +1255,13 @@ class ContentCollection extends DataClass
           other.sourceId == this.sourceId &&
           other.title == this.title &&
           other.subtitle == this.subtitle &&
+          other.author == this.author &&
+          other.description == this.description &&
+          other.metadataSource == this.metadataSource &&
+          other.titleSource == this.titleSource &&
+          other.authorSource == this.authorSource &&
+          other.coverPath == this.coverPath &&
+          other.coverSource == this.coverSource &&
           other.itemCount == this.itemCount &&
           other.normalizedCharacterLength == this.normalizedCharacterLength &&
           other.importedAt == this.importedAt &&
@@ -996,6 +1273,13 @@ class ContentCollectionsCompanion extends UpdateCompanion<ContentCollection> {
   final Value<String> sourceId;
   final Value<String> title;
   final Value<String?> subtitle;
+  final Value<String?> author;
+  final Value<String?> description;
+  final Value<String> metadataSource;
+  final Value<String> titleSource;
+  final Value<String> authorSource;
+  final Value<String?> coverPath;
+  final Value<String> coverSource;
   final Value<int> itemCount;
   final Value<int> normalizedCharacterLength;
   final Value<DateTime> importedAt;
@@ -1006,6 +1290,13 @@ class ContentCollectionsCompanion extends UpdateCompanion<ContentCollection> {
     this.sourceId = const Value.absent(),
     this.title = const Value.absent(),
     this.subtitle = const Value.absent(),
+    this.author = const Value.absent(),
+    this.description = const Value.absent(),
+    this.metadataSource = const Value.absent(),
+    this.titleSource = const Value.absent(),
+    this.authorSource = const Value.absent(),
+    this.coverPath = const Value.absent(),
+    this.coverSource = const Value.absent(),
     this.itemCount = const Value.absent(),
     this.normalizedCharacterLength = const Value.absent(),
     this.importedAt = const Value.absent(),
@@ -1017,6 +1308,13 @@ class ContentCollectionsCompanion extends UpdateCompanion<ContentCollection> {
     required String sourceId,
     required String title,
     this.subtitle = const Value.absent(),
+    this.author = const Value.absent(),
+    this.description = const Value.absent(),
+    this.metadataSource = const Value.absent(),
+    this.titleSource = const Value.absent(),
+    this.authorSource = const Value.absent(),
+    this.coverPath = const Value.absent(),
+    this.coverSource = const Value.absent(),
     required int itemCount,
     required int normalizedCharacterLength,
     required DateTime importedAt,
@@ -1034,6 +1332,13 @@ class ContentCollectionsCompanion extends UpdateCompanion<ContentCollection> {
     Expression<String>? sourceId,
     Expression<String>? title,
     Expression<String>? subtitle,
+    Expression<String>? author,
+    Expression<String>? description,
+    Expression<String>? metadataSource,
+    Expression<String>? titleSource,
+    Expression<String>? authorSource,
+    Expression<String>? coverPath,
+    Expression<String>? coverSource,
     Expression<int>? itemCount,
     Expression<int>? normalizedCharacterLength,
     Expression<DateTime>? importedAt,
@@ -1045,6 +1350,13 @@ class ContentCollectionsCompanion extends UpdateCompanion<ContentCollection> {
       if (sourceId != null) 'source_id': sourceId,
       if (title != null) 'title': title,
       if (subtitle != null) 'subtitle': subtitle,
+      if (author != null) 'author': author,
+      if (description != null) 'description': description,
+      if (metadataSource != null) 'metadata_source': metadataSource,
+      if (titleSource != null) 'title_source': titleSource,
+      if (authorSource != null) 'author_source': authorSource,
+      if (coverPath != null) 'cover_path': coverPath,
+      if (coverSource != null) 'cover_source': coverSource,
       if (itemCount != null) 'item_count': itemCount,
       if (normalizedCharacterLength != null)
         'normalized_character_length': normalizedCharacterLength,
@@ -1059,6 +1371,13 @@ class ContentCollectionsCompanion extends UpdateCompanion<ContentCollection> {
     Value<String>? sourceId,
     Value<String>? title,
     Value<String?>? subtitle,
+    Value<String?>? author,
+    Value<String?>? description,
+    Value<String>? metadataSource,
+    Value<String>? titleSource,
+    Value<String>? authorSource,
+    Value<String?>? coverPath,
+    Value<String>? coverSource,
     Value<int>? itemCount,
     Value<int>? normalizedCharacterLength,
     Value<DateTime>? importedAt,
@@ -1070,6 +1389,13 @@ class ContentCollectionsCompanion extends UpdateCompanion<ContentCollection> {
       sourceId: sourceId ?? this.sourceId,
       title: title ?? this.title,
       subtitle: subtitle ?? this.subtitle,
+      author: author ?? this.author,
+      description: description ?? this.description,
+      metadataSource: metadataSource ?? this.metadataSource,
+      titleSource: titleSource ?? this.titleSource,
+      authorSource: authorSource ?? this.authorSource,
+      coverPath: coverPath ?? this.coverPath,
+      coverSource: coverSource ?? this.coverSource,
       itemCount: itemCount ?? this.itemCount,
       normalizedCharacterLength:
           normalizedCharacterLength ?? this.normalizedCharacterLength,
@@ -1093,6 +1419,27 @@ class ContentCollectionsCompanion extends UpdateCompanion<ContentCollection> {
     }
     if (subtitle.present) {
       map['subtitle'] = Variable<String>(subtitle.value);
+    }
+    if (author.present) {
+      map['author'] = Variable<String>(author.value);
+    }
+    if (description.present) {
+      map['description'] = Variable<String>(description.value);
+    }
+    if (metadataSource.present) {
+      map['metadata_source'] = Variable<String>(metadataSource.value);
+    }
+    if (titleSource.present) {
+      map['title_source'] = Variable<String>(titleSource.value);
+    }
+    if (authorSource.present) {
+      map['author_source'] = Variable<String>(authorSource.value);
+    }
+    if (coverPath.present) {
+      map['cover_path'] = Variable<String>(coverPath.value);
+    }
+    if (coverSource.present) {
+      map['cover_source'] = Variable<String>(coverSource.value);
     }
     if (itemCount.present) {
       map['item_count'] = Variable<int>(itemCount.value);
@@ -1121,6 +1468,13 @@ class ContentCollectionsCompanion extends UpdateCompanion<ContentCollection> {
           ..write('sourceId: $sourceId, ')
           ..write('title: $title, ')
           ..write('subtitle: $subtitle, ')
+          ..write('author: $author, ')
+          ..write('description: $description, ')
+          ..write('metadataSource: $metadataSource, ')
+          ..write('titleSource: $titleSource, ')
+          ..write('authorSource: $authorSource, ')
+          ..write('coverPath: $coverPath, ')
+          ..write('coverSource: $coverSource, ')
           ..write('itemCount: $itemCount, ')
           ..write('normalizedCharacterLength: $normalizedCharacterLength, ')
           ..write('importedAt: $importedAt, ')
@@ -4341,6 +4695,19 @@ class $ReaderPreferencesRowsTable extends ReaderPreferencesRows
         type: DriftSqlType.string,
         requiredDuringInsert: false,
       );
+  static const VerificationMeta _backgroundOpacityMeta = const VerificationMeta(
+    'backgroundOpacity',
+  );
+  @override
+  late final GeneratedColumn<double> backgroundOpacity =
+      GeneratedColumn<double>(
+        'background_opacity',
+        aliasedName,
+        false,
+        type: DriftSqlType.double,
+        requiredDuringInsert: false,
+        defaultValue: const Constant(1.0),
+      );
   static const VerificationMeta _backgroundImageOpacityMeta =
       const VerificationMeta('backgroundImageOpacity');
   @override
@@ -4755,6 +5122,7 @@ class $ReaderPreferencesRowsTable extends ReaderPreferencesRows
     darkTextColorArgb,
     darkBackgroundColorArgb,
     backgroundImagePath,
+    backgroundOpacity,
     backgroundImageOpacity,
     backgroundOverlayOpacity,
     showTopInfoBar,
@@ -4987,6 +5355,15 @@ class $ReaderPreferencesRowsTable extends ReaderPreferencesRows
         backgroundImagePath.isAcceptableOrUnknown(
           data['background_image_path']!,
           _backgroundImagePathMeta,
+        ),
+      );
+    }
+    if (data.containsKey('background_opacity')) {
+      context.handle(
+        _backgroundOpacityMeta,
+        backgroundOpacity.isAcceptableOrUnknown(
+          data['background_opacity']!,
+          _backgroundOpacityMeta,
         ),
       );
     }
@@ -5343,6 +5720,10 @@ class $ReaderPreferencesRowsTable extends ReaderPreferencesRows
         DriftSqlType.string,
         data['${effectivePrefix}background_image_path'],
       ),
+      backgroundOpacity: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}background_opacity'],
+      )!,
       backgroundImageOpacity: attachedDatabase.typeMapping.read(
         DriftSqlType.double,
         data['${effectivePrefix}background_image_opacity'],
@@ -5493,6 +5874,7 @@ class ReaderPreferencesRow extends DataClass
   final int? darkTextColorArgb;
   final int? darkBackgroundColorArgb;
   final String? backgroundImagePath;
+  final double backgroundOpacity;
   final double backgroundImageOpacity;
   final double backgroundOverlayOpacity;
   final bool showTopInfoBar;
@@ -5544,6 +5926,7 @@ class ReaderPreferencesRow extends DataClass
     this.darkTextColorArgb,
     this.darkBackgroundColorArgb,
     this.backgroundImagePath,
+    required this.backgroundOpacity,
     required this.backgroundImageOpacity,
     required this.backgroundOverlayOpacity,
     required this.showTopInfoBar,
@@ -5618,6 +6001,7 @@ class ReaderPreferencesRow extends DataClass
     if (!nullToAbsent || backgroundImagePath != null) {
       map['background_image_path'] = Variable<String>(backgroundImagePath);
     }
+    map['background_opacity'] = Variable<double>(backgroundOpacity);
     map['background_image_opacity'] = Variable<double>(backgroundImageOpacity);
     map['background_overlay_opacity'] = Variable<double>(
       backgroundOverlayOpacity,
@@ -5701,6 +6085,7 @@ class ReaderPreferencesRow extends DataClass
       backgroundImagePath: backgroundImagePath == null && nullToAbsent
           ? const Value.absent()
           : Value(backgroundImagePath),
+      backgroundOpacity: Value(backgroundOpacity),
       backgroundImageOpacity: Value(backgroundImageOpacity),
       backgroundOverlayOpacity: Value(backgroundOverlayOpacity),
       showTopInfoBar: Value(showTopInfoBar),
@@ -5768,6 +6153,7 @@ class ReaderPreferencesRow extends DataClass
       backgroundImagePath: serializer.fromJson<String?>(
         json['backgroundImagePath'],
       ),
+      backgroundOpacity: serializer.fromJson<double>(json['backgroundOpacity']),
       backgroundImageOpacity: serializer.fromJson<double>(
         json['backgroundImageOpacity'],
       ),
@@ -5850,6 +6236,7 @@ class ReaderPreferencesRow extends DataClass
         darkBackgroundColorArgb,
       ),
       'backgroundImagePath': serializer.toJson<String?>(backgroundImagePath),
+      'backgroundOpacity': serializer.toJson<double>(backgroundOpacity),
       'backgroundImageOpacity': serializer.toJson<double>(
         backgroundImageOpacity,
       ),
@@ -5922,6 +6309,7 @@ class ReaderPreferencesRow extends DataClass
     Value<int?> darkTextColorArgb = const Value.absent(),
     Value<int?> darkBackgroundColorArgb = const Value.absent(),
     Value<String?> backgroundImagePath = const Value.absent(),
+    double? backgroundOpacity,
     double? backgroundImageOpacity,
     double? backgroundOverlayOpacity,
     bool? showTopInfoBar,
@@ -5987,6 +6375,7 @@ class ReaderPreferencesRow extends DataClass
     backgroundImagePath: backgroundImagePath.present
         ? backgroundImagePath.value
         : this.backgroundImagePath,
+    backgroundOpacity: backgroundOpacity ?? this.backgroundOpacity,
     backgroundImageOpacity:
         backgroundImageOpacity ?? this.backgroundImageOpacity,
     backgroundOverlayOpacity:
@@ -6083,6 +6472,9 @@ class ReaderPreferencesRow extends DataClass
       backgroundImagePath: data.backgroundImagePath.present
           ? data.backgroundImagePath.value
           : this.backgroundImagePath,
+      backgroundOpacity: data.backgroundOpacity.present
+          ? data.backgroundOpacity.value
+          : this.backgroundOpacity,
       backgroundImageOpacity: data.backgroundImageOpacity.present
           ? data.backgroundImageOpacity.value
           : this.backgroundImageOpacity,
@@ -6195,6 +6587,7 @@ class ReaderPreferencesRow extends DataClass
           ..write('darkTextColorArgb: $darkTextColorArgb, ')
           ..write('darkBackgroundColorArgb: $darkBackgroundColorArgb, ')
           ..write('backgroundImagePath: $backgroundImagePath, ')
+          ..write('backgroundOpacity: $backgroundOpacity, ')
           ..write('backgroundImageOpacity: $backgroundImageOpacity, ')
           ..write('backgroundOverlayOpacity: $backgroundOverlayOpacity, ')
           ..write('showTopInfoBar: $showTopInfoBar, ')
@@ -6253,6 +6646,7 @@ class ReaderPreferencesRow extends DataClass
     darkTextColorArgb,
     darkBackgroundColorArgb,
     backgroundImagePath,
+    backgroundOpacity,
     backgroundImageOpacity,
     backgroundOverlayOpacity,
     showTopInfoBar,
@@ -6308,6 +6702,7 @@ class ReaderPreferencesRow extends DataClass
           other.darkTextColorArgb == this.darkTextColorArgb &&
           other.darkBackgroundColorArgb == this.darkBackgroundColorArgb &&
           other.backgroundImagePath == this.backgroundImagePath &&
+          other.backgroundOpacity == this.backgroundOpacity &&
           other.backgroundImageOpacity == this.backgroundImageOpacity &&
           other.backgroundOverlayOpacity == this.backgroundOverlayOpacity &&
           other.showTopInfoBar == this.showTopInfoBar &&
@@ -6363,6 +6758,7 @@ class ReaderPreferencesRowsCompanion
   final Value<int?> darkTextColorArgb;
   final Value<int?> darkBackgroundColorArgb;
   final Value<String?> backgroundImagePath;
+  final Value<double> backgroundOpacity;
   final Value<double> backgroundImageOpacity;
   final Value<double> backgroundOverlayOpacity;
   final Value<bool> showTopInfoBar;
@@ -6415,6 +6811,7 @@ class ReaderPreferencesRowsCompanion
     this.darkTextColorArgb = const Value.absent(),
     this.darkBackgroundColorArgb = const Value.absent(),
     this.backgroundImagePath = const Value.absent(),
+    this.backgroundOpacity = const Value.absent(),
     this.backgroundImageOpacity = const Value.absent(),
     this.backgroundOverlayOpacity = const Value.absent(),
     this.showTopInfoBar = const Value.absent(),
@@ -6468,6 +6865,7 @@ class ReaderPreferencesRowsCompanion
     this.darkTextColorArgb = const Value.absent(),
     this.darkBackgroundColorArgb = const Value.absent(),
     this.backgroundImagePath = const Value.absent(),
+    this.backgroundOpacity = const Value.absent(),
     this.backgroundImageOpacity = const Value.absent(),
     this.backgroundOverlayOpacity = const Value.absent(),
     this.showTopInfoBar = const Value.absent(),
@@ -6532,6 +6930,7 @@ class ReaderPreferencesRowsCompanion
     Expression<int>? darkTextColorArgb,
     Expression<int>? darkBackgroundColorArgb,
     Expression<String>? backgroundImagePath,
+    Expression<double>? backgroundOpacity,
     Expression<double>? backgroundImageOpacity,
     Expression<double>? backgroundOverlayOpacity,
     Expression<bool>? showTopInfoBar,
@@ -6590,6 +6989,7 @@ class ReaderPreferencesRowsCompanion
         'dark_background_color_argb': darkBackgroundColorArgb,
       if (backgroundImagePath != null)
         'background_image_path': backgroundImagePath,
+      if (backgroundOpacity != null) 'background_opacity': backgroundOpacity,
       if (backgroundImageOpacity != null)
         'background_image_opacity': backgroundImageOpacity,
       if (backgroundOverlayOpacity != null)
@@ -6657,6 +7057,7 @@ class ReaderPreferencesRowsCompanion
     Value<int?>? darkTextColorArgb,
     Value<int?>? darkBackgroundColorArgb,
     Value<String?>? backgroundImagePath,
+    Value<double>? backgroundOpacity,
     Value<double>? backgroundImageOpacity,
     Value<double>? backgroundOverlayOpacity,
     Value<bool>? showTopInfoBar,
@@ -6712,6 +7113,7 @@ class ReaderPreferencesRowsCompanion
       darkBackgroundColorArgb:
           darkBackgroundColorArgb ?? this.darkBackgroundColorArgb,
       backgroundImagePath: backgroundImagePath ?? this.backgroundImagePath,
+      backgroundOpacity: backgroundOpacity ?? this.backgroundOpacity,
       backgroundImageOpacity:
           backgroundImageOpacity ?? this.backgroundImageOpacity,
       backgroundOverlayOpacity:
@@ -6826,6 +7228,9 @@ class ReaderPreferencesRowsCompanion
       map['background_image_path'] = Variable<String>(
         backgroundImagePath.value,
       );
+    }
+    if (backgroundOpacity.present) {
+      map['background_opacity'] = Variable<double>(backgroundOpacity.value);
     }
     if (backgroundImageOpacity.present) {
       map['background_image_opacity'] = Variable<double>(
@@ -6964,6 +7369,7 @@ class ReaderPreferencesRowsCompanion
           ..write('darkTextColorArgb: $darkTextColorArgb, ')
           ..write('darkBackgroundColorArgb: $darkBackgroundColorArgb, ')
           ..write('backgroundImagePath: $backgroundImagePath, ')
+          ..write('backgroundOpacity: $backgroundOpacity, ')
           ..write('backgroundImageOpacity: $backgroundImageOpacity, ')
           ..write('backgroundOverlayOpacity: $backgroundOverlayOpacity, ')
           ..write('showTopInfoBar: $showTopInfoBar, ')
@@ -9858,6 +10264,13 @@ typedef $$ContentCollectionsTableCreateCompanionBuilder =
       required String sourceId,
       required String title,
       Value<String?> subtitle,
+      Value<String?> author,
+      Value<String?> description,
+      Value<String> metadataSource,
+      Value<String> titleSource,
+      Value<String> authorSource,
+      Value<String?> coverPath,
+      Value<String> coverSource,
       required int itemCount,
       required int normalizedCharacterLength,
       required DateTime importedAt,
@@ -9870,6 +10283,13 @@ typedef $$ContentCollectionsTableUpdateCompanionBuilder =
       Value<String> sourceId,
       Value<String> title,
       Value<String?> subtitle,
+      Value<String?> author,
+      Value<String?> description,
+      Value<String> metadataSource,
+      Value<String> titleSource,
+      Value<String> authorSource,
+      Value<String?> coverPath,
+      Value<String> coverSource,
       Value<int> itemCount,
       Value<int> normalizedCharacterLength,
       Value<DateTime> importedAt,
@@ -10012,6 +10432,41 @@ class $$ContentCollectionsTableFilterComposer
 
   ColumnFilters<String> get subtitle => $composableBuilder(
     column: $table.subtitle,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get author => $composableBuilder(
+    column: $table.author,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get metadataSource => $composableBuilder(
+    column: $table.metadataSource,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get titleSource => $composableBuilder(
+    column: $table.titleSource,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get authorSource => $composableBuilder(
+    column: $table.authorSource,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get coverPath => $composableBuilder(
+    column: $table.coverPath,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get coverSource => $composableBuilder(
+    column: $table.coverSource,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -10166,6 +10621,41 @@ class $$ContentCollectionsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get author => $composableBuilder(
+    column: $table.author,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get metadataSource => $composableBuilder(
+    column: $table.metadataSource,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get titleSource => $composableBuilder(
+    column: $table.titleSource,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get authorSource => $composableBuilder(
+    column: $table.authorSource,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get coverPath => $composableBuilder(
+    column: $table.coverPath,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get coverSource => $composableBuilder(
+    column: $table.coverSource,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get itemCount => $composableBuilder(
     column: $table.itemCount,
     builder: (column) => ColumnOrderings(column),
@@ -10207,6 +10697,37 @@ class $$ContentCollectionsTableAnnotationComposer
 
   GeneratedColumn<String> get subtitle =>
       $composableBuilder(column: $table.subtitle, builder: (column) => column);
+
+  GeneratedColumn<String> get author =>
+      $composableBuilder(column: $table.author, builder: (column) => column);
+
+  GeneratedColumn<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get metadataSource => $composableBuilder(
+    column: $table.metadataSource,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get titleSource => $composableBuilder(
+    column: $table.titleSource,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get authorSource => $composableBuilder(
+    column: $table.authorSource,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get coverPath =>
+      $composableBuilder(column: $table.coverPath, builder: (column) => column);
+
+  GeneratedColumn<String> get coverSource => $composableBuilder(
+    column: $table.coverSource,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<int> get itemCount =>
       $composableBuilder(column: $table.itemCount, builder: (column) => column);
@@ -10368,6 +10889,13 @@ class $$ContentCollectionsTableTableManager
                 Value<String> sourceId = const Value.absent(),
                 Value<String> title = const Value.absent(),
                 Value<String?> subtitle = const Value.absent(),
+                Value<String?> author = const Value.absent(),
+                Value<String?> description = const Value.absent(),
+                Value<String> metadataSource = const Value.absent(),
+                Value<String> titleSource = const Value.absent(),
+                Value<String> authorSource = const Value.absent(),
+                Value<String?> coverPath = const Value.absent(),
+                Value<String> coverSource = const Value.absent(),
                 Value<int> itemCount = const Value.absent(),
                 Value<int> normalizedCharacterLength = const Value.absent(),
                 Value<DateTime> importedAt = const Value.absent(),
@@ -10378,6 +10906,13 @@ class $$ContentCollectionsTableTableManager
                 sourceId: sourceId,
                 title: title,
                 subtitle: subtitle,
+                author: author,
+                description: description,
+                metadataSource: metadataSource,
+                titleSource: titleSource,
+                authorSource: authorSource,
+                coverPath: coverPath,
+                coverSource: coverSource,
                 itemCount: itemCount,
                 normalizedCharacterLength: normalizedCharacterLength,
                 importedAt: importedAt,
@@ -10390,6 +10925,13 @@ class $$ContentCollectionsTableTableManager
                 required String sourceId,
                 required String title,
                 Value<String?> subtitle = const Value.absent(),
+                Value<String?> author = const Value.absent(),
+                Value<String?> description = const Value.absent(),
+                Value<String> metadataSource = const Value.absent(),
+                Value<String> titleSource = const Value.absent(),
+                Value<String> authorSource = const Value.absent(),
+                Value<String?> coverPath = const Value.absent(),
+                Value<String> coverSource = const Value.absent(),
                 required int itemCount,
                 required int normalizedCharacterLength,
                 required DateTime importedAt,
@@ -10400,6 +10942,13 @@ class $$ContentCollectionsTableTableManager
                 sourceId: sourceId,
                 title: title,
                 subtitle: subtitle,
+                author: author,
+                description: description,
+                metadataSource: metadataSource,
+                titleSource: titleSource,
+                authorSource: authorSource,
+                coverPath: coverPath,
+                coverSource: coverSource,
                 itemCount: itemCount,
                 normalizedCharacterLength: normalizedCharacterLength,
                 importedAt: importedAt,
@@ -12191,6 +12740,7 @@ typedef $$ReaderPreferencesRowsTableCreateCompanionBuilder =
       Value<int?> darkTextColorArgb,
       Value<int?> darkBackgroundColorArgb,
       Value<String?> backgroundImagePath,
+      Value<double> backgroundOpacity,
       Value<double> backgroundImageOpacity,
       Value<double> backgroundOverlayOpacity,
       Value<bool> showTopInfoBar,
@@ -12245,6 +12795,7 @@ typedef $$ReaderPreferencesRowsTableUpdateCompanionBuilder =
       Value<int?> darkTextColorArgb,
       Value<int?> darkBackgroundColorArgb,
       Value<String?> backgroundImagePath,
+      Value<double> backgroundOpacity,
       Value<double> backgroundImageOpacity,
       Value<double> backgroundOverlayOpacity,
       Value<bool> showTopInfoBar,
@@ -12419,6 +12970,11 @@ class $$ReaderPreferencesRowsTableFilterComposer
 
   ColumnFilters<String> get backgroundImagePath => $composableBuilder(
     column: $table.backgroundImagePath,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get backgroundOpacity => $composableBuilder(
+    column: $table.backgroundOpacity,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -12700,6 +13256,11 @@ class $$ReaderPreferencesRowsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<double> get backgroundOpacity => $composableBuilder(
+    column: $table.backgroundOpacity,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<double> get backgroundImageOpacity => $composableBuilder(
     column: $table.backgroundImageOpacity,
     builder: (column) => ColumnOrderings(column),
@@ -12970,6 +13531,11 @@ class $$ReaderPreferencesRowsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<double> get backgroundOpacity => $composableBuilder(
+    column: $table.backgroundOpacity,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<double> get backgroundImageOpacity => $composableBuilder(
     column: $table.backgroundImageOpacity,
     builder: (column) => column,
@@ -13198,6 +13764,7 @@ class $$ReaderPreferencesRowsTableTableManager
                 Value<int?> darkTextColorArgb = const Value.absent(),
                 Value<int?> darkBackgroundColorArgb = const Value.absent(),
                 Value<String?> backgroundImagePath = const Value.absent(),
+                Value<double> backgroundOpacity = const Value.absent(),
                 Value<double> backgroundImageOpacity = const Value.absent(),
                 Value<double> backgroundOverlayOpacity = const Value.absent(),
                 Value<bool> showTopInfoBar = const Value.absent(),
@@ -13250,6 +13817,7 @@ class $$ReaderPreferencesRowsTableTableManager
                 darkTextColorArgb: darkTextColorArgb,
                 darkBackgroundColorArgb: darkBackgroundColorArgb,
                 backgroundImagePath: backgroundImagePath,
+                backgroundOpacity: backgroundOpacity,
                 backgroundImageOpacity: backgroundImageOpacity,
                 backgroundOverlayOpacity: backgroundOverlayOpacity,
                 showTopInfoBar: showTopInfoBar,
@@ -13304,6 +13872,7 @@ class $$ReaderPreferencesRowsTableTableManager
                 Value<int?> darkTextColorArgb = const Value.absent(),
                 Value<int?> darkBackgroundColorArgb = const Value.absent(),
                 Value<String?> backgroundImagePath = const Value.absent(),
+                Value<double> backgroundOpacity = const Value.absent(),
                 Value<double> backgroundImageOpacity = const Value.absent(),
                 Value<double> backgroundOverlayOpacity = const Value.absent(),
                 Value<bool> showTopInfoBar = const Value.absent(),
@@ -13356,6 +13925,7 @@ class $$ReaderPreferencesRowsTableTableManager
                 darkTextColorArgb: darkTextColorArgb,
                 darkBackgroundColorArgb: darkBackgroundColorArgb,
                 backgroundImagePath: backgroundImagePath,
+                backgroundOpacity: backgroundOpacity,
                 backgroundImageOpacity: backgroundImageOpacity,
                 backgroundOverlayOpacity: backgroundOverlayOpacity,
                 showTopInfoBar: showTopInfoBar,

@@ -7,6 +7,104 @@ import 'package:xaocen_reader/data/data_root.dart';
 import 'package:xaocen_reader/data/data_root_backup.dart';
 
 void main() {
+  test('standard root uses a stable product key and default profile', () async {
+    final support = await Directory.systemTemp.createTemp(
+      'xaocen-data-root-stable-',
+    );
+    addTearDown(() => support.delete(recursive: true));
+
+    final root = await DataRoot.standard(supportDirectory: support);
+
+    expect(root.mode, DataRootMode.standard);
+    expect(root.profileId, DataRoot.defaultProfileId);
+    expect(
+      root.rootDirectory.path,
+      p.join(
+        support.path,
+        DataRoot.stableCompanyDirectory,
+        DataRoot.stableProductDirectory,
+        DataRoot.profilesDirectoryName,
+        DataRoot.defaultProfileId,
+      ),
+    );
+  });
+
+  test(
+    'portable root is separate from Flutter runtime data directory',
+    () async {
+      final executable = await Directory.systemTemp.createTemp(
+        'xaocen-portable-executable-',
+      );
+      addTearDown(() => executable.delete(recursive: true));
+
+      final root = await DataRoot.portable(executableDirectory: executable);
+
+      expect(root.mode, DataRootMode.portable);
+      expect(
+        root.rootDirectory.path,
+        p.join(
+          executable.path,
+          DataRoot.portableUserDataDirectoryName,
+          DataRoot.profilesDirectoryName,
+          DataRoot.defaultProfileId,
+        ),
+      );
+      expect(root.rootDirectory.path, isNot(p.join(executable.path, 'data')));
+    },
+  );
+
+  test('portable mode requires an explicit argument or marker', () async {
+    final executable = await Directory.systemTemp.createTemp(
+      'xaocen-portable-resolver-',
+    );
+    final support = await Directory.systemTemp.createTemp(
+      'xaocen-standard-resolver-',
+    );
+    addTearDown(() async {
+      await executable.delete(recursive: true);
+      await support.delete(recursive: true);
+    });
+
+    final portable = await DataRoot.resolve(
+      arguments: const [DataRoot.portableArgument],
+      executableDirectory: executable,
+    );
+    expect(portable.mode, DataRootMode.portable);
+
+    final marker = File(
+      p.join(executable.path, DataRoot.portableMarkerFileName),
+    );
+    await marker.writeAsString('portable');
+    final marked = await DataRoot.resolve(executableDirectory: executable);
+    expect(marked.mode, DataRootMode.portable);
+
+    final standard = await DataRoot.standard(supportDirectory: support);
+    expect(standard.mode, DataRootMode.standard);
+  });
+
+  test('active profile selection is persisted for the next startup', () async {
+    final executable = await Directory.systemTemp.createTemp(
+      'xaocen-active-profile-',
+    );
+    addTearDown(() => executable.delete(recursive: true));
+
+    await DataRoot.setActiveProfile(
+      profileId: 'reader_2',
+      mode: DataRootMode.portable,
+      executableDirectory: executable,
+    );
+    final resolved = await DataRoot.resolve(
+      arguments: const [DataRoot.portableArgument],
+      executableDirectory: executable,
+    );
+    expect(resolved.profileId, 'reader_2');
+
+    final defaultProfile = await DataRoot.portable(
+      executableDirectory: executable,
+    );
+    expect(await defaultProfile.listProfileIds(), ['default', 'reader_2']);
+  });
+
   test(
     'standard root migrates legacy database and library without absolute paths',
     () async {
@@ -111,6 +209,7 @@ void main() {
         destination: bundleDir,
       );
       expect(manifest.files, isNotEmpty);
+      expect(manifest.sourceProfileId, source.profileId);
       expect(await service.verifyBundle(bundle: bundleDir), isNotNull);
 
       final targetFile = File(
@@ -123,7 +222,7 @@ void main() {
       );
       await targetFile.create(recursive: true);
       await targetFile.writeAsString('changed');
-      await service.restoreBundle(root: target, bundle: bundleDir);
+      await service.importProfile(target: target, bundle: bundleDir);
       final restored = File(
         p.join(targetDir.path, 'books', 'local_txt', 'book', 'normalized.txt'),
       );

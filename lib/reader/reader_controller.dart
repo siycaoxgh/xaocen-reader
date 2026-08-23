@@ -128,6 +128,9 @@ class ReaderController extends ChangeNotifier {
     _blockIndex = ReaderBlockIndex.build(
       text: doc.text,
       targetBlockSize: targetBlockSize,
+      visualBreakOffsets:
+          doc.rendering?.images.map((image) => image.characterOffset) ??
+          const <int>[],
     );
     _state = ReaderState.ready;
     notifyListeners();
@@ -149,6 +152,11 @@ class ReaderController extends ChangeNotifier {
       _blockIndex = ReaderBlockIndex.build(
         text: _document!.text,
         targetBlockSize: targetBlockSize,
+        visualBreakOffsets:
+            _document!.rendering?.images.map(
+              (image) => image.characterOffset,
+            ) ??
+            const <int>[],
       );
       notifyListeners();
 

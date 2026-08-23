@@ -56,6 +56,7 @@ final class ReaderPreferences {
     required this.darkTextColorArgb,
     required this.darkBackgroundColorArgb,
     required this.backgroundImagePath,
+    required this.backgroundOpacity,
     required this.backgroundImageOpacity,
     required this.backgroundOverlayOpacity,
     required this.showTopInfoBar,
@@ -126,6 +127,7 @@ final class ReaderPreferences {
   static const ReaderPaletteId defaultPaletteId = ReaderPaletteId.paperWhite;
   static const double defaultBackgroundImageOpacity = 1;
   static const double defaultBackgroundOverlayOpacity = 0.45;
+  static const double defaultBackgroundOpacity = 1;
   static const double minAppearanceOpacity = 0;
   static const double maxAppearanceOpacity = 1;
 
@@ -181,6 +183,7 @@ final class ReaderPreferences {
     darkTextColorArgb: null,
     darkBackgroundColorArgb: null,
     backgroundImagePath: null,
+    backgroundOpacity: defaultBackgroundOpacity,
     backgroundImageOpacity: defaultBackgroundImageOpacity,
     backgroundOverlayOpacity: defaultBackgroundOverlayOpacity,
     showTopInfoBar: defaultShowTopInfoBar,
@@ -231,6 +234,7 @@ final class ReaderPreferences {
     int? darkTextColorArgb,
     int? darkBackgroundColorArgb,
     String? backgroundImagePath,
+    double backgroundOpacity = defaultBackgroundOpacity,
     double backgroundImageOpacity = defaultBackgroundImageOpacity,
     double backgroundOverlayOpacity = defaultBackgroundOverlayOpacity,
     bool showTopInfoBar = defaultShowTopInfoBar,
@@ -329,6 +333,12 @@ final class ReaderPreferences {
       darkBackgroundColorArgb ?? backgroundColorArgb,
     ),
     backgroundImagePath: _validManagedPath(backgroundImagePath),
+    backgroundOpacity: _valid(
+      backgroundOpacity,
+      minAppearanceOpacity,
+      maxAppearanceOpacity,
+      defaultBackgroundOpacity,
+    ),
     backgroundImageOpacity: _valid(
       backgroundImageOpacity,
       minAppearanceOpacity,
@@ -395,6 +405,7 @@ final class ReaderPreferences {
   final int? darkTextColorArgb;
   final int? darkBackgroundColorArgb;
   final String? backgroundImagePath;
+  final double backgroundOpacity;
   final double backgroundImageOpacity;
   final double backgroundOverlayOpacity;
   final bool showTopInfoBar;
@@ -471,6 +482,7 @@ final class ReaderPreferences {
     Object? darkTextColorArgb = _unset,
     Object? darkBackgroundColorArgb = _unset,
     Object? backgroundImagePath = _unset,
+    double? backgroundOpacity,
     double? backgroundImageOpacity,
     double? backgroundOverlayOpacity,
     bool? showTopInfoBar,
@@ -574,6 +586,7 @@ final class ReaderPreferences {
       backgroundImagePath: identical(backgroundImagePath, _unset)
           ? this.backgroundImagePath
           : backgroundImagePath as String?,
+      backgroundOpacity: backgroundOpacity ?? this.backgroundOpacity,
       backgroundImageOpacity:
           backgroundImageOpacity ?? this.backgroundImageOpacity,
       backgroundOverlayOpacity:
@@ -638,6 +651,7 @@ final class ReaderPreferences {
         darkTextColorArgb != previous.darkTextColorArgb ||
         darkBackgroundColorArgb != previous.darkBackgroundColorArgb ||
         backgroundImagePath != previous.backgroundImagePath ||
+        backgroundOpacity != previous.backgroundOpacity ||
         backgroundImageOpacity != previous.backgroundImageOpacity ||
         backgroundOverlayOpacity != previous.backgroundOverlayOpacity) {
       result.add(ReaderPreferenceChangeKind.paint);
@@ -721,6 +735,7 @@ final class ReaderPreferences {
       darkTextColorArgb == other.darkTextColorArgb &&
       darkBackgroundColorArgb == other.darkBackgroundColorArgb &&
       backgroundImagePath == other.backgroundImagePath &&
+      backgroundOpacity == other.backgroundOpacity &&
       backgroundImageOpacity == other.backgroundImageOpacity &&
       backgroundOverlayOpacity == other.backgroundOverlayOpacity &&
       showTopInfoBar == other.showTopInfoBar &&
@@ -769,6 +784,7 @@ final class ReaderPreferences {
     darkTextColorArgb,
     darkBackgroundColorArgb,
     backgroundImagePath,
+    backgroundOpacity,
     backgroundImageOpacity,
     backgroundOverlayOpacity,
     showTopInfoBar,

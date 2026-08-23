@@ -156,6 +156,7 @@ class _ReadingHistoryPageState extends ConsumerState<ReadingHistoryPage> {
         autoReadPreferencesRepository: ref.read(
           autoReadPreferencesRepositoryProvider,
         ),
+        ttsPreferencesRepository: ref.read(ttsPreferencesRepositoryProvider),
       ),
     );
     _refresh();

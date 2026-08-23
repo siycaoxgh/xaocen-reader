@@ -11,11 +11,12 @@ import 'providers.dart';
 ///
 /// M2：数据库在 support 目录；library 根在
 /// `<support>/library`（见 [LibraryFileManager] 布局）。
-Future<void> bootstrap() async {
+Future<void> bootstrap({List<String> arguments = const <String>[]}) async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 数据库（正式文件库）
-  final dataRoot = await DataRoot.standard();
+  // The executable directory is only used when portable mode is explicitly
+  // requested. Standard mode stays in the stable per-user data root.
+  final dataRoot = await DataRoot.resolve(arguments: arguments);
   final db = await AppDatabase.open(dataRoot: dataRoot);
   // 文件管理（library 根）
   final fileManager = LibraryFileManager(libraryRoot: dataRoot.booksDirectory);

@@ -66,6 +66,9 @@ class Win32Window {
   // Windows shell visibility and tray operations. These are native shell
   // concerns; Reader state remains in Flutter.
   bool SetShellVisibility(bool show_taskbar, bool show_tray);
+  // Updates native tray labels from the app locale without changing command
+  // IDs or menu callbacks.
+  void SetTrayLocale(const std::string& locale_tag);
   // Registers the persisted keyboard Boss Key with the Windows shell. This
   // remains process-owned and is cleared when the gesture changes.
   bool SetGlobalBossKey(UINT modifiers, UINT virtual_key);
@@ -82,6 +85,15 @@ class Win32Window {
   bool QuitApplication();
   bool IsTrayEnabled() const { return tray_enabled_; }
   bool IsQuitRequested() const { return quit_requested_; }
+  // Runtime signal for the validated patched Engine alpha-surface path.
+  // Standard Engine windows deliberately report false.
+  bool IsAlphaSurfaceRequested() const { return alpha_surface_requested_; }
+  // The staged bundle selection is known by the runner before the HWND is
+  // created. Keep that signal in the native window owner instead of trying to
+  // smuggle it through Dart entrypoint arguments.
+  void SetAlphaSurfaceRequested(bool requested) {
+    alpha_surface_requested_ = requested;
+  }
 
   // Return a RECT representing the bounds of the current client area.
   RECT GetClientArea();
@@ -126,6 +138,7 @@ class Win32Window {
   bool taskbar_enabled_ = true;
   bool tray_enabled_ = false;
   bool tray_icon_added_ = false;
+  bool tray_locale_chinese_ = true;
   bool window_border_visible_ = true;
   bool boss_hotkey_registered_ = false;
   bool mouse_boss_enabled_ = false;
@@ -133,6 +146,7 @@ class Win32Window {
   bool mouse_boss_right_down_ = false;
   bool mouse_boss_latched_ = false;
   bool boss_capture_active_ = false;
+  bool alpha_surface_requested_ = false;
   ULONGLONG mouse_boss_left_down_at_ = 0;
   ULONGLONG mouse_boss_right_down_at_ = 0;
 

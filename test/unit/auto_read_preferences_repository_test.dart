@@ -1,4 +1,4 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:drift/native.dart';
@@ -21,7 +21,7 @@ void main() {
   tearDown(() => db.close());
 
   test('defaults and derived velocity mapping are typed', () async {
-    expect(db.schemaVersion, 18);
+    expect(db.schemaVersion, 21);
     final preferences = await repository.load();
     expect(preferences.verticalSpeedPreset, VerticalSpeedPreset.standard);
     expect(preferences.pagedIntervalSeconds, 5);
@@ -208,7 +208,7 @@ void main() {
         )).commandFor(PhysicalInputId.keyboardArrowLeft),
         ReaderCommand.previousPage,
       );
-      expect(secondDb.schemaVersion, 18);
+      expect(secondDb.schemaVersion, 21);
       await secondDb.close();
       await directory.delete(recursive: true);
     },

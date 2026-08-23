@@ -31,6 +31,7 @@ migrate_working_dir/
 .pub-cache/
 .pub/
 /build/
+/artifacts/
 /coverage/
 /android/build/
 .m1cache/
@@ -46,3 +47,54 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Local user data and privacy-sensitive runtime material
+*.db
+*.sqlite
+*.sqlite3
+*.sqlite-shm
+*.sqlite-wal
+*.bak
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+key.properties
+user_data/
+**/user_data/
+
+# Historical checkouts, local captures, and generated diagnostics
+/archive/
+/test_output/
+/artifacts/
+**/test_output/
+**/artifacts/
+*.log
+*.xml
+!android/**/*.xml
+!windows/**/*.xml
+
+# Build products and native experiment output
+**/build/
+**/.dart_tool/
+**/.idea/
+*.apk
+*.aab
+*.exe
+*.dll
+*.pdb
+*.so
+*.dylib
+*.dSYM/
+windows_engine_patches/**/fixture_evidence/
+windows_engine_patches/**/dcomp_interop_spike/*.exe
+windows_engine_patches/**/dcomp_interop_spike/*.png
+windows_engine_patches/**/dcomp_interop_spike/*.log
+
+# Raw legacy source exports may contain URLs, scripts, headers, or secrets.
+docs/M5_9D_*_LEGACY_*.json
+docs/M5_9D_12_1_LEGACY_SOURCE_PACK.json
+
+# Vendored plugin examples are upstream demo applications, not XAOCEN runtime code.
+third_party/flutter_tts/example/

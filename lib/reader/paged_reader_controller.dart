@@ -29,6 +29,7 @@ import '../data/repositories/reading_progress_repository.dart';
 import '../domain/reader/paged_text_range.dart';
 import '../domain/reader/reader_block.dart';
 import '../domain/reader/reader_locator.dart';
+import '../domain/reader/reader_rendering.dart';
 import 'normalized_document_loader.dart';
 import 'paged_layout_engine.dart';
 import 'page_window.dart';
@@ -64,6 +65,7 @@ class PagedReaderController extends ChangeNotifier {
     this.paragraphSpacing = 0,
     this.firstLineIndent = 0,
     this.textAlign = TextAlign.left,
+    this.styleRuns = const <ReaderInlineStyleRun>[],
     this.chapterStartOffsets = const <int>[],
     this.previousWindowPages = 2,
     this.nextWindowPages = 3,
@@ -102,6 +104,7 @@ class PagedReaderController extends ChangeNotifier {
   late double paragraphSpacing;
   late double firstLineIndent;
   late TextAlign textAlign;
+  final List<ReaderInlineStyleRun> styleRuns;
   final List<int> chapterStartOffsets;
   final int previousWindowPages;
   final int nextWindowPages;
@@ -535,6 +538,7 @@ class PagedReaderController extends ChangeNotifier {
       firstLineIndent: firstLineIndent,
       textAlign: textAlign,
       chapterStartOffsets: chapterStartOffsets,
+      styleRuns: styleRuns,
     );
   }
 

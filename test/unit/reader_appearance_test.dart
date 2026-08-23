@@ -3,9 +3,48 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:xaocen_reader/design/theme/app_theme.dart';
 import 'package:xaocen_reader/reader/reader_appearance.dart';
 import 'package:xaocen_reader/reader/reader_chrome.dart';
+import 'package:xaocen_reader/domain/reader/reader_preferences.dart';
 
 /// P1：ReaderResolvedAppearance 解析 + 对比度验收（≥4.5:1）。
 void main() {
+  testWidgets('Windows true transparency applies background alpha only', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.dark(),
+        home: const Scaffold(body: SizedBox()),
+      ),
+    );
+    final appearance = resolveReaderAppearance(
+      tester.element(find.byType(Scaffold)),
+      theme: AppTheme.dark(),
+      preferences: ReaderPreferences.defaults.copyWith(backgroundOpacity: 0),
+      supportsWindowsTrueTransparency: true,
+    );
+    expect(appearance.backgroundOpacity, 0);
+    expect(appearance.backgroundColor.a, 0);
+    expect(appearance.textColor.a, 1);
+  });
+
+  testWidgets('unsupported engine keeps persisted opacity opaque', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: const Scaffold(body: SizedBox()),
+      ),
+    );
+    final appearance = resolveReaderAppearance(
+      tester.element(find.byType(Scaffold)),
+      preferences: ReaderPreferences.defaults.copyWith(backgroundOpacity: 0),
+      supportsWindowsTrueTransparency: false,
+    );
+    expect(appearance.backgroundOpacity, 1);
+    expect(appearance.backgroundColor.a, 1);
+  });
+
   test('color picker parser accepts HEX and RGB and rejects invalid input', () {
     expect(ReaderSettingsSheetStateColorParser.parse('#123456'), 0xff123456);
     expect(

@@ -2,16 +2,49 @@ import 'package:flutter/services.dart';
 
 import 'reader_input.dart';
 
-/// Capability facade for shortcut capture and help UI.
+/// The single capability registry for Windows keyboard shortcut capture.
 ///
-/// The physical-to-domain mapping remains in [physicalInputIdForPhysicalKey],
-/// which is also used by Reader runtime dispatch. This facade deliberately
-/// does not maintain a second key truth table.
+/// `physicalInputIdForPhysicalKey` describes the platform event mapping. This
+/// registry is the narrower product contract: a key is listed here only when
+/// it has been verified through capture, persistence, and runtime dispatch.
+/// Mouse gestures are intentionally not part of this keyboard registry.
 final class SupportedShortcutKeyRegistry {
   SupportedShortcutKeyRegistry._();
 
-  static PhysicalInputId? inputFor(PhysicalKeyboardKey key) =>
-      physicalInputIdForPhysicalKey(key);
+  static const _unsupportedMessage = '该按键暂不支持作为 XAOCEN 快捷键';
+
+  /// Stable, verified keyboard capability set.
+  ///
+  /// Common OEM punctuation is deliberately excluded until it has a complete
+  /// capture → save → runtime proof on Windows. It remains representable in
+  /// the domain for backwards compatibility, but cannot be newly captured.
+  static const _verifiedKeyboardInputs = <PhysicalInputId>[
+    ...PhysicalInputId.keyboardLetters,
+    ...PhysicalInputId.keyboardDigits,
+    ...PhysicalInputId.keyboardFunctionKeys,
+    PhysicalInputId.keyboardArrowLeft,
+    PhysicalInputId.keyboardArrowRight,
+    PhysicalInputId.keyboardArrowUp,
+    PhysicalInputId.keyboardArrowDown,
+    PhysicalInputId.keyboardPageUp,
+    PhysicalInputId.keyboardPageDown,
+    PhysicalInputId.keyboardHome,
+    PhysicalInputId.keyboardEnd,
+    PhysicalInputId.keyboardSpace,
+    PhysicalInputId.keyboardEnter,
+    ...PhysicalInputId.keyboardNumpadDigits,
+    PhysicalInputId.keyboardNumpadAdd,
+    PhysicalInputId.keyboardNumpadSubtract,
+    PhysicalInputId.keyboardNumpadMultiply,
+    PhysicalInputId.keyboardNumpadDivide,
+  ];
+
+  static PhysicalInputId? inputFor(PhysicalKeyboardKey key) {
+    final input = physicalInputIdForPhysicalKey(key);
+    return input != null && _verifiedKeyboardInputs.contains(input)
+        ? input
+        : null;
+  }
 
   static ReaderInputGesture? gestureForEvent(
     KeyEvent event, {
@@ -27,10 +60,10 @@ final class SupportedShortcutKeyRegistry {
 
   static bool supports(PhysicalKeyboardKey key) => inputFor(key) != null;
 
-  static List<PhysicalInputId> get keyboardInputs => PhysicalInputId
-      .windowsInputs
-      .where((input) => input.value.startsWith('keyboard.'))
-      .toList(growable: false);
+  static String get unsupportedMessage => _unsupportedMessage;
+
+  static List<PhysicalInputId> get keyboardInputs =>
+      _verifiedKeyboardInputs.toList(growable: false);
 
   static Map<String, List<PhysicalInputId>> get categories => {
     '字母 A-Z': PhysicalInputId.keyboardLetters,
@@ -55,23 +88,9 @@ final class SupportedShortcutKeyRegistry {
       PhysicalInputId.keyboardNumpadMultiply,
       PhysicalInputId.keyboardNumpadDivide,
     ],
-    '常用符号键': PhysicalInputId.windowsInputs
-        .where(
-          (input) =>
-              input.value == 'keyboard.minus' ||
-              input.value == 'keyboard.equal' ||
-              input.value == 'keyboard.bracketLeft' ||
-              input.value == 'keyboard.bracketRight' ||
-              input.value == 'keyboard.backslash' ||
-              input.value == 'keyboard.semicolon' ||
-              input.value == 'keyboard.quote' ||
-              input.value == 'keyboard.comma' ||
-              input.value == 'keyboard.period' ||
-              input.value == 'keyboard.slash' ||
-              input.value == 'keyboard.backquote',
-        )
-        .toList(growable: false),
   };
+
+  static const unsupportedCategories = <String>['常用符号键（当前暂不支持）'];
 
   static const modifierDescription = 'Ctrl / Alt / Shift 组合';
   static const mouseGestureDescription = '左右键同时按下显示/隐藏窗口';

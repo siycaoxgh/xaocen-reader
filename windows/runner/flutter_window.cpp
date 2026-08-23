@@ -1,5 +1,6 @@
 #include "flutter_window.h"
 
+#include <algorithm>
 #include <optional>
 #include <map>
 #include <string>
@@ -22,8 +23,13 @@ flutter::EncodableMap DesktopColorSampleMap(
             static_cast<unsigned>(GetGValue(color)),
             static_cast<unsigned>(GetBValue(color)));
   return flutter::EncodableMap{
-      {flutter::EncodableValue("x"), flutter::EncodableValue(sample.point.x)},
-      {flutter::EncodableValue("y"), flutter::EncodableValue(sample.point.y)},
+      // POINT::x/y are Win32 LONG values.  EncodableValue deliberately only
+      // accepts the codec's exact int32_t/int64_t alternatives, so make the
+      // wire type explicit instead of relying on an ambiguous LONG conversion.
+      {flutter::EncodableValue("x"),
+       flutter::EncodableValue(static_cast<int32_t>(sample.point.x))},
+      {flutter::EncodableValue("y"),
+       flutter::EncodableValue(static_cast<int32_t>(sample.point.y))},
       {flutter::EncodableValue("r"),
        flutter::EncodableValue(static_cast<int>(GetRValue(color)))},
       {flutter::EncodableValue("g"),
@@ -117,11 +123,24 @@ std::wstring LocalizedFamilyName(const std::wstring& fallback) {
   if (FAILED(collection->GetFontFamily(family_index, &family))) return fallback;
   ComPtr<IDWriteLocalizedStrings> names;
   if (FAILED(family->GetFamilyNames(&names))) return fallback;
-  const wchar_t* locales[] = {L"zh-CN", L"zh-Hans", L"zh", L"en-US", L"en"};
-  for (const auto locale : locales) {
+  std::vector<std::wstring> locales;
+  wchar_t current_locale[LOCALE_NAME_MAX_LENGTH] = {};
+  if (GetUserDefaultLocaleName(current_locale, ARRAYSIZE(current_locale)) >
+      0) {
+    locales.emplace_back(current_locale);
+  }
+  for (const wchar_t* fallback_locale :
+       {L"zh-CN", L"zh-Hans", L"zh", L"en-US"}) {
+    const std::wstring candidate(fallback_locale);
+    if (std::find(locales.begin(), locales.end(), candidate) == locales.end()) {
+      locales.push_back(candidate);
+    }
+  }
+  for (const auto& locale : locales) {
     UINT32 index = 0;
     BOOL locale_exists = FALSE;
-    if (SUCCEEDED(names->FindLocaleName(locale, &index, &locale_exists)) &&
+    if (SUCCEEDED(names->FindLocaleName(locale.c_str(), &index,
+                                        &locale_exists)) &&
         locale_exists) {
       UINT32 length = 0;
       if (SUCCEEDED(names->GetStringLength(index, &length))) {
@@ -129,6 +148,16 @@ std::wstring LocalizedFamilyName(const std::wstring& fallback) {
         if (SUCCEEDED(names->GetString(index, result.data(), length + 1)) &&
             !result.empty()) return result;
       }
+    }
+  }
+  const UINT32 name_count = names->GetCount();
+  for (UINT32 index = 0; index < name_count; ++index) {
+    UINT32 length = 0;
+    if (FAILED(names->GetStringLength(index, &length))) continue;
+    std::wstring result(length, L'\0');
+    if (SUCCEEDED(names->GetString(index, result.data(), length + 1)) &&
+        !result.empty()) {
+      return result;
     }
   }
   return fallback;
@@ -144,6 +173,23 @@ std::string Utf8FromWide(const std::wstring& value) {
                       static_cast<int>(value.size()), result.data(), size,
                       nullptr, nullptr);
   return result;
+}
+
+// Small, verified Windows CJK fallback used only when DirectWrite exposes no
+// localized value. It never changes the stable font identity or family name.
+std::wstring VerifiedWindowsCjkDisplayName(const std::wstring& family,
+                                           const std::wstring& localized) {
+  if (localized != family) return localized;
+  static const std::map<std::wstring, std::wstring> aliases = {
+      {L"DengXian", L"等线"},
+      {L"Microsoft YaHei", L"微软雅黑"},
+      {L"SimSun", L"宋体"},
+      {L"SimHei", L"黑体"},
+      {L"KaiTi", L"楷体"},
+      {L"FangSong", L"仿宋"},
+  };
+  const auto match = aliases.find(family);
+  return match == aliases.end() ? localized : match->second;
 }
 
 flutter::EncodableList InstalledWindowsFonts() {
@@ -210,8 +256,10 @@ flutter::EncodableList InstalledWindowsFonts() {
     // Registry display names are already localized by Windows when the
     // current locale has a localized family name; keep the family as the
     // stable runtime value and expose the localized value for UI.
+    const auto localized_name = LocalizedFamilyName(name);
     descriptor[flutter::EncodableValue("displayName")] =
-        flutter::EncodableValue(Utf8FromWide(LocalizedFamilyName(name)));
+        flutter::EncodableValue(
+            Utf8FromWide(VerifiedWindowsCjkDisplayName(name, localized_name)));
     result.emplace_back(flutter::EncodableValue(descriptor));
   }
   return result;
@@ -226,6 +274,14 @@ FlutterWindow::~FlutterWindow() {}
 bool FlutterWindow::OnCreate() {
   if (!Win32Window::OnCreate()) {
     return false;
+  }
+
+  // DirectComposition needs a visible top-level HWND before its first frame
+  // is submitted. Standard bundles keep the existing first-frame reveal;
+  // staged patched-alpha bundles opt in to the early reveal to avoid a
+  // startup deadlock while the composition target is initialized.
+  if (IsAlphaSurfaceRequested()) {
+    this->Show();
   }
 
   RECT frame = GetClientArea();
@@ -327,6 +383,20 @@ bool FlutterWindow::OnCreate() {
               SetMouseBossChordEnabled(mouse_boss_enabled);
           result->Success(flutter::EncodableValue(
               visibility_ok && boss_ok && mouse_boss_ok));
+          return;
+        }
+        if (call.method_name() == "getWindowsTrueTransparencyCapability") {
+          // This is a runtime runner signal, not a DLL-name heuristic: the
+          // top-level HWND only reports support when it was created with the
+          // validated alpha-surface switch.
+          result->Success(
+              flutter::EncodableValue(IsAlphaSurfaceRequested()));
+          return;
+        }
+        if (call.method_name() == "setTrayLocale") {
+          const auto* locale = std::get_if<std::string>(call.arguments());
+          SetTrayLocale(locale != nullptr ? *locale : "zh-CN");
+          result->Success();
           return;
         }
         if (call.method_name() == "setWindowBorder") {
@@ -526,7 +596,8 @@ FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
   // The Flutter child view covers the client area. Handle borderless hit
   // testing before forwarding top-level messages so native drag/resize keeps
   // working even when Flutter has focus.
-  if (message == WM_NCHITTEST && !IsWindowBorderVisible()) {
+  if ((message == WM_NCHITTEST || message == WM_NCCALCSIZE) &&
+      !IsWindowBorderVisible()) {
     return Win32Window::MessageHandler(hwnd, message, wparam, lparam);
   }
   // Persist shell geometry before Flutter/plugin close handling can consume

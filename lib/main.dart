@@ -1,5 +1,5 @@
 import 'app/bootstrap.dart';
 
-void main() {
-  bootstrap();
+void main(List<String> arguments) {
+  bootstrap(arguments: arguments);
 }

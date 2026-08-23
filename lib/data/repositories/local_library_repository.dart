@@ -6,7 +6,9 @@ import 'package:drift/drift.dart';
 import 'package:path/path.dart' as p;
 
 import '../../domain/library/library_entities.dart';
+import '../../domain/library/metadata_source_priority.dart';
 import '../../domain/library/library_import_models.dart';
+import '../../domain/library/local_txt_metadata.dart';
 import '../../domain/library/normalized_artifact.dart';
 import '../../domain/local_txt/large_file_policy.dart';
 import '../../domain/local_txt/pipeline_progress.dart';
@@ -19,6 +21,11 @@ import 'library_file_manager.dart';
 import 'managed_collection_health.dart';
 import '../../sources/local_txt/txt_import_request.dart';
 import '../../sources/local_txt/txt_import_service.dart';
+import '../../sources/epub/epub_parser.dart';
+import '../../sources/epub/epub_models.dart';
+import '../../sources/epub/epub_reader_content_adapter.dart';
+import '../../domain/reader/reader_rendering.dart';
+import '../../domain/remote/web_source_contracts.dart';
 
 /// 本地书库仓库 —— UI 唯一数据入口（UI 不直接访问 Drift）。
 ///
@@ -50,6 +57,18 @@ class LocalLibraryRepository {
       'local-txt:$hash:chapter:$offset';
   static String documentIdFor(String hash, int offset) =>
       'local-txt:$hash:document:$offset';
+  static String epubSourceIdFor(String hash) => 'epub-source:$hash';
+  static String epubCollectionIdFor(String hash) => 'epub:$hash';
+  static String epubItemIdFor(String hash, int index) =>
+      'epub:$hash:item:$index';
+  static String epubDocumentIdFor(String hash, int index) =>
+      'epub:$hash:document:$index';
+  static String webBookCollectionIdFor(String sourceId, String bookKey) =>
+      'web-book:$sourceId:$bookKey';
+  static String webBookSourceIdFor(String sourceId, String bookKey) =>
+      'web-book-source:$sourceId:$bookKey';
+  static String webBookStorageKeyFor(String collectionId) =>
+      sha256.convert(utf8.encode(collectionId)).toString();
 
   // ---- 导入 ----
 
@@ -261,6 +280,1288 @@ class LocalLibraryRepository {
     }
   }
 
+  /// 导入 EPUB 到现有 library/content 数据模型。
+  ///
+  /// EPUB 的 spine 文本会被展平到应用管理的 normalized.txt，章节/导航
+  /// 仍保留为 content_items/toc_entries，Reader 因而继续使用同一
+  /// NormalizedDocumentLoader、UTF-16 Locator 与 progress repository。
+  /// 不新增 schema，也不修改外部 EPUB 文件。
+  Future<ImportEpubResult> importEpub(ImportEpubRequest request) async {
+    final file = request.externalFile;
+    if (!await file.exists()) {
+      throw const LibraryException('file_not_found', '文件不存在');
+    }
+    final stat = await file.stat();
+    if (stat.type == FileSystemEntityType.directory || stat.size == 0) {
+      throw const LibraryException('invalid_epub', 'EPUB 文件无效');
+    }
+
+    final bytes = await file.readAsBytes();
+    final contentHash = sha256.convert(bytes).toString();
+    final existing = await findByContentHash(contentHash);
+    if (existing != null) {
+      if (!existing.sourceId.startsWith('epub-source:')) {
+        throw const LibraryException(
+          'duplicate_content_identity',
+          '内容身份与已有书籍冲突',
+        );
+      }
+      if (await _epubManagedFilesHealthy(existing)) {
+        return ImportEpubResult(
+          collection: existing,
+          alreadyImported: true,
+          outcome: ImportOutcome.alreadyImported,
+        );
+      }
+      return ImportEpubResult(
+        collection: existing,
+        alreadyImported: true,
+        outcome: ImportOutcome.corruptedManagedCopy,
+      );
+    }
+
+    final EpubBook book;
+    try {
+      book = const EpubParser().parseBytes(bytes);
+    } on EpubParseException catch (e) {
+      throw LibraryException('invalid_epub', e.message);
+    }
+    final sourceName = file.uri.pathSegments.isEmpty
+        ? '未命名.epub'
+        : file.uri.pathSegments.last;
+    final sourceId = epubSourceIdFor(contentHash);
+    final collectionId = epubCollectionIdFor(contentHash);
+    final content = const EpubReaderContentAdapter().adaptBook(
+      book: book,
+      contentId: collectionId,
+      sourceId: sourceId,
+    );
+    if (content.documents.isEmpty) {
+      throw const LibraryException('invalid_epub', 'EPUB 没有可读正文');
+    }
+
+    final normalizedText = _joinEpubSpine(book);
+    final normalizedBytes = utf8.encode(normalizedText);
+    final normalizedHash = sha256.convert(normalizedBytes).toString();
+    final parsedRendering = const EpubReaderContentAdapter().renderingForBook(
+      book,
+    );
+    final imageAssetsByHref = <String, EpubAsset>{
+      for (final asset in book.assets) asset.href: asset,
+    };
+    final persistedImages = <ReaderImagePlacement>[];
+    String? persistedCoverPath;
+    var persistedCoverSource = CoverSourcePriority.placeholder;
+    final now = DateTime.now();
+    final jobId =
+        'epub-${contentHash.substring(0, 12)}-${now.microsecondsSinceEpoch}';
+    final jobDir = await _files.createImportingJob(jobId);
+    try {
+      await File(
+        p.join(jobDir.path, 'source.epub'),
+      ).writeAsBytes(bytes, flush: true);
+      await File(
+        p.join(jobDir.path, 'normalized.txt'),
+      ).writeAsBytes(normalizedBytes, flush: true);
+      for (var index = 0; index < parsedRendering.images.length; index++) {
+        final image = parsedRendering.images[index];
+        final asset = imageAssetsByHref[image.storagePath];
+        if (asset == null || asset.bytes.isEmpty) continue;
+        final extension = _epubImageExtension(asset.mediaType, asset.href);
+        // Persist storage paths with POSIX separators so a library imported
+        // on Windows remains portable to Android/Linux.  Filesystem access
+        // still uses the host-native join below.
+        final relative = p.posix.join('images', '${index + 1}$extension');
+        final imageFile = File(p.join(jobDir.path, relative));
+        await imageFile.parent.create(recursive: true);
+        await imageFile.writeAsBytes(asset.bytes, flush: true);
+        persistedImages.add(
+          ReaderImagePlacement(
+            characterOffset: image.characterOffset,
+            storagePath: 'library/epub/$contentHash/$relative',
+            altText: image.altText,
+            width: image.width,
+            height: image.height,
+          ),
+        );
+      }
+      final coverHref = book.metadata.coverHref;
+      final coverAsset = coverHref == null
+          ? null
+          : imageAssetsByHref[coverHref];
+      if (coverAsset != null && coverAsset.bytes.isNotEmpty) {
+        final extension = _epubImageExtension(
+          coverAsset.mediaType,
+          coverAsset.href,
+        );
+        final coverRelative = 'cover$extension';
+        final coverFile = File(p.join(jobDir.path, coverRelative));
+        await coverFile.writeAsBytes(coverAsset.bytes, flush: true);
+        persistedCoverPath = 'library/epub/$contentHash/$coverRelative';
+        persistedCoverSource = CoverSourcePriority.autoDetected;
+      }
+      final rendering = ReaderRenderingMetadata(
+        styleRuns: parsedRendering.styleRuns,
+        images: persistedImages,
+      );
+      final manifest = <String, dynamic>{
+        'manifestVersion': 1,
+        'contentHash': contentHash,
+        'sourceHash': contentHash,
+        'normalizedHash': normalizedHash,
+        'normalizedCharacterLength': normalizedText.length,
+        'normalizedUtf8ByteLength': normalizedBytes.length,
+        'normalizationVersion': 'epub-text-v1',
+        'originalFileName': sourceName,
+        'sourceSize': stat.size,
+        'mediaType': 'application/epub+zip',
+        'parserVersion': 'epub-parser-v1',
+        'cover': persistedCoverPath == null
+            ? null
+            : <String, String>{
+                'href': book.metadata.coverHref!,
+                'storagePath': persistedCoverPath,
+                'source': persistedCoverSource,
+              },
+        'rendering': rendering.toJson(),
+        'importedAt': now.toUtc().toIso8601String(),
+      };
+      await File(p.join(jobDir.path, 'manifest.json')).writeAsString(
+        const JsonEncoder.withIndent('  ').convert(manifest),
+        flush: true,
+      );
+
+      final sourcePath = 'library/epub/$contentHash/source.epub';
+      final normalizedPath = 'library/epub/$contentHash/normalized.txt';
+      final metadata = content.metadata;
+      final collection = LibraryCollection(
+        id: collectionId,
+        sourceId: sourceId,
+        title: metadata.title.trim().isEmpty ? sourceName : metadata.title,
+        subtitle: null,
+        itemCount: content.navigation.isNotEmpty
+            ? content.navigation.length
+            : content.documents.length,
+        normalizedCharacterLength: normalizedText.length,
+        detectedEncoding: TextEncoding.utf8,
+        sourceSize: stat.size,
+        importedAt: now,
+        author: metadata.author,
+        description: metadata.description,
+        metadataSource: metadata.titleSource == MetadataSourcePriority.fileName
+            ? MetadataSourcePriority.fileName
+            : MetadataSourcePriority.autoDetected,
+        titleSource: metadata.titleSource,
+        authorSource: metadata.authorSource,
+        fileName: sourceName,
+        sourcePath: sourcePath,
+        coverPath: persistedCoverPath,
+        coverSource: persistedCoverSource,
+      );
+
+      await _db.transaction(() async {
+        await _db
+            .into(_db.contentSources)
+            .insert(
+              ContentSourcesCompanion.insert(
+                id: sourceId,
+                type: 'epub',
+                displayName: sourceName,
+                contentHash: contentHash,
+                managedSourcePath: sourcePath,
+                sourceSize: stat.size,
+                detectedEncoding: TextEncoding.utf8.name,
+                createdAt: now,
+                updatedAt: now,
+              ),
+            );
+        await _db
+            .into(_db.contentCollections)
+            .insert(
+              ContentCollectionsCompanion.insert(
+                id: collectionId,
+                sourceId: sourceId,
+                title: collection.title,
+                author: Value(collection.author),
+                description: Value(collection.description),
+                metadataSource: Value(collection.metadataSource),
+                titleSource: Value(collection.titleSource),
+                authorSource: Value(collection.authorSource),
+                coverPath: Value(collection.coverPath),
+                coverSource: Value(collection.coverSource),
+                itemCount: collection.itemCount,
+                normalizedCharacterLength: collection.normalizedCharacterLength,
+                importedAt: now,
+                updatedAt: now,
+              ),
+            );
+        for (var index = 0; index < content.documents.length; index++) {
+          final document = content.documents[index];
+          final spine = book.spine[index];
+          final itemTitle = spine.title.trim().isEmpty
+              ? '第${index + 1}节'
+              : spine.title;
+          await _db
+              .into(_db.contentItems)
+              .insert(
+                ContentItemsCompanion.insert(
+                  id: document.itemId,
+                  collectionId: collectionId,
+                  kind: 'chapter',
+                  title: itemTitle,
+                  orderIndex: index + 1,
+                  startCharacterOffset: document.startCharacterOffset,
+                  endCharacterOffset: document.endCharacterOffset,
+                  createdAt: now,
+                ),
+              );
+          await _db
+              .into(_db.contentDocuments)
+              .insert(
+                ContentDocumentsCompanion.insert(
+                  id: document.id,
+                  itemId: document.itemId,
+                  storagePath: normalizedPath,
+                  mediaType: document.mediaType,
+                  startCharacterOffset: document.startCharacterOffset,
+                  endCharacterOffset: document.endCharacterOffset,
+                  contentHash: normalizedHash,
+                  normalizationVersion: document.normalizationVersion,
+                ),
+              );
+        }
+        for (final entry in content.navigation) {
+          await _db
+              .into(_db.tocEntries)
+              .insert(
+                TocEntriesCompanion.insert(
+                  id: entry.id,
+                  collectionId: collectionId,
+                  itemId: Value(entry.itemId),
+                  parentId: Value(entry.parentId),
+                  kind: entry.kind,
+                  level: entry.level,
+                  title: entry.title,
+                  orderIndex: entry.orderIndex,
+                  startCharacterOffset: entry.startCharacterOffset,
+                  endCharacterOffset: entry.endCharacterOffset,
+                ),
+              );
+        }
+        await _db
+            .into(_db.importRecords)
+            .insert(
+              ImportRecordsCompanion.insert(
+                id: 'import:$contentHash:${now.microsecondsSinceEpoch}',
+                sourceHash: contentHash,
+                state: 'completed',
+                startedAt: now,
+                completedAt: Value(now),
+              ),
+            );
+      });
+
+      await _files.commitToEpubContentDir(jobId, contentHash);
+      final normalizedFile = _files.resolveStoragePath(normalizedPath);
+      final finalBytes = await normalizedFile.readAsBytes();
+      if (sha256.convert(finalBytes).toString() != normalizedHash) {
+        throw const LibraryException('normalized_verify_failed', 'EPUB 正文校验失败');
+      }
+      return ImportEpubResult(collection: collection, alreadyImported: false);
+    } catch (e) {
+      try {
+        if (await jobDir.exists()) await jobDir.delete(recursive: true);
+      } catch (_) {}
+      try {
+        if (await findByContentHash(contentHash) != null) {
+          await removeCollection(collectionId, deleteManagedFiles: false);
+        }
+      } catch (_) {}
+      if (e is LibraryException) rethrow;
+      throw LibraryException('import_failed', 'EPUB 导入失败: $e');
+    }
+  }
+
+  /// Persists a WebBook snapshot through the existing library tables.
+  ///
+  /// WebBook does not get a second database model: the runtime projection is
+  /// flattened into one UTF-8 normalized document plus the same item/TOC
+  /// ranges used by TXT and EPUB. The source identity includes both the
+  /// registered source and book key, so adding the same book twice is a
+  /// stable no-op while different books from one source remain distinct.
+  Future<ImportWebBookResult> importWebBook(
+    ImportWebBookRequest request,
+  ) async {
+    final source = request.source;
+    final detail = request.detail;
+    final projection = request.projection;
+    final content = projection.content;
+    if (content.documents.isEmpty || content.navigation.isEmpty) {
+      throw const LibraryException('invalid_webbook', '书源没有可读章节');
+    }
+    if (content.identity.sourceId != source.id.value ||
+        content.identity.contentId !=
+            webBookCollectionIdFor(source.id.value, detail.bookKey)) {
+      throw const LibraryException('invalid_webbook', '书源内容身份不一致');
+    }
+
+    final collectionId = content.identity.contentId;
+    final persistedSourceId = webBookSourceIdFor(
+      source.id.value,
+      detail.bookKey,
+    );
+    final existing = await getCollection(collectionId);
+    if (existing != null) {
+      return ImportWebBookResult(collection: existing, alreadyImported: true);
+    }
+
+    final catalogEntries = request.catalogEntries == null
+        ? content.navigation
+              .where((entry) => entry.itemId != null)
+              .map(
+                (entry) => WebBookTocEntry(
+                  chapterKey: _webBookChapterKeyFromItemId(entry.itemId!),
+                  title: entry.title,
+                  orderIndex: entry.orderIndex,
+                  chapterUri: detail.detailUri,
+                ),
+              )
+              .toList(growable: false)
+        : List<WebBookTocEntry>.unmodifiable(request.catalogEntries!);
+    if (catalogEntries.isEmpty) {
+      throw const LibraryException('invalid_webbook', '书源目录为空');
+    }
+    final catalogKeys = <String>{};
+    for (final entry in catalogEntries) {
+      if (!catalogKeys.add(entry.chapterKey)) {
+        throw const LibraryException('invalid_webbook', '书源目录包含重复章节');
+      }
+    }
+    final cachedNavigation = content.navigation
+        .where((entry) => entry.itemId != null)
+        .toList(growable: false);
+    for (final entry in cachedNavigation) {
+      final key = _webBookChapterKeyFromItemId(entry.itemId!);
+      if (!catalogKeys.contains(key)) {
+        throw const LibraryException('invalid_webbook', '缓存章节不属于当前目录');
+      }
+    }
+    final cachedByKey = <String, LibraryTocEntry>{
+      for (final entry in cachedNavigation)
+        _webBookChapterKeyFromItemId(entry.itemId!): entry,
+    };
+
+    final textParts = <String>[];
+    for (final document in content.documents) {
+      final text = projection.documentTextById[document.id];
+      if (text == null) {
+        throw const LibraryException('invalid_webbook', '章节正文缺失');
+      }
+      textParts.add(text);
+    }
+    final normalizedText = textParts.join('\n\n');
+    if (normalizedText.isEmpty ||
+        normalizedText.length != content.normalizedCharacterLength) {
+      throw const LibraryException('invalid_webbook', '章节正文长度不一致');
+    }
+
+    final normalizedBytes = utf8.encode(normalizedText);
+    final normalizedHash = sha256.convert(normalizedBytes).toString();
+    final identityHash = sha256
+        .convert(utf8.encode(persistedSourceId))
+        .toString();
+    final storageKey = webBookStorageKeyFor(collectionId);
+    final normalizedPath = 'library/web_book/$storageKey/normalized.txt';
+    final now = DateTime.now().toUtc();
+    final jobId =
+        'web-book-${storageKey.substring(0, 12)}-${now.microsecondsSinceEpoch}';
+    final jobDir = await _files.createImportingJob(jobId);
+    final title = detail.title.trim().isEmpty ? '未命名书籍' : detail.title.trim();
+    final collection = LibraryCollection(
+      id: collectionId,
+      sourceId: persistedSourceId,
+      title: title,
+      subtitle: null,
+      itemCount: catalogEntries.length,
+      normalizedCharacterLength: normalizedText.length,
+      detectedEncoding: TextEncoding.utf8,
+      sourceSize: normalizedBytes.length,
+      importedAt: now,
+      author: detail.author,
+      description: detail.description,
+      metadataSource: 'autoDetected',
+      titleSource: 'autoDetected',
+      authorSource: detail.author == null ? 'unknown' : 'autoDetected',
+      fileName: title,
+      sourcePath: normalizedPath,
+    );
+    try {
+      await File(
+        p.join(jobDir.path, 'normalized.txt'),
+      ).writeAsBytes(normalizedBytes, flush: true);
+      await File(p.join(jobDir.path, 'manifest.json')).writeAsString(
+        const JsonEncoder.withIndent('  ').convert(<String, Object?>{
+          'manifestVersion': 1,
+          'sourceKind': 'webBook',
+          'sourceId': source.id.value,
+          'bookKey': detail.bookKey,
+          'detailUri': detail.detailUri.toString(),
+          'normalizedHash': normalizedHash,
+          'normalizedCharacterLength': normalizedText.length,
+          'normalizedUtf8ByteLength': normalizedBytes.length,
+          'normalizationVersion': 'web-book-html-v1',
+          'parserVersion': 'web-book-rule-engine-v1',
+          'originalFileName': title,
+          'sourceName': request.sourceName,
+          'sourceEndpoint': source.endpoint.toString(),
+          'cacheMode': catalogEntries.length == cachedByKey.length
+              ? 'fullSnapshot'
+              : 'chapterCache',
+          'cachedChapterKeys': cachedByKey.keys.toList(growable: false),
+          'totalChapterCount': catalogEntries.length,
+          'toc': [
+            for (final entry in catalogEntries)
+              <String, Object?>{
+                'chapterKey': entry.chapterKey,
+                'title': entry.title,
+                'orderIndex': entry.orderIndex,
+                'chapterUri': entry.chapterUri.toString(),
+              },
+          ],
+          'importedAt': now.toIso8601String(),
+        }),
+        flush: true,
+      );
+
+      final tocTitleByItemId = <String, String>{
+        for (final entry in content.navigation)
+          if (entry.itemId != null) entry.itemId!: entry.title,
+      };
+      await _db.transaction(() async {
+        await _db
+            .into(_db.contentSources)
+            .insert(
+              ContentSourcesCompanion.insert(
+                id: persistedSourceId,
+                type: 'webBook',
+                displayName: title,
+                contentHash: identityHash,
+                managedSourcePath: normalizedPath,
+                sourceSize: normalizedBytes.length,
+                detectedEncoding: TextEncoding.utf8.name,
+                createdAt: now,
+                updatedAt: now,
+              ),
+            );
+        await _db
+            .into(_db.contentCollections)
+            .insert(
+              ContentCollectionsCompanion.insert(
+                id: collectionId,
+                sourceId: persistedSourceId,
+                title: title,
+                author: Value(detail.author),
+                description: Value(detail.description),
+                metadataSource: const Value('autoDetected'),
+                titleSource: const Value('autoDetected'),
+                authorSource: Value(
+                  detail.author == null ? 'unknown' : 'autoDetected',
+                ),
+                itemCount: catalogEntries.length,
+                normalizedCharacterLength: normalizedText.length,
+                importedAt: now,
+                updatedAt: now,
+              ),
+            );
+        for (var index = 0; index < content.documents.length; index++) {
+          final document = content.documents[index];
+          await _db
+              .into(_db.contentItems)
+              .insert(
+                ContentItemsCompanion.insert(
+                  id: document.itemId,
+                  collectionId: collectionId,
+                  kind: 'chapter',
+                  title: tocTitleByItemId[document.itemId] ?? '第${index + 1}章',
+                  orderIndex: index,
+                  startCharacterOffset: document.startCharacterOffset,
+                  endCharacterOffset: document.endCharacterOffset,
+                  createdAt: now,
+                ),
+              );
+          await _db
+              .into(_db.contentDocuments)
+              .insert(
+                ContentDocumentsCompanion.insert(
+                  id: document.id,
+                  itemId: document.itemId,
+                  storagePath: normalizedPath,
+                  mediaType: 'text/plain; charset=utf-8',
+                  startCharacterOffset: document.startCharacterOffset,
+                  endCharacterOffset: document.endCharacterOffset,
+                  contentHash: normalizedHash,
+                  normalizationVersion: 'web-book-html-v1',
+                ),
+              );
+        }
+        for (final entry in catalogEntries) {
+          final cached = cachedByKey[entry.chapterKey];
+          await _db
+              .into(_db.tocEntries)
+              .insert(
+                TocEntriesCompanion.insert(
+                  id: '$collectionId:toc:${entry.chapterKey}',
+                  collectionId: collectionId,
+                  itemId: Value(cached?.itemId),
+                  parentId: const Value(null),
+                  kind: 'chapter',
+                  level: 0,
+                  title: entry.title,
+                  orderIndex: entry.orderIndex,
+                  startCharacterOffset: cached?.startCharacterOffset ?? 0,
+                  endCharacterOffset: cached?.endCharacterOffset ?? 0,
+                ),
+              );
+        }
+        await _db
+            .into(_db.importRecords)
+            .insert(
+              ImportRecordsCompanion.insert(
+                id: 'import:$identityHash:${now.microsecondsSinceEpoch}',
+                sourceHash: identityHash,
+                state: 'completed',
+                startedAt: now,
+                completedAt: Value(now),
+              ),
+            );
+      });
+      await _files.commitToWebBookContentDir(jobId, storageKey);
+      final finalFile = _files.resolveStoragePath(normalizedPath);
+      final finalBytes = await finalFile.readAsBytes();
+      if (sha256.convert(finalBytes).toString() != normalizedHash) {
+        throw const LibraryException(
+          'normalized_verify_failed',
+          'WebBook 正文校验失败',
+        );
+      }
+      return ImportWebBookResult(
+        collection: collection,
+        alreadyImported: false,
+      );
+    } catch (error) {
+      try {
+        if (await jobDir.exists()) await jobDir.delete(recursive: true);
+      } catch (_) {}
+      try {
+        if (await getCollection(collectionId) != null) {
+          await removeCollection(collectionId, deleteManagedFiles: false);
+        }
+      } catch (_) {}
+      if (error is LibraryException) rethrow;
+      throw LibraryException('import_webbook_failed', 'WebBook 加入书架失败: $error');
+    }
+  }
+
+  /// Compares a persisted WebBook snapshot with a freshly fetched source TOC.
+  ///
+  /// Existing chapter ranges are deliberately treated as immutable.  The
+  /// current product contract therefore accepts append-only source changes;
+  /// removal or insertion before a persisted chapter returns `failed` rather
+  /// than rewriting the normalized text and invalidating UTF-16 offsets.
+  Future<WebBookUpdatePlan> planWebBookUpdate({
+    required String collectionId,
+    required WebBookTableOfContents toc,
+  }) async {
+    final collection = await getCollection(collectionId);
+    if (collection == null) {
+      throw const LibraryException('not_found', '书库记录不存在');
+    }
+    if (!collection.sourceId.startsWith('web-book-source:')) {
+      throw const LibraryException('not_webbook', '该书不是在线书源书籍');
+    }
+
+    final items = await getItems(collectionId);
+    final persistedKeys = <String>[];
+    final itemPrefix = '$collectionId:item:';
+    for (final item in items) {
+      if (!item.id.startsWith(itemPrefix)) {
+        return WebBookUpdatePlan(
+          collection: collection,
+          status: WebBookUpdateStatus.failed,
+          newEntries: const [],
+          message: '已有章节 identity 无法识别，未执行更新',
+        );
+      }
+      final key = item.id.substring(itemPrefix.length);
+      if (key.isEmpty || persistedKeys.contains(key)) {
+        return WebBookUpdatePlan(
+          collection: collection,
+          status: WebBookUpdateStatus.failed,
+          newEntries: const [],
+          message: '已有章节 identity 重复，未执行更新',
+        );
+      }
+      persistedKeys.add(key);
+    }
+
+    final sourceEntries = toc.entries;
+    final sourceKeys = <String>{};
+    for (final entry in sourceEntries) {
+      if (!sourceKeys.add(entry.chapterKey)) {
+        return WebBookUpdatePlan(
+          collection: collection,
+          status: WebBookUpdateStatus.failed,
+          newEntries: const [],
+          message: '来源目录包含重复章节，未执行更新',
+        );
+      }
+    }
+    var previousIndex = -1;
+    for (final key in persistedKeys) {
+      final index = sourceEntries.indexWhere(
+        (entry) => entry.chapterKey == key,
+      );
+      if (index < 0 || index <= previousIndex) {
+        return WebBookUpdatePlan(
+          collection: collection,
+          status: WebBookUpdateStatus.failed,
+          newEntries: const [],
+          message: '来源目录删除或移动了已有章节，未执行更新',
+        );
+      }
+      previousIndex = index;
+    }
+    final newEntries = sourceEntries
+        .where((entry) => !persistedKeys.contains(entry.chapterKey))
+        .toList(growable: false);
+    if (newEntries.isEmpty) {
+      return WebBookUpdatePlan(
+        collection: collection,
+        status: WebBookUpdateStatus.noChanges,
+        newEntries: const [],
+        message: '当前已是最新章节',
+      );
+    }
+    // New chapters must be after every persisted chapter.  This keeps all
+    // existing offsets stable without silently changing source order.
+    if (newEntries.any(
+      (entry) => sourceEntries.indexOf(entry) <= previousIndex,
+    )) {
+      return WebBookUpdatePlan(
+        collection: collection,
+        status: WebBookUpdateStatus.failed,
+        newEntries: const [],
+        message: '来源新增章节位于已有章节之前，未执行更新',
+      );
+    }
+    return WebBookUpdatePlan(
+      collection: collection,
+      status: WebBookUpdateStatus.updated,
+      newEntries: newEntries,
+      message: '发现 ${newEntries.length} 个新章节',
+    );
+  }
+
+  /// Appends the chapters from a validated [WebBookUpdatePlan].
+  ///
+  /// The file and existing document rows keep their original prefix and
+  /// offsets.  Only the new suffix is written and indexed, so progress,
+  /// bookmarks and ReaderPreferences remain valid without a schema change.
+  Future<WebBookUpdateResult> updateWebBook({
+    required WebBookUpdatePlan plan,
+    required List<WebBookChapter> chapters,
+    required WebBookTableOfContents toc,
+  }) async {
+    if (plan.status == WebBookUpdateStatus.noChanges) {
+      return WebBookUpdateResult(
+        collection: plan.collection,
+        status: WebBookUpdateStatus.noChanges,
+        addedChapterCount: 0,
+        message: plan.message ?? '当前已是最新章节',
+      );
+    }
+    if (plan.status == WebBookUpdateStatus.failed) {
+      return WebBookUpdateResult(
+        collection: plan.collection,
+        status: WebBookUpdateStatus.failed,
+        addedChapterCount: 0,
+        message: plan.message ?? '无法安全更新书籍',
+      );
+    }
+    if (chapters.length != plan.newEntries.length) {
+      throw const LibraryException('invalid_webbook_update', '新章节数量不一致');
+    }
+    final expectedKeys = plan.newEntries.map((entry) => entry.chapterKey);
+    final actualKeys = chapters.map((chapter) => chapter.entry.chapterKey);
+    if (!_sameStrings(expectedKeys, actualKeys)) {
+      throw const LibraryException(
+        'invalid_webbook_update',
+        '新章节顺序或 identity 不一致',
+      );
+    }
+    final collection = plan.collection;
+    final sourcePath = collection.sourcePath;
+    if (sourcePath == null || !sourcePath.endsWith('/normalized.txt')) {
+      throw const LibraryException('source_missing', '找不到在线书籍正文快照');
+    }
+    final normalizedFile = _files.resolveStoragePath(sourcePath);
+    if (!await normalizedFile.exists()) {
+      throw const LibraryException('source_missing', '找不到在线书籍正文快照');
+    }
+    final oldBytes = await normalizedFile.readAsBytes();
+    final oldText = utf8.decode(oldBytes);
+    if (oldText.length != collection.normalizedCharacterLength) {
+      throw const LibraryException('invalid_webbook_update', '现有正文快照长度不一致');
+    }
+
+    final text = StringBuffer(oldText);
+    final newRanges = <({WebBookChapter chapter, int start, int end})>[];
+    for (final chapter in chapters) {
+      final body = chapter.body.canonical.text;
+      if (body.trim().isEmpty) {
+        throw const LibraryException('invalid_webbook_update', '新章节正文为空');
+      }
+      if (text.isNotEmpty) text.write('\n\n');
+      final start = text.length;
+      text.write(body);
+      newRanges.add((chapter: chapter, start: start, end: text.length));
+    }
+    final normalizedText = text.toString();
+    final normalizedBytes = utf8.encode(normalizedText);
+    final normalizedHash = sha256.convert(normalizedBytes).toString();
+    final now = DateTime.now().toUtc();
+    final existingItemIds =
+        (await (_db.select(
+              _db.contentItems,
+            )..where((item) => item.collectionId.equals(collection.id))).get())
+            .map((item) => item.id)
+            .toList(growable: false);
+    try {
+      await normalizedFile.writeAsBytes(normalizedBytes, flush: true);
+      await _db.transaction(() async {
+        await (_db.update(
+          _db.contentDocuments,
+        )..where((document) => document.itemId.isIn(existingItemIds))).write(
+          ContentDocumentsCompanion(contentHash: Value(normalizedHash)),
+        );
+
+        for (var index = 0; index < newRanges.length; index++) {
+          final range = newRanges[index];
+          final entry = range.chapter.entry;
+          final itemId = '${collection.id}:item:${entry.chapterKey}';
+          final documentId =
+              '${collection.id}:document:${collection.itemCount + index}';
+          await _db
+              .into(_db.contentItems)
+              .insert(
+                ContentItemsCompanion.insert(
+                  id: itemId,
+                  collectionId: collection.id,
+                  kind: 'chapter',
+                  title: entry.title,
+                  orderIndex: entry.orderIndex,
+                  startCharacterOffset: range.start,
+                  endCharacterOffset: range.end,
+                  createdAt: now,
+                ),
+              );
+          await _db
+              .into(_db.contentDocuments)
+              .insert(
+                ContentDocumentsCompanion.insert(
+                  id: documentId,
+                  itemId: itemId,
+                  storagePath: sourcePath,
+                  mediaType: 'text/plain; charset=utf-8',
+                  startCharacterOffset: range.start,
+                  endCharacterOffset: range.end,
+                  contentHash: normalizedHash,
+                  normalizationVersion: 'web-book-html-v1',
+                ),
+              );
+          await _db
+              .into(_db.tocEntries)
+              .insert(
+                TocEntriesCompanion.insert(
+                  id: '${collection.id}:toc:${entry.chapterKey}',
+                  collectionId: collection.id,
+                  itemId: Value(itemId),
+                  parentId: const Value(null),
+                  kind: 'chapter',
+                  level: 0,
+                  title: entry.title,
+                  orderIndex: entry.orderIndex,
+                  startCharacterOffset: range.start,
+                  endCharacterOffset: range.end,
+                ),
+              );
+        }
+        await (_db.update(
+          _db.contentCollections,
+        )..where((item) => item.id.equals(collection.id))).write(
+          ContentCollectionsCompanion(
+            itemCount: Value(collection.itemCount + newRanges.length),
+            normalizedCharacterLength: Value(normalizedText.length),
+            updatedAt: Value(now),
+          ),
+        );
+        await (_db.update(
+          _db.contentSources,
+        )..where((source) => source.id.equals(collection.sourceId))).write(
+          ContentSourcesCompanion(
+            sourceSize: Value(normalizedBytes.length),
+            updatedAt: Value(now),
+          ),
+        );
+        await _db
+            .into(_db.importRecords)
+            .insert(
+              ImportRecordsCompanion.insert(
+                id: 'webbook-update:${collection.id}:${now.microsecondsSinceEpoch}',
+                sourceHash: sha256
+                    .convert(utf8.encode(collection.sourceId))
+                    .toString(),
+                state: 'completed',
+                startedAt: now,
+                completedAt: Value(now),
+              ),
+            );
+      });
+      try {
+        await _updateWebBookManifest(
+          normalizedFile: normalizedFile,
+          normalizedHash: normalizedHash,
+          normalizedTextLength: normalizedText.length,
+          normalizedByteLength: normalizedBytes.length,
+          chapterCount: collection.itemCount + newRanges.length,
+          sourceRevision: toc.sourceRevision,
+          updatedAt: now,
+        );
+      } catch (_) {
+        // The normalized file and database are the Reader truth. A manifest
+        // is diagnostic metadata; a write failure must not roll back a valid
+        // append after the transaction has committed.
+      }
+    } catch (error) {
+      try {
+        await normalizedFile.writeAsBytes(oldBytes, flush: true);
+      } catch (_) {}
+      if (error is LibraryException) rethrow;
+      throw LibraryException('webbook_update_failed', '在线书籍更新失败: $error');
+    }
+    final updated = await getCollection(collection.id);
+    if (updated == null) {
+      throw const LibraryException('webbook_update_failed', '更新后书籍记录不存在');
+    }
+    return WebBookUpdateResult(
+      collection: updated,
+      status: WebBookUpdateStatus.updated,
+      addedChapterCount: newRanges.length,
+      message: '已新增 ${newRanges.length} 个章节',
+    );
+  }
+
+  /// Appends a contiguous, source-ordered prefix of chapters fetched on
+  /// demand. Unlike the refresh path, this method never assumes that the
+  /// collection item count equals the number of cached rows (the catalog may
+  /// already contain the full remote chapter count). Existing normalized text
+  /// is kept byte-for-byte as a prefix, so all existing UTF-16 offsets remain
+  /// valid.
+  Future<WebBookUpdateResult> appendWebBookChapterCache({
+    required String collectionId,
+    required List<WebBookChapter> chapters,
+    required WebBookTableOfContents toc,
+  }) async {
+    if (chapters.isEmpty) {
+      final collection = await getCollection(collectionId);
+      if (collection == null) {
+        throw const LibraryException('not_found', '书库记录不存在');
+      }
+      return WebBookUpdateResult(
+        collection: collection,
+        status: WebBookUpdateStatus.noChanges,
+        addedChapterCount: 0,
+        message: '章节已在本地缓存',
+      );
+    }
+    final collection = await getCollection(collectionId);
+    if (collection == null) {
+      throw const LibraryException('not_found', '书库记录不存在');
+    }
+    if (!collection.sourceId.startsWith('web-book-source:')) {
+      throw const LibraryException('not_webbook', '该书不是在线书源书籍');
+    }
+    final sourcePath = collection.sourcePath;
+    if (sourcePath == null || !sourcePath.endsWith('/normalized.txt')) {
+      throw const LibraryException('source_missing', '找不到在线书籍正文快照');
+    }
+    final normalizedFile = _files.resolveStoragePath(sourcePath);
+    if (!await normalizedFile.exists()) {
+      throw const LibraryException('source_missing', '找不到在线书籍正文快照');
+    }
+
+    final persistedItems = await getItems(collectionId);
+    final persistedKeys = <String>[];
+    final itemPrefix = '$collectionId:item:';
+    for (final item in persistedItems) {
+      if (!item.id.startsWith(itemPrefix)) {
+        throw const LibraryException(
+          'invalid_webbook_cache',
+          '已有缓存章节 identity 无法识别',
+        );
+      }
+      persistedKeys.add(item.id.substring(itemPrefix.length));
+    }
+    final sourceEntries = toc.entries;
+    if (persistedKeys.length > sourceEntries.length) {
+      throw const LibraryException('invalid_webbook_cache', '缓存章节数量超过来源目录');
+    }
+    for (var index = 0; index < persistedKeys.length; index++) {
+      if (persistedKeys[index] != sourceEntries[index].chapterKey) {
+        throw const LibraryException(
+          'invalid_webbook_cache',
+          '来源目录顺序发生变化，未改写现有正文快照',
+        );
+      }
+    }
+    final expected = sourceEntries
+        .skip(persistedKeys.length)
+        .take(chapters.length)
+        .toList(growable: false);
+    if (expected.length != chapters.length ||
+        !_sameStrings(
+          expected.map((entry) => entry.chapterKey),
+          chapters.map((chapter) => chapter.entry.chapterKey),
+        )) {
+      throw const LibraryException(
+        'invalid_webbook_cache',
+        '按需章节必须按来源目录顺序连续写入',
+      );
+    }
+
+    final oldBytes = await normalizedFile.readAsBytes();
+    final oldText = utf8.decode(oldBytes);
+    if (oldText.length != collection.normalizedCharacterLength) {
+      throw const LibraryException('invalid_webbook_cache', '现有正文快照长度不一致');
+    }
+    final text = StringBuffer(oldText);
+    final newRanges = <({WebBookChapter chapter, int start, int end})>[];
+    for (final chapter in chapters) {
+      final body = chapter.body.canonical.text.trim();
+      if (body.isEmpty) {
+        throw const LibraryException('invalid_webbook_cache', '章节正文为空，未写入缓存');
+      }
+      if (text.isNotEmpty) text.write('\n\n');
+      final start = text.length;
+      text.write(body);
+      newRanges.add((chapter: chapter, start: start, end: text.length));
+    }
+    final normalizedText = text.toString();
+    final normalizedBytes = utf8.encode(normalizedText);
+    final normalizedHash = sha256.convert(normalizedBytes).toString();
+    final now = DateTime.now().toUtc();
+    final existingItemIds = persistedItems
+        .map((item) => item.id)
+        .toList(growable: false);
+    try {
+      await normalizedFile.writeAsBytes(normalizedBytes, flush: true);
+      await _db.transaction(() async {
+        if (existingItemIds.isNotEmpty) {
+          await (_db.update(
+            _db.contentDocuments,
+          )..where((document) => document.itemId.isIn(existingItemIds))).write(
+            ContentDocumentsCompanion(contentHash: Value(normalizedHash)),
+          );
+        }
+        for (final range in newRanges) {
+          final entry = range.chapter.entry;
+          final itemId = '$collectionId:item:${entry.chapterKey}';
+          final documentId = '$collectionId:document:${entry.orderIndex}';
+          await _db
+              .into(_db.contentItems)
+              .insert(
+                ContentItemsCompanion.insert(
+                  id: itemId,
+                  collectionId: collectionId,
+                  kind: 'chapter',
+                  title: entry.title,
+                  orderIndex: entry.orderIndex,
+                  startCharacterOffset: range.start,
+                  endCharacterOffset: range.end,
+                  createdAt: now,
+                ),
+              );
+          await _db
+              .into(_db.contentDocuments)
+              .insert(
+                ContentDocumentsCompanion.insert(
+                  id: documentId,
+                  itemId: itemId,
+                  storagePath: sourcePath,
+                  mediaType: 'text/plain; charset=utf-8',
+                  startCharacterOffset: range.start,
+                  endCharacterOffset: range.end,
+                  contentHash: normalizedHash,
+                  normalizationVersion: 'web-book-html-v1',
+                ),
+              );
+          await (_db.update(_db.tocEntries)..where(
+                (tocEntry) =>
+                    tocEntry.id.equals('$collectionId:toc:${entry.chapterKey}'),
+              ))
+              .write(
+                TocEntriesCompanion(
+                  itemId: Value(itemId),
+                  startCharacterOffset: Value(range.start),
+                  endCharacterOffset: Value(range.end),
+                ),
+              );
+        }
+        await (_db.update(
+          _db.contentCollections,
+        )..where((item) => item.id.equals(collectionId))).write(
+          ContentCollectionsCompanion(
+            // itemCount is the full source catalog count and must not be
+            // inflated every time a cached suffix is appended.
+            itemCount: Value(collection.itemCount),
+            normalizedCharacterLength: Value(normalizedText.length),
+            updatedAt: Value(now),
+          ),
+        );
+        await (_db.update(
+          _db.contentSources,
+        )..where((source) => source.id.equals(collection.sourceId))).write(
+          ContentSourcesCompanion(
+            sourceSize: Value(normalizedBytes.length),
+            updatedAt: Value(now),
+          ),
+        );
+        await _db
+            .into(_db.importRecords)
+            .insert(
+              ImportRecordsCompanion.insert(
+                id: 'webbook-cache:$collectionId:${now.microsecondsSinceEpoch}',
+                sourceHash: sha256
+                    .convert(utf8.encode(collection.sourceId))
+                    .toString(),
+                state: 'completed',
+                startedAt: now,
+                completedAt: Value(now),
+              ),
+            );
+      });
+      await _updateWebBookManifest(
+        normalizedFile: normalizedFile,
+        normalizedHash: normalizedHash,
+        normalizedTextLength: normalizedText.length,
+        normalizedByteLength: normalizedBytes.length,
+        chapterCount: collection.itemCount,
+        sourceRevision: toc.sourceRevision,
+        updatedAt: now,
+        cachedChapterKeys: [
+          ...persistedKeys,
+          ...chapters.map((chapter) => chapter.entry.chapterKey),
+        ],
+        totalChapterCount: sourceEntries.length,
+      );
+    } catch (error) {
+      try {
+        await normalizedFile.writeAsBytes(oldBytes, flush: true);
+      } catch (_) {}
+      if (error is LibraryException) rethrow;
+      throw LibraryException('webbook_cache_failed', '章节缓存写入失败: $error');
+    }
+    final updated = await getCollection(collectionId);
+    if (updated == null) {
+      throw const LibraryException('webbook_cache_failed', '缓存后书籍记录不存在');
+    }
+    return WebBookUpdateResult(
+      collection: updated,
+      status: WebBookUpdateStatus.updated,
+      addedChapterCount: chapters.length,
+      message: '已缓存 ${chapters.length} 个章节',
+    );
+  }
+
+  /// Reads the persisted source/book identity without adding a WebBook table.
+  Future<WebBookSnapshotMetadata> getWebBookSnapshotMetadata(
+    String collectionId,
+  ) async {
+    final collection = await getCollection(collectionId);
+    if (collection == null) {
+      throw const LibraryException('not_found', '书库记录不存在');
+    }
+    final sourcePath = collection.sourcePath;
+    if (sourcePath == null || !sourcePath.endsWith('/normalized.txt')) {
+      throw const LibraryException('source_missing', '找不到在线书籍快照信息');
+    }
+    final normalizedFile = _files.resolveStoragePath(sourcePath);
+    final manifest = File(
+      p.join(p.dirname(normalizedFile.path), 'manifest.json'),
+    );
+    if (!await manifest.exists()) {
+      throw const LibraryException('source_missing', '在线书籍缺少书源更新信息');
+    }
+    final decoded = jsonDecode(await manifest.readAsString());
+    if (decoded is! Map ||
+        decoded['sourceId'] is! String ||
+        decoded['bookKey'] is! String ||
+        decoded['detailUri'] is! String) {
+      throw const LibraryException('source_missing', '在线书籍书源更新信息不完整');
+    }
+    final detailUri = Uri.tryParse(decoded['detailUri'] as String);
+    if (detailUri == null || detailUri.scheme.isEmpty) {
+      throw const LibraryException('source_missing', '在线书籍详情地址无效');
+    }
+    return WebBookSnapshotMetadata(
+      sourceId: decoded['sourceId'] as String,
+      bookKey: decoded['bookKey'] as String,
+      detailUri: detailUri,
+      sourceName: decoded['sourceName'] is String
+          ? decoded['sourceName'] as String
+          : null,
+      sourceEndpoint: decoded['sourceEndpoint'] is String
+          ? Uri.tryParse(decoded['sourceEndpoint'] as String)
+          : null,
+      cacheMode: decoded['cacheMode'] is String
+          ? decoded['cacheMode'] as String
+          : 'fullSnapshot',
+      cachedChapterKeys: decoded['cachedChapterKeys'] is List
+          ? [
+              for (final key in decoded['cachedChapterKeys'] as List)
+                if (key is String) key,
+            ]
+          : const <String>[],
+      totalChapterCount: decoded['totalChapterCount'] is int
+          ? decoded['totalChapterCount'] as int
+          : null,
+      catalog: _manifestCatalog(decoded['toc']),
+    );
+  }
+
+  List<WebBookTocEntry> _manifestCatalog(Object? value) {
+    if (value is! List) return const <WebBookTocEntry>[];
+    final result = <WebBookTocEntry>[];
+    for (final item in value) {
+      if (item is! Map) continue;
+      final key = item['chapterKey'];
+      final title = item['title'];
+      final orderIndex = item['orderIndex'];
+      final uri = item['chapterUri'];
+      if (key is! String ||
+          title is! String ||
+          orderIndex is! int ||
+          uri is! String) {
+        continue;
+      }
+      final chapterUri = Uri.tryParse(uri);
+      if (chapterUri == null || chapterUri.scheme.isEmpty) continue;
+      result.add(
+        WebBookTocEntry(
+          chapterKey: key,
+          title: title,
+          orderIndex: orderIndex,
+          chapterUri: chapterUri,
+        ),
+      );
+    }
+    result.sort((a, b) => a.orderIndex.compareTo(b.orderIndex));
+    return List.unmodifiable(result);
+  }
+
+  Future<void> _updateWebBookManifest({
+    required File normalizedFile,
+    required String normalizedHash,
+    required int normalizedTextLength,
+    required int normalizedByteLength,
+    required int chapterCount,
+    required String? sourceRevision,
+    required DateTime updatedAt,
+    List<String>? cachedChapterKeys,
+    int? totalChapterCount,
+  }) async {
+    final manifest = File(
+      p.join(p.dirname(normalizedFile.path), 'manifest.json'),
+    );
+    if (!await manifest.exists()) return;
+    final decoded = jsonDecode(await manifest.readAsString());
+    final value = decoded is Map
+        ? <String, Object?>{
+            for (final entry in decoded.entries) '${entry.key}': entry.value,
+          }
+        : <String, Object?>{};
+    value['normalizedHash'] = normalizedHash;
+    value['normalizedCharacterLength'] = normalizedTextLength;
+    value['normalizedUtf8ByteLength'] = normalizedByteLength;
+    value['chapterCount'] = chapterCount;
+    if (sourceRevision != null) value['sourceRevision'] = sourceRevision;
+    if (cachedChapterKeys != null) {
+      value['cachedChapterKeys'] = cachedChapterKeys;
+    }
+    if (totalChapterCount != null) {
+      value['totalChapterCount'] = totalChapterCount;
+    }
+    value['updatedAt'] = updatedAt.toIso8601String();
+    await manifest.writeAsString(
+      const JsonEncoder.withIndent('  ').convert(value),
+      flush: true,
+    );
+  }
+
+  bool _sameStrings(Iterable<String> left, Iterable<String> right) {
+    final a = left.toList();
+    final b = right.toList();
+    if (a.length != b.length) return false;
+    for (var index = 0; index < a.length; index++) {
+      if (a[index] != b[index]) return false;
+    }
+    return true;
+  }
+
+  String _joinEpubSpine(EpubBook book) {
+    final buffer = StringBuffer();
+    for (var index = 0; index < book.spine.length; index++) {
+      if (index > 0) buffer.write('\n\n');
+      buffer.write(book.spine[index].text);
+    }
+    return buffer.toString();
+  }
+
+  String _epubImageExtension(String mediaType, String href) {
+    switch (mediaType.toLowerCase()) {
+      case 'image/jpeg':
+        return '.jpg';
+      case 'image/png':
+        return '.png';
+      case 'image/gif':
+        return '.gif';
+      case 'image/webp':
+        return '.webp';
+      default:
+        final extension = p.extension(href).toLowerCase();
+        return extension.length <= 5 ? extension : '.bin';
+    }
+  }
+
+  Future<bool> _epubManagedFilesHealthy(LibraryCollection collection) async {
+    final sourcePath = collection.sourcePath;
+    if (sourcePath == null || !sourcePath.endsWith('/source.epub')) {
+      return false;
+    }
+    final normalizedPath = sourcePath.replaceFirst(
+      RegExp(r'source\.epub$'),
+      'normalized.txt',
+    );
+    final source = _files.resolveStoragePath(sourcePath);
+    final normalized = _files.resolveStoragePath(normalizedPath);
+    final manifest = _files.resolveStoragePath(
+      normalizedPath.replaceFirst(RegExp(r'normalized\.txt$'), 'manifest.json'),
+    );
+    return await source.exists() &&
+        await normalized.exists() &&
+        await manifest.exists();
+  }
+
   /// 调用 M1 管线（缓存目录用 jobDir 内的 .m1cache 子目录，不入正式库）。
   /// 规范化文本经 [TxtImportService.onNormalizedText] 回调获取。
   Future<_M1PipelineResult> _runM1Pipeline(
@@ -399,9 +1700,13 @@ class LocalLibraryRepository {
     final now = DateTime.now();
     final sourceId = sourceIdFor(contentHash);
     final collectionId = collectionIdFor(contentHash);
-    final title = originalFileName.endsWith('.txt')
-        ? originalFileName.substring(0, originalFileName.length - 4)
-        : originalFileName;
+    // normalized.txt is UTF-8 regardless of the source encoding, while the
+    // original file name remains the safe fallback title source.
+    final normalizedForMetadata = File(p.join(jobDir.path, 'normalized.txt'));
+    final metadata = LocalTxtMetadataInferer.fromText(
+      await normalizedForMetadata.readAsString(),
+      originalFileName,
+    );
     final sourcePath = p.join(
       'library',
       'local_txt',
@@ -419,13 +1724,20 @@ class LocalLibraryRepository {
     final collection = LibraryCollection(
       id: collectionId,
       sourceId: sourceId,
-      title: title,
+      title: metadata.title,
       subtitle: null,
       itemCount: itemCount,
       normalizedCharacterLength: index.normalizedCharacterLength,
       detectedEncoding: index.encoding,
       sourceSize: size,
       importedAt: now,
+      author: metadata.author,
+      description: metadata.description,
+      metadataSource: metadata.metadataSource,
+      titleSource: metadata.titleSource,
+      authorSource: metadata.authorSource,
+      fileName: originalFileName,
+      sourcePath: sourcePath,
     );
 
     await _db.transaction(() async {
@@ -452,7 +1764,12 @@ class LocalLibraryRepository {
             ContentCollectionsCompanion.insert(
               id: collectionId,
               sourceId: sourceId,
-              title: title,
+              title: metadata.title,
+              author: Value(metadata.author),
+              description: Value(metadata.description),
+              metadataSource: Value(metadata.metadataSource),
+              titleSource: Value(metadata.titleSource),
+              authorSource: Value(metadata.authorSource),
               itemCount: itemCount,
               normalizedCharacterLength: index.normalizedCharacterLength,
               importedAt: now,
@@ -592,6 +1909,15 @@ class LocalLibraryRepository {
         ),
         sourceSize: src?.sourceSize ?? 0,
         importedAt: r.importedAt,
+        author: r.author,
+        description: r.description,
+        metadataSource: r.metadataSource,
+        titleSource: r.titleSource,
+        authorSource: r.authorSource,
+        fileName: src?.displayName,
+        sourcePath: src?.managedSourcePath,
+        coverPath: r.coverPath,
+        coverSource: r.coverSource,
       );
     }).toList();
   }
@@ -616,7 +1942,123 @@ class LocalLibraryRepository {
       ),
       sourceSize: src?.sourceSize ?? 0,
       importedAt: row.importedAt,
+      author: row.author,
+      description: row.description,
+      metadataSource: row.metadataSource,
+      titleSource: row.titleSource,
+      authorSource: row.authorSource,
+      fileName: src?.displayName,
+      sourcePath: src?.managedSourcePath,
+      coverPath: row.coverPath,
+      coverSource: row.coverSource,
     );
+  }
+
+  /// Persist user-edited metadata without touching the source file, collection
+  /// identity, normalized content, or any reader state.
+  Future<LibraryCollection> updateManualMetadata(
+    String collectionId, {
+    required String title,
+    required String? author,
+    required String? description,
+    required bool titleChanged,
+    required bool authorChanged,
+    required bool descriptionChanged,
+  }) async {
+    final trimmedTitle = title.trim();
+    if (trimmedTitle.isEmpty) {
+      throw const LibraryException('invalid_metadata', '书名不能为空');
+    }
+    final current = await getCollection(collectionId);
+    if (current == null) {
+      throw const LibraryException('not_found', '书库记录不存在');
+    }
+    final trimmedAuthor = author?.trim();
+    final trimmedDescription = description?.trim();
+    final hasManualOverride =
+        titleChanged || authorChanged || descriptionChanged;
+    if (!hasManualOverride) return current;
+
+    await (_db.update(
+      _db.contentCollections,
+    )..where((t) => t.id.equals(collectionId))).write(
+      ContentCollectionsCompanion(
+        title: titleChanged ? Value(trimmedTitle) : const Value.absent(),
+        author: authorChanged
+            ? Value(
+                trimmedAuthor == null || trimmedAuthor.isEmpty
+                    ? null
+                    : trimmedAuthor,
+              )
+            : const Value.absent(),
+        description: descriptionChanged
+            ? Value(
+                trimmedDescription == null || trimmedDescription.isEmpty
+                    ? null
+                    : trimmedDescription,
+              )
+            : const Value.absent(),
+        metadataSource: const Value('manual'),
+        titleSource: titleChanged
+            ? const Value('manual')
+            : const Value.absent(),
+        authorSource: authorChanged
+            ? const Value('manual')
+            : const Value.absent(),
+        updatedAt: Value(DateTime.now()),
+      ),
+    );
+    final updated = await getCollection(collectionId);
+    if (updated == null) {
+      throw const LibraryException('update_failed', '书籍信息保存失败');
+    }
+    return updated;
+  }
+
+  /// Re-read only the managed source prefix and restore inferred metadata.
+  /// This never re-imports the book and therefore preserves its identity and
+  /// reader progress.
+  Future<LibraryCollection> restoreAutomaticMetadata(
+    String collectionId,
+  ) async {
+    final current = await getCollection(collectionId);
+    if (current == null) {
+      throw const LibraryException('not_found', '书库记录不存在');
+    }
+    final sourcePath = current.sourcePath;
+    if (sourcePath == null || sourcePath.trim().isEmpty) {
+      throw const LibraryException('source_missing', '找不到原始 TXT 来源');
+    }
+    final normalizedPath = sourcePath.replaceFirst(
+      RegExp(r'source\.txt$'),
+      'normalized.txt',
+    );
+    final normalizedFile = _files.resolveStoragePath(normalizedPath);
+    if (!await normalizedFile.exists()) {
+      throw const LibraryException('source_missing', '找不到原始 TXT 来源');
+    }
+    final metadata = LocalTxtMetadataInferer.fromText(
+      await normalizedFile.readAsString(),
+      current.fileName ?? '未命名书籍.txt',
+    );
+    await (_db.update(
+      _db.contentCollections,
+    )..where((t) => t.id.equals(collectionId))).write(
+      ContentCollectionsCompanion(
+        title: Value(metadata.title),
+        author: Value(metadata.author),
+        description: Value(metadata.description),
+        metadataSource: Value(metadata.metadataSource),
+        titleSource: Value(metadata.titleSource),
+        authorSource: Value(metadata.authorSource),
+        updatedAt: Value(DateTime.now()),
+      ),
+    );
+    final restored = await getCollection(collectionId);
+    if (restored == null) {
+      throw const LibraryException('update_failed', '自动识别信息恢复失败');
+    }
+    return restored;
   }
 
   Future<List<LibraryItem>> getItems(String collectionId) async {
@@ -709,6 +2151,15 @@ class LocalLibraryRepository {
       detectedEncoding: TextEncoding.values.byName(src.detectedEncoding),
       sourceSize: src.sourceSize,
       importedAt: row.importedAt,
+      author: row.author,
+      description: row.description,
+      metadataSource: row.metadataSource,
+      titleSource: row.titleSource,
+      authorSource: row.authorSource,
+      fileName: src.displayName,
+      sourcePath: src.managedSourcePath,
+      coverPath: row.coverPath,
+      coverSource: row.coverSource,
     );
   }
 
@@ -722,7 +2173,13 @@ class LocalLibraryRepository {
     if (collection == null) {
       throw const LibraryException('not_found', '书库记录不存在');
     }
-    final hash = collection.id.replaceFirst('local-txt:', '');
+    final isEpub = collection.sourceId.startsWith('epub-source:');
+    final isWebBook = collection.sourceId.startsWith('web-book-source:');
+    final hash = isEpub
+        ? collection.id.replaceFirst('epub:', '')
+        : isWebBook
+        ? webBookStorageKeyFor(collection.id)
+        : collection.id.replaceFirst('local-txt:', '');
 
     await _db.transaction(() async {
       // 级联删除（外键依赖顺序：documents → toc → items → collection → source）
@@ -754,11 +2211,23 @@ class LocalLibraryRepository {
     });
 
     if (deleteManagedFiles) {
-      await _files.deleteContentDir(hash);
+      if (isEpub) {
+        await _files.deleteEpubContentDir(hash);
+      } else if (isWebBook) {
+        await _files.deleteWebBookContentDir(hash);
+      } else {
+        await _files.deleteContentDir(hash);
+      }
     }
   }
 
   // ---- 辅助 ----
+
+  String _webBookChapterKeyFromItemId(String itemId) {
+    const marker = ':item:';
+    final index = itemId.lastIndexOf(marker);
+    return index < 0 ? itemId : itemId.substring(index + marker.length);
+  }
 
   void _throwIfCancelled(ImportCancellationToken? token) {
     if (token != null && token.isCancelled) {

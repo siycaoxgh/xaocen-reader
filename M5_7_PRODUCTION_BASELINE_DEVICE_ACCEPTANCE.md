@@ -12,8 +12,8 @@ Production repository used for this baseline:
 
 `C:\Users\TOM\Desktop\xaocen-reader-v4\xaocen_reader`
 
-HEAD: `4e2b91dcd1d92174b3705ad8fa4a304b5f1f66da`  
-Branch: `feat/m4-horizontal-reader`  
+HEAD: `4e2b91dcd1d92174b3705ad8fa4a304b5f1f66da`
+Branch: `feat/m4-horizontal-reader`
 Drift schema: 12
 
 ## Automated pass
@@ -29,7 +29,7 @@ Drift schema: 12
   - `build/app/outputs/flutter-apk/app-debug.apk`
 - `git diff --check`: PASS
 
-The intended sibling path `C:\Users\TOM\Desktop\xaocen-reader-v4\aocen_reader`
+The intended sibling path `C:\Users\TOM\Desktop\xaocen-reader-v4\xaocen_reader`
 is an Engine-report directory without `.git`; it was not initialized or used as
 the production repository.
 

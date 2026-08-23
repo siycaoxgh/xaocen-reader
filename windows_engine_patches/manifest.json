@@ -2,7 +2,7 @@
   "frameworkRevision": "84fc5cbb223",
   "engineRevision": "69c8c61792f04cc809dfef0c910414fb9afc06cd",
   "patch": "0001-windows-dcomp-alpha-surface.patch",
-  "patchSha256": "a27a3a6c74ae606c12d15878910fe28ac9a79de737becf0d15242e6961a11aa0",
+  "patchSha256": "2634EB232F2222850198A52E41B3D0DC2482B1190AD0E3E6DF1BBA001A432C0B",
   "upstreamBlobSha1": {
     "engine/src/flutter/shell/platform/windows/BUILD.gn": "09b52a96fb0b1c5271ca76079af495173aa4460a",
     "engine/src/flutter/shell/platform/windows/egl/manager.cc": "64fb765bf546190fa610a9bdff007fc881c3cc7e",

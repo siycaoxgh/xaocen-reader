@@ -6,6 +6,7 @@ import 'dart:convert';
 import 'package:crypto/crypto.dart';
 
 import '../../data/repositories/library_file_manager.dart';
+import '../domain/reader/reader_rendering.dart';
 
 /// 加载后的不可变规范化正文。
 class NormalizedDocument {
@@ -16,6 +17,7 @@ class NormalizedDocument {
     required this.parserVersion,
     required this.indexFormatVersion,
     required this.sourceFileName,
+    this.rendering,
   });
 
   /// 完整正文（UTF-16 码元；Dart String 内部即 UTF-16）。
@@ -28,6 +30,10 @@ class NormalizedDocument {
   final String parserVersion;
   final String indexFormatVersion;
   final String sourceFileName;
+
+  /// Optional EPUB (or future source) presentation metadata.  The normalized
+  /// text remains the sole Locator/Progress truth.
+  final ReaderRenderingMetadata? rendering;
 
   int get characterLength => text.length;
 }
@@ -139,6 +145,9 @@ class NormalizedDocumentLoader {
       parserVersion: _str(manifest, 'parserVersion'),
       indexFormatVersion: _str(manifest, 'indexFormatVersion'),
       sourceFileName: _str(manifest, 'originalFileName'),
+      rendering: manifest?['rendering'] == null
+          ? null
+          : ReaderRenderingMetadata.fromJson(manifest?['rendering']),
     );
   }
 

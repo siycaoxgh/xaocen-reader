@@ -1,0 +1,28 @@
+{
+  "schema": "xaocen.webBook",
+  "version": 1,
+  "sourceId": "poc-sudugu-qingshan",
+  "name": "速读谷 ·测试",
+  "endpoint": "https://fixture.invalid/books/qingshan/",
+  "searchEndpoint": "https://fixture.invalid/search",
+  "searchRequest": {"queryParameter": "key"},
+  "bookKey": "5",
+  "ruleVersion": 1,
+  "rules": {
+    "search": {
+      "itemSelector": ".item",
+      "title": {"selector": ".itemtxt h3 a"},
+      "author": {"selector": ".itemtxt p a[href*=\"/zuozhe/\"]", "removePrefix": "作者："},
+      "linkSelector": ".itemtxt h3 a",
+      "keyAttribute": null
+    },
+    "detail": {
+      "selector": ".container",
+      "title": {"selector": "h1 a"},
+      "author": {"selector": "a[href*=\"/zuozhe/\"]", "removePrefix": "作者："},
+      "description": {"selector": ".des"}
+    },
+    "toc": {"entrySelector": "#list.dir a[href$=\".html\"]"},
+    "chapter": {"bodySelector": ".con"}
+  }
+}

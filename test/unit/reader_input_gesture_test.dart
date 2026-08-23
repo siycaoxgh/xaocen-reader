@@ -117,21 +117,75 @@ void main() {
     }
   });
 
-  test(
-    'shortcut capability registry is sourced from physical input support',
-    () {
-      expect(
-        SupportedShortcutKeyRegistry.inputFor(PhysicalKeyboardKey.slash),
-        PhysicalInputId.keyboardSlash,
-      );
-      expect(
-        SupportedShortcutKeyRegistry.categories['小键盘'],
-        contains(PhysicalInputId.keyboardNumpadAdd),
-      );
-      expect(
-        SupportedShortcutKeyRegistry.displayName(PhysicalInputId.keyboardSlash),
-        '/',
-      );
-    },
-  );
+  test('shortcut capability registry contains only verified keys', () {
+    expect(
+      SupportedShortcutKeyRegistry.inputFor(PhysicalKeyboardKey.keyA),
+      PhysicalInputId.keyboardKeyA,
+    );
+    expect(
+      SupportedShortcutKeyRegistry.inputFor(PhysicalKeyboardKey.slash),
+      isNull,
+    );
+    for (final key in <PhysicalKeyboardKey>[
+      PhysicalKeyboardKey.minus,
+      PhysicalKeyboardKey.equal,
+      PhysicalKeyboardKey.bracketLeft,
+      PhysicalKeyboardKey.bracketRight,
+      PhysicalKeyboardKey.backslash,
+      PhysicalKeyboardKey.semicolon,
+      PhysicalKeyboardKey.quote,
+      PhysicalKeyboardKey.backquote,
+      PhysicalKeyboardKey.comma,
+      PhysicalKeyboardKey.period,
+      PhysicalKeyboardKey.slash,
+    ]) {
+      expect(SupportedShortcutKeyRegistry.supports(key), isFalse);
+    }
+    expect(
+      SupportedShortcutKeyRegistry.categories['小键盘'],
+      contains(PhysicalInputId.keyboardNumpadAdd),
+    );
+    expect(SupportedShortcutKeyRegistry.unsupportedCategories, isNotEmpty);
+  });
+
+  test('keyboard gate maps one short press and paced hold repeats', () {
+    var now = DateTime(2026, 1, 1);
+    final gate = ReaderKeyEventGate(
+      now: () => now,
+      repeatInterval: const Duration(milliseconds: 180),
+    );
+    KeyEvent down() => KeyDownEvent(
+      physicalKey: PhysicalKeyboardKey.pageDown,
+      logicalKey: LogicalKeyboardKey.pageDown,
+      timeStamp: Duration.zero,
+    );
+    KeyEvent repeat() => KeyRepeatEvent(
+      physicalKey: PhysicalKeyboardKey.pageDown,
+      logicalKey: LogicalKeyboardKey.pageDown,
+      timeStamp: Duration.zero,
+    );
+    KeyEvent up() => KeyUpEvent(
+      physicalKey: PhysicalKeyboardKey.pageDown,
+      logicalKey: LogicalKeyboardKey.pageDown,
+      timeStamp: Duration.zero,
+    );
+
+    expect(gate.accept(down()), isTrue, reason: 'first short press');
+    expect(gate.accept(down()), isFalse, reason: 'duplicate key-down');
+    expect(gate.accept(repeat()), isFalse, reason: 'repeat too soon');
+    now = now.add(const Duration(milliseconds: 200));
+    expect(gate.accept(repeat()), isTrue, reason: 'controlled hold repeat');
+    expect(gate.accept(up()), isFalse);
+    expect(gate.accept(down()), isTrue, reason: 'next press after release');
+  });
+
+  test('wheel gate keeps one command per burst and allows next detent', () {
+    var now = DateTime(2026, 1, 1);
+    final gate = ReaderWheelEventGate(now: () => now);
+    expect(gate.accept(120), isTrue, reason: 'single wheel detent');
+    expect(gate.accept(120), isFalse, reason: 'rapid duplicate signal');
+    now = now.add(const Duration(milliseconds: 150));
+    expect(gate.accept(-120), isTrue, reason: 'next intentional detent');
+    expect(gate.accept(0), isFalse);
+  });
 }

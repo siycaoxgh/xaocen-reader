@@ -216,6 +216,87 @@ PhysicalInputId? physicalInputIdForPhysicalKey(
   _ => null,
 };
 
+/// Normalizes Flutter keyboard events into one press cycle.
+///
+/// Windows can surface a held key as an initial [KeyDownEvent] followed by
+/// either [KeyRepeatEvent]s or, for some drivers, another [KeyDownEvent]. The
+/// latter must not be treated as a second short press. Repeats remain
+/// available, but are paced at a modest interval so a long press is stable
+/// rather than a burst of page commands.
+final class ReaderKeyEventGate {
+  ReaderKeyEventGate({
+    DateTime Function()? now,
+    this.repeatInterval = const Duration(milliseconds: 180),
+  }) : _now = now ?? DateTime.now;
+
+  final DateTime Function() _now;
+  final Duration repeatInterval;
+  final Set<PhysicalKeyboardKey> _pressed = <PhysicalKeyboardKey>{};
+  final Map<PhysicalKeyboardKey, DateTime> _lastAccepted =
+      <PhysicalKeyboardKey, DateTime>{};
+
+  /// Returns whether [event] should dispatch a semantic Reader command.
+  /// Key-up events always release the cycle and never dispatch a command.
+  bool accept(KeyEvent event, {bool allowRepeat = true}) {
+    final key = event.physicalKey;
+    if (event is KeyUpEvent) {
+      _pressed.remove(key);
+      _lastAccepted.remove(key);
+      return false;
+    }
+
+    final now = _now();
+    if (event is KeyDownEvent) {
+      if (!_pressed.add(key)) return false;
+      _lastAccepted[key] = now;
+      return true;
+    }
+    if (event is KeyRepeatEvent) {
+      _pressed.add(key);
+      if (!allowRepeat) return false;
+      final previous = _lastAccepted[key];
+      if (previous != null && now.difference(previous) < repeatInterval) {
+        return false;
+      }
+      _lastAccepted[key] = now;
+      return true;
+    }
+    return false;
+  }
+
+  void clear() {
+    _pressed.clear();
+    _lastAccepted.clear();
+  }
+}
+
+/// One logical page command per high-frequency wheel burst.
+///
+/// Pointer-scroll events are delivered as a stream on Windows (including for
+/// one physical wheel detent). The gate keeps the first event, suppresses the
+/// burst, and allows the next intentional detent after the short interval.
+final class ReaderWheelEventGate {
+  ReaderWheelEventGate({
+    DateTime Function()? now,
+    this.throttle = const Duration(milliseconds: 140),
+  }) : _now = now ?? DateTime.now;
+
+  final DateTime Function() _now;
+  final Duration throttle;
+  DateTime? _lastAccepted;
+
+  bool accept(double delta) {
+    if (delta == 0) return false;
+    final now = _now();
+    final previous = _lastAccepted;
+    if (previous != null && now.difference(previous) < throttle) return false;
+    _lastAccepted = now;
+    return true;
+  }
+
+  void clear() => _lastAccepted = null;
+}
+
 ReaderInputGesture? readerInputGestureForKey(
   LogicalKeyboardKey key, {
   bool control = false,

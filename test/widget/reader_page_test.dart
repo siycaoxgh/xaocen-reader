@@ -417,7 +417,8 @@ void main() {
 
         await tester.tap(find.byKey(readerMoreActionKey));
         await tester.pumpAndSettle();
-        expect(find.textContaining('朗读当前未实现'), findsOneWidget);
+        expect(find.byKey(readerAutoHubTtsSettingsKey), findsNothing);
+        expect(find.textContaining('朗读当前未实现'), findsNothing);
       },
     );
 

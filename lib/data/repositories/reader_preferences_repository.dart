@@ -51,6 +51,7 @@ final class ReaderPreferencesRepository {
       darkTextColorArgb: preferences.darkTextColorArgb,
       darkBackgroundColorArgb: preferences.darkBackgroundColorArgb,
       backgroundImagePath: preferences.backgroundImagePath,
+      backgroundOpacity: preferences.backgroundOpacity,
       backgroundImageOpacity: preferences.backgroundImageOpacity,
       backgroundOverlayOpacity: preferences.backgroundOverlayOpacity,
       showTopInfoBar: preferences.showTopInfoBar,
@@ -106,6 +107,7 @@ final class ReaderPreferencesRepository {
             darkTextColorArgb: Value(safe.darkTextColorArgb),
             darkBackgroundColorArgb: Value(safe.darkBackgroundColorArgb),
             backgroundImagePath: Value(safe.backgroundImagePath),
+            backgroundOpacity: Value(safe.backgroundOpacity),
             backgroundImageOpacity: Value(safe.backgroundImageOpacity),
             backgroundOverlayOpacity: Value(safe.backgroundOverlayOpacity),
             showTopInfoBar: Value(safe.showTopInfoBar),
@@ -184,6 +186,7 @@ final class ReaderPreferencesRepository {
       darkBackgroundColorArgb:
           row.darkBackgroundColorArgb ?? row.backgroundColorArgb,
       backgroundImagePath: row.backgroundImagePath,
+      backgroundOpacity: row.backgroundOpacity,
       backgroundImageOpacity: row.backgroundImageOpacity,
       backgroundOverlayOpacity: row.backgroundOverlayOpacity,
       showTopInfoBar: row.showTopInfoBar,

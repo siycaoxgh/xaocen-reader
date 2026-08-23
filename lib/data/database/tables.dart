@@ -42,6 +42,23 @@ class ContentCollections extends Table {
 
   TextColumn get subtitle => text().nullable()();
 
+  TextColumn get author => text().nullable()();
+
+  TextColumn get description => text().nullable()();
+
+  TextColumn get metadataSource =>
+      text().withDefault(const Constant('legacy'))();
+
+  TextColumn get titleSource => text().withDefault(const Constant('legacy'))();
+
+  TextColumn get authorSource =>
+      text().withDefault(const Constant('unknown'))();
+
+  TextColumn get coverPath => text().nullable()();
+
+  TextColumn get coverSource =>
+      text().withDefault(const Constant('placeholder'))();
+
   /// 章节 item 数（volume 不计入）。
   IntColumn get itemCount => integer()();
 
@@ -237,6 +254,7 @@ class ReaderPreferencesRows extends Table {
   IntColumn get darkTextColorArgb => integer().nullable()();
   IntColumn get darkBackgroundColorArgb => integer().nullable()();
   TextColumn get backgroundImagePath => text().nullable()();
+  RealColumn get backgroundOpacity => real().withDefault(const Constant(1.0))();
   RealColumn get backgroundImageOpacity =>
       real().withDefault(const Constant(1.0))();
   RealColumn get backgroundOverlayOpacity =>

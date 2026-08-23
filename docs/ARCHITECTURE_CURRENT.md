@@ -385,7 +385,7 @@ Two distinct hashes, distinct duties:
   atomically with the file); `expectedHash` is only a fallback when the
   manifest is missing. ReaderPage passes expectedLength only.
 - Repair: `ManagedCollectionHealthCheck` (source hash / normalized hash /
-  UTF-16 length / versions / Drift↔manifest consistency) + 
+  UTF-16 length / versions / Drift↔manifest consistency) +
   `CollectionRepairService` (re-runs the M1 pipeline from managed
   source.txt into a repair temp dir, verifies, atomically replaces,
   Drift transaction, re-checks). External TXT is never modified; on failure
@@ -503,14 +503,17 @@ Two distinct hashes, distinct duties:
 
 ## 10. Platform
 
-- **Windows**: Release build via `flutter build windows --release`
-  (`build\windows\x64\runner\Release\xaocen_reader.exe`). CMake note:
+- **Windows**: Release build via
+  `tool\build_windows_engine.ps1 -Engine Standard -Configuration Release`.
+  The only distributable output is
+  `artifacts\windows\current\Release\xaocen_reader.exe`; the Flutter
+  `build\windows\x64\runner\Release` directory is intermediate only. CMake note:
   `windows/CMakeLists.txt` installs unconditionally into the build dir
   (sqlite3_flutter_libs FetchContent re-runs `project()` and would reset
   CMAKE_INSTALL_PREFIX to Program Files otherwise). Mouse wheel / scrollbar
   / window resize supported by the virtualized list.
-- **Android**: Debug build via `flutter build apk --debug`
-  (`build\app\outputs\flutter-apk\app-debug.apk`). applicationId
+- **Android**: Release build via `flutter build apk --release`
+  (`build\app\outputs\flutter-apk\app-release.apk`). applicationId
   `com.xaocen.xaocen_reader`. `android/settings.gradle.kts` prefers google()
   and excludes androidx.test from download.flutter.io (dynamic-version
   metadata 404). sqlite3 native assets download via ghproxy mirror
@@ -1094,6 +1097,33 @@ database and library (including SQLite WAL/SHM sidecars) into the new root
 without clearing or re-importing user data. `DataRootBackupService` provides a
 manifest/hash verified export and a staged directory-swap restore; complete
 snapshots require the database to be closed. Drift schema remains 11.
+
+## M5.9 storage root foundation
+
+The writable root now has a stable internal product key and is independent of
+the Windows EXE display metadata. Windows standard data uses
+`%LOCALAPPDATA%\\XAOCEN\\Reader\\profiles\\<profileId>`, while Android keeps
+its app-private support directory and adds the same `profiles/<profileId>`
+scope. The default profile is `default`.
+
+Portable mode is explicit (`--portable`, `XAOCEN_PORTABLE=1`, or a
+`portable.marker`) and uses `<exe>\\user_data\\profiles\\<profileId>`. The
+Flutter bundle's `<exe>\\data` directory remains runtime-only. Standard mode
+checks the previous Roaming roots and copies a complete legacy data root,
+including database WAL/SHM sidecars and managed books, into a staging directory
+without deleting the source.
+
+Profile selection is restart-scoped: `--profile=<id>` and `XAOCEN_PROFILE` take
+precedence, followed by the persisted `active_profile.json` pointer and then
+`default`. `DataRoot.listProfileIds()` only enumerates initialized profile
+metadata and never opens another profile's database. `DataRootBackupService`
+exposes explicit profile export/import names over the existing verified
+manifest and staged restore implementation.
+
+Each profile also owns a local `sync/outbox` directory. `SyncOutbox` records
+small metadata change envelopes for a future account/sync adapter; it performs
+no network I/O, does not copy normalized text, and is not a second source of
+reading progress or Locator truth.
 
 ## M5.6e Reader Font System
 

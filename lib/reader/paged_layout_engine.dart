@@ -20,6 +20,7 @@ import 'package:flutter/painting.dart';
 
 import '../domain/reader/paged_text_range.dart';
 import '../domain/reader/reader_block.dart';
+import '../domain/reader/reader_rendering.dart';
 import 'reader_typography_layout.dart';
 
 /// 分页引擎。
@@ -40,13 +41,15 @@ class PagedLayoutEngine {
     this.firstLineIndent = 0,
     this.textAlign = TextAlign.left,
     Iterable<int> chapterStartOffsets = const <int>[],
+    Iterable<ReaderInlineStyleRun> styleRuns = const <ReaderInlineStyleRun>[],
     this.textScale = 1.0,
     this.policyVersion = pagedPolicyVersion,
   }) : chapterStartOffsets = _normalizeChapterStarts(chapterStartOffsets),
        paddingTop = paddingTop ?? verticalPadding,
        paddingBottom = paddingBottom ?? verticalPadding,
        paddingLeft = paddingLeft ?? horizontalPadding,
-       paddingRight = paddingRight ?? horizontalPadding;
+       paddingRight = paddingRight ?? horizontalPadding,
+       styleRuns = List.unmodifiable(styleRuns);
 
   /// 规范化正文（引用 NormalizedDocument.text，不复制全文）。
   final String text;
@@ -74,6 +77,7 @@ class PagedLayoutEngine {
 
   /// Real chapter starts in normalized UTF-16 offsets. Volumes are excluded.
   final List<int> chapterStartOffsets;
+  final List<ReaderInlineStyleRun> styleRuns;
   final double textScale;
   final int policyVersion;
 
@@ -140,6 +144,26 @@ class PagedLayoutEngine {
         startsAtParagraphBoundary:
             globalStart == 0 || text.codeUnitAt(globalStart - 1) == 0x0A,
         buildFastLineRecords: false,
+        styleRuns: styleRuns
+            .where(
+              (run) =>
+                  run.endCharacterOffset > globalStart &&
+                  run.startCharacterOffset < globalStart + candidate.length,
+            )
+            .map(
+              (run) => ReaderInlineStyleRun(
+                startCharacterOffset: (run.startCharacterOffset - globalStart)
+                    .clamp(0, candidate.length)
+                    .toInt(),
+                endCharacterOffset: (run.endCharacterOffset - globalStart)
+                    .clamp(0, candidate.length)
+                    .toInt(),
+                bold: run.bold,
+                italic: run.italic,
+                headingLevel: run.headingLevel,
+              ),
+            )
+            .toList(growable: false),
       );
 
   /// 页尾 surrogate 修正：不拆 UTF-16 surrogate pair（§三十）。

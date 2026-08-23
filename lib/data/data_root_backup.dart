@@ -13,16 +13,19 @@ final class DataRootManifest {
     required this.sourceRootId,
     required this.createdAt,
     required this.files,
+    this.sourceProfileId,
   });
 
   final int formatVersion;
   final String sourceRootId;
+  final String? sourceProfileId;
   final DateTime createdAt;
   final List<DataRootManifestEntry> files;
 
   Map<String, Object?> toJson() => {
     'formatVersion': formatVersion,
     'sourceRootId': sourceRootId,
+    if (sourceProfileId != null) 'sourceProfileId': sourceProfileId,
     'createdAt': createdAt.toUtc().toIso8601String(),
     'files': files.map((file) => file.toJson()).toList(growable: false),
   };
@@ -45,6 +48,7 @@ final class DataRootManifest {
     return DataRootManifest(
       formatVersion: value['formatVersion'] as int,
       sourceRootId: value['sourceRootId'] as String,
+      sourceProfileId: value['sourceProfileId'] as String?,
       createdAt: created,
       files: List.unmodifiable(entries),
     );
@@ -120,6 +124,7 @@ final class DataRootBackupService {
     final manifest = DataRootManifest(
       formatVersion: 1,
       sourceRootId: root.rootId,
+      sourceProfileId: root.profileId,
       createdAt: DateTime.now().toUtc(),
       files: files,
     );
@@ -130,6 +135,14 @@ final class DataRootBackupService {
   }
 
   Future<DataRootManifest> createBackup({
+    required DataRoot root,
+    required Directory destination,
+  }) => exportBundle(root: root, destination: destination);
+
+  /// Explicit profile-level naming for callers building account/profile
+  /// workflows. The bundle format remains the same and contains no network
+  /// or account state.
+  Future<DataRootManifest> exportProfile({
     required DataRoot root,
     required Directory destination,
   }) => exportBundle(root: root, destination: destination);
@@ -195,6 +208,13 @@ final class DataRootBackupService {
       throw DataRootException('restore failed: $error');
     }
   }
+
+  /// Imports a previously exported profile through the same verified,
+  /// staged-restore path. The target profile database must be closed first.
+  Future<DataRootManifest> importProfile({
+    required DataRoot target,
+    required Directory bundle,
+  }) => restoreBundle(root: target, bundle: bundle);
 
   Future<void> _copyRootFiles(
     Directory source,

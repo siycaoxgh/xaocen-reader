@@ -1,8 +1,10 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
 // ignore_for_file: prefer_initializing_formals, unnecessary_getters_setters
 
 import 'reader_typography_layout.dart';
+import '../domain/reader/reader_rendering.dart';
 
 class ReaderBlockLayout {
   const ReaderBlockLayout({
@@ -31,6 +33,10 @@ class ReaderTextBlock extends LeafRenderObjectWidget {
     this.firstLineIndent = 0,
     this.textAlign = TextAlign.left,
     this.startsAtParagraphBoundary = true,
+    this.highlightStart,
+    this.highlightEnd,
+    this.highlightColor,
+    this.styleRuns = const <ReaderInlineStyleRun>[],
     this.onLayout,
   });
   final String text;
@@ -42,6 +48,10 @@ class ReaderTextBlock extends LeafRenderObjectWidget {
   final double firstLineIndent;
   final TextAlign textAlign;
   final bool startsAtParagraphBoundary;
+  final int? highlightStart;
+  final int? highlightEnd;
+  final Color? highlightColor;
+  final List<ReaderInlineStyleRun> styleRuns;
   final ValueChanged<ReaderBlockLayout>? onLayout;
 
   @override
@@ -56,6 +66,10 @@ class ReaderTextBlock extends LeafRenderObjectWidget {
         firstLineIndent: firstLineIndent,
         textAlign: textAlign,
         startsAtParagraphBoundary: startsAtParagraphBoundary,
+        highlightStart: highlightStart,
+        highlightEnd: highlightEnd,
+        highlightColor: highlightColor,
+        styleRuns: styleRuns,
         onLayout: onLayout,
       );
 
@@ -74,6 +88,10 @@ class ReaderTextBlock extends LeafRenderObjectWidget {
       ..firstLineIndent = firstLineIndent
       ..textAlign = textAlign
       ..startsAtParagraphBoundary = startsAtParagraphBoundary
+      ..highlightStart = highlightStart
+      ..highlightEnd = highlightEnd
+      ..highlightColor = highlightColor
+      ..styleRuns = styleRuns
       ..onLayout = onLayout;
   }
 }
@@ -89,6 +107,10 @@ class RenderReaderTextBlock extends RenderBox {
     double firstLineIndent = 0,
     TextAlign textAlign = TextAlign.left,
     bool startsAtParagraphBoundary = true,
+    int? highlightStart,
+    int? highlightEnd,
+    Color? highlightColor,
+    List<ReaderInlineStyleRun> styleRuns = const <ReaderInlineStyleRun>[],
     ValueChanged<ReaderBlockLayout>? onLayout,
   }) : _text = text,
        _style = style,
@@ -99,6 +121,10 @@ class RenderReaderTextBlock extends RenderBox {
        _firstLineIndent = firstLineIndent,
        _textAlign = textAlign,
        _startsAtParagraphBoundary = startsAtParagraphBoundary,
+       _highlightStart = highlightStart,
+       _highlightEnd = highlightEnd,
+       _highlightColor = highlightColor,
+       _styleRuns = styleRuns,
        _onLayout = onLayout;
 
   String _text;
@@ -110,6 +136,10 @@ class RenderReaderTextBlock extends RenderBox {
   double _firstLineIndent;
   TextAlign _textAlign;
   bool _startsAtParagraphBoundary;
+  int? _highlightStart;
+  int? _highlightEnd;
+  Color? _highlightColor;
+  List<ReaderInlineStyleRun> _styleRuns;
   ValueChanged<ReaderBlockLayout>? _onLayout;
   ReaderTypographyLayout? _layout;
 
@@ -213,6 +243,49 @@ class RenderReaderTextBlock extends RenderBox {
     }
   }
 
+  int? get highlightStart => _highlightStart;
+  set highlightStart(int? value) {
+    if (value == _highlightStart) return;
+    _highlightStart = value;
+    _layout?.updateHighlight(
+      start: _highlightStart,
+      end: _highlightEnd,
+      color: _highlightColor,
+    );
+    markNeedsPaint();
+  }
+
+  int? get highlightEnd => _highlightEnd;
+  set highlightEnd(int? value) {
+    if (value == _highlightEnd) return;
+    _highlightEnd = value;
+    _layout?.updateHighlight(
+      start: _highlightStart,
+      end: _highlightEnd,
+      color: _highlightColor,
+    );
+    markNeedsPaint();
+  }
+
+  Color? get highlightColor => _highlightColor;
+  set highlightColor(Color? value) {
+    if (value == _highlightColor) return;
+    _highlightColor = value;
+    _layout?.updateHighlight(
+      start: _highlightStart,
+      end: _highlightEnd,
+      color: _highlightColor,
+    );
+    markNeedsPaint();
+  }
+
+  List<ReaderInlineStyleRun> get styleRuns => _styleRuns;
+  set styleRuns(List<ReaderInlineStyleRun> value) {
+    if (identical(value, _styleRuns) || listEquals(value, _styleRuns)) return;
+    _styleRuns = value;
+    markNeedsLayout();
+  }
+
   ValueChanged<ReaderBlockLayout>? get onLayout => _onLayout;
   set onLayout(ValueChanged<ReaderBlockLayout>? value) => _onLayout = value;
 
@@ -231,6 +304,10 @@ class RenderReaderTextBlock extends RenderBox {
     firstLineIndent: _firstLineIndent,
     textAlign: _textAlign,
     startsAtParagraphBoundary: _startsAtParagraphBoundary,
+    highlightStart: _highlightStart,
+    highlightEnd: _highlightEnd,
+    highlightColor: _highlightColor,
+    styleRuns: _styleRuns,
   );
 
   @override

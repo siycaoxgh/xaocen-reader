@@ -4,8 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/database/app_database.dart';
 import '../data/data_root.dart';
+import '../data/sync/sync_outbox.dart';
 import '../data/repositories/encoding_index_provider.dart';
 import '../data/repositories/library_file_manager.dart';
+import '../data/repositories/local_book_cover_repository.dart';
 import '../data/repositories/local_library_repository.dart';
 import '../data/repositories/reading_progress_repository.dart';
 import '../data/repositories/reader_bookmark_repository.dart';
@@ -17,14 +19,23 @@ import '../data/repositories/reading_history_repository.dart';
 import '../data/repositories/reading_session_repository.dart';
 import '../data/repositories/auto_read_preferences_repository.dart';
 import '../data/repositories/windows_shell_preferences_repository.dart';
+import '../data/repositories/app_theme_preferences_repository.dart';
+import '../data/repositories/tts_preferences_repository.dart';
+import '../data/repositories/feed_subscription_repository.dart';
+import '../data/repositories/web_book_source_registry.dart';
+import '../domain/app_theme_mode.dart';
 import '../domain/library/library_entities.dart';
 import '../domain/library/library_import_models.dart';
 import '../domain/platform/platform_capabilities.dart';
 import '../domain/reader/reading_history.dart';
+import '../domain/reader/reader_progress_state.dart';
+import '../domain/remote/feed_subscription.dart';
 import '../domain/local_txt/pipeline_progress.dart';
 import '../reader/normalized_document_loader.dart';
 import '../sources/local_txt/txt_cancellation.dart';
 import '../platform/platform_capabilities_adapter.dart';
+import '../sources/remote/feed_subscription_service.dart';
+import '../sources/remote/remote_http_transport.dart';
 
 /// 数据库 Provider（懒加载）。
 final databaseProvider = Provider<AppDatabase>((ref) {
@@ -36,6 +47,11 @@ final databaseProvider = Provider<AppDatabase>((ref) {
 /// The initialized storage scope for the running application instance.
 final dataRootProvider = Provider<DataRoot>((ref) {
   throw UnimplementedError('dataRootProvider must be overridden');
+});
+
+/// Local-only future sync queue. It never performs network I/O by itself.
+final syncOutboxProvider = Provider<SyncOutbox>((ref) {
+  return SyncOutbox(root: ref.watch(dataRootProvider));
 });
 
 /// 文件管理 Provider（使用系统 support 目录下 library 根）。
@@ -61,6 +77,19 @@ final libraryRepositoryProvider = Provider<LocalLibraryRepository>((ref) {
   );
 });
 
+final localBookCoverRepositoryProvider = Provider<LocalBookCoverRepository?>((
+  ref,
+) {
+  try {
+    return LocalBookCoverRepository(
+      database: ref.watch(databaseProvider),
+      fileManager: ref.watch(fileManagerProvider),
+    );
+  } on UnimplementedError {
+    return null;
+  }
+});
+
 /// 书架集合列表（自动刷新）。
 final collectionsProvider = FutureProvider<List<LibraryCollection>>((
   ref,
@@ -68,6 +97,22 @@ final collectionsProvider = FutureProvider<List<LibraryCollection>>((
   final repo = ref.watch(libraryRepositoryProvider);
   return repo.listCollections();
 });
+
+/// Manifest-backed metadata for online books. This is deliberately separate
+/// from the collection schema so local books do not carry remote concerns.
+final webBookSnapshotMetadataProvider =
+    FutureProvider.family<WebBookSnapshotMetadata?, String>((
+      ref,
+      collectionId,
+    ) async {
+      try {
+        return await ref
+            .watch(libraryRepositoryProvider)
+            .getWebBookSnapshotMetadata(collectionId);
+      } on Object {
+        return null;
+      }
+    });
 
 /// 文档加载器 Provider（Reader 使用）。
 final documentLoaderProvider = Provider<NormalizedDocumentLoader>((ref) {
@@ -82,6 +127,14 @@ final readingProgressRepositoryProvider = Provider<ReadingProgressRepository>((
   final db = ref.watch(databaseProvider);
   return ReadingProgressRepository(db: db);
 });
+
+/// The bookshelf reads the same persisted progress state as Reader.
+final collectionProgressProvider =
+    FutureProvider.family<ReaderProgressState?, String>((ref, collectionId) {
+      return ref
+          .watch(readingProgressRepositoryProvider)
+          .getProgress(collectionId);
+    });
 
 final readerBookmarkRepositoryProvider = Provider<ReaderBookmarkRepository>((
   ref,
@@ -124,10 +177,42 @@ final autoReadPreferencesRepositoryProvider =
       return AutoReadPreferencesRepository(db: ref.watch(databaseProvider));
     });
 
+final ttsPreferencesRepositoryProvider = Provider<TtsPreferencesRepository>((
+  ref,
+) {
+  return TtsPreferencesRepository(db: ref.watch(databaseProvider));
+});
+
 final windowsShellPreferencesRepositoryProvider =
     Provider<WindowsShellPreferencesRepository>((ref) {
       return WindowsShellPreferencesRepository(db: ref.watch(databaseProvider));
     });
+
+final appThemePreferencesRepositoryProvider =
+    Provider<AppThemePreferencesRepository>((ref) {
+      return AppThemePreferencesRepository(ref.watch(databaseProvider));
+    });
+
+/// Application shell theme. ReaderThemeMode remains book-scoped and is not
+/// read or mutated by this provider.
+final appThemeModeProvider =
+    AsyncNotifierProvider<AppThemeModeNotifier, AppThemeMode>(
+      AppThemeModeNotifier.new,
+    );
+
+class AppThemeModeNotifier extends AsyncNotifier<AppThemeMode> {
+  @override
+  Future<AppThemeMode> build() {
+    return ref.watch(appThemePreferencesRepositoryProvider).load();
+  }
+
+  Future<void> setMode(AppThemeMode mode) async {
+    // Publish first so every open Settings route and overlay rebuilds in the
+    // same frame; persistence is then completed through the same repository.
+    state = AsyncData(mode);
+    await ref.read(appThemePreferencesRepositoryProvider).save(mode);
+  }
+}
 
 final platformCapabilitiesAdapterProvider =
     Provider<PlatformCapabilitiesAdapter>((ref) {
@@ -274,4 +359,75 @@ class ImportProgressNotifier extends StateNotifier<ImportProgressState> {
       _pendingFile = null;
     }
   }
+
+  /// EPUB 使用独立解析器，但最终仍写入同一 Library/Reader 数据模型。
+  Future<void> startEpub(File file) async {
+    final repo = _ref.read(libraryRepositoryProvider);
+    _pendingFile = file;
+    state = const ImportProgressState(running: true);
+    try {
+      final result = await repo.importEpub(
+        ImportEpubRequest(externalFile: file),
+      );
+      state = ImportProgressState(
+        done: true,
+        alreadyImported: result.alreadyImported,
+      );
+      _pendingFile = null;
+      _ref.invalidate(collectionsProvider);
+    } on LibraryException catch (e) {
+      state = ImportProgressState(error: e.message);
+      _pendingFile = null;
+    } catch (e) {
+      state = ImportProgressState(error: 'EPUB 导入失败: $e');
+      _pendingFile = null;
+    }
+  }
 }
+
+/// Profile-scoped RSS/Atom subscription persistence.
+final feedSubscriptionRepositoryProvider = Provider<FeedSubscriptionRepository>(
+  (ref) => FeedSubscriptionRepository(ref.watch(dataRootProvider)),
+);
+
+/// The transport is shared by explicit subscription actions and is released
+/// with the ProviderScope. No timer or background refresh is attached.
+final feedSubscriptionTransportProvider = Provider<RemoteHttpTransport>((ref) {
+  final transport = RemoteHttpTransport();
+  ref.onDispose(transport.close);
+  return transport;
+});
+
+final feedSubscriptionServiceProvider = Provider<FeedSubscriptionService>(
+  (ref) => FeedSubscriptionService(
+    repository: ref.watch(feedSubscriptionRepositoryProvider),
+    transport: ref.watch(feedSubscriptionTransportProvider),
+  ),
+);
+
+final feedSubscriptionsProvider = FutureProvider<List<FeedSubscription>>((ref) {
+  return ref.watch(feedSubscriptionRepositoryProvider).list();
+});
+
+/// Profile/DataRoot-scoped WebBook source registry. It stores only validated
+/// source definitions and local enabled state; network requests stay in the
+/// explicit WebBook browser flow.
+final webBookSourceRegistryProvider = Provider<WebBookSourceRegistry>((ref) {
+  return WebBookSourceRegistry(ref.watch(dataRootProvider));
+});
+
+final webBookSourceEntriesProvider =
+    FutureProvider<List<WebBookSourceRegistryEntry>>((ref) {
+      return ref.watch(webBookSourceRegistryProvider).list();
+    });
+
+final webBookTransportProvider = Provider<RemoteHttpTransport>((ref) {
+  final transport = RemoteHttpTransport();
+  ref.onDispose(transport.close);
+  return transport;
+});
+
+final feedSubscriptionProvider =
+    FutureProvider.family<FeedSubscription?, String>((ref, sourceId) {
+      return ref.watch(feedSubscriptionRepositoryProvider).find(sourceId);
+    });

@@ -14,6 +14,13 @@ import 'dart:io';
 ///     ├── normalized.txt
 ///     ├── index.json
 ///     └── manifest.json
+/// └── epub/<contentHash>/      # 正式 EPUB 包与规范化正文
+///     ├── source.epub
+///     ├── normalized.txt
+///     └── manifest.json
+/// └── web_book/<contentHash>/  # 正式 WebBook snapshot 与规范化正文
+///     ├── normalized.txt
+///     └── manifest.json
 /// ```
 class LibraryFileManager {
   LibraryFileManager({required this.libraryRoot});
@@ -25,12 +32,22 @@ class LibraryFileManager {
       Directory('${libraryRoot.path}${Platform.pathSeparator}importing');
   Directory get localTxtDir =>
       Directory('${libraryRoot.path}${Platform.pathSeparator}local_txt');
+  Directory get epubDir =>
+      Directory('${libraryRoot.path}${Platform.pathSeparator}epub');
+  Directory get webBookDir =>
+      Directory('${libraryRoot.path}${Platform.pathSeparator}web_book');
 
   Directory importingJobDir(String jobId) =>
       Directory('${importingDir.path}${Platform.pathSeparator}$jobId');
 
   Directory contentDir(String contentHash) =>
       Directory('${localTxtDir.path}${Platform.pathSeparator}$contentHash');
+
+  Directory epubContentDir(String contentHash) =>
+      Directory('${epubDir.path}${Platform.pathSeparator}$contentHash');
+
+  Directory webBookContentDir(String contentHash) =>
+      Directory('${webBookDir.path}${Platform.pathSeparator}$contentHash');
 
   /// 解析 DB 中存储的相对路径（如 `library/local_txt/<hash>/normalized.txt`）
   /// 为绝对 File。
@@ -84,6 +101,50 @@ class LibraryFileManager {
     }
   }
 
+  /// 原子提交 EPUB 导入目录。导入临时文件仍统一位于 importing 下，
+  /// 正式内容则按来源类型分开，避免与 TXT 的 repair/delete 语义混淆。
+  Future<void> commitToEpubContentDir(String jobId, String contentHash) async {
+    final src = importingJobDir(jobId);
+    if (!await src.exists()) {
+      throw LibraryFileException('import job dir missing: $jobId');
+    }
+    final dst = epubContentDir(contentHash);
+    if (await dst.exists()) {
+      await dst.delete(recursive: true);
+    }
+    await epubDir.create(recursive: true);
+    try {
+      await src.rename(dst.path);
+    } catch (_) {
+      await _copyRecursive(src, dst);
+      await src.delete(recursive: true);
+    }
+  }
+
+  /// Atomic commit for a persisted WebBook snapshot. The snapshot uses the
+  /// same importing staging area as TXT/EPUB but has its own final directory
+  /// so repair/delete logic cannot confuse it with a local file.
+  Future<void> commitToWebBookContentDir(
+    String jobId,
+    String contentHash,
+  ) async {
+    final src = importingJobDir(jobId);
+    if (!await src.exists()) {
+      throw LibraryFileException('import job dir missing: $jobId');
+    }
+    final dst = webBookContentDir(contentHash);
+    if (await dst.exists()) {
+      await dst.delete(recursive: true);
+    }
+    await webBookDir.create(recursive: true);
+    try {
+      await src.rename(dst.path);
+    } catch (_) {
+      await _copyRecursive(src, dst);
+      await src.delete(recursive: true);
+    }
+  }
+
   /// 清理未完成导入 job（启动时调用；只清 importing 下，不清正式目录）。
   Future<void> cleanupStaleImportingJobs() async {
     if (!await importingDir.exists()) return;
@@ -105,6 +166,36 @@ class LibraryFileManager {
       throw const LibraryFileException('path traversal rejected');
     }
     final target = contentDir(contentHash);
+    _assertSafeDelete(target);
+    if (await target.exists()) {
+      await target.delete(recursive: true);
+    }
+  }
+
+  /// 删除应用管理的 EPUB 目录，使用与 TXT 相同的安全校验。
+  Future<void> deleteEpubContentDir(String contentHash) async {
+    if (contentHash.isEmpty) {
+      throw const LibraryFileException('refusing empty directory name');
+    }
+    if (contentHash.contains('..')) {
+      throw const LibraryFileException('path traversal rejected');
+    }
+    final target = epubContentDir(contentHash);
+    _assertSafeDelete(target);
+    if (await target.exists()) {
+      await target.delete(recursive: true);
+    }
+  }
+
+  /// Deletes an app-managed WebBook snapshot after validating its hash path.
+  Future<void> deleteWebBookContentDir(String contentHash) async {
+    if (contentHash.isEmpty) {
+      throw const LibraryFileException('refusing empty directory name');
+    }
+    if (contentHash.contains('..')) {
+      throw const LibraryFileException('path traversal rejected');
+    }
+    final target = webBookContentDir(contentHash);
     _assertSafeDelete(target);
     if (await target.exists()) {
       await target.delete(recursive: true);

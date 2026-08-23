@@ -42,6 +42,17 @@ final class WindowsShellBridge {
     }
   }
 
+  static Future<void> setTrayLocale(String localeTag) async {
+    if (!supported) return;
+    try {
+      await _channel.invokeMethod<void>('setTrayLocale', localeTag);
+    } on MissingPluginException {
+      // Unit/widget hosts do not load the Windows runner.
+    } on PlatformException {
+      // Tray labels retain the native default if the bridge is unavailable.
+    }
+  }
+
   static Future<bool> hideWindow() async {
     if (!supported) return false;
     try {
@@ -209,9 +220,14 @@ void unawaitedShell(Future<void> future) => unawaited(future);
 /// Root-level app-local Boss Key host. It wraps MaterialApp so the chord also
 /// works while a Reader or settings route is on top of the shell.
 class WindowsShellHost extends ConsumerStatefulWidget {
-  const WindowsShellHost({required this.child, super.key});
+  const WindowsShellHost({
+    required this.child,
+    this.localeTag = 'zh-CN',
+    super.key,
+  });
 
   final Widget child;
+  final String localeTag;
 
   @override
   ConsumerState<WindowsShellHost> createState() => _WindowsShellHostState();
@@ -232,7 +248,16 @@ class _WindowsShellHostState extends ConsumerState<WindowsShellHost> {
     final value = await repository.load();
     if (!mounted) return;
     setState(() => _preferences = value);
+    await WindowsShellBridge.setTrayLocale(widget.localeTag);
     unawaited(WindowsShellBridge.apply(value));
+  }
+
+  @override
+  void didUpdateWidget(covariant WindowsShellHost oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.localeTag != widget.localeTag) {
+      unawaited(WindowsShellBridge.setTrayLocale(widget.localeTag));
+    }
   }
 
   KeyEventResult _onKeyEvent(FocusNode node, KeyEvent event) {

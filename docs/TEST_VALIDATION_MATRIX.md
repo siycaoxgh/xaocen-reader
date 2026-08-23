@@ -6,7 +6,64 @@
 
 图例：✅ 通过 · ✅* 通过（用户手动确认） · ➖ 不适用/未执行 · 🔒 回归敏感
 
+## M5.8 — App identity / icon / version (2026-08-15)
+
+| Validation | Result |
+|---|---|
+| Windows product name | XAOCEN Reader |
+| Android user-visible name | 晓枨阅读 |
+| Android applicationId | PASS — `com.xaocen.xaocen_reader` preserved |
+| User-visible version | PASS — `4.5.8` |
+| Shared icon source | PASS — provided rounded ICO |
+
+## M5.8s.8-FINAL — TTS / AutoRead baseline freeze (2026-08-15)
+
+| Validation | Result |
+|---|---|
+| Windows / Android TTS contract | PASS (automated/build regression; physical speech remains manual where noted) |
+| AutoRead / TTS mutual exclusion | PASS |
+| Unified `自动` entry and shared overlay | PASS |
+| Overlay inactivity hide | PASS — 2.5 seconds |
+| Live speech-rate continuity | PASS (UTF-16 offset-preserving tests; audible hardware check remains manual) |
+| Sleep timer / chapter-end stop | PASS |
+| Android automatic volume-key profiles | PASS (logic/persistence); physical key press = MANUAL REQUIRED |
+| Android MediaSession / notification actions | PASS on emulator |
+| Android lock-screen / Bluetooth headset controls | MANUAL REQUIRED |
+| AVD `KEYCODE_MEDIA_*` delivery | MANUAL REQUIRED — emulator reports no media-button session route |
+| Windows native system media control | DEFERRED |
+| UTF-16 Locator / ReaderProgress | PASS |
+| Windows true-transparency regression | PASS |
+| Static analysis | PASS (`flutter analyze --no-pub`) |
+| Full Flutter tests | PASS (642) |
+| Android Release | PASS |
+| Windows Patched Release | PASS (canonical stage + launch smoke) |
+| `git diff --check` | PASS (line-ending warnings only) |
+
 ## M5.6a — P1 regression fixes
+
+## M5.8s.7 — TTS Final Validation & Baseline Freeze (2026-08-15)
+
+| Validation | Result |
+|---|---|
+| Start from current Reader location | PASS (locator-to-segment tests) |
+| Pause / resume / stop | PASS |
+| Previous / next | PASS |
+| Continuous segments / chapters | PASS |
+| Vertical / paged follow | PASS (existing follow contracts) |
+| System voice / speech rate | PASS (persistence and fallback tests) |
+| Sleep timer / chapter-end stop | PASS (fake-clock tests) |
+| Reader/App cleanup | PASS |
+| UTF-16 Locator / ReaderProgress | PASS; no second TTS progress truth |
+| Android MediaSession / notification path | PASS (native/build); physical headset/lock-screen = MANUAL REQUIRED |
+| Android screen-off / background | MANUAL REQUIRED |
+| Windows minimize / Tray speech | MANUAL REQUIRED |
+| Windows native system media control | DEFERRED |
+| Windows true-transparency regression | PASS (protected frozen baseline; no TTS path changes) |
+| Static analysis | PASS (`flutter analyze --no-pub`) |
+| Flutter tests | PASS (626 across `test/unit`, `test/widget`, `test/contracts`, `test/fixtures`) |
+| Windows Release / Android Release | PASS |
+| Android Emulator Release install/launcher smoke | PASS (`emulator-5554`, `adb install -r`) |
+| `git diff --check` | PASS (line-ending warnings only) |
 
 ## M5.6c.1.2 — unified AutoRead and Android volume contract
 
@@ -812,3 +869,19 @@ vertical A → paged → 不翻页 → 重开 = paged + A · vertical A → page
 | Four real TXT corpus / logical error | PASS / 0 |
 | Windows Release / Android Debug | PASS / PASS |
 | Drift schema | 11, unchanged |
+
+## M5.7s.8d-4-FINAL Windows True Transparency baseline
+
+| Area | Result |
+|---|---|
+| Background opacity 0–100% | PASS — manual acceptance |
+| BG 0% desktop透出 / foreground 100% | PASS — manual acceptance |
+| Reader Theme and custom text RGB preserved | PASS — manual acceptance |
+| Borderless DWM border and top white line | PASS — manual acceptance |
+| Native window drag | PASS — manual acceptance |
+| Native window resize | PASS — manual acceptance |
+| Standard Engine fallback | PASS — manual acceptance |
+| `flutter analyze --no-pub` | PASS |
+| Full Flutter tests | PASS |
+| `git diff --check` | PASS |
+| Canonical Windows Release output | `artifacts\\windows\\current\\Release\\` |

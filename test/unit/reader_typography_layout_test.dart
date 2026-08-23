@@ -1,6 +1,7 @@
 import 'package:flutter/painting.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:xaocen_reader/reader/reader_typography_layout.dart';
+import 'package:xaocen_reader/domain/reader/reader_rendering.dart';
 
 void main() {
   test(
@@ -110,5 +111,44 @@ void main() {
       expect(line.painter.width, lessThanOrEqualTo(180));
     }
     expect(layout.lines.first.x, lessThan(0));
+  });
+
+  test('inline EPUB style runs are paint-only and preserve source offsets', () {
+    const text = '普通 粗体 斜体';
+    final layout = ReaderTypographyLayout(
+      text: text,
+      style: const TextStyle(fontSize: 18),
+      textDirection: TextDirection.ltr,
+      width: 240,
+      paragraphSpacing: 0,
+      firstLineIndent: 0,
+      startsAtParagraphBoundary: true,
+      styleRuns: [
+        ReaderInlineStyleRun(
+          startCharacterOffset: 3,
+          endCharacterOffset: 5,
+          bold: true,
+        ),
+        ReaderInlineStyleRun(
+          startCharacterOffset: 6,
+          endCharacterOffset: 8,
+          italic: true,
+        ),
+      ],
+    );
+    addTearDown(layout.dispose);
+    expect(layout.text, text);
+    expect(layout.lines.single.start, 0);
+    expect(layout.lines.single.end, text.length);
+    final span = layout.fastPainter!.text! as TextSpan;
+    expect(span.children, isNotEmpty);
+    expect(
+      span.children!.any((child) => child.style?.fontWeight == FontWeight.bold),
+      isTrue,
+    );
+    expect(
+      span.children!.any((child) => child.style?.fontStyle == FontStyle.italic),
+      isTrue,
+    );
   });
 }

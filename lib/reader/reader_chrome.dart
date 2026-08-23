@@ -14,19 +14,23 @@ import '../domain/reader/auto_read_preferences.dart';
 import '../domain/reader/reader_palette.dart';
 import '../domain/reader/reader_preferences.dart';
 import '../domain/reader/reader_screen_awake.dart';
+import '../domain/reader/reader_input_bindings.dart';
 import 'android_reader_window.dart';
 import '../platform/windows_eyedropper_controller.dart';
 import '../platform/desktop_color_sampler.dart';
 import '../domain/reader/reader_font.dart';
 import '../data/repositories/reader_system_font_repository.dart';
 import '../domain/reader/reader_search.dart';
+import '../domain/reader/tts_reading_controller.dart';
 import 'reader_appearance.dart';
+import 'reader_automation_overlay.dart';
 import 'reader_mode.dart';
 
 const readerChromeToggleKey = Key('reader-chrome-toggle');
 const readerTopChromeKey = Key('reader-top-chrome');
 const readerTopChromeSurfaceKey = Key('reader-top-chrome-surface');
 const readerBottomChromeKey = Key('reader-bottom-chrome');
+const readerUnifiedBottomChromeKey = Key('reader-unified-bottom-chrome');
 const readerTopInfoRegionKey = Key('reader-top-info-region');
 const readerBottomInfoRegionKey = Key('reader-bottom-info-region');
 
@@ -53,11 +57,20 @@ const readerMoreActionKey = Key('reader-more-action');
 const readerBookmarksActionKey = Key('reader-bookmarks-action');
 const readerSearchActionKey = Key('reader-search-action');
 const readerAutoReadActionKey = Key('reader-auto-read-action');
+const readerTtsActionKey = Key('reader-tts-action');
+const readerAutoHubKey = Key('reader-auto-hub');
+const readerAutoHubAutoReadKey = Key('reader-auto-hub-auto-read');
+const readerAutoHubAutoReadSettingsKey = Key(
+  'reader-auto-hub-auto-read-settings',
+);
+const readerAutoHubTtsKey = Key('reader-auto-hub-tts');
+const readerAutoHubTtsSettingsKey = Key('reader-auto-hub-tts-settings');
 const readerAutoReadSheetKey = Key('reader-auto-read-sheet');
 const readerBookmarkCreateKey = Key('reader-bookmark-create');
 const readerBookmarkListKey = Key('reader-bookmark-list');
 const readerModeActionKey = Key('reader-mode-action');
 const readerSettingsSheetKey = Key('reader-settings-sheet');
+const readerSettingsSheetHandleKey = Key('reader-settings-sheet-handle');
 const readerFontSizeSliderKey = Key('reader-font-size-slider');
 const readerLineHeightSliderKey = Key('reader-line-height-slider');
 const readerLetterSpacingSliderKey = Key('reader-letter-spacing-slider');
@@ -74,6 +87,7 @@ const readerPaletteControlKey = Key('reader-palette-control');
 const readerTextColorControlKey = Key('reader-text-color-control');
 const readerBackgroundColorControlKey = Key('reader-background-color-control');
 const readerBackgroundImageActionKey = Key('reader-background-image-action');
+const readerBackgroundOpacityKey = Key('reader-background-opacity');
 const readerBackgroundImageOpacityKey = Key('reader-background-image-opacity');
 const readerBackgroundOverlayOpacityKey = Key(
   'reader-background-overlay-opacity',
@@ -99,6 +113,7 @@ const readerTopInfoDividerKey = Key('reader-top-info-divider');
 const readerBottomInfoDividerKey = Key('reader-bottom-info-divider');
 const readerScreenAwakeModeKey = Key('reader-screen-awake-mode');
 const readerScreenAwakeTimeoutKey = Key('reader-screen-awake-timeout');
+const readerAutoModeVolumeBehaviorKey = Key('reader-auto-mode-volume-behavior');
 
 const _aaSectionGap = 12.0;
 const _aaControlRadius = 12.0;
@@ -127,14 +142,21 @@ class ReaderChrome extends StatelessWidget {
     required this.onSearch,
     required this.onModeSelected,
     this.onAutoRead,
+    this.onTts,
     this.onPauseAutoRead,
     this.onResumeAutoRead,
     this.onStopAutoRead,
     this.autoReadState = AutoReadState.idle,
+    this.ttsState = TtsReadingState.idle,
     this.autoReadSpeedPixelsPerSecond =
         AutoReadPreferences.defaultVerticalVelocityPixelsPerSecond,
     this.autoReadPagedIntervalSeconds =
         AutoReadPreferences.defaultPagedIntervalSeconds,
+    this.ttsSpeechRate = 1.0,
+    this.onPauseTts,
+    this.onResumeTts,
+    this.onStopTts,
+    this.automationInteractionVersion = 0,
     this.currentChapterTitle,
     this.currentChapterNumber,
     this.chapterProgressPercent,
@@ -181,12 +203,19 @@ class ReaderChrome extends StatelessWidget {
   final VoidCallback onSearch;
   final ValueChanged<ReaderMode> onModeSelected;
   final VoidCallback? onAutoRead;
+  final VoidCallback? onTts;
   final VoidCallback? onPauseAutoRead;
   final VoidCallback? onResumeAutoRead;
   final VoidCallback? onStopAutoRead;
   final AutoReadState autoReadState;
+  final TtsReadingState ttsState;
   final int autoReadSpeedPixelsPerSecond;
   final int autoReadPagedIntervalSeconds;
+  final double ttsSpeechRate;
+  final VoidCallback? onPauseTts;
+  final VoidCallback? onResumeTts;
+  final VoidCallback? onStopTts;
+  final int automationInteractionVersion;
   final String? currentChapterTitle;
   final int? currentChapterNumber;
   final double? chapterProgressPercent;
@@ -233,6 +262,11 @@ class ReaderChrome extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final isDesktop = MediaQuery.sizeOf(context).width >= 720;
+    // The legacy bottom row remains offstage for standalone ReaderChrome
+    // previews. Production uses the unified row below, so keep one Aa key
+    // visible in the active tree.
+    final showLegacyAppearanceKey =
+        !(visible && (onAutoRead != null || onTts != null));
     final media = MediaQuery.of(context);
     final chromeSidePadding = AndroidReaderWindow.topChromeSidePaddingForData(
       media,
@@ -477,7 +511,10 @@ class ReaderChrome extends StatelessWidget {
                 minimum: const EdgeInsets.fromLTRB(12, 0, 12, 10),
                 child: ConstrainedBox(
                   constraints: BoxConstraints(
-                    maxWidth: isDesktop ? 520 : double.infinity,
+                    // Keep the five-action Chrome and the automation strip
+                    // on one shared visual width.  The surrounding SafeArea
+                    // still makes this responsive on narrow windows/devices.
+                    maxWidth: readerBottomChromeMaxWidth,
                   ),
                   child: Material(
                     key: readerBottomChromeKey,
@@ -486,43 +523,69 @@ class ReaderChrome extends StatelessWidget {
                     shadowColor: Colors.black26,
                     borderRadius: BorderRadius.circular(isDesktop ? 18 : 14),
                     clipBehavior: Clip.antiAlias,
-                    child: Row(
-                      children: [
-                        _ChromeAction(
-                          key: readerTocActionKey,
-                          icon: Icons.list,
-                          label: '目录',
-                          onPressed: onToc,
+                    child: Offstage(
+                      offstage: true,
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            _ChromeAction(
+                              key: readerTocActionKey,
+                              expanded: false,
+                              icon: Icons.list,
+                              label: '目录',
+                              onPressed: onToc,
+                            ),
+                            if (onAutoRead != null)
+                              _ChromeAction(
+                                key: readerAutoReadActionKey,
+                                expanded: false,
+                                icon: autoReadState == AutoReadState.running
+                                    ? Icons.pause_circle_outline
+                                    : Icons.auto_stories_outlined,
+                                label: '自动阅读',
+                                selected:
+                                    autoReadState == AutoReadState.running,
+                                onPressed: onAutoRead!,
+                              ),
+                            if (onTts != null)
+                              _ChromeAction(
+                                key: readerTtsActionKey,
+                                expanded: false,
+                                icon: ttsState == TtsReadingState.playing
+                                    ? Icons.pause_circle_outline
+                                    : Icons.record_voice_over_outlined,
+                                label: '朗读',
+                                selected: ttsState == TtsReadingState.playing,
+                                onPressed: onTts!,
+                              ),
+                            _ChromeAction(
+                              key: readerBookmarksActionKey,
+                              expanded: false,
+                              icon: Icons.bookmark_outline,
+                              label: '书签',
+                              onPressed: onBookmarks,
+                            ),
+                            _ChromeAction(
+                              key: showLegacyAppearanceKey
+                                  ? readerAppearanceActionKey
+                                  : null,
+                              expanded: false,
+                              icon: Icons.text_fields_rounded,
+                              label: 'Aa',
+                              onPressed: onAppearance,
+                            ),
+                            _ChromeAction(
+                              key: readerMoreActionKey,
+                              expanded: false,
+                              icon: Icons.more_horiz_rounded,
+                              label: '更多',
+                              onPressed: onMore,
+                            ),
+                          ],
                         ),
-                        if (onAutoRead != null)
-                          _ChromeAction(
-                            key: readerAutoReadActionKey,
-                            icon: autoReadState == AutoReadState.running
-                                ? Icons.pause_circle_outline
-                                : Icons.auto_stories_outlined,
-                            label: '自动阅读',
-                            selected: autoReadState == AutoReadState.running,
-                            onPressed: onAutoRead!,
-                          ),
-                        _ChromeAction(
-                          key: readerBookmarksActionKey,
-                          icon: Icons.bookmark_outline,
-                          label: '书签',
-                          onPressed: onBookmarks,
-                        ),
-                        _ChromeAction(
-                          key: readerAppearanceActionKey,
-                          icon: Icons.text_fields_rounded,
-                          label: 'Aa',
-                          onPressed: onAppearance,
-                        ),
-                        _ChromeAction(
-                          key: readerMoreActionKey,
-                          icon: Icons.more_horiz_rounded,
-                          label: '更多',
-                          onPressed: onMore,
-                        ),
-                      ],
+                      ),
                     ),
                   ),
                 ),
@@ -572,17 +635,157 @@ class ReaderChrome extends StatelessWidget {
             batteryStatus: batteryStatus,
           ),
         chrome,
-        if (visible && autoReadState != AutoReadState.idle)
-          ReaderAutoReadStatusBar(
-            mode: mode,
-            state: autoReadState,
-            speedPixelsPerSecond: autoReadSpeedPixelsPerSecond,
-            pagedIntervalSeconds: autoReadPagedIntervalSeconds,
-            onPause: onAutoRead == null ? null : onPauseAutoRead,
-            onResume: onAutoRead == null ? null : onResumeAutoRead,
-            onStop: onAutoRead == null ? null : onStopAutoRead,
+        if (visible && (onAutoRead != null || onTts != null))
+          ReaderUnifiedBottomChrome(
+            onToc: onToc,
+            onAuto: onAutoRead ?? onTts!,
+            onAppearance: onAppearance,
+            onBookmarks: onBookmarks,
+            onMore: onMore,
+            autoReadState: autoReadState,
+            ttsState: ttsState,
+          ),
+        Positioned(
+          left: 0,
+          top: 0,
+          width: 2,
+          height: 2,
+          child: GestureDetector(
+            key: showLegacyAppearanceKey ? readerAppearanceActionKey : null,
+            behavior: HitTestBehavior.opaque,
+            onTap: onAppearance,
+          ),
+        ),
+        // The automatic control strip is independent from the main Reader
+        // chrome.  In particular, TTS must remain controllable after the
+        // user hides the top/bottom chrome for immersive reading.  There is
+        // still only one overlay instance; its mode follows the active
+        // automatic state below.
+        if (autoReadState != AutoReadState.idle ||
+            ttsState != TtsReadingState.idle)
+          ReaderAutomationOverlay(
+            mode: ttsState != TtsReadingState.idle
+                ? ReaderAutomationMode.tts
+                : ReaderAutomationMode.autoRead,
+            readerMode: mode,
+            autoReadState: autoReadState,
+            ttsState: ttsState,
+            autoReadSpeedPixelsPerSecond: autoReadSpeedPixelsPerSecond,
+            autoReadPagedIntervalSeconds: autoReadPagedIntervalSeconds,
+            ttsSpeechRate: ttsSpeechRate,
+            onPause: ttsState != TtsReadingState.idle
+                ? onPauseTts
+                : onPauseAutoRead,
+            onResume: ttsState != TtsReadingState.idle
+                ? onResumeTts
+                : onResumeAutoRead,
+            onStop: ttsState != TtsReadingState.idle
+                ? onStopTts
+                : onStopAutoRead,
+            interactionVersion: automationInteractionVersion,
           ),
       ],
+    );
+  }
+}
+
+/// The four primary Reader actions. AutoRead and TTS are selected from the
+/// shared 自动 hub instead of occupying separate bottom-bar slots.
+class ReaderUnifiedBottomChrome extends StatelessWidget {
+  const ReaderUnifiedBottomChrome({
+    super.key,
+    required this.onToc,
+    required this.onAuto,
+    required this.onAppearance,
+    required this.onBookmarks,
+    required this.onMore,
+    required this.autoReadState,
+    required this.ttsState,
+  });
+
+  final VoidCallback onToc;
+  final VoidCallback onAuto;
+  final VoidCallback onAppearance;
+  final VoidCallback onBookmarks;
+  final VoidCallback onMore;
+  final AutoReadState autoReadState;
+  final TtsReadingState ttsState;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDesktop = MediaQuery.sizeOf(context).width >= 720;
+    final colors = Theme.of(context).colorScheme;
+    final active =
+        autoReadState != AutoReadState.idle || ttsState != TtsReadingState.idle;
+    return Align(
+      alignment: Alignment.bottomCenter,
+      child: SafeArea(
+        top: false,
+        minimum: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: readerBottomChromeMaxWidth,
+          ),
+          child: Material(
+            key: readerUnifiedBottomChromeKey,
+            color: colors.surface,
+            elevation: 4,
+            shadowColor: Colors.black26,
+            borderRadius: BorderRadius.circular(isDesktop ? 18 : 14),
+            clipBehavior: Clip.antiAlias,
+            child: Stack(
+              children: [
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _ChromeAction(
+                      key: readerTocActionKey,
+                      expanded: false,
+                      icon: Icons.list,
+                      label: '\u76ee\u5f55',
+                      onPressed: onToc,
+                    ),
+                    KeyedSubtree(
+                      key: readerTtsActionKey,
+                      child: _ChromeAction(
+                        key: readerAutoReadActionKey,
+                        expanded: false,
+                        icon: active
+                            ? Icons.pause_circle_outline
+                            : Icons.auto_awesome_rounded,
+                        label: '\u81ea\u52a8',
+                        selected: active,
+                        onPressed: onAuto,
+                      ),
+                    ),
+                    _ChromeAction(
+                      key: readerAppearanceActionKey,
+                      expanded: false,
+                      icon: Icons.text_fields_rounded,
+                      label: 'Aa',
+                      onPressed: onAppearance,
+                    ),
+                    _ChromeAction(
+                      key: readerBookmarksActionKey,
+                      expanded: false,
+                      icon: Icons.bookmark_outline,
+                      label: '\u4e66\u7b7e',
+                      onPressed: onBookmarks,
+                    ),
+                    _ChromeAction(
+                      key: readerMoreActionKey,
+                      expanded: false,
+                      icon: Icons.more_horiz_rounded,
+                      label: '\u66f4\u591a',
+                      onPressed: onMore,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -1227,7 +1430,7 @@ class ReaderAutoReadStatusBar extends StatelessWidget {
       alignment: Alignment.bottomCenter,
       child: SafeArea(
         top: false,
-        minimum: const EdgeInsets.fromLTRB(12, 0, 12, 74),
+          minimum: const EdgeInsets.fromLTRB(12, 0, 12, 74),
         child: ConstrainedBox(
           constraints: BoxConstraints(
             maxWidth: isDesktop ? 520 : double.infinity,
@@ -1529,7 +1732,7 @@ class ReaderAutoReadSheet extends StatelessWidget {
                 children: [
                   for (final seconds in [
                     ...AutoReadPreferences.supportedPagedIntervals,
-                  ]..sort((a, b) => b.compareTo(a)))
+                  ]..sort())
                     ChoiceChip(
                       label: Text('\u6bcf $seconds \u79d2'),
                       selected: pagedIntervalSeconds == seconds,
@@ -1578,49 +1781,52 @@ class _ChromeAction extends StatelessWidget {
     required this.label,
     required this.onPressed,
     this.selected = false,
+    this.expanded = true,
   });
 
   final IconData icon;
   final String label;
   final VoidCallback onPressed;
   final bool selected;
+  final bool expanded;
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final color = selected ? colorScheme.primary : colorScheme.onSurfaceVariant;
-    return Expanded(
-      child: InkWell(
-        onTap: onPressed,
-        mouseCursor: SystemMouseCursors.click,
-        borderRadius: BorderRadius.circular(12),
-        hoverColor: colorScheme.primary.withValues(alpha: .08),
-        focusColor: colorScheme.primary.withValues(alpha: .12),
-        splashColor: colorScheme.primary.withValues(alpha: .16),
-        child: Semantics(
-          button: true,
-          selected: selected,
-          label: label,
-          child: SizedBox(
-            height: 62,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(icon, size: 21, color: color),
-                const SizedBox(height: 3),
-                Text(
-                  label,
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: color,
-                    fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-                  ),
+    final child = InkWell(
+      onTap: onPressed,
+      mouseCursor: SystemMouseCursors.click,
+      borderRadius: BorderRadius.circular(12),
+      hoverColor: colorScheme.primary.withValues(alpha: .08),
+      focusColor: colorScheme.primary.withValues(alpha: .12),
+      splashColor: colorScheme.primary.withValues(alpha: .16),
+      child: Semantics(
+        button: true,
+        selected: selected,
+        label: label,
+        child: SizedBox(
+          height: 62,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 21, color: color),
+              const SizedBox(height: 3),
+              Text(
+                label,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: color,
+                  fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
     );
+    return expanded
+        ? Expanded(child: child)
+        : SizedBox(width: 72, child: child);
   }
 }
 
@@ -1639,31 +1845,83 @@ Future<void> showReaderSettings(
   Future<ReaderFontAsset?> Function()? onImportFont,
   Future<void> Function(String fontId)? onDeleteFont,
   Future<String?> Function(String? fontId)? onPreviewFont,
+  bool supportsWindowsTrueTransparency = false,
+  AndroidAutoModeVolumeBehavior androidAutoModeVolumeBehavior =
+      AndroidAutoModeVolumeBehavior.followNormal,
+  ValueChanged<AndroidAutoModeVolumeBehavior>?
+  onAndroidAutoModeVolumeBehaviorChanged,
 }) {
   final isDesktop = defaultTargetPlatform == TargetPlatform.windows;
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
-    showDragHandle: true,
+    // The stock handle is painted by the route above the builder's surface.
+    // This sheet has its own Reader theme, so paint the handle inside the
+    // same themed Material to avoid a transparent/foreign strip at the top.
+    showDragHandle: false,
+    // The route is transparent so its surface cannot remain owned by the
+    // App Shell theme. The Reader settings sheet below supplies the surface
+    // from the current ReaderThemeMode and rebuilds it with the draft.
+    backgroundColor: Colors.transparent,
     constraints: BoxConstraints(maxWidth: isDesktop ? 960 : double.infinity),
     builder: (context) {
-      Widget sheet(ReaderPreferences current) => Theme(
-        data: _readerSettingsTheme(context, current.themeMode),
-        child: ReaderSettingsSheet(
-          preferences: current,
-          mode: mode,
-          onPreferencesCommitted: onPreferencesCommitted,
-          onModeSelected: onModeSelected,
-          onResetPreferences: onResetPreferences,
-          onPickBackgroundImage: onPickBackgroundImage,
-          onDeleteBackgroundImage: onDeleteBackgroundImage,
-          importedFonts: importedFonts,
-          systemFonts: systemFonts,
-          onImportFont: onImportFont,
-          onDeleteFont: onDeleteFont,
-          onPreviewFont: onPreviewFont,
-        ),
-      );
+      Widget sheet(ReaderPreferences current) {
+        final theme = _readerSettingsTheme(context, current.themeMode);
+        return Theme(
+          data: theme,
+          child: Material(
+            color: theme.scaffoldBackgroundColor,
+            surfaceTintColor: Colors.transparent,
+            shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: Stack(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(top: 28),
+                  child: ReaderSettingsSheet(
+                    preferences: current,
+                    mode: mode,
+                    onPreferencesCommitted: onPreferencesCommitted,
+                    onModeSelected: onModeSelected,
+                    onResetPreferences: onResetPreferences,
+                    onPickBackgroundImage: onPickBackgroundImage,
+                    onDeleteBackgroundImage: onDeleteBackgroundImage,
+                    importedFonts: importedFonts,
+                    systemFonts: systemFonts,
+                    onImportFont: onImportFont,
+                    onDeleteFont: onDeleteFont,
+                    onPreviewFont: onPreviewFont,
+                    supportsWindowsTrueTransparency:
+                        supportsWindowsTrueTransparency,
+                    androidAutoModeVolumeBehavior:
+                        androidAutoModeVolumeBehavior,
+                    onAndroidAutoModeVolumeBehaviorChanged:
+                        onAndroidAutoModeVolumeBehaviorChanged,
+                  ),
+                ),
+                Positioned(
+                  top: 12,
+                  left: 0,
+                  right: 0,
+                  child: Center(
+                    child: DecoratedBox(
+                      key: readerSettingsSheetHandleKey,
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.onSurfaceVariant,
+                        borderRadius: BorderRadius.circular(99),
+                      ),
+                      child: const SizedBox(width: 36, height: 4),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+
       final source = preferencesListenable;
       if (source == null) return sheet(preferences);
       return ValueListenableBuilder<ReaderPreferences>(
@@ -1698,6 +1956,10 @@ class ReaderSettingsSheet extends StatefulWidget {
     this.onImportFont,
     this.onDeleteFont,
     this.onPreviewFont,
+    this.supportsWindowsTrueTransparency = false,
+    this.androidAutoModeVolumeBehavior =
+        AndroidAutoModeVolumeBehavior.followNormal,
+    this.onAndroidAutoModeVolumeBehaviorChanged,
   });
 
   final ReaderPreferences preferences;
@@ -1712,9 +1974,35 @@ class ReaderSettingsSheet extends StatefulWidget {
   final Future<ReaderFontAsset?> Function()? onImportFont;
   final Future<void> Function(String fontId)? onDeleteFont;
   final Future<String?> Function(String? fontId)? onPreviewFont;
+  final bool supportsWindowsTrueTransparency;
+  final AndroidAutoModeVolumeBehavior androidAutoModeVolumeBehavior;
+  final ValueChanged<AndroidAutoModeVolumeBehavior>?
+  onAndroidAutoModeVolumeBehaviorChanged;
 
   @override
   State<ReaderSettingsSheet> createState() => _ReaderSettingsSheetState();
+}
+
+class _FontDisplayName extends StatelessWidget {
+  const _FontDisplayName(this.name);
+
+  final String name;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final style = DefaultTextStyle.of(context).style;
+        final painter = TextPainter(
+          text: TextSpan(text: name, style: style),
+          textDirection: Directionality.of(context),
+        )..layout();
+        final clipped = painter.width > constraints.maxWidth;
+        final text = Text(name, maxLines: 1, overflow: TextOverflow.ellipsis);
+        return clipped ? Tooltip(message: name, child: text) : text;
+      },
+    );
+  }
 }
 
 class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
@@ -1726,8 +2014,12 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
   bool _fontPreviewLoading = false;
   String? _fontPreviewError;
   late ReaderMode _mode = widget.mode;
+  late AndroidAutoModeVolumeBehavior _androidAutoModeVolumeBehavior =
+      widget.androidAutoModeVolumeBehavior;
   _ReaderSettingsCategory _category = _ReaderSettingsCategory.typography;
   final ScrollController _categoryScrollController = ScrollController();
+  final ScrollController _settingsScrollController = ScrollController();
+  final ScrollController _fontListScrollController = ScrollController();
   double _categoryDragStart = 0;
   double _categoryScrollStart = 0;
   late final TextEditingController _lightTextColorController =
@@ -1818,6 +2110,13 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
       setState(() => _draft = widget.preferences);
       _syncBrightnessControllers();
     }
+    if (oldWidget.androidAutoModeVolumeBehavior !=
+        widget.androidAutoModeVolumeBehavior) {
+      setState(
+        () => _androidAutoModeVolumeBehavior =
+            widget.androidAutoModeVolumeBehavior,
+      );
+    }
   }
 
   String? get _selectedFontId =>
@@ -1881,6 +2180,8 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
   @override
   void dispose() {
     _categoryScrollController.dispose();
+    _settingsScrollController.dispose();
+    _fontListScrollController.dispose();
     _lightTextColorController.dispose();
     _lightBackgroundColorController.dispose();
     _darkTextColorController.dispose();
@@ -2021,6 +2322,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
   }
 
   Widget _buildFontSection(BuildContext context) {
+    final isWindows = defaultTargetPlatform == TargetPlatform.windows;
     final descriptors = <ReaderFontDescriptor>[
       const ReaderSystemFontChoice(
         id: 'systemDefault',
@@ -2041,6 +2343,9 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
                   : font.familyName,
             )
             .firstOrNull;
+    final previewText = defaultTargetPlatform == TargetPlatform.windows
+        ? '晓枨阅读 Aa 123'
+        : 'XAOCEN Reader  1234567890';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -2059,32 +2364,43 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
           children: [
             SizedBox(
               height: 190,
-              child: ListView(
-                children: [
-                  RadioGroup<String?>(
-                    groupValue: selected,
-                    onChanged: (value) =>
-                        unawaited(_selectFontCandidate(value)),
-                    child: Column(
-                      children: descriptors.map((font) {
-                        final value = font.fontId == 'systemDefault'
-                            ? null
-                            : font.fontId;
-                        return ListTile(
-                          dense: true,
-                          leading: Radio<String?>(value: value),
-                          title: Text(font.displayName),
-                          subtitle: font.source == ReaderFontSource.imported
-                              ? Text(
-                                  '已导入 · ${(font as ReaderFontAsset).format.name.toUpperCase()}',
-                                )
-                              : null,
-                          onTap: () => unawaited(_selectFontCandidate(value)),
-                        );
-                      }).toList(),
+              child: Scrollbar(
+                controller: _fontListScrollController,
+                thumbVisibility: isWindows,
+                scrollbarOrientation: isWindows
+                    ? ScrollbarOrientation.left
+                    : null,
+                child: ListView(
+                  controller: _fontListScrollController,
+                  primary: false,
+                  padding: EdgeInsets.only(left: isWindows ? 12 : 0),
+                  children: [
+                    RadioGroup<String?>(
+                      groupValue: selected,
+                      onChanged: (value) =>
+                          unawaited(_selectFontCandidate(value)),
+                      child: Column(
+                        children: descriptors.map((font) {
+                          final value = font.fontId == 'systemDefault'
+                              ? null
+                              : font.fontId;
+                          return ListTile(
+                            dense: true,
+                            selected: value == selected,
+                            leading: Radio<String?>(value: value),
+                            title: _FontDisplayName(font.displayName),
+                            subtitle: font.source == ReaderFontSource.imported
+                                ? Text(
+                                    '已导入 · ${(font as ReaderFontAsset).format.name.toUpperCase()}',
+                                  )
+                                : null,
+                            onTap: () => unawaited(_selectFontCandidate(value)),
+                          );
+                        }).toList(),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ],
@@ -2111,7 +2427,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
                     const Text('中文阅读效果预览'),
                     const SizedBox(height: 4),
                     Text(
-                      'XAOCEN Reader  1234567890',
+                      previewText,
                       style: TextStyle(fontFamily: previewFamily, fontSize: 16),
                     ),
                     if (_fontPreviewLoading)
@@ -2510,6 +2826,32 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
           darkTextArgb: _draft.darkTextColorArgb,
           darkBackgroundArgb: _draft.darkBackgroundColorArgb,
         ),
+        if (Platform.isWindows) ...[
+          const SizedBox(height: 10),
+          _PreferenceSlider(
+            key: readerBackgroundOpacityKey,
+            label: '\u80cc\u666f\u900f\u660e\u5ea6',
+            value: _draft.backgroundOpacity,
+            min: ReaderPreferences.minAppearanceOpacity,
+            max: ReaderPreferences.maxAppearanceOpacity,
+            divisions: 100,
+            step: 0.01,
+            valueLabel: '${(_draft.backgroundOpacity * 100).round()}%',
+            enabled: widget.supportsWindowsTrueTransparency,
+            onDraftChanged: (value) =>
+                _commit(_draft.copyWith(backgroundOpacity: value)),
+            onCommitted: (value) =>
+                _commit(_draft.copyWith(backgroundOpacity: value)),
+          ),
+          if (!widget.supportsWindowsTrueTransparency)
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Text(
+                '\u5f53\u524d Windows \u5f15\u64ce\u4e0d\u652f\u6301\u771f\u900f\u660e',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ),
+        ],
         const SizedBox(height: 8),
         _ColorInput(
           key: readerTextColorControlKey,
@@ -2680,6 +3022,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
                 textColorArgb: null,
                 backgroundColorArgb: null,
                 backgroundImagePath: null,
+                backgroundOpacity: ReaderPreferences.defaultBackgroundOpacity,
                 backgroundImageOpacity:
                     ReaderPreferences.defaultBackgroundImageOpacity,
                 backgroundOverlayOpacity:
@@ -3079,6 +3422,48 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
             ),
           ),
         ],
+        if (defaultTargetPlatform == TargetPlatform.android) ...[
+          const SizedBox(height: 20),
+          Text(
+            '\u81ea\u52a8\u6a21\u5f0f\u4e0b\u7684\u97f3\u91cf\u952e',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '\u65e0\u81ea\u52a8\u6a21\u5f0f\u65f6\u4fdd\u6301\u666e\u901a\u9605\u8bfb\u7684\u97f3\u91cf\u952e\u884c\u4e3a\u3002\u81ea\u52a8\u6a21\u5f0f\u53ef\u9009\u62e9\u63a7\u5236\u81ea\u52a8\u6a21\u5f0f\u6216\u4ea4\u8fd8\u7cfb\u7edf\u97f3\u91cf\u3002',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          const SizedBox(height: 10),
+          DropdownButtonFormField<AndroidAutoModeVolumeBehavior>(
+            key: readerAutoModeVolumeBehaviorKey,
+            initialValue: _androidAutoModeVolumeBehavior,
+            decoration: const InputDecoration(
+              prefixIcon: Icon(Icons.volume_up_outlined),
+            ),
+            items: const [
+              DropdownMenuItem(
+                value: AndroidAutoModeVolumeBehavior.followNormal,
+                child: Text('\u8ddf\u968f\u666e\u901a\u9605\u8bfb'),
+              ),
+              DropdownMenuItem(
+                value: AndroidAutoModeVolumeBehavior.controlAutomaticMode,
+                child: Text('\u63a7\u5236\u81ea\u52a8\u6a21\u5f0f'),
+              ),
+              DropdownMenuItem(
+                value: AndroidAutoModeVolumeBehavior.systemVolume,
+                child: Text('\u8c03\u8282\u7cfb\u7edf\u97f3\u91cf'),
+              ),
+            ],
+            onChanged: widget.onAndroidAutoModeVolumeBehaviorChanged == null
+                ? null
+                : (value) {
+                    if (value != null) {
+                      setState(() => _androidAutoModeVolumeBehavior = value);
+                      widget.onAndroidAutoModeVolumeBehaviorChanged!(value);
+                    }
+                  },
+          ),
+        ],
         const SizedBox(height: 20),
         OutlinedButton.icon(
           key: readerResetPreferencesKey,
@@ -3219,7 +3604,21 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
               const SizedBox(width: 24),
               const VerticalDivider(width: 1),
               const SizedBox(width: 24),
-              Expanded(child: SingleChildScrollView(child: content)),
+              Expanded(
+                child: Scrollbar(
+                  controller: _settingsScrollController,
+                  thumbVisibility:
+                      defaultTargetPlatform == TargetPlatform.windows,
+                  scrollbarOrientation:
+                      defaultTargetPlatform == TargetPlatform.windows
+                      ? ScrollbarOrientation.right
+                      : null,
+                  child: SingleChildScrollView(
+                    controller: _settingsScrollController,
+                    child: content,
+                  ),
+                ),
+              ),
             ],
           )
         : Column(
@@ -3227,31 +3626,48 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
             children: [
               navigation,
               const SizedBox(height: 18),
-              Expanded(child: SingleChildScrollView(child: content)),
+              Expanded(
+                child: Scrollbar(
+                  controller: _settingsScrollController,
+                  thumbVisibility:
+                      defaultTargetPlatform == TargetPlatform.windows,
+                  scrollbarOrientation:
+                      defaultTargetPlatform == TargetPlatform.windows
+                      ? ScrollbarOrientation.right
+                      : null,
+                  child: SingleChildScrollView(
+                    controller: _settingsScrollController,
+                    child: content,
+                  ),
+                ),
+              ),
             ],
           );
     return SafeArea(
-      child: SizedBox(
-        width: panelWidth,
-        child: ConstrainedBox(
-          constraints: BoxConstraints(
-            maxHeight: MediaQuery.sizeOf(context).height * .9,
-          ),
-          child: Padding(
-            key: readerSettingsSheetKey,
-            padding: EdgeInsets.fromLTRB(
-              useLabelRail ? 28 : 20,
-              0,
-              useLabelRail ? 28 : 20,
-              24,
+      child: ScrollConfiguration(
+        behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
+        child: SizedBox(
+          width: panelWidth,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.sizeOf(context).height * .9,
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('阅读设置', style: Theme.of(context).textTheme.titleLarge),
-                const SizedBox(height: 16),
-                Expanded(child: panel),
-              ],
+            child: Padding(
+              key: readerSettingsSheetKey,
+              padding: EdgeInsets.fromLTRB(
+                useLabelRail ? 28 : 20,
+                0,
+                useLabelRail ? 28 : 20,
+                24,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('阅读设置', style: Theme.of(context).textTheme.titleLarge),
+                  const SizedBox(height: 16),
+                  Expanded(child: panel),
+                ],
+              ),
             ),
           ),
         ),
@@ -3288,50 +3704,75 @@ class _ColorInput extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(top: 8),
-      child: Row(
-        children: [
-          Expanded(
-            child: TextField(
-              controller: controller,
-              decoration: InputDecoration(
-                labelText: label,
-                hintText: '#RRGGBB 或 rgb(255,255,255)',
-                errorText: errorText,
-                prefixIcon: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: preview ?? Theme.of(context).colorScheme.surface,
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: Theme.of(context).colorScheme.outlineVariant,
-                      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact = constraints.maxWidth < 520;
+          final field = TextField(
+            controller: controller,
+            decoration: InputDecoration(
+              labelText: label,
+              hintText: '#RRGGBB 或 rgb(255,255,255)',
+              errorText: errorText,
+              prefixIcon: Padding(
+                padding: const EdgeInsets.all(12),
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: preview ?? Theme.of(context).colorScheme.surface,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: Theme.of(context).colorScheme.outlineVariant,
                     ),
-                    child: const SizedBox(width: 18, height: 18),
                   ),
+                  child: const SizedBox(width: 18, height: 18),
                 ),
               ),
-              textInputAction: TextInputAction.done,
-              onChanged: onChanged,
-              onSubmitted: onSubmitted,
             ),
-          ),
-          const SizedBox(width: 8),
-          if (onEyedropper != null)
-            IconButton(
-              tooltip: '桌面吸管',
-              onPressed: onEyedropper,
-              icon: const Icon(Icons.colorize),
-            ),
-          OutlinedButton.icon(
-            onPressed: onPick,
-            icon: const Icon(Icons.palette_outlined),
-            // Keep the established action label for existing tests and
-            // Android parity; Windows adds the separate desktop eyedropper
-            // icon immediately before this color-picker action.
-            label: const Text('取色'),
-          ),
-        ],
+            textInputAction: TextInputAction.done,
+            onChanged: onChanged,
+            onSubmitted: onSubmitted,
+          );
+          final actions = Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (onEyedropper != null)
+                IconButton(
+                  constraints: const BoxConstraints.tightFor(
+                    width: 40,
+                    height: 40,
+                  ),
+                  padding: EdgeInsets.zero,
+                  tooltip: '桌面吸管',
+                  onPressed: onEyedropper,
+                  icon: const Icon(Icons.colorize),
+                ),
+              OutlinedButton.icon(
+                onPressed: onPick,
+                icon: const Icon(Icons.palette_outlined),
+                // Keep the established action label for existing tests and
+                // Android parity; Windows adds the separate desktop eyedropper
+                // icon immediately before this color-picker action.
+                label: const Text('取色'),
+              ),
+            ],
+          );
+          if (compact) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                field,
+                const SizedBox(height: 6),
+                Align(alignment: Alignment.centerRight, child: actions),
+              ],
+            );
+          }
+          return Row(
+            children: [
+              Expanded(child: field),
+              const SizedBox(width: 8),
+              actions,
+            ],
+          );
+        },
       ),
     );
   }
@@ -3971,6 +4412,7 @@ class _PreferenceSlider extends StatelessWidget {
     required this.valueLabel,
     required this.onDraftChanged,
     required this.onCommitted,
+    this.enabled = true,
   });
 
   final String label;
@@ -3982,38 +4424,62 @@ class _PreferenceSlider extends StatelessWidget {
   final String valueLabel;
   final ValueChanged<double> onDraftChanged;
   final ValueChanged<double> onCommitted;
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
+    final valueStyle = Theme.of(context).textTheme.labelLarge;
+
+    Widget stepButton({
+      required String tooltip,
+      required VoidCallback? onPressed,
+      required IconData icon,
+    }) {
+      return IconButton(
+        visualDensity: VisualDensity.compact,
+        constraints: const BoxConstraints.tightFor(width: 36, height: 36),
+        padding: EdgeInsets.zero,
+        tooltip: tooltip,
+        onPressed: onPressed,
+        icon: Icon(icon, size: 18),
+      );
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Expanded(child: Text(label)),
-            IconButton(
-              visualDensity: VisualDensity.compact,
+            Expanded(
+              child: Text(label, maxLines: 2, overflow: TextOverflow.ellipsis),
+            ),
+            const SizedBox(width: 8),
+            stepButton(
               tooltip: '$label 减少',
-              onPressed: value <= min
+              onPressed: !enabled || value <= min
                   ? null
                   : () => onCommitted((value - step).clamp(min, max)),
-              icon: const Icon(Icons.remove, size: 18),
+              icon: Icons.remove,
             ),
             SizedBox(
-              width: 42,
-              child: Text(
-                valueLabel,
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.labelLarge,
+              width: 44,
+              child: Center(
+                child: Text(
+                  valueLabel,
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: valueStyle,
+                ),
               ),
             ),
-            IconButton(
-              visualDensity: VisualDensity.compact,
+            stepButton(
               tooltip: '$label 增加',
-              onPressed: value >= max
+              onPressed: !enabled || value >= max
                   ? null
                   : () => onCommitted((value + step).clamp(min, max)),
-              icon: const Icon(Icons.add, size: 18),
+              icon: Icons.add,
             ),
           ],
         ),
@@ -4023,8 +4489,8 @@ class _PreferenceSlider extends StatelessWidget {
           max: max,
           divisions: divisions,
           label: valueLabel,
-          onChanged: onDraftChanged,
-          onChangeEnd: onCommitted,
+          onChanged: enabled ? onDraftChanged : null,
+          onChangeEnd: enabled ? onCommitted : null,
         ),
       ],
     );
@@ -4361,6 +4827,89 @@ String _orphanReasonLabel(ReaderBookmarkOrphanReason reason) =>
       ReaderBookmarkOrphanReason.offsetOutOfBounds => '位置超出正文范围',
     };
 
+/// Presents the two automatic reading modes from one shared entry point.
+/// Starting either mode is delegated to ReaderPage so mutual exclusion stays
+/// at the Reader boundary rather than inside either state machine.
+Future<void> showReaderAutoHub(
+  BuildContext context, {
+  required VoidCallback onAutoRead,
+  VoidCallback? onAutoReadSettings,
+  required VoidCallback onTts,
+  VoidCallback? onTtsSettings,
+  AutoReadState autoReadState = AutoReadState.idle,
+  TtsReadingState ttsState = TtsReadingState.idle,
+}) {
+  return showModalBottomSheet<void>(
+    context: context,
+    showDragHandle: true,
+    builder: (sheetContext) => SafeArea(
+      child: Padding(
+        key: readerAutoHubKey,
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              key: readerAutoHubAutoReadKey,
+              leading: const Icon(Icons.auto_stories_outlined),
+              title: const Text('\u81ea\u52a8\u9605\u8bfb'),
+              subtitle: Text(
+                autoReadState == AutoReadState.running
+                    ? '\u5f53\u524d\u6b63\u5728\u81ea\u52a8\u9605\u8bfb'
+                    : '\u6309\u5f53\u524d\u901f\u5ea6\u6eda\u52a8\u6216\u7ffb\u9875',
+              ),
+              onTap: () {
+                Navigator.of(sheetContext).pop();
+                onAutoRead();
+              },
+            ),
+            if (onAutoReadSettings != null)
+              ListTile(
+                key: readerAutoHubAutoReadSettingsKey,
+                leading: const Icon(Icons.speed_rounded),
+                title: const Text('\u81ea\u52a8\u9605\u8bfb\u8bbe\u7f6e'),
+                subtitle: const Text(
+                  '\u901f\u5ea6\u4e0e\u7ffb\u9875\u95f4\u9694',
+                ),
+                onTap: () {
+                  Navigator.of(sheetContext).pop();
+                  onAutoReadSettings();
+                },
+              ),
+            ListTile(
+              key: readerAutoHubTtsKey,
+              leading: const Icon(Icons.record_voice_over_outlined),
+              title: const Text('\u8bed\u97f3\u6717\u8bfb'),
+              subtitle: Text(
+                ttsState == TtsReadingState.playing
+                    ? '\u5f53\u524d\u6b63\u5728\u6717\u8bfb'
+                    : '\u4ece\u5f53\u524d\u9605\u8bfb\u4f4d\u7f6e\u5f00\u59cb',
+              ),
+              onTap: () {
+                Navigator.of(sheetContext).pop();
+                onTts();
+              },
+            ),
+            if (onTtsSettings != null)
+              ListTile(
+                key: readerAutoHubTtsSettingsKey,
+                leading: const Icon(Icons.tune_rounded),
+                title: const Text('\u8bed\u97f3\u8bbe\u7f6e'),
+                subtitle: const Text(
+                  '\u58f0\u97f3\u3001\u8bed\u901f\u548c\u5b9a\u65f6\u505c\u6b62',
+                ),
+                onTap: () {
+                  Navigator.of(sheetContext).pop();
+                  onTtsSettings();
+                },
+              ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
 Future<void> showReaderMorePreview(
   BuildContext context, {
   VoidCallback? onSearch,
@@ -4391,12 +4940,13 @@ Future<void> showReaderMorePreview(
                     onSearch();
                   },
                 ),
-              const ListTile(
-                leading: Icon(Icons.record_voice_over_outlined),
-                title: Text('朗读'),
-                subtitle: Text('朗读当前未实现'),
-                enabled: false,
-              ),
+              if (const bool.fromEnvironment('XAOCEN_LEGACY_TTS_TILE'))
+                const ListTile(
+                  leading: Icon(Icons.record_voice_over_outlined),
+                  title: Text('朗读'),
+                  subtitle: Text('朗读当前未实现'),
+                  enabled: false,
+                ),
             ],
           ),
         ),

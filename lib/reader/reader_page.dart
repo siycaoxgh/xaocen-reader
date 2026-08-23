@@ -32,6 +32,7 @@ import '../data/repositories/reader_input_bindings_repository.dart';
 import '../data/repositories/reading_history_repository.dart';
 import '../data/repositories/reading_session_repository.dart';
 import '../data/repositories/auto_read_preferences_repository.dart';
+import '../data/repositories/tts_preferences_repository.dart';
 import '../domain/library/chapter_boundary_resolver.dart';
 import '../domain/library/current_chapter_progress_resolver.dart';
 import '../domain/library/library_entities.dart';
@@ -47,12 +48,14 @@ import '../domain/reader/reader_screen_awake.dart';
 import '../domain/reader/reader_font.dart';
 import '../domain/reader/reader_search.dart';
 import '../domain/reader/reader_visible_range.dart';
+import '../domain/reader/reader_content.dart';
 import 'normalized_document_loader.dart';
 import 'paged_reader_controller.dart';
 import 'paged_reader_view.dart';
 import 'chapter_page_metrics.dart';
 import 'reader_appearance.dart';
 import 'reader_chrome.dart';
+import 'reader_automation_overlay.dart';
 import 'reader_controller.dart';
 import 'reader_input.dart';
 import 'reader_input_router.dart';
@@ -60,20 +63,27 @@ import 'reader_mode.dart';
 import 'reader_metrics_signature.dart';
 import 'reader_search.dart';
 import '../domain/reader/reader_progress_state.dart';
+import '../domain/reader/reader_rendering.dart';
+import '../domain/reader/tts_readable_text.dart';
+import '../domain/reader/tts_reading_controller.dart';
+import '../domain/reader/tts_preferences.dart';
 import 'reader_text_block.dart';
+import 'reader_epub_image.dart';
 import 'vertical_auto_read_driver.dart';
 import 'paged_auto_read_driver.dart';
 import 'reader_keep_awake.dart';
 import 'reader_font_runtime.dart';
 import 'android_reader_window.dart';
+import '../platform/windows_true_transparency.dart';
+import 'tts_controls.dart';
 
 /// 打开 Reader 所需上下文（由书架页组装）。
 class ReaderLaunchContext {
-  const ReaderLaunchContext({
+  ReaderLaunchContext({
     required this.collection,
-    required this.documents,
-    required this.toc,
-    required this.normalizedCharacterLength,
+    required List<LibraryDocument> documents,
+    required List<LibraryTocEntry> toc,
+    required int normalizedCharacterLength,
     required this.documentLoader,
     required this.progressRepository,
     this.bookmarkRepository,
@@ -82,10 +92,18 @@ class ReaderLaunchContext {
     this.readingHistoryRepository,
     this.readingSessionRepository,
     this.autoReadPreferencesRepository,
+    this.ttsPreferencesRepository,
     this.appearanceAssetRepository,
     this.fontRepository,
     this.repair,
-  });
+    this.initialLocatorOverride,
+    this.loadUncachedChapter,
+    ReaderContent? content,
+  }) : content = content,
+       documents = content?.documents ?? documents,
+       toc = content?.navigation ?? toc,
+       normalizedCharacterLength =
+           content?.normalizedCharacterLength ?? normalizedCharacterLength;
 
   final LibraryCollection collection;
 
@@ -102,11 +120,35 @@ class ReaderLaunchContext {
   final ReadingHistoryRepository? readingHistoryRepository;
   final ReadingSessionRepository? readingSessionRepository;
   final AutoReadPreferencesRepository? autoReadPreferencesRepository;
+  final TtsPreferencesRepository? ttsPreferencesRepository;
   final ReaderAppearanceAssetRepository? appearanceAssetRepository;
   final ReaderFontRepository? fontRepository;
 
+  /// Optional WebBook boundary. The Reader does not fetch network content;
+  /// the shelf/source layer returns a refreshed launch context after caching
+  /// the requested chapter. Existing local/TXT/EPUB launches leave this null.
+  final Future<ReaderLaunchContext> Function(LibraryTocEntry entry)?
+  loadUncachedChapter;
+
+  /// Used only when a freshly cached WebBook chapter replaces the route. It
+  /// is a one-time restore target, not a second progress/locator store.
+  final ReaderLocator? initialLocatorOverride;
+
   /// 修复回调（由书架页注入）：返回 null 表示成功，否则返回错误信息。
   final Future<String?> Function()? repair;
+
+  /// Runtime source-neutral Reader contract.  Existing launch call sites keep
+  /// their legacy projections for compatibility; the contract is resolved
+  /// lazily from the same values and never changes Locator or progress data.
+  final ReaderContent? content;
+
+  ReaderContent get resolvedContent =>
+      content ??
+      ReaderContentAdapterRegistry.defaultInstance.resolve(
+        collection: collection,
+        documents: documents,
+        navigation: toc,
+      );
 }
 
 /// 打开 Reader 的工厂（书架页调用）。
@@ -192,10 +234,6 @@ class _ReaderPageState extends State<ReaderPage>
   PagedAutoReadDriver? _pagedAutoReadDriver;
   StreamSubscription<AutoReadEvent>? _autoReadEvents;
   StreamSubscription<AutoReadPreferences>? _autoReadPreferencesSubscription;
-  Timer? _autoReadSpeedWriteTimer;
-  int? _pendingAutoReadSpeedWrite;
-  Timer? _autoReadIntervalWriteTimer;
-  int? _pendingAutoReadIntervalWrite;
   final ReaderFontRuntime _fontRuntime = ReaderFontRuntime();
   final ReaderSystemFontRepository _systemFontRepository =
       ReaderSystemFontRepository();
@@ -243,13 +281,21 @@ class _ReaderPageState extends State<ReaderPage>
   ReaderLocator? _modeRestoreAnchor;
   int? _modeRestoreGeneration;
   bool _suppressProgrammaticScrollNotifications = false;
+  bool _pagedTtsNavigationPending = false;
+  bool _pauseTtsAfterNormalVolumeNavigation = false;
   bool _chromeVisible = true;
+  bool _supportsWindowsTrueTransparency = false;
   Timer? _autoReadChromeHideTimer;
+  int _automaticModeHandoffGeneration = 0;
+  int _automationInteractionVersion = 0;
+  TtsReadingState _lastObservedTtsState = TtsReadingState.idle;
   Timer? _batteryStatusTimer;
   BatteryStatus? _batteryStatus;
   final FocusNode _pagedInputFocusNode = FocusNode(
     debugLabel: 'reader-paged-input',
   );
+  final ReaderKeyEventGate _verticalKeyEventGate = ReaderKeyEventGate();
+  late final TtsReadingController _ttsController;
   ReadingSessionLifecycle? _readingSession;
   bool _sessionStartInFlight = false;
   String? _historyEntryId;
@@ -263,8 +309,9 @@ class _ReaderPageState extends State<ReaderPage>
     if (_chromeVisible) {
       setState(() => _chromeVisible = false);
     } else {
-      setState(() => _chromeVisible = true);
-      if (_autoReadController.state == AutoReadState.running) {
+      _showChrome();
+      if (_autoReadController.state != AutoReadState.idle ||
+          _ttsController.state != TtsReadingState.idle) {
         _scheduleAutoReadChromeHide();
       }
     }
@@ -292,6 +339,19 @@ class _ReaderPageState extends State<ReaderPage>
   void stopPagedAutoRead() => _pagedAutoReadDriver?.stop();
 
   void _startAutoRead() {
+    final handoff = ++_automaticModeHandoffGeneration;
+    unawaited(_startAutoReadAfterTtsHandoff(handoff));
+  }
+
+  Future<void> _startAutoReadAfterTtsHandoff(int handoff) async {
+    if (_ttsController.state != TtsReadingState.idle) {
+      await _ttsController.stop();
+    }
+    if (!mounted || handoff != _automaticModeHandoffGeneration) return;
+    // A fresh AutoRead session may only start after the previous automatic
+    // mode has fully ended.  This prevents a delayed TTS stop callback from
+    // racing a newly started driver.
+    if (_ttsController.state != TtsReadingState.idle) return;
     if (_mode == ReaderMode.vertical) {
       startVerticalAutoRead();
     } else {
@@ -323,6 +383,7 @@ class _ReaderPageState extends State<ReaderPage>
   }
 
   void _stopAutoRead() {
+    ++_automaticModeHandoffGeneration;
     _autoReadChromeHideTimer?.cancel();
     _autoReadChromeHideTimer = null;
     _showChrome();
@@ -355,23 +416,41 @@ class _ReaderPageState extends State<ReaderPage>
   void _scheduleAutoReadChromeHide() {
     _autoReadChromeHideTimer?.cancel();
     _autoReadChromeHideTimer = null;
-    if (!mounted || _autoReadController.state != AutoReadState.running) return;
+    if (!mounted ||
+        (_autoReadController.state == AutoReadState.idle &&
+            _ttsController.state == TtsReadingState.idle)) {
+      return;
+    }
     _showChrome();
-    _autoReadChromeHideTimer = Timer(const Duration(milliseconds: 2500), () {
+    _autoReadChromeHideTimer = Timer(readerAutomationHideAfter, () {
       _autoReadChromeHideTimer = null;
-      if (!mounted || _autoReadController.state != AutoReadState.running) {
+      if (!mounted ||
+          (_autoReadController.state == AutoReadState.idle &&
+              _ttsController.state == TtsReadingState.idle)) {
         return;
       }
       setState(() => _chromeVisible = false);
     });
   }
 
+  void _startAutoReadFromHub() {
+    _screenAwakeController.recordUserActivity();
+    _showChrome();
+    // Automatic modes are mutually exclusive at the Reader boundary. If an
+    // old paused AutoRead session is still present while TTS is active, end
+    // that session instead of allowing it to resume after the TTS handoff.
+    if (_ttsController.state != TtsReadingState.idle) {
+      _stopAutoRead();
+      _startAutoRead();
+      return;
+    }
+    _toggleAutoRead();
+  }
+
   void _openAutoReadControls() {
     _screenAwakeController.recordUserActivity();
     _showChrome();
-    // Opening an operation panel pauses a running driver and never resumes it
-    // when the panel closes. ReadingSession remains lifecycle-owned.
-    _pauseAutoRead(AutoReadPauseReason.settingsPanel);
+    final repository = widget.launch.autoReadPreferencesRepository;
     unawaited(
       showReaderAutoReadControls(
         context,
@@ -379,74 +458,251 @@ class _ReaderPageState extends State<ReaderPage>
         stateOf: () => _autoReadController.state,
         speedOf: () =>
             _autoReadController.preferences.verticalVelocityPixelsPerSecond,
-        events: _autoReadController.events,
         pagedIntervalOf: () =>
             _autoReadController.preferences.pagedIntervalSeconds,
+        events: _autoReadController.events,
         onStart: _startAutoRead,
-        onPause: _pauseAutoReadForManualNavigation,
+        onPause: () => _pauseAutoRead(AutoReadPauseReason.settingsPanel),
         onResume: _resumeAutoRead,
         onStop: _stopAutoRead,
-        onSpeedChanged: _setAutoReadSpeed,
-        onPagedIntervalChanged: _setAutoReadInterval,
+        onSpeedChanged: (value) {
+          final next = _autoReadController.preferences.copyWith(
+            verticalVelocityPixelsPerSecond: value,
+            updatedAt: DateTime.now().toUtc(),
+          );
+          _autoReadController.updatePreferences(next);
+          if (repository != null) unawaited(repository.update(next));
+        },
+        onPagedIntervalChanged: (value) {
+          final next = _autoReadController.preferences.copyWith(
+            pagedIntervalSeconds: value,
+            updatedAt: DateTime.now().toUtc(),
+          );
+          _autoReadController.updatePreferences(next);
+          if (repository != null) unawaited(repository.update(next));
+        },
       ),
     );
   }
 
-  void _setAutoReadSpeed(int velocity) {
-    final next = _autoReadController.preferences.copyWith(
-      verticalVelocityPixelsPerSecond: velocity,
-      updatedAt: DateTime.now().toUtc(),
+  void _startTtsFromHub() {
+    _screenAwakeController.recordUserActivity();
+    _showChrome();
+    unawaited(_stopAutoReadForTtsHandoff());
+    unawaited(
+      _ttsController.dispatchCommand(
+        TtsCommand.playPause,
+        currentOffset: _ttsStartOffset(),
+      ),
     );
-    _autoReadController.updatePreferences(next);
-    final repository = widget.launch.autoReadPreferencesRepository;
-    _pendingAutoReadSpeedWrite = next.verticalVelocityPixelsPerSecond;
-    _autoReadSpeedWriteTimer?.cancel();
-    if (repository != null) {
-      _autoReadSpeedWriteTimer = Timer(const Duration(milliseconds: 250), () {
-        final pending = _pendingAutoReadSpeedWrite;
-        _pendingAutoReadSpeedWrite = null;
-        if (pending != null) {
-          unawaited(
-            repository.update(
-              _autoReadController.preferences.copyWith(
-                verticalVelocityPixelsPerSecond: pending,
-                updatedAt: DateTime.now().toUtc(),
-              ),
-            ),
-          );
-        }
-      });
+    _scheduleAutoReadChromeHide();
+  }
+
+  void _pauseTtsFromOverlay() {
+    _screenAwakeController.recordUserActivity();
+    _showChrome();
+    unawaited(_ttsController.pause());
+  }
+
+  void _resumeTtsFromOverlay() {
+    _screenAwakeController.recordUserActivity();
+    _showChrome();
+    unawaited(_ttsController.resume());
+    _scheduleAutoReadChromeHide();
+  }
+
+  void _stopTtsFromOverlay() {
+    _screenAwakeController.recordUserActivity();
+    _showChrome();
+    _autoReadChromeHideTimer?.cancel();
+    _autoReadChromeHideTimer = null;
+    unawaited(_ttsController.stop());
+  }
+
+  void _openAutoHub() {
+    _screenAwakeController.recordUserActivity();
+    _showChrome();
+    unawaited(
+      showReaderAutoHub(
+        context,
+        autoReadState: _autoReadController.state,
+        ttsState: _ttsController.state,
+        onAutoRead: _startAutoReadFromHub,
+        onAutoReadSettings: _openAutoReadControls,
+        onTts: _startTtsFromHub,
+        onTtsSettings: _openTtsControls,
+      ),
+    );
+  }
+
+  int _ttsStartOffset() {
+    if (_mode == ReaderMode.vertical && _scroll.hasClients) {
+      return _topVisibleCharacterOffset();
+    }
+    return _activeConfirmedLocator?.absoluteCharacterOffset ??
+        _initialState?.absoluteCharacterOffset ??
+        0;
+  }
+
+  void _openTtsControls() {
+    _screenAwakeController.recordUserActivity();
+    _showChrome();
+    _pauseAutoRead(AutoReadPauseReason.settingsPanel);
+    unawaited(
+      showReaderTtsControls(
+        context,
+        controller: _ttsController,
+        currentOffset: _ttsStartOffset,
+        currentChapterEndOffset: _currentChapterBoundary?.endOffset,
+        onBeforePlayback: _stopAutoReadForTtsHandoff,
+        onPreferencesChanged: _persistTtsPreferences,
+      ),
+    );
+  }
+
+  Future<void> _stopAutoReadForTtsHandoff() async {
+    if (_autoReadController.state != AutoReadState.idle) {
+      _stopAutoRead();
+    } else {
+      // Invalidate a pending start request even when the visible controller
+      // is already idle.
+      ++_automaticModeHandoffGeneration;
     }
   }
 
-  void _setAutoReadInterval(int seconds) {
-    final next = _autoReadController.preferences.copyWith(
-      pagedIntervalSeconds: seconds,
-      updatedAt: DateTime.now().toUtc(),
-    );
-    _autoReadController.updatePreferences(next);
-    final repository = widget.launch.autoReadPreferencesRepository;
-    _pendingAutoReadIntervalWrite = seconds;
-    _autoReadIntervalWriteTimer?.cancel();
-    if (repository != null) {
-      _autoReadIntervalWriteTimer = Timer(
-        const Duration(milliseconds: 250),
-        () {
-          final pending = _pendingAutoReadIntervalWrite;
-          _pendingAutoReadIntervalWrite = null;
-          if (pending != null) {
-            unawaited(
-              repository.update(
-                _autoReadController.preferences.copyWith(
-                  pagedIntervalSeconds: pending,
-                  updatedAt: DateTime.now().toUtc(),
-                ),
-              ),
-            );
-          }
-        },
-      );
+  Future<void> _loadTtsPreferences() async {
+    final repository = widget.launch.ttsPreferencesRepository;
+    if (repository == null || !mounted) return;
+    final saved = await repository.load();
+    if (!mounted) return;
+    await _ttsController.setSpeechRate(saved.speechRate);
+    final hasSavedVoice =
+        saved.voiceName != null || saved.voiceIdentifier != null;
+    await _ttsController.loadVoices(selectDefault: !hasSavedVoice);
+    if (!mounted) return;
+    final voice = _ttsController.voicesList.where((candidate) {
+      if (saved.voiceIdentifier != null &&
+          candidate.identifier == saved.voiceIdentifier) {
+        return true;
+      }
+      return candidate.name == saved.voiceName &&
+          candidate.locale == saved.voiceLocale;
+    }).firstOrNull;
+    if (voice != null) {
+      await _ttsController.setVoice(voice);
+    } else if (hasSavedVoice) {
+      _ttsController.clearVoiceSelection();
     }
+  }
+
+  Future<void> _persistTtsPreferences(TtsReadingController controller) async {
+    final repository = widget.launch.ttsPreferencesRepository;
+    if (repository == null) return;
+    final voice = controller.selectedVoice;
+    await repository.update(
+      TtsPreferences(
+        speechRate: controller.speechRate,
+        voiceName: voice?.name,
+        voiceLocale: voice?.locale,
+        voiceIdentifier: voice?.identifier,
+      ),
+    );
+  }
+
+  void _followTtsPosition(int offset) {
+    // A user navigation is a new speech starting point even when it lands in
+    // the same speech segment.  Restarting that segment prevents an old
+    // utterance from continuing after a manual page/scroll/chapter action.
+    _ttsController.followReaderPosition(
+      offset,
+      forceRestart: true,
+      chapterEndOffset: _currentChapterBoundaryForOffset(offset)?.endOffset,
+    );
+  }
+
+  void _followTtsSegmentIntoView(ReadableTextSegment segment) {
+    if (!mounted) return;
+    final targetOffset =
+        _ttsController.activeSpeechCharacterOffset ??
+        segment.startCharacterOffset;
+    if (_mode == ReaderMode.paged) {
+      final paged = _pagedController;
+      final page = paged?.currentPage;
+      if (paged != null &&
+          (page == null ||
+              targetOffset < page.startCharacterOffset ||
+              targetOffset >= page.endCharacterOffset)) {
+        // PagedReaderController keeps the exact UTF-16 locator while moving
+        // the bounded page window.  It is therefore the only valid follow
+        // operation for paged TTS.
+        paged.jumpToOffset(targetOffset);
+      }
+      return;
+    }
+
+    final visible = lastVisibleRange;
+    if (visible == null) {
+      // On the first TTS notification the measured range may not have been
+      // published yet.  The confirmed Reader locator still tells us whether
+      // this is the segment the user is already reading; do not jump it back
+      // to the segment start.
+      final confirmedOffset = _activeConfirmedLocator?.absoluteCharacterOffset;
+      if (confirmedOffset == null || segment.contains(confirmedOffset)) {
+        return;
+      }
+    }
+    if (visible != null &&
+        targetOffset >= visible.startCharacterOffset &&
+        targetOffset < visible.endCharacterOffset) {
+      return;
+    }
+
+    final block = _controller.blockIndex?.blockForOffset(targetOffset);
+    if (block == null || !_listController.isAttached) {
+      // The virtual list may not have attached its first frame yet.  Retry
+      // through the existing bounded frame lifecycle instead of inventing a
+      // second scroll/position model.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || _ttsController.activeSegment?.index != segment.index) {
+          return;
+        }
+        _followTtsSegmentIntoView(segment);
+      });
+      return;
+    }
+
+    final wasSuppressed = _suppressProgrammaticScrollNotifications;
+    _suppressProgrammaticScrollNotifications = true;
+    final render = _renderObjects[block.index];
+    final localOffset = targetOffset - block.startCharacterOffset;
+    final characterRect = render?.rectForCharacterOffset(localOffset);
+    _listController.jumpToItem(
+      index: block.index,
+      scrollController: _scroll,
+      alignment: 0.18,
+      rect: characterRect == null
+          ? null
+          : Rect.fromLTWH(0, characterRect.top, 1, characterRect.height),
+    );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _suppressProgrammaticScrollNotifications = wasSuppressed;
+      if (_ttsController.activeSegment?.index != segment.index) return;
+      // Keep the existing Reader Locator/progress controller authoritative;
+      // this is a position update, not TTS progress.
+      _controller.reportUserScroll(
+        topVisibleCharacterOffset: targetOffset,
+        source: ReaderPositionEventSource.autoRead,
+      );
+    });
+  }
+
+  void _onPagedUserNavigationForTts() {
+    _pauseAutoReadForPageNavigation();
+    // PageView reports the user gesture before its controller settles.  Wait
+    // for PagedReaderController's onPageSettled notification so the new page's
+    // confirmed UTF-16 locator, rather than the old one, restarts TTS.
+    _pagedTtsNavigationPending = true;
   }
 
   Future<void> _confirmVerticalAutoReadPosition() async {
@@ -515,28 +771,22 @@ class _ReaderPageState extends State<ReaderPage>
 
   (bool, bool) _androidVolumeBindingStates() {
     if (defaultTargetPlatform != TargetPlatform.android) return (false, false);
+    final normal = _androidNormalVolumeBindingStates();
+    if (!_hasActiveAutomaticMode) return normal;
+    return switch (_effectiveAutoModeVolumeBehavior) {
+      AndroidAutoModeVolumeBehavior.followNormal => normal,
+      AndroidAutoModeVolumeBehavior.controlAutomaticMode => (true, true),
+      AndroidAutoModeVolumeBehavior.systemVolume => (false, false),
+    };
+  }
+
+  (bool, bool) _androidNormalVolumeBindingStates() {
     bool activeFor(PhysicalInputId input) {
       final command = _inputRouter.profile.commandFor(input);
-      final autoAction =
-          _inputRouter.profile.autoReadVolumeActions[input] ??
-          AndroidAutoReadVolumeAction.followNormal;
-      final running = _autoReadController.state == AutoReadState.running;
-      final normalConsumes = switch (command) {
-        ReaderCommand.previousPage || ReaderCommand.nextPage =>
-          _mode == ReaderMode.paged || _mode == ReaderMode.vertical,
+      return switch (command) {
+        ReaderCommand.previousPage || ReaderCommand.nextPage => true,
         ReaderCommand.toggleAutoRead => true,
         _ => false,
-      };
-      if (!running || autoAction == AndroidAutoReadVolumeAction.followNormal) {
-        return normalConsumes;
-      }
-      return switch (autoAction) {
-        AndroidAutoReadVolumeAction.previousPage ||
-        AndroidAutoReadVolumeAction.nextPage ||
-        AndroidAutoReadVolumeAction.toggleAutoRead => true,
-        AndroidAutoReadVolumeAction.systemVolume ||
-        AndroidAutoReadVolumeAction.disabled => false,
-        AndroidAutoReadVolumeAction.followNormal => normalConsumes,
       };
     }
 
@@ -546,26 +796,65 @@ class _ReaderPageState extends State<ReaderPage>
     );
   }
 
+  bool get _autoReadIsActive =>
+      _autoReadController.state == AutoReadState.running ||
+      _autoReadController.state == AutoReadState.paused;
+
+  bool get _ttsIsActive =>
+      _ttsController.state == TtsReadingState.playing ||
+      _ttsController.state == TtsReadingState.paused;
+
+  bool get _hasActiveAutomaticMode => _autoReadIsActive || _ttsIsActive;
+
+  AndroidAutoModeVolumeBehavior get _effectiveAutoModeVolumeBehavior {
+    final configured = _inputRouter.profile.autoModeVolumeBehavior;
+    if (configured != AndroidAutoModeVolumeBehavior.followNormal) {
+      return configured;
+    }
+    // Keep profiles loaded from older builds safe until they are rewritten by
+    // the new setting. The compatibility map is never persisted as a second
+    // truth after the unified setting is changed.
+    final legacy = _inputRouter.profile.autoReadVolumeActions.values;
+    if (legacy.isNotEmpty &&
+        legacy.every(
+          (action) => action == AndroidAutoReadVolumeAction.systemVolume,
+        )) {
+      return AndroidAutoModeVolumeBehavior.systemVolume;
+    }
+    if (legacy.any(
+      (action) => action != AndroidAutoReadVolumeAction.followNormal,
+    )) {
+      return AndroidAutoModeVolumeBehavior.controlAutomaticMode;
+    }
+    return AndroidAutoModeVolumeBehavior.followNormal;
+  }
+
   void _onReaderInputProfileChanged(ReaderInputProfile profile) {
     _onInputHostStateChanged(
       pagedActive: _mode == ReaderMode.paged,
       captureActive: _inputRouter.capture.isActive,
     );
+    if (mounted) setState(() {});
   }
 
   void _routerPreviousPage() {
     _pauseAutoReadForPageNavigation();
     if (_mode == ReaderMode.paged) {
       _pagedController?.previousPage();
+      _followTtsPosition(
+        _pagedController?.confirmedLocator?.absoluteCharacterOffset ?? 0,
+      );
     } else if (_scroll.hasClients) {
       final position = _scroll.position;
       final extent = position.viewportDimension;
       unawaited(
-        _scroll.animateTo(
-          (position.pixels - extent).clamp(0.0, position.maxScrollExtent),
-          duration: const Duration(milliseconds: 180),
-          curve: Curves.easeOut,
-        ),
+        _scroll
+            .animateTo(
+              (position.pixels - extent).clamp(0.0, position.maxScrollExtent),
+              duration: const Duration(milliseconds: 180),
+              curve: Curves.easeOut,
+            )
+            .then((_) => _followTtsPosition(_topVisibleCharacterOffset())),
       );
     }
     if (mounted) setState(() {});
@@ -575,15 +864,20 @@ class _ReaderPageState extends State<ReaderPage>
     _pauseAutoReadForPageNavigation();
     if (_mode == ReaderMode.paged) {
       _pagedController?.nextPage();
+      _followTtsPosition(
+        _pagedController?.confirmedLocator?.absoluteCharacterOffset ?? 0,
+      );
     } else if (_scroll.hasClients) {
       final position = _scroll.position;
       final extent = position.viewportDimension;
       unawaited(
-        _scroll.animateTo(
-          (position.pixels + extent).clamp(0.0, position.maxScrollExtent),
-          duration: const Duration(milliseconds: 180),
-          curve: Curves.easeOut,
-        ),
+        _scroll
+            .animateTo(
+              (position.pixels + extent).clamp(0.0, position.maxScrollExtent),
+              duration: const Duration(milliseconds: 180),
+              curve: Curves.easeOut,
+            )
+            .then((_) => _followTtsPosition(_topVisibleCharacterOffset())),
       );
     }
     if (mounted) setState(() {});
@@ -591,40 +885,110 @@ class _ReaderPageState extends State<ReaderPage>
 
   FutureOr<bool> _handleAndroidVolume(PhysicalInputId input) async {
     if (defaultTargetPlatform != TargetPlatform.android) return false;
-    final running = _autoReadController.state == AutoReadState.running;
-    final action = running
-        ? (_inputRouter.profile.autoReadVolumeActions[input] ??
-              AndroidAutoReadVolumeAction.followNormal)
-        : AndroidAutoReadVolumeAction.followNormal;
-    switch (action) {
-      case AndroidAutoReadVolumeAction.systemVolume:
-      case AndroidAutoReadVolumeAction.disabled:
+    if (!_hasActiveAutomaticMode) {
+      return _handleNormalAndroidVolume(input);
+    }
+    switch (_effectiveAutoModeVolumeBehavior) {
+      case AndroidAutoModeVolumeBehavior.systemVolume:
         return false;
-      case AndroidAutoReadVolumeAction.followNormal:
-        final command = _inputRouter.profile.commandFor(input);
-        if (command == ReaderCommand.previousPage) {
-          _routerPreviousPage();
-          return true;
+      case AndroidAutoModeVolumeBehavior.followNormal:
+        return _handleNormalAndroidVolume(input);
+      case AndroidAutoModeVolumeBehavior.controlAutomaticMode:
+        if (input == PhysicalInputId.androidVolumeUp) {
+          _toggleActiveAutomaticMode();
+        } else {
+          _advanceActiveAutomaticMode();
         }
-        if (command == ReaderCommand.nextPage) {
-          _routerNextPage();
-          return true;
-        }
-        if (command == ReaderCommand.toggleAutoRead) {
-          _toggleAutoRead();
-          return true;
-        }
-        return false;
-      case AndroidAutoReadVolumeAction.previousPage:
-        _routerPreviousPage();
-        return true;
-      case AndroidAutoReadVolumeAction.nextPage:
-        _routerNextPage();
-        return true;
-      case AndroidAutoReadVolumeAction.toggleAutoRead:
-        _toggleAutoRead();
         return true;
     }
+  }
+
+  FutureOr<bool> _handleNormalAndroidVolume(PhysicalInputId input) {
+    final command = _inputRouter.profile.commandFor(input);
+    if (command == ReaderCommand.previousPage) {
+      _pauseAutomaticForNormalVolumeNavigation();
+      _routerPreviousPage();
+      return true;
+    }
+    if (command == ReaderCommand.nextPage) {
+      _pauseAutomaticForNormalVolumeNavigation();
+      _routerNextPage();
+      return true;
+    }
+    if (command == ReaderCommand.toggleAutoRead) {
+      _toggleAutoRead();
+      return true;
+    }
+    return false;
+  }
+
+  void _pauseAutomaticForNormalVolumeNavigation() {
+    if (_autoReadIsActive) _pauseAutoReadForPageNavigation();
+    if (_ttsIsActive) {
+      _pauseTtsAfterNormalVolumeNavigation = true;
+      unawaited(_ttsController.pause());
+    }
+  }
+
+  void _toggleActiveAutomaticMode() {
+    _screenAwakeController.recordUserActivity();
+    _showChrome();
+    if (_autoReadIsActive) {
+      _toggleAutoRead();
+      return;
+    }
+    if (_ttsIsActive) {
+      unawaited(
+        _ttsController.dispatchCommand(
+          TtsCommand.playPause,
+          currentOffset: _ttsStartOffset(),
+        ),
+      );
+      _scheduleAutoReadChromeHide();
+    }
+  }
+
+  void _advanceActiveAutomaticMode() {
+    _screenAwakeController.recordUserActivity();
+    _showChrome();
+    if (_ttsIsActive) {
+      unawaited(_ttsController.next());
+      _scheduleAutoReadChromeHide();
+      return;
+    }
+    if (!_autoReadIsActive) return;
+    if (_mode == ReaderMode.paged) {
+      _pagedController?.nextPage();
+      if (mounted) setState(() {});
+      return;
+    }
+    if (!_scroll.hasClients) return;
+    final position = _scroll.position;
+    final extent = position.viewportDimension;
+    unawaited(
+      _scroll
+          .animateTo(
+            (position.pixels + extent).clamp(0.0, position.maxScrollExtent),
+            duration: const Duration(milliseconds: 180),
+            curve: Curves.easeOut,
+          )
+          .then((_) {
+            if (!mounted) return;
+            _controller.reportUserScroll(
+              topVisibleCharacterOffset: _topVisibleCharacterOffset(),
+              source: ReaderPositionEventSource.autoRead,
+            );
+            setState(() {});
+          }),
+    );
+  }
+
+  void _setAndroidAutoModeVolumeBehavior(
+    AndroidAutoModeVolumeBehavior behavior,
+  ) {
+    final repository = widget.launch.inputBindingsRepository;
+    if (repository == null) return;
+    unawaited(repository.setAndroidAutoModeVolumeBehavior(behavior));
   }
 
   Future<void> _routerPreviousChapter() =>
@@ -666,15 +1030,85 @@ class _ReaderPageState extends State<ReaderPage>
 
   Future<void> _startChapterNavigation(LibraryTocEntry entry) async {
     _pauseAutoReadForPageNavigation();
+    if (entry.itemId == null && widget.launch.loadUncachedChapter != null) {
+      try {
+        if (mounted) {
+          ScaffoldMessenger.of(context)
+            ..hideCurrentSnackBar()
+            ..showSnackBar(const SnackBar(content: Text('正在获取章节…')));
+        }
+        final refreshed = await widget.launch.loadUncachedChapter!(entry);
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        // Recreate only the Reader route with the same collection/progress
+        // repositories. The normalized prefix is unchanged, while the newly
+        // cached target now has stable offsets in the refreshed TOC.
+        final target = refreshed.toc.firstWhere(
+          (value) => value.id == entry.id,
+          orElse: () => refreshed.toc.firstWhere(
+            (value) => value.orderIndex == entry.orderIndex,
+          ),
+        );
+        final replacement = ReaderLaunchContext(
+          collection: refreshed.collection,
+          documents: refreshed.documents,
+          toc: refreshed.toc,
+          normalizedCharacterLength: refreshed.normalizedCharacterLength,
+          documentLoader: refreshed.documentLoader,
+          progressRepository: refreshed.progressRepository,
+          bookmarkRepository: refreshed.bookmarkRepository,
+          preferencesRepository: refreshed.preferencesRepository,
+          inputBindingsRepository: refreshed.inputBindingsRepository,
+          readingHistoryRepository: refreshed.readingHistoryRepository,
+          readingSessionRepository: refreshed.readingSessionRepository,
+          autoReadPreferencesRepository:
+              refreshed.autoReadPreferencesRepository,
+          ttsPreferencesRepository: refreshed.ttsPreferencesRepository,
+          appearanceAssetRepository: refreshed.appearanceAssetRepository,
+          fontRepository: refreshed.fontRepository,
+          repair: refreshed.repair,
+          content: refreshed.content,
+          initialLocatorOverride: ReaderLocator(
+            collectionId: refreshed.collection.id,
+            absoluteCharacterOffset: target.startCharacterOffset,
+            itemIdHint: target.itemId,
+          ),
+          loadUncachedChapter: refreshed.loadUncachedChapter,
+        );
+        await Navigator.of(context).pushReplacement(
+          MaterialPageRoute<void>(
+            builder: (_) => ReaderPage(launch: replacement),
+          ),
+        );
+      } catch (error) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            SnackBar(
+              content: Text('获取章节失败：$error'),
+              action: SnackBarAction(
+                label: '重试',
+                onPressed: () {
+                  unawaited(_startChapterNavigation(entry));
+                },
+              ),
+            ),
+          );
+      }
+      return;
+    }
     _invalidateChapterNavigation();
     final generation = _chapterNavigationGeneration;
     await _restoreToChapter(entry, navigationGeneration: generation);
+    _followTtsPosition(entry.startCharacterOffset);
   }
 
   void _showChrome() {
     _autoReadChromeHideTimer?.cancel();
     _autoReadChromeHideTimer = null;
-    if (_chromeVisible) return;
+    if (!mounted) return;
+    _automationInteractionVersion++;
     setState(() => _chromeVisible = true);
   }
 
@@ -713,6 +1147,8 @@ class _ReaderPageState extends State<ReaderPage>
   @override
   void initState() {
     super.initState();
+    _ttsController = TtsReadingController()..addListener(_onTtsChanged);
+    unawaited(_loadWindowsTrueTransparencyCapability());
     _screenAwakeController = ReaderScreenAwakeController(
       setKeepScreenOn: ReaderKeepAwake.setEnabled,
       onSmartTimeout: () {
@@ -792,9 +1228,8 @@ class _ReaderPageState extends State<ReaderPage>
     if (override != null) {
       _controller.injectDocument(override);
     }
-    final doc = widget.launch.documents.isNotEmpty
-        ? widget.launch.documents.first
-        : null;
+    final content = widget.launch.resolvedContent;
+    final doc = content.primaryDocument;
     if (doc != null) {
       // 注意：不把 doc.contentHash 当作 expectedHash 传入。
       // M2 早期版本 content_documents.content_hash 误存 sourceHash；
@@ -802,7 +1237,7 @@ class _ReaderPageState extends State<ReaderPage>
       // Loader 内部优先读 manifest.normalizedHash 校验落盘字节。
       _controller.setDocumentSource(
         storagePath: doc.storagePath,
-        expectedLength: widget.launch.normalizedCharacterLength,
+        expectedLength: content.normalizedCharacterLength,
       );
     }
     _controller.visibleRangeProvider = _measureVisibleRange;
@@ -811,6 +1246,54 @@ class _ReaderPageState extends State<ReaderPage>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) unawaited(_initializePreferencesAndStart());
     });
+  }
+
+  Future<void> _loadWindowsTrueTransparencyCapability() async {
+    final supported = await WindowsTrueTransparencyCapability.load();
+    if (!mounted || supported == _supportsWindowsTrueTransparency) return;
+    _supportsWindowsTrueTransparency = supported;
+    _resolveAppearance();
+    setState(() {});
+  }
+
+  void _onTtsChanged() {
+    // TTS can also be started by a media/headset command, bypassing the
+    // visible TTS sheet.  Enforce the same handoff at the Reader boundary so
+    // no paused/running AutoRead driver can survive into a TTS session.
+    if (_ttsController.state == TtsReadingState.playing &&
+        _autoReadController.state != AutoReadState.idle) {
+      _stopAutoRead();
+    }
+    final previousState = _lastObservedTtsState;
+    final currentState = _ttsController.state;
+    _lastObservedTtsState = currentState;
+    final segment = _ttsController.activeSegment;
+    if (_ttsController.state == TtsReadingState.playing && segment != null) {
+      _followTtsSegmentIntoView(segment);
+    }
+    // Speech progress is not user interaction.  Only a real state transition
+    // starts/resets the Reader chrome inactivity window; otherwise a long
+    // utterance could keep the controls visible forever.
+    if (currentState != previousState && currentState != TtsReadingState.idle) {
+      _scheduleAutoReadChromeHide();
+    } else if (currentState == TtsReadingState.idle &&
+        _autoReadController.state == AutoReadState.idle) {
+      _autoReadChromeHideTimer?.cancel();
+      _autoReadChromeHideTimer = null;
+    }
+    // Volume interception depends on the currently active automatic mode.
+    // Keep the Android host in sync whenever TTS starts, pauses, resumes, or
+    // reaches the end; inactive TTS must immediately release the keys.
+    _onInputHostStateChanged(
+      pagedActive: _mode == ReaderMode.paged,
+      captureActive: _inputRouter.capture.isActive,
+    );
+    if (_pauseTtsAfterNormalVolumeNavigation &&
+        _ttsController.state == TtsReadingState.playing) {
+      _pauseTtsAfterNormalVolumeNavigation = false;
+      unawaited(_ttsController.pause());
+    }
+    if (mounted) setState(() {});
   }
 
   Future<void> _refreshBatteryStatus() async {
@@ -897,6 +1380,7 @@ class _ReaderPageState extends State<ReaderPage>
         _autoReadController.updatePreferences,
       );
     }
+    await _loadTtsPreferences();
     if (!mounted) return;
     _preferencesReady = true;
     _screenAwakeController.updatePreferences(
@@ -944,8 +1428,14 @@ class _ReaderPageState extends State<ReaderPage>
       preferences: _preferences,
       hasBackgroundImage: _preferences.backgroundImagePath != null,
       fontFamily: _fontFamily,
+      supportsWindowsTrueTransparency: _supportsWindowsTrueTransparency,
     );
     _bodyStyle = _appearance.baseTextStyle;
+  }
+
+  Color _ttsHighlightColorFor(BuildContext context) {
+    final accent = _effectiveReaderTheme().colorScheme.primary;
+    return accent.withValues(alpha: .18);
   }
 
   void _syncAndroidSystemUi() {
@@ -1069,26 +1559,6 @@ class _ReaderPageState extends State<ReaderPage>
     _batteryStatusTimer = null;
     _autoReadChromeHideTimer?.cancel();
     _autoReadChromeHideTimer = null;
-    _autoReadSpeedWriteTimer?.cancel();
-    final pendingSpeed = _pendingAutoReadSpeedWrite;
-    final pendingInterval = _pendingAutoReadIntervalWrite;
-    final autoReadRepository = widget.launch.autoReadPreferencesRepository;
-    if (autoReadRepository != null &&
-        (pendingSpeed != null || pendingInterval != null)) {
-      unawaited(
-        autoReadRepository.update(
-          _autoReadController.preferences.copyWith(
-            verticalVelocityPixelsPerSecond: pendingSpeed,
-            pagedIntervalSeconds: pendingInterval,
-            updatedAt: DateTime.now().toUtc(),
-          ),
-        ),
-      );
-    }
-    _pendingAutoReadSpeedWrite = null;
-    _pendingAutoReadIntervalWrite = null;
-    _autoReadSpeedWriteTimer?.cancel();
-    _autoReadIntervalWriteTimer?.cancel();
     _autoReadEvents?.cancel();
     _autoReadPreferencesSubscription?.cancel();
     _verticalAutoReadDriver.interrupt(AutoReadPauseReason.lifecycle);
@@ -1132,6 +1602,9 @@ class _ReaderPageState extends State<ReaderPage>
     _controller.dispose();
     _scroll.dispose();
     _pagedInputFocusNode.dispose();
+    _verticalKeyEventGate.clear();
+    _ttsController.removeListener(_onTtsChanged);
+    _ttsController.dispose();
     unawaited(_inputRouter.dispose());
     unawaited(ReaderInputBridge.deactivate());
     super.dispose();
@@ -1351,13 +1824,17 @@ class _ReaderPageState extends State<ReaderPage>
         ColoredBox(color: _appearance.backgroundColor),
         if (image != null)
           Opacity(
-            opacity: _preferences.backgroundImageOpacity,
+            opacity:
+                _preferences.backgroundImageOpacity *
+                _appearance.backgroundOpacity,
             child: Image.file(image, fit: BoxFit.cover, gaplessPlayback: true),
           ),
         if (image != null && _preferences.backgroundOverlayOpacity > 0)
           ColoredBox(
             color: overlayBase.withValues(
-              alpha: _preferences.backgroundOverlayOpacity,
+              alpha:
+                  _preferences.backgroundOverlayOpacity *
+                  _appearance.backgroundOpacity,
             ),
           ),
       ],
@@ -1479,9 +1956,16 @@ class _ReaderPageState extends State<ReaderPage>
 
   /// 分页控制器变化（窗口重建/翻页后）→ setState。
   void _onPagedControllerChanged() {
+    final followUserPosition = _pagedTtsNavigationPending;
+    _pagedTtsNavigationPending = false;
     _scheduleChapterPageMetrics();
     if (mounted) setState(() {});
     unawaited(_recordHistorySnapshot());
+    if (followUserPosition && _mode == ReaderMode.paged) {
+      _followTtsPosition(
+        _pagedController?.confirmedLocator?.absoluteCharacterOffset ?? 0,
+      );
+    }
   }
 
   void _invalidateChapterPageMetrics() {
@@ -1607,6 +2091,9 @@ class _ReaderPageState extends State<ReaderPage>
       paddingRight: _preferences.paddingRight,
       paragraphSpacing: _preferences.paragraphSpacing,
       firstLineIndent: _preferences.firstLineIndent,
+      styleRuns:
+          _controller.document!.rendering?.styleRuns ??
+          const <ReaderInlineStyleRun>[],
       chapterStartOffsets: widget.launch.toc
           .where((entry) => entry.kind == 'chapter')
           .map((entry) => entry.startCharacterOffset)
@@ -1631,6 +2118,7 @@ class _ReaderPageState extends State<ReaderPage>
           _transition == ReaderModeTransitionState.idle &&
           _restoreFinished,
     );
+    _verticalKeyEventGate.clear();
     _mode = ReaderMode.paged;
     _scheduleChapterPageMetrics();
     _inputRouter.setPagedActive(true);
@@ -1662,6 +2150,7 @@ class _ReaderPageState extends State<ReaderPage>
     _transition = ReaderModeTransitionState.pagedToVertical;
     _controller.freezeWrites();
     // Activate the target subtree before scheduling its two-stage restore.
+    _verticalKeyEventGate.clear();
     _mode = ReaderMode.vertical;
     _inputRouter.setPagedActive(false);
     _modeRestoreAnchor = locator;
@@ -1748,13 +2237,12 @@ class _ReaderPageState extends State<ReaderPage>
           progressRepository: widget.launch.progressRepository,
           progressOverride: widget.progressOverride,
         );
-        final doc = widget.launch.documents.isNotEmpty
-            ? widget.launch.documents.first
-            : null;
+        final content = widget.launch.resolvedContent;
+        final doc = content.primaryDocument;
         if (doc != null) {
           _controller.setDocumentSource(
             storagePath: doc.storagePath,
-            expectedLength: widget.launch.normalizedCharacterLength,
+            expectedLength: content.normalizedCharacterLength,
           );
         }
         _controller.visibleRangeProvider = _measureVisibleRange;
@@ -1794,8 +2282,15 @@ class _ReaderPageState extends State<ReaderPage>
         widget.launch.collection.id,
       );
     }
-    await _controller.open(initialLocator: _initialState?.toLocator());
+    await _controller.open(
+      initialLocator:
+          widget.launch.initialLocatorOverride ?? _initialState?.toLocator(),
+    );
     if (!mounted) return;
+    final document = _controller.document;
+    if (document != null) {
+      _ttsController.setSource(ReadableTextSource.fromText(document.text));
+    }
     setState(() {});
     // 列表可能尚未 attach：post-frame 再尝试跳转
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -2389,6 +2884,9 @@ class _ReaderPageState extends State<ReaderPage>
                   onTap: _toggleChrome,
                   child: Focus(
                     autofocus: _mode == ReaderMode.vertical,
+                    onFocusChange: (focused) {
+                      if (!focused) _verticalKeyEventGate.clear();
+                    },
                     onKeyEvent: _mode == ReaderMode.vertical
                         ? _onVerticalKeyEvent
                         : null,
@@ -2442,6 +2940,11 @@ class _ReaderPageState extends State<ReaderPage>
                 onPauseAutoRead: _pauseAutoReadForManualNavigation,
                 onResumeAutoRead: _resumeAutoRead,
                 onStopAutoRead: _stopAutoRead,
+                ttsSpeechRate: _ttsController.speechRate,
+                onPauseTts: _pauseTtsFromOverlay,
+                onResumeTts: _resumeTtsFromOverlay,
+                onStopTts: _stopTtsFromOverlay,
+                automationInteractionVersion: _automationInteractionVersion,
                 onBack: () => Navigator.of(context).pop(),
                 onToc: () {
                   _showChrome();
@@ -2468,6 +2971,12 @@ class _ReaderPageState extends State<ReaderPage>
                       onImportFont: _pickReaderFont,
                       onDeleteFont: _deleteReaderFont,
                       onPreviewFont: _previewReaderFont,
+                      supportsWindowsTrueTransparency:
+                          _supportsWindowsTrueTransparency,
+                      androidAutoModeVolumeBehavior:
+                          _inputRouter.profile.autoModeVolumeBehavior,
+                      onAndroidAutoModeVolumeBehaviorChanged:
+                          _setAndroidAutoModeVolumeBehavior,
                     ).whenComplete(_requestPagedInputFocus),
                   );
                 },
@@ -2479,7 +2988,9 @@ class _ReaderPageState extends State<ReaderPage>
                 },
                 onBookmarks: _openBookmarks,
                 onSearch: _openSearch,
-                onAutoRead: _openAutoReadControls,
+                onAutoRead: _openAutoHub,
+                onTts: _openTtsControls,
+                ttsState: _ttsController.state,
                 onModeSelected: (mode) {
                   _screenAwakeController.recordUserActivity();
                   _showChrome();
@@ -2608,7 +3119,7 @@ class _ReaderPageState extends State<ReaderPage>
                           block.endCharacterOffset,
                         );
                         final key = _blockKeys[i] ??= GlobalKey();
-                        return ReaderTextBlock(
+                        final textBlock = ReaderTextBlock(
                           key: key,
                           text: text,
                           style: _bodyStyle,
@@ -2621,6 +3132,14 @@ class _ReaderPageState extends State<ReaderPage>
                                   ReaderTextAlignment.justify
                               ? TextAlign.justify
                               : TextAlign.left,
+                          highlightStart: _ttsHighlightStartForBlock(block),
+                          highlightEnd: _ttsHighlightEndForBlock(block),
+                          highlightColor: _ttsHighlightColorFor(context),
+                          styleRuns: _styleRunsForRange(
+                            doc.rendering,
+                            block.startCharacterOffset,
+                            block.endCharacterOffset,
+                          ),
                           startsAtParagraphBoundary:
                               block.startCharacterOffset == 0 ||
                               doc.text.codeUnitAt(
@@ -2635,6 +3154,26 @@ class _ReaderPageState extends State<ReaderPage>
                             }
                           },
                         );
+                        final images = doc.rendering?.images
+                            .where(
+                              (image) =>
+                                  image.characterOffset ==
+                                  block.startCharacterOffset,
+                            )
+                            .toList(growable: false);
+                        if (images == null || images.isEmpty) return textBlock;
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            for (final image in images)
+                              ReaderEpubImage(
+                                placement: image,
+                                file: widget.launch.documentLoader.fileManager
+                                    .resolveStoragePath(image.storagePath),
+                              ),
+                            textBlock,
+                          ],
+                        );
                       },
                     ),
                   ),
@@ -2645,6 +3184,59 @@ class _ReaderPageState extends State<ReaderPage>
         ),
       ],
     );
+  }
+
+  int? _ttsHighlightStartForBlock(ReaderBlock block) {
+    final segment = _ttsController.activeSegment;
+    if (segment == null ||
+        segment.endCharacterOffset <= block.startCharacterOffset ||
+        segment.startCharacterOffset >= block.endCharacterOffset) {
+      return null;
+    }
+    return (segment.startCharacterOffset - block.startCharacterOffset)
+        .clamp(0, block.length)
+        .toInt();
+  }
+
+  List<ReaderInlineStyleRun> _styleRunsForRange(
+    ReaderRenderingMetadata? rendering,
+    int start,
+    int end,
+  ) {
+    if (rendering == null) return const <ReaderInlineStyleRun>[];
+    return rendering.styleRuns
+        .where(
+          (run) =>
+              run.endCharacterOffset > start && run.startCharacterOffset < end,
+        )
+        .map(
+          (run) => ReaderInlineStyleRun(
+            startCharacterOffset: (run.startCharacterOffset - start).clamp(
+              0,
+              end - start,
+            ),
+            endCharacterOffset: (run.endCharacterOffset - start).clamp(
+              0,
+              end - start,
+            ),
+            bold: run.bold,
+            italic: run.italic,
+            headingLevel: run.headingLevel,
+          ),
+        )
+        .toList(growable: false);
+  }
+
+  int? _ttsHighlightEndForBlock(ReaderBlock block) {
+    final segment = _ttsController.activeSegment;
+    if (segment == null ||
+        segment.endCharacterOffset <= block.startCharacterOffset ||
+        segment.startCharacterOffset >= block.endCharacterOffset) {
+      return null;
+    }
+    return (segment.endCharacterOffset - block.startCharacterOffset)
+        .clamp(0, block.length)
+        .toInt();
   }
 
   void _onVerticalPointerSignal(PointerSignalEvent event) {
@@ -2666,14 +3258,20 @@ class _ReaderPageState extends State<ReaderPage>
   }
 
   KeyEventResult _onVerticalKeyEvent(FocusNode node, KeyEvent event) {
-    if (event is! KeyDownEvent) return KeyEventResult.ignored;
+    final accepted = _verticalKeyEventGate.accept(event);
+    if (event is KeyUpEvent) return KeyEventResult.ignored;
     final input = readerInputGestureForEvent(
       event,
       control: HardwareKeyboard.instance.isControlPressed,
       alt: HardwareKeyboard.instance.isAltPressed,
       shift: HardwareKeyboard.instance.isShiftPressed,
     );
-    if (input != null && _inputRouter.handlePhysicalGesture(input)) {
+    if (input == null) return KeyEventResult.ignored;
+    // Consume duplicate key-downs and paced repeats at the Reader boundary so
+    // Scrollable/Shortcuts ancestors cannot interpret the same physical event
+    // as a second page command.
+    if (!accepted) return KeyEventResult.handled;
+    if (_inputRouter.handlePhysicalGesture(input)) {
       return KeyEventResult.handled;
     }
     return KeyEventResult.ignored;
@@ -2698,8 +3296,12 @@ class _ReaderPageState extends State<ReaderPage>
           controller: paged,
           appearance: _appearance,
           inputRouter: _inputRouter,
-          onUserNavigation: _pauseAutoReadForPageNavigation,
+          onUserNavigation: _onPagedUserNavigationForTts,
           focusNode: _pagedInputFocusNode,
+          activeTtsSegment: _ttsController.activeSegment,
+          ttsHighlightColor: _ttsHighlightColorFor(context),
+          resolveStoragePath:
+              widget.launch.documentLoader.fileManager.resolveStoragePath,
         );
       },
     );
@@ -2732,6 +3334,9 @@ class _ReaderPageState extends State<ReaderPage>
             : _userSource(notification),
       );
       unawaited(_recordHistorySnapshot());
+      if (notification is ScrollEndNotification) {
+        _followTtsPosition(topOffset);
+      }
       if (notification is ScrollEndNotification) {
         _controller.flush(source: ReaderPositionEventSource.userScrollbar);
       }

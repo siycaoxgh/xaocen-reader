@@ -12,6 +12,15 @@ class LibraryCollection {
     required this.detectedEncoding,
     required this.sourceSize,
     required this.importedAt,
+    this.author,
+    this.description,
+    this.metadataSource = 'legacy',
+    this.titleSource = 'legacy',
+    this.authorSource = 'unknown',
+    this.fileName,
+    this.sourcePath,
+    this.coverPath,
+    this.coverSource = 'placeholder',
   });
 
   final String id;
@@ -25,6 +34,15 @@ class LibraryCollection {
   final TextEncoding detectedEncoding;
   final int sourceSize;
   final DateTime importedAt;
+  final String? author;
+  final String? description;
+  final String metadataSource;
+  final String titleSource;
+  final String authorSource;
+  final String? fileName;
+  final String? sourcePath;
+  final String? coverPath;
+  final String coverSource;
 }
 
 /// 书库条目（领域实体）。

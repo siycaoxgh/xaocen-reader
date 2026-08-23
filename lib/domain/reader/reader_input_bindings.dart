@@ -26,6 +26,15 @@ enum AndroidAutoReadVolumeAction {
   disabled,
 }
 
+/// Shared Android volume-key policy while either automatic Reader mode is
+/// active.  This is one setting for AutoRead and TTS, not two independent
+/// profiles.
+enum AndroidAutoModeVolumeBehavior {
+  followNormal,
+  controlAutomaticMode,
+  systemVolume,
+}
+
 /// Stable persisted physical-input identifier.
 ///
 /// The value is deliberately a string owned by the domain contract. It is not
@@ -324,6 +333,7 @@ final class ReaderInputProfile {
     required this.version,
     required Map<ReaderInputGesture, ReaderCommand?> bindings,
     Map<PhysicalInputId, AndroidAutoReadVolumeAction>? autoReadVolumeActions,
+    this.autoModeVolumeBehavior = AndroidAutoModeVolumeBehavior.followNormal,
     required this.updatedAt,
   }) : bindings = Map.unmodifiable(bindings),
        autoReadVolumeActions = Map.unmodifiable(
@@ -352,6 +362,7 @@ final class ReaderInputProfile {
   final int version;
   final Map<ReaderInputGesture, ReaderCommand?> bindings;
   final Map<PhysicalInputId, AndroidAutoReadVolumeAction> autoReadVolumeActions;
+  final AndroidAutoModeVolumeBehavior autoModeVolumeBehavior;
   final DateTime updatedAt;
 
   factory ReaderInputProfile.defaults(
@@ -394,6 +405,7 @@ final class ReaderInputProfile {
                   AndroidAutoReadVolumeAction.followNormal,
             }
           : const {},
+      autoModeVolumeBehavior: AndroidAutoModeVolumeBehavior.followNormal,
       updatedAt: updatedAt ?? DateTime.fromMillisecondsSinceEpoch(0),
     );
   }
@@ -412,12 +424,15 @@ final class ReaderInputProfile {
     int? version,
     Map<ReaderInputGesture, ReaderCommand?>? bindings,
     Map<PhysicalInputId, AndroidAutoReadVolumeAction>? autoReadVolumeActions,
+    AndroidAutoModeVolumeBehavior? autoModeVolumeBehavior,
     DateTime? updatedAt,
   }) => ReaderInputProfile(
     platform: platform,
     version: version ?? this.version,
     bindings: Map.unmodifiable(bindings ?? this.bindings),
     autoReadVolumeActions: autoReadVolumeActions ?? this.autoReadVolumeActions,
+    autoModeVolumeBehavior:
+        autoModeVolumeBehavior ?? this.autoModeVolumeBehavior,
     updatedAt: updatedAt ?? this.updatedAt,
   );
 

@@ -2,6 +2,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/painting.dart';
 
+import '../domain/reader/reader_rendering.dart';
+
 /// Visual paragraph layout over the original UTF-16 text.
 /// No character is inserted, deleted, or persisted.
 final class ReaderTypographyLayout {
@@ -14,6 +16,10 @@ final class ReaderTypographyLayout {
     required this.firstLineIndent,
     this.textAlign = TextAlign.left,
     required this.startsAtParagraphBoundary,
+    this.highlightStart,
+    this.highlightEnd,
+    this.highlightColor,
+    this.styleRuns = const <ReaderInlineStyleRun>[],
     this.buildFastLineRecords = true,
   }) {
     _layout();
@@ -27,6 +33,10 @@ final class ReaderTypographyLayout {
   final double firstLineIndent;
   final TextAlign textAlign;
   final bool startsAtParagraphBoundary;
+  int? highlightStart;
+  int? highlightEnd;
+  Color? highlightColor;
+  final List<ReaderInlineStyleRun> styleRuns;
   final bool buildFastLineRecords;
   final List<ReaderTypographyLine> lines = [];
   double height = 0;
@@ -59,7 +69,7 @@ final class ReaderTypographyLayout {
 
   void _layoutFast() {
     final painter = TextPainter(
-      text: TextSpan(text: text, style: style),
+      text: _spanForRange(0, text.length, style),
       textDirection: textDirection,
       textScaler: TextScaler.noScaling,
       textAlign: textAlign,
@@ -114,9 +124,8 @@ final class ReaderTypographyLayout {
       // clipping it to the viewport.
       final x = rawX.clamp(-width + 1, width - 1).toDouble();
       final available = math.max(1.0, width - math.max(0, x));
-      final remaining = text.substring(cursor, contentEnd);
       final probe = TextPainter(
-        text: TextSpan(text: remaining, style: style),
+        text: _spanForRange(cursor, contentEnd, style),
         textDirection: textDirection,
         textScaler: TextScaler.noScaling,
         textAlign: textAlign,
@@ -153,7 +162,13 @@ final class ReaderTypographyLayout {
         : displayText;
     final lineWidth = x < 0 ? width : math.max(1.0, width - x);
     final painter = TextPainter(
-      text: TextSpan(text: paintText.isEmpty ? ' ' : paintText, style: style),
+      text: _spanForRange(
+        start,
+        math.min(end, text.length),
+        style,
+        appendNewline: paintText.endsWith('\n'),
+        forceSpace: paintText.isEmpty,
+      ),
       textDirection: textDirection,
       textScaler: TextScaler.noScaling,
       textAlign: textAlign,
@@ -206,24 +221,75 @@ final class ReaderTypographyLayout {
 
   void paint(Canvas canvas, Offset offset) {
     if (_fastPainter case final painter?) {
+      _paintHighlights(canvas, offset);
       painter.paint(canvas, offset);
       return;
     }
     for (final line in lines) {
+      _paintHighlightForLine(canvas, offset, line);
       line.painter.paint(canvas, offset + Offset(line.x, line.top));
     }
   }
 
+  void _paintHighlights(Canvas canvas, Offset offset) {
+    final start = highlightStart;
+    final end = highlightEnd;
+    final color = highlightColor;
+    if (start == null || end == null || color == null || start >= end) return;
+    for (final line in lines) {
+      if (line.end <= start || line.start >= end) continue;
+      canvas.drawRect(
+        Rect.fromLTWH(
+          line.x,
+          line.top,
+          width - line.x,
+          line.height,
+        ).shift(offset),
+        Paint()..color = color,
+      );
+    }
+  }
+
+  void _paintHighlightForLine(
+    Canvas canvas,
+    Offset offset,
+    ReaderTypographyLine line,
+  ) {
+    final start = highlightStart;
+    final end = highlightEnd;
+    final color = highlightColor;
+    if (start == null || end == null || color == null || start >= end) return;
+    if (line.end <= start || line.start >= end) return;
+    canvas.drawRect(
+      Rect.fromLTWH(
+        line.x,
+        line.top,
+        width - line.x,
+        line.height,
+      ).shift(offset),
+      Paint()..color = color,
+    );
+  }
+
+  void updateHighlight({int? start, int? end, Color? color}) {
+    highlightStart = start;
+    highlightEnd = end;
+    highlightColor = color;
+  }
+
   void updatePaintStyle(TextStyle value) {
     if (_fastPainter case final painter?) {
-      painter.text = TextSpan(text: text, style: value);
+      painter.text = _spanForRange(0, text.length, value);
       painter.layout(maxWidth: width);
       return;
     }
     for (final line in lines) {
-      line.painter.text = TextSpan(
-        text: line.displayText.isEmpty ? ' ' : line.displayText,
-        style: value,
+      line.painter.text = _spanForRange(
+        line.start,
+        math.min(line.end, text.length),
+        value,
+        appendNewline: line.displayText.endsWith('\n'),
+        forceSpace: line.displayText.isEmpty,
       );
       line.painter.layout(
         maxWidth: line.x < 0 ? width : math.max(1.0, width - line.x),
@@ -239,6 +305,72 @@ final class ReaderTypographyLayout {
     for (final line in lines) {
       line.painter.dispose();
     }
+  }
+
+  TextSpan _spanForRange(
+    int start,
+    int end,
+    TextStyle base, {
+    bool appendNewline = false,
+    bool forceSpace = false,
+  }) {
+    final safeStart = start.clamp(0, text.length).toInt();
+    final safeEnd = end.clamp(safeStart, text.length).toInt();
+    final relevant = styleRuns
+        .where(
+          (run) =>
+              run.endCharacterOffset > safeStart &&
+              run.startCharacterOffset < safeEnd,
+        )
+        .toList(growable: false);
+    if (relevant.isEmpty) {
+      return TextSpan(
+        text: forceSpace
+            ? ' '
+            : text.substring(safeStart, safeEnd) + (appendNewline ? '\n' : ''),
+        style: base,
+      );
+    }
+    final boundaries = <int>{safeStart, safeEnd};
+    for (final run in relevant) {
+      boundaries.add(
+        run.startCharacterOffset.clamp(safeStart, safeEnd).toInt(),
+      );
+      boundaries.add(run.endCharacterOffset.clamp(safeStart, safeEnd).toInt());
+    }
+    final sorted = boundaries.toList()..sort();
+    final children = <TextSpan>[];
+    for (var index = 0; index + 1 < sorted.length; index++) {
+      final segmentStart = sorted[index];
+      final segmentEnd = sorted[index + 1];
+      if (segmentEnd <= segmentStart) continue;
+      final bold = relevant.any(
+        (run) =>
+            run.bold &&
+            run.startCharacterOffset <= segmentStart &&
+            run.endCharacterOffset >= segmentEnd,
+      );
+      final italic = relevant.any(
+        (run) =>
+            run.italic &&
+            run.startCharacterOffset <= segmentStart &&
+            run.endCharacterOffset >= segmentEnd,
+      );
+      children.add(
+        TextSpan(
+          text: text.substring(segmentStart, segmentEnd),
+          style: base.copyWith(
+            fontWeight: bold ? FontWeight.bold : base.fontWeight,
+            fontStyle: italic ? FontStyle.italic : base.fontStyle,
+          ),
+        ),
+      );
+    }
+    if (appendNewline) children.add(TextSpan(text: '\n', style: base));
+    if (children.isEmpty && forceSpace) {
+      children.add(TextSpan(text: ' ', style: base));
+    }
+    return TextSpan(children: children);
   }
 }
 

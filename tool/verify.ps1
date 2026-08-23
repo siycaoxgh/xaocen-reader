@@ -1,5 +1,6 @@
-# XAOCEN Reader v4 - unified verification gate (M0 -> M2)
-# Steps: pub get / format check / analyze / test / integration test / windows release / apk debug / git diff --check
+# XAOCEN Reader v4 - unified verification gate
+# Steps: pub get / format check / analyze / test / integration test /
+# canonical Windows release / Android release / git diff --check
 # Any failure returns non-zero exit code; stderr is not swallowed.
 # -SkipIntegration: skip the integration_test step (used when no device is attached).
 param(
@@ -10,12 +11,37 @@ $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
 Set-Location $root
 
-# flutter/dart are not on PATH in this environment; use the known SDK location.
-$flutterBin = Join-Path $env:USERPROFILE 'flutter\bin\flutter.bat'
-$dartBin = Join-Path $env:USERPROFILE 'flutter\bin\dart.bat'
-if (-not (Test-Path $flutterBin)) {
-    $flutterBin = 'flutter'
-    $dartBin = 'dart'
+# Prefer the repository user's normal SDK location, then PATH. This also
+# supports the common develop\flutter layout used by the XAOCEN build host.
+$flutterBin = $null
+$dartBin = $null
+foreach ($sdkRoot in @(
+    (Join-Path $env:USERPROFILE 'develop\flutter'),
+    (Join-Path $env:USERPROFILE 'flutter')
+)) {
+    $candidateFlutter = Join-Path $sdkRoot 'bin\flutter.bat'
+    $candidateDart = Join-Path $sdkRoot 'bin\dart.bat'
+    if ((Test-Path -LiteralPath $candidateFlutter -PathType Leaf) -and
+        (Test-Path -LiteralPath $candidateDart -PathType Leaf)) {
+        $flutterBin = $candidateFlutter
+        $dartBin = $candidateDart
+        break
+    }
+}
+if ($null -eq $flutterBin) {
+    $flutterCommand = Get-Command flutter.bat -ErrorAction SilentlyContinue
+    if ($null -eq $flutterCommand) {
+        $flutterCommand = Get-Command flutter -ErrorAction SilentlyContinue
+    }
+    $dartCommand = Get-Command dart.bat -ErrorAction SilentlyContinue
+    if ($null -eq $dartCommand) {
+        $dartCommand = Get-Command dart -ErrorAction SilentlyContinue
+    }
+    if ($null -eq $flutterCommand -or $null -eq $dartCommand) {
+        throw 'Flutter/Dart SDK not found. Add flutter and dart to PATH or place the SDK under %USERPROFILE%\develop\flutter.'
+    }
+    $flutterBin = if ($flutterCommand.Source) { $flutterCommand.Source } else { $flutterCommand.Path }
+    $dartBin = if ($dartCommand.Source) { $dartCommand.Source } else { $dartCommand.Path }
 }
 
 $steps = @(
@@ -41,8 +67,11 @@ if (-not $SkipIntegration -and (Test-Path $itDir)) {
 }
 
 $steps += @(
-    @{ Name = 'flutter build windows --release';   Cmd = { & $flutterBin build windows --release } },
-    @{ Name = 'flutter build apk --debug';         Cmd = { & $flutterBin build apk --debug } },
+    @{ Name = 'canonical Windows Standard Release'; Cmd = { & (Join-Path $root 'tool\build_windows_engine.ps1') -Engine Standard -Configuration Release } },
+    # Release is the distributable baseline: it avoids shipping the large
+    # debug kernel/validation layer while retaining the same universal ABI
+    # coverage for device and emulator smoke installation.
+    @{ Name = 'flutter build apk --release';        Cmd = { & $flutterBin build apk --release } },
     @{ Name = 'git diff --check';                  Cmd = { & git diff --check } }
 )
 

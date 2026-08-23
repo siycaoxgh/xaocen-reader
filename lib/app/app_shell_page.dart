@@ -5,8 +5,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../domain/reader/reading_history.dart';
 import '../reader/reader_page.dart';
 import 'library_page.dart';
+import 'app_shell_contract.dart';
 import 'providers.dart';
 import 'reading_history_page.dart';
+import 'product_identity.dart';
 
 class _BrandMark extends StatelessWidget {
   const _BrandMark({this.size = 32});
@@ -23,10 +25,15 @@ class _BrandMark extends StatelessWidget {
         color: scheme.primaryContainer,
         borderRadius: BorderRadius.circular(size * .28),
       ),
-      child: Icon(
-        Icons.menu_book_rounded,
-        size: size * .58,
-        color: scheme.onPrimaryContainer,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(size * .28),
+        child: Image.asset(
+          'assets/branding/xaocen_reader_logo.png',
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+          semanticLabel: productNameForPlatform(),
+        ),
       ),
     );
   }
@@ -44,16 +51,6 @@ class AppShellPage extends ConsumerStatefulWidget {
 class _AppShellPageState extends ConsumerState<AppShellPage> {
   int _selectedIndex = 0;
 
-  static const _destinations = <_ShellDestination>[
-    _ShellDestination('\u9996\u9875', Icons.home_outlined, Icons.home),
-    _ShellDestination(
-      '\u4e66\u67b6',
-      Icons.menu_book_outlined,
-      Icons.menu_book,
-    ),
-    _ShellDestination('\u6211\u7684', Icons.person_outline, Icons.person),
-  ];
-
   void _select(int index) {
     if (index == _selectedIndex) return;
     setState(() => _selectedIndex = index);
@@ -61,26 +58,13 @@ class _AppShellPageState extends ConsumerState<AppShellPage> {
 
   @override
   Widget build(BuildContext context) {
-    final isDesktop = MediaQuery.sizeOf(context).width >= 720;
-    final body = Column(
+    final isDesktop = AppShellLayout.isDesktop(context);
+    final body = IndexedStack(
+      index: _selectedIndex,
       children: [
-        _ShellHeader(
-          title: _destinations[_selectedIndex].label,
-          isDesktop: isDesktop,
-        ),
-        Expanded(
-          child: IndexedStack(
-            index: _selectedIndex,
-            children: [
-              _HomeSurface(
-                onOpenShelf: () => _select(1),
-                onOpen: _openHistoryEntry,
-              ),
-              const LibraryPage(embedded: true),
-              _MeSurface(onChanged: _refreshAfterRoute),
-            ],
-          ),
-        ),
+        _HomeSurface(onOpenShelf: () => _select(1), onOpen: _openHistoryEntry),
+        const LibraryPage(embedded: true),
+        _MeSurface(onChanged: _refreshAfterRoute),
       ],
     );
 
@@ -129,7 +113,7 @@ class _AppShellPageState extends ConsumerState<AppShellPage> {
                 selectedIndex: _selectedIndex,
                 onDestinationSelected: _select,
                 destinations: [
-                  for (final destination in _destinations)
+                  for (final destination in AppShellLayout.destinations)
                     NavigationDestination(
                       icon: Icon(destination.icon),
                       selectedIcon: Icon(destination.selectedIcon),
@@ -178,6 +162,7 @@ class _AppShellPageState extends ConsumerState<AppShellPage> {
         autoReadPreferencesRepository: ref.read(
           autoReadPreferencesRepositoryProvider,
         ),
+        ttsPreferencesRepository: ref.read(ttsPreferencesRepositoryProvider),
       ),
     );
     if (mounted) ref.invalidate(recentReadingProvider);
@@ -192,7 +177,7 @@ class _HomeSurface extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDesktop = MediaQuery.sizeOf(context).width >= 720;
+    final isDesktop = AppShellLayout.isDesktop(context);
     return Align(
       alignment: Alignment.topCenter,
       child: ConstrainedBox(
@@ -225,6 +210,26 @@ class _HomeSurface extends StatelessWidget {
                 onTap: onOpenShelf,
               ),
             ),
+            const SizedBox(height: 12),
+            Card(
+              child: ListTile(
+                leading: const Icon(Icons.rss_feed),
+                title: const Text('内容订阅'),
+                subtitle: const Text('管理内容订阅并手动刷新文章'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.of(context).pushNamed('/feeds'),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Card(
+              child: ListTile(
+                leading: const Icon(Icons.travel_explore),
+                title: const Text('在线书源'),
+                subtitle: const Text('管理书源、搜索并加入书架'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.of(context).pushNamed('/web-books'),
+              ),
+            ),
           ],
         ),
       ),
@@ -239,7 +244,7 @@ class _MeSurface extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final desktop = MediaQuery.sizeOf(context).width >= 720;
+    final desktop = AppShellLayout.isDesktop(context);
     return Align(
       alignment: Alignment.topCenter,
       child: ConstrainedBox(
@@ -252,11 +257,6 @@ class _MeSurface extends StatelessWidget {
             32,
           ),
           children: [
-            Text(
-              '\u6211\u7684',
-              style: Theme.of(context).textTheme.headlineSmall,
-            ),
-            const SizedBox(height: 4),
             Text(
               '\u4e2a\u4eba\u9605\u8bfb\u4fe1\u606f\u4e0e\u5e94\u7528\u8bbe\u7f6e',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -330,36 +330,6 @@ class _MeSectionLabel extends StatelessWidget {
   );
 }
 
-class _ShellHeader extends StatelessWidget {
-  const _ShellHeader({required this.title, required this.isDesktop});
-
-  final String title;
-  final bool isDesktop;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Theme.of(context).colorScheme.surface,
-      child: SizedBox(
-        height: isDesktop ? 64 : 56,
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: isDesktop ? 28 : 20),
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: Row(
-              children: [
-                const _BrandMark(),
-                const SizedBox(width: 10),
-                Text(title, style: Theme.of(context).textTheme.titleLarge),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _DesktopSidebar extends StatelessWidget {
   const _DesktopSidebar({required this.selectedIndex, required this.onSelect});
 
@@ -384,7 +354,7 @@ class _DesktopSidebar extends StatelessWidget {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      'XAOCEN Reader',
+                      productNameForPlatform(),
                       style: Theme.of(context).textTheme.titleMedium,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -394,11 +364,11 @@ class _DesktopSidebar extends StatelessWidget {
             ),
             for (
               var index = 0;
-              index < _AppShellPageState._destinations.length;
+              index < AppShellLayout.destinations.length;
               index++
             )
               _DesktopNavItem(
-                destination: _AppShellPageState._destinations[index],
+                destination: AppShellLayout.destinations[index],
                 selected: index == selectedIndex,
                 onTap: () => onSelect(index),
               ),
@@ -426,7 +396,7 @@ class _DesktopNavItem extends StatelessWidget {
     required this.onTap,
   });
 
-  final _ShellDestination destination;
+  final AppShellDestination destination;
   final bool selected;
   final VoidCallback onTap;
 
@@ -447,12 +417,4 @@ class _DesktopNavItem extends StatelessWidget {
       ),
     );
   }
-}
-
-class _ShellDestination {
-  const _ShellDestination(this.label, this.icon, this.selectedIcon);
-
-  final String label;
-  final IconData icon;
-  final IconData selectedIcon;
 }

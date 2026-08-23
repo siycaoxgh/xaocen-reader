@@ -21,6 +21,14 @@ namespace {
 #define DWMWA_USE_IMMERSIVE_DARK_MODE 20
 #endif
 
+#ifndef DWMWA_BORDER_COLOR
+#define DWMWA_BORDER_COLOR 34
+#endif
+
+#ifndef DWMWA_COLOR_NONE
+#define DWMWA_COLOR_NONE 0xFFFFFFFE
+#endif
+
 constexpr const wchar_t kWindowClassName[] = L"FLUTTER_RUNNER_WIN32_WINDOW";
 
 UINT TaskbarCreatedMessage() {
@@ -83,6 +91,23 @@ bool IsUsableRect(const RECT& rect) {
   return rect.right > rect.left && rect.bottom > rect.top &&
          (rect.right - rect.left) >= GetSystemMetrics(SM_CXMINTRACK) &&
          (rect.bottom - rect.top) >= GetSystemMetrics(SM_CYMINTRACK);
+}
+
+// The alpha surface is an opt-in validation path.  The extended window style
+// must be present at top-level HWND creation time so that DWM does not create
+// a redirection bitmap before the patched Flutter engine installs its
+// DirectComposition surface.  Keep this runner-side switch scoped to the
+// existing engine switch; ordinary Standard builds remain unchanged.
+bool AlphaSurfaceRequested() {
+  wchar_t value[128]{};
+  for (int index = 1; index <= 32; ++index) {
+    wchar_t name[64]{};
+    swprintf_s(name, L"FLUTTER_ENGINE_SWITCH_%d", index);
+    const DWORD length = GetEnvironmentVariableW(name, value, ARRAYSIZE(value));
+    if (length == 0 || length >= ARRAYSIZE(value)) continue;
+    if (wcscmp(value, L"enable-windows-alpha-surface") == 0) return true;
+  }
+  return false;
 }
 
 RECT ClampToVisibleWorkArea(const RECT& requested) {
@@ -268,8 +293,19 @@ bool Win32Window::Create(const std::wstring& title,
   UINT dpi = FlutterDesktopGetDpiForMonitor(monitor);
   double scale_factor = dpi / 96.0;
 
-  HWND window = CreateWindow(
-      window_class, title.c_str(), WS_OVERLAPPEDWINDOW,
+  // Preserve the explicit staged-bundle signal set by main.cpp, while still
+  // accepting the legacy environment switch used by manual engine runs.
+  alpha_surface_requested_ =
+      alpha_surface_requested_ || AlphaSurfaceRequested();
+  // Start with an explicit application window entry so the taskbar button is
+  // present during Flutter's first-frame startup. The persisted shell
+  // preference may later switch this to WS_EX_TOOLWINDOW when the user has
+  // intentionally disabled the taskbar entry.
+  const DWORD extended_style =
+      WS_EX_APPWINDOW |
+      (alpha_surface_requested_ ? WS_EX_NOREDIRECTIONBITMAP : 0);
+  HWND window = CreateWindowEx(
+      extended_style, window_class, title.c_str(), WS_OVERLAPPEDWINDOW,
       Scale(origin.x, scale_factor), Scale(origin.y, scale_factor),
       Scale(size.width, scale_factor), Scale(size.height, scale_factor),
       nullptr, nullptr, GetModuleHandle(nullptr), this);
@@ -278,7 +314,26 @@ bool Win32Window::Create(const std::wstring& title,
     return false;
   }
 
+  // Set both icon slots explicitly. The class icon is still the resource
+  // source of truth, while WM_SETICON keeps the title bar and taskbar from
+  // falling back to a generic Flutter icon on Windows shell refreshes.
+  const HICON app_icon =
+      LoadIcon(GetModuleHandle(nullptr), MAKEINTRESOURCE(IDI_APP_ICON));
+  if (app_icon != nullptr) {
+    SendMessage(window, WM_SETICON, ICON_BIG,
+                reinterpret_cast<LPARAM>(app_icon));
+    SendMessage(window, WM_SETICON, ICON_SMALL,
+                reinterpret_cast<LPARAM>(app_icon));
+  }
+
   UpdateTheme(window);
+  // A borderless window must not inherit a DWM non-client outline. Keep the
+  // resize hit-test below; this only removes the system-painted pixels.
+  if (!window_border_visible_) {
+    const DWORD no_border = DWMWA_COLOR_NONE;
+    DwmSetWindowAttribute(window, DWMWA_BORDER_COLOR, &no_border,
+                          sizeof(no_border));
+  }
 
   return OnCreate();
 }
@@ -327,6 +382,13 @@ Win32Window::MessageHandler(HWND hwnd,
     return 0;
   }
   switch (message) {
+    case WM_NCCALCSIZE:
+      if (!window_border_visible_ && wparam != 0) {
+        // Extend the client surface over the non-client frame. WM_NCHITTEST
+        // still returns resize/caption zones, so drag and resize remain native.
+        return 0;
+      }
+      break;
     case WM_NCHITTEST:
       if (!window_border_visible_) {
         POINT point{GET_X_LPARAM(lparam), GET_Y_LPARAM(lparam)};
@@ -711,6 +773,10 @@ bool Win32Window::SetWindowBorder(bool show_border) {
   SetWindowLongPtr(window_handle_, GWL_STYLE, style);
   window_border_visible_ = show_border;
 
+  const DWORD border_color = show_border ? DWMWA_COLOR_DEFAULT : DWMWA_COLOR_NONE;
+  DwmSetWindowAttribute(window_handle_, DWMWA_BORDER_COLOR, &border_color,
+                        sizeof(border_color));
+
   SetWindowPos(window_handle_, nullptr, 0, 0, 0, 0,
                SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE |
                    SWP_FRAMECHANGED);
@@ -785,6 +851,15 @@ void Win32Window::RemoveTrayIcon() {
   tray_icon_added_ = false;
 }
 
+void Win32Window::SetTrayLocale(const std::string& locale_tag) {
+  // The current product locale is Chinese. Keep an English fallback so a
+  // future localized app can switch labels without changing native menu
+  // command IDs or callbacks.
+  tray_locale_chinese_ = locale_tag.size() >= 2 &&
+                         (locale_tag[0] == 'z' || locale_tag[0] == 'Z') &&
+                         (locale_tag[1] == 'h' || locale_tag[1] == 'H');
+}
+
 void Win32Window::ShowTrayMenu() {
   if (window_handle_ == nullptr || !tray_enabled_) return;
   POINT point{};
@@ -792,11 +867,20 @@ void Win32Window::ShowTrayMenu() {
   HMENU menu = CreatePopupMenu();
   if (menu == nullptr) return;
   const bool visible = IsWindowVisible(window_handle_) != FALSE;
-  AppendMenuW(menu, MF_STRING, kTrayShowCommand, L"Show window");
+  const wchar_t* show_label = tray_locale_chinese_
+                                  ? L"\x663E\x793A\x7A97\x53E3"
+                                  : L"Show Window";
+  const wchar_t* hide_label = tray_locale_chinese_
+                                  ? L"\x9690\x85CF\x7A97\x53E3"
+                                  : L"Hide Window";
+  const wchar_t* exit_label =
+      tray_locale_chinese_ ? L"\x9000\x51FA XAOCEN Reader"
+                            : L"Exit XAOCEN Reader";
+  AppendMenuW(menu, MF_STRING, kTrayShowCommand, show_label);
   AppendMenuW(menu, MF_STRING | (visible ? MF_ENABLED : MF_GRAYED),
-              kTrayHideCommand, L"Hide window");
+              kTrayHideCommand, hide_label);
   AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
-  AppendMenuW(menu, MF_STRING, kTrayExitCommand, L"Exit application");
+  AppendMenuW(menu, MF_STRING, kTrayExitCommand, exit_label);
   // A popup menu must have a foreground owner for Windows to keep it open
   // and deliver WM_COMMAND. The owner may be hidden after a Boss action; the
   // tray popup itself remains the explicit recovery surface.

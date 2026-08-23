@@ -111,6 +111,7 @@ void main() {
         ),
         ReaderPreferences.defaults.copyWith(backgroundImageOpacity: .8),
         ReaderPreferences.defaults.copyWith(backgroundOverlayOpacity: .6),
+        ReaderPreferences.defaults.copyWith(backgroundOpacity: .5),
       ]) {
         expect(value.changesFrom(ReaderPreferences.defaults), {
           ReaderPreferenceChangeKind.paint,
@@ -168,6 +169,16 @@ void main() {
       await seedBook(db, b);
     });
     tearDown(() => db.close());
+
+    test('background opacity persists as a paint-only preference', () async {
+      final saved = ReaderPreferences.defaults.copyWith(backgroundOpacity: 0.5);
+      await repo.update(a, saved);
+      final loaded = await repo.load(a);
+      expect(loaded.backgroundOpacity, 0.5);
+      expect(loaded.changesFrom(ReaderPreferences.defaults), {
+        ReaderPreferenceChangeKind.paint,
+      });
+    });
 
     test('typed API, defaults, save/load/watch', () async {
       final Future<ReaderPreferences> Function(String) typedLoad = repo.load;
@@ -258,7 +269,7 @@ void main() {
   });
 
   test(
-    'schema 4閳? preserves books and seeds legacy global settings per book',
+    'schema 4闁? preserves books and seeds legacy global settings per book',
     () async {
       final dir = await Directory.systemTemp.createTemp('m51e1_migration');
       final file = File('${dir.path}${Platform.pathSeparator}db.sqlite');
@@ -377,7 +388,7 @@ void main() {
       expect(
         (await db.customSelect('PRAGMA user_version').getSingle())
             .data['user_version'],
-        18,
+        21,
       );
       await db.close();
       await dir.delete(recursive: true);
@@ -412,7 +423,7 @@ void main() {
     expect(
       (await db.customSelect('PRAGMA user_version').getSingle())
           .data['user_version'],
-      18,
+      21,
     );
     await db.close();
     await dir.delete(recursive: true);
@@ -453,7 +464,7 @@ void main() {
       expect(
         (await db.customSelect('PRAGMA user_version').getSingle())
             .data['user_version'],
-        18,
+        21,
       );
       await db.close();
       await dir.delete(recursive: true);
@@ -478,7 +489,7 @@ void main() {
     expect(
       (await db.customSelect('PRAGMA user_version').getSingle())
           .data['user_version'],
-      18,
+      21,
     );
     await db.close();
     await dir.delete(recursive: true);
@@ -508,13 +519,13 @@ void main() {
     expect(
       (await db.customSelect('PRAGMA user_version').getSingle())
           .data['user_version'],
-      18,
+      21,
     );
     await db.close();
     await dir.delete(recursive: true);
   });
 
-  test('schema 6閳?1 preserves typography and adds display defaults', () async {
+  test('schema 6闁?1 preserves typography and adds display defaults', () async {
     final dir = await Directory.systemTemp.createTemp('m55e_migration');
     final file = File('${dir.path}${Platform.pathSeparator}db.sqlite');
     var db = AppDatabase(NativeDatabase(file));
@@ -567,13 +578,13 @@ void main() {
     expect(
       (await db.customSelect('PRAGMA user_version').getSingle())
           .data['user_version'],
-      18,
+      21,
     );
     await db.close();
     await dir.delete(recursive: true);
   });
 
-  test('schema 7閳?1 preserves legacy colors and image appearance', () async {
+  test('schema 7闁?1 preserves legacy colors and image appearance', () async {
     final dir = await Directory.systemTemp.createTemp('m55e_palette_migration');
     final file = File('${dir.path}${Platform.pathSeparator}db.sqlite');
     var db = AppDatabase(NativeDatabase(file));
@@ -655,7 +666,7 @@ void main() {
     expect(
       (await db.customSelect('PRAGMA user_version').getSingle())
           .data['user_version'],
-      18,
+      21,
     );
     expect((await db.select(db.contentCollections).get()).single.id, a);
     await db.close();
@@ -663,7 +674,7 @@ void main() {
   });
 
   test(
-    'schema 8閳?1 adds display defaults without changing book preferences',
+    'schema 8闁?1 adds display defaults without changing book preferences',
     () async {
       final dir = await Directory.systemTemp.createTemp(
         'm55g_display_migration',
@@ -751,7 +762,7 @@ void main() {
       expect(
         (await db.customSelect('PRAGMA user_version').getSingle())
             .data['user_version'],
-        18,
+        21,
       );
       await db.close();
       await dir.delete(recursive: true);
@@ -759,7 +770,7 @@ void main() {
   );
 
   test(
-    'schema 9閳?1 adds fixed info slots and AutoRead display choice',
+    'schema 9闁?1 adds fixed info slots and AutoRead display choice',
     () async {
       final dir = await Directory.systemTemp.createTemp('m56b_slots_migration');
       final file = File('${dir.path}${Platform.pathSeparator}db.sqlite');
@@ -841,7 +852,7 @@ void main() {
       expect(
         (await db.customSelect('PRAGMA user_version').getSingle())
             .data['user_version'],
-        18,
+        21,
       );
       await db.close();
       await dir.delete(recursive: true);

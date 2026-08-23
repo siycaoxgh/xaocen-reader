@@ -41,12 +41,24 @@ class Controller {
   void HandleKeyboard(WPARAM message, const KBDLLHOOKSTRUCT* data);
   bool SampleAtCursor(desktop_color_sampler::Sample* sample,
                       std::string* error) const;
+  bool CreatePreviewWindow();
+  void DestroyPreviewWindow();
+  void UpdatePreview(const desktop_color_sampler::Sample& sample);
+  void SetPickingCursor();
+  void RestoreCursor();
+  static LRESULT CALLBACK PreviewWindowProc(HWND window, UINT message,
+                                            WPARAM wparam, LPARAM lparam);
+  static ATOM RegisterPreviewWindowClass(HINSTANCE instance);
 
   HWND owner_ = nullptr;
+  HWND preview_window_ = nullptr;
   HHOOK mouse_hook_ = nullptr;
   HHOOK keyboard_hook_ = nullptr;
   UINT_PTR timer_id_ = 0;
   bool picking_ = false;
+  HCURSOR previous_cursor_ = nullptr;
+  COLORREF preview_color_ = RGB(32, 32, 32);
+  std::wstring preview_hex_ = L"#------";
   SampleCallback on_sample_;
   ConfirmCallback on_confirm_;
   CancelCallback on_cancel_;

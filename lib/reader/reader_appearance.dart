@@ -13,6 +13,7 @@
 library;
 
 import 'dart:math' as math;
+import 'dart:io' show Platform;
 
 import 'package:flutter/material.dart';
 
@@ -33,6 +34,7 @@ class ReaderResolvedAppearance {
     this.textContrastRatio = 21,
     this.hasLowContrastWarning = false,
     this.hasBackgroundImage = false,
+    this.backgroundOpacity = 1,
   });
 
   final Color backgroundColor;
@@ -47,6 +49,10 @@ class ReaderResolvedAppearance {
   final double textContrastRatio;
   final bool hasLowContrastWarning;
   final bool hasBackgroundImage;
+
+  /// Effective Reader background alpha. Foreground colors are intentionally
+  /// not derived from this value.
+  final double backgroundOpacity;
 }
 
 /// 从 [ThemeData] 解析 Reader 外观。
@@ -68,6 +74,7 @@ ReaderResolvedAppearance resolveReaderAppearance(
   int? darkBackgroundColorArgb,
   bool hasBackgroundImage = false,
   String? fontFamily,
+  bool supportsWindowsTrueTransparency = false,
 }) {
   final scheme = (theme ?? Theme.of(context)).colorScheme;
   final dark = scheme.brightness == Brightness.dark;
@@ -92,9 +99,17 @@ ReaderResolvedAppearance resolveReaderAppearance(
         darkBackgroundColorArgb ??
         backgroundColorArgb,
   );
-  final backgroundColor = Color(palette.backgroundArgb);
+  final resolvedBackgroundColor = Color(palette.backgroundArgb);
+  final productBackgroundAlpha =
+      Platform.isWindows && supportsWindowsTrueTransparency
+      ? (resolvedPreferences?.backgroundOpacity ??
+            ReaderPreferences.defaultBackgroundOpacity)
+      : 1.0;
+  final backgroundColor = resolvedBackgroundColor.withValues(
+    alpha: productBackgroundAlpha,
+  );
   final textColor = Color(palette.textArgb);
-  final textContrast = contrastRatio(textColor, backgroundColor);
+  final textContrast = contrastRatio(textColor, resolvedBackgroundColor);
   return ReaderResolvedAppearance(
     backgroundColor: backgroundColor,
     textColor: textColor,
@@ -106,6 +121,7 @@ ReaderResolvedAppearance resolveReaderAppearance(
     paletteId: resolvedPreferences?.paletteId ?? paletteId,
     textContrastRatio: textContrast,
     hasLowContrastWarning: textContrast < 4.5,
+    backgroundOpacity: productBackgroundAlpha,
     baseTextStyle: ReaderTypography.body(
       fontSize: resolvedPreferences?.fontSize ?? fontSize,
       lineHeight: resolvedPreferences?.lineHeight ?? lineHeight,

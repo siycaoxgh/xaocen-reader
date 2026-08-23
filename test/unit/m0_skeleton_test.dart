@@ -57,8 +57,8 @@ void main() {
 
   group('版本与代际常量', () {
     test('应用版本为 0.1.0-dev.4+4', () {
-      expect(appVersion, '0.1.0-dev.4+4');
-      expect(appVersion.startsWith('0.1.0'), isTrue);
+      expect(appVersion, '4.5.8+5');
+      expect(appVersion.startsWith('4.5.8'), isTrue);
     });
 
     test('数据代际为 v4-local-1', () {
