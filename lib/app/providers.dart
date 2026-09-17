@@ -36,6 +36,8 @@ import '../sources/local_txt/txt_cancellation.dart';
 import '../platform/platform_capabilities_adapter.dart';
 import '../sources/remote/feed_subscription_service.dart';
 import '../sources/remote/remote_http_transport.dart';
+import '../domain/account/account_client.dart';
+import '../domain/account/account_models.dart';
 
 /// 数据库 Provider（懒加载）。
 final databaseProvider = Provider<AppDatabase>((ref) {
@@ -113,6 +115,19 @@ final webBookSnapshotMetadataProvider =
         return null;
       }
     });
+
+/// One Account client per app scope. The client keeps access tokens in memory
+/// and delegates refresh-token persistence to the platform secure store.
+final accountClientProvider = Provider<XaocenAccountClient>((ref) {
+  final client = XaocenAccountClient(
+    platform: Platform.isAndroid
+        ? XaocenAccountProduct.androidPlatform
+        : XaocenAccountProduct.windowsPlatform,
+    profileId: ref.watch(dataRootProvider).profileId,
+  );
+  ref.onDispose(client.close);
+  return client;
+});
 
 /// 文档加载器 Provider（Reader 使用）。
 final documentLoaderProvider = Provider<NormalizedDocumentLoader>((ref) {

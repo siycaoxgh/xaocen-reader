@@ -21,6 +21,7 @@ class MainActivity : FlutterActivity() {
     private val fontsChannelName = "xaocen.reader/fonts"
     private val windowChannelName = "xaocen.reader/window"
     private val ttsChannelName = "xaocen.reader/tts_background"
+    private val accountChannelName = "xaocen.reader/account"
     private var pagedReaderActive = false
     private var inputCaptureActive = false
     private var volumeBindingActive = false
@@ -53,6 +54,25 @@ class MainActivity : FlutterActivity() {
         fontsChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, fontsChannelName)
         windowChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, windowChannelName)
         ttsChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, ttsChannelName)
+        val accountChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, accountChannelName)
+        accountChannel.setMethodCallHandler { call, result ->
+            when (call.method) {
+                "openExternalUrl" -> {
+                    val value = call.arguments as? String
+                    if (value.isNullOrBlank()) {
+                        result.error("invalid_url", "URL is required", null)
+                    } else {
+                        try {
+                            startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(value)))
+                            result.success(true)
+                        } catch (error: Exception) {
+                            result.error("open_failed", error.message, null)
+                        }
+                    }
+                }
+                else -> result.notImplemented()
+            }
+        }
         ttsChannel.setMethodCallHandler { call, result ->
             when (call.method) {
                 "start" -> {

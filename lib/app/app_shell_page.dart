@@ -267,6 +267,19 @@ class _MeSurface extends StatelessWidget {
             _MeSectionLabel(label: '\u9605\u8bfb\u4fe1\u606f'),
             Card(
               child: ListTile(
+                leading: const Icon(Icons.account_circle_outlined),
+                title: const Text('XAOCEN Account'),
+                subtitle: const Text('连接账号、查看权益或导入离线授权'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () async {
+                  await Navigator.of(context).pushNamed('/account');
+                  onChanged();
+                },
+              ),
+            ),
+            const SizedBox(height: 12),
+            Card(
+              child: ListTile(
                 leading: const Icon(Icons.history),
                 title: const Text('\u9605\u8bfb\u5386\u53f2'),
                 subtitle: const Text(

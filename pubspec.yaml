@@ -29,6 +29,9 @@ dependencies:
   archive: ^3.6.1
   xml: ^6.6.1
   html: ^0.15.6
+  flutter_secure_storage: 9.2.4
+  cryptography: 2.7.0
+  qr_flutter: 4.1.0
 dependency_overrides:
   flutter_tts:
     path: third_party/flutter_tts

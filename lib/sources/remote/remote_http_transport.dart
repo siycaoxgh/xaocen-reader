@@ -79,7 +79,11 @@ final class RemoteHttpTransport {
   final bool _ownsClient;
   bool _closed = false;
 
-  Future<RemoteHttpResponse> execute(RemoteRequestPlan plan) async {
+  Future<RemoteHttpResponse> execute(
+    RemoteRequestPlan plan, {
+    List<int>? bodyBytes,
+    String? bearerToken,
+  }) async {
     if (_closed) {
       throw const RemoteHttpException(
         kind: RemoteHttpFailureKind.invalidRequest,
@@ -95,6 +99,19 @@ final class RemoteHttpTransport {
       request.maxRedirects = 5;
       for (final entry in plan.headers.values.entries) {
         request.headers.set(entry.key, entry.value);
+      }
+      // Authentication is supplied out-of-band so RemoteHeaders can never
+      // accidentally persist or log a bearer secret.  Account clients keep
+      // the access token in memory and pass it only for this request.
+      if (bearerToken != null && bearerToken.isNotEmpty) {
+        request.headers.set(
+          HttpHeaders.authorizationHeader,
+          'Bearer $bearerToken',
+        );
+      }
+      if (bodyBytes != null) {
+        request.contentLength = bodyBytes.length;
+        request.add(bodyBytes);
       }
       final response = await request.close().timeout(timeout);
       final body = await _readBody(
