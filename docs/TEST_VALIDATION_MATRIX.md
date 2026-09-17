@@ -1,5 +1,12 @@
 # TEST_VALIDATION_MATRIX.md — XAOCEN Reader v4 验证矩阵
 
+> **Current gate (2026-09-18):** Flutter analyze PASS; Account contract tests
+> 3/3 PASS; full Flutter suite 773 PASS with 3 explicitly skipped live-network
+> tests; secret scan PASS. Drift is schema 21. Windows Patched Release and
+> platform signing status are recorded in `RELEASE_BASELINE_2026_09_18.md`.
+> The M5.6 matrix below is retained as historical device evidence, not as the
+> current total capability list.
+
 > 状态：M5.6c.1.2 COMPLETE（`feat/m4-horizontal-reader`，Drift schema 11）；Android 真机按阶段策略另行复核。
 > 自动测试与真人测试分开记录。**Android Debug 构建 PASS ≠ Android 真机 PASS**，两者分别列出。
 > 真人环境：Windows（本机，用户 + 自动化集成测试）；Android 真机 Redmi K60（23013RK75C / mondrian，Android 15 / API 35，无线 adb）。

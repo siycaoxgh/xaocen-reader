@@ -1,5 +1,12 @@
 # M5.9 Summary + Future Capability Map
 
+> **Historical planning snapshot:** this file captured the boundary before the
+> later M5.9c/M5.9d implementation stages. Its statements that RSS/Atom,
+> WebArticleSource, WebBookSource and Content Transform were merely planned are
+> superseded by the corresponding stage reports and
+> `RELEASE_BASELINE_2026_09_18.md`. Keep this document for design rationale;
+> do not use it to decide current product support or release artifacts.
+
 项目根目录：`C:\Users\TOM\Desktop\xaocen-reader-v4\xaocen_reader`
 
 本文件只汇总 M5.9 已完成的架构合同，并登记后续能力边界。本轮没有修改生产代码、数据库 schema、Reader、平台 Runner 或构建产物。

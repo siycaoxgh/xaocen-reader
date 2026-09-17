@@ -1,5 +1,12 @@
 # KNOWN_ISSUES.md — XAOCEN Reader v4 已知问题清单
 
+> **2026-09-18 状态校正：**本文是累计问题账本。下面 M5.6 检查点以及
+> “EPUB/RSS/TTS/在线来源未实现”等行只代表当时，现已过期。当前源码为
+> Drift schema 21，已经包含 EPUB、RSS/Atom、TTS 和最小 WebArticle/WebBook
+> 产品链路。当前发布阻塞为正式 Android/Windows 签名凭据缺失，以及
+> XAOCEN Account 的真实服务/系统凭据存储人工验收。当前真相见
+> `RELEASE_BASELINE_2026_09_18.md`。
+
 > 状态截至 M5.6c.1.2（`feat/m4-horizontal-reader`，Drift schema 11）。Android 真机按阶段策略另行复核。
 > 已解决的问题不在此列为 open；「Resolved but regression-sensitive」列出需要持续盯防的已修复项。
 

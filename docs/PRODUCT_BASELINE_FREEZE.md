@@ -1,5 +1,14 @@
 # XAOCEN Production Baseline Freeze
 
+> 2026-09-18 current addendum: the active product is `4.5.8+5`, Drift schema
+> `21`. TXT/EPUB/ReaderContent/Profile/Responsive Shell, RSS/Atom, WebArticle
+> minimal runtime, WebBook product loop/on-demand chapter cache, TTS/AutoRead,
+> and Windows true transparency are present in the current source. XAOCEN
+> Account is integrated but still requires real-service and OS credential-store
+> acceptance before production freeze. For current release/artifact truth and
+> documentation precedence, read `RELEASE_BASELINE_2026_09_18.md`. Counts,
+> paths and “planned” labels in older amendments are historical snapshots.
+
 ## 基线范围
 
 本文件用于保护已经完成或已自动化验证的 Reader 功能，避免后续新增功能改变既有产品合同。它不是 Git freeze，也不禁止修复真实 bug；所有改动必须可追踪、可回归。

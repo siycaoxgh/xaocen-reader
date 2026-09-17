@@ -58,9 +58,13 @@ app.*.map.json
 *.key
 *.p12
 *.pfx
+*.pem
+*.pkcs12
+*.pvk
 *.jks
 *.keystore
-key.properties
+**/key.properties
+/secrets/
 user_data/
 **/user_data/
 

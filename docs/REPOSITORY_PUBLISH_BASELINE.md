@@ -43,3 +43,9 @@
 - Windows Release：`C:\Users\TOM\Desktop\xaocen-reader-v4\xaocen_reader\artifacts\windows\current\Release\xaocen_reader.exe`
 
 上述路径是本机最新构建交付位置，不是 GitHub 源码路径。需要分发二进制时，应作为 GitHub Release 附件上传，不要提交到源码树。
+
+> 2026-09-18 校正：路径存在不等于正式发布资格。Android 必须通过非 Debug
+> 证书检查，Windows 必须为 Patched Engine、干净源码并具有有效
+> Authenticode 签名。当前规则和实际阻塞见
+> `RELEASE_BASELINE_2026_09_18.md`；发布前运行
+> `tool\audit_release_artifacts.ps1`。

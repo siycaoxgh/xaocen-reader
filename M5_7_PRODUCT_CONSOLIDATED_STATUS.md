@@ -1,5 +1,9 @@
 # XAOCEN M5.7 产品状态、构建产物与基线汇总
 
+> **历史验收记录：**本文冻结 M5.7 当时的结果，不再代表当前测试总数、
+> 最新产物或后续 M5.8/M5.9 能力。当前发布和签名状态统一见
+> `docs/RELEASE_BASELINE_2026_09_18.md`。
+
 更新时间：2026-08-16
 唯一项目根目录：`C:\Users\TOM\Desktop\xaocen-reader-v4\xaocen_reader`
 

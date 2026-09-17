@@ -1,7 +1,16 @@
 # ARCHITECTURE_CURRENT.md — XAOCEN Reader v4 当前架构与合同
-<!-- Current checkpoint: M5.6e complete; Reader Font System added, Drift schema 12. -->
+<!-- Current checkpoint: 2026-09-18, Drift schema 21. -->
 
-> 只描述当前代码与合同（`feat/m4-horizontal-reader`，M5.6e 完成点，Drift schema 12）。
+> **Current snapshot (2026-09-18):** the detailed sections below are cumulative
+> architecture history and some section-local schema numbers describe the
+> migration introduced in that milestone. The live database schema is `21`.
+> Current source adapters include TXT, EPUB, RSS/Atom, WebArticle and WebBook;
+> all converge on `ReaderContent` and the existing absolute UTF-16 Locator.
+> Profile/DataRoot/SyncProvider/ContentSource remain separate boundaries.
+> Release and capability status is authoritative in
+> `RELEASE_BASELINE_2026_09_18.md`; this notice supersedes the old M5.6 header.
+
+> 本文保留累计合同及其迁移历史；“当前值”以顶部快照和实际代码为准。
 > 不记录历史故事（见 PROJECT_HISTORY.md）。
 > 代码位置均以本仓库实际文件为准。
 

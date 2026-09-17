@@ -12,6 +12,29 @@ Legend for validation columns:
 
 ---
 
+## Unreleased — Account integration and release safety (2026-09-18)
+
+### Added
+
+- Added the XAOCEN Account device-authorization client, account/entitlement
+  lookup, refresh/logout/revoke boundaries, OS secure refresh-token storage,
+  offline-license import and local Ed25519 verification.
+- Added an account settings entry that delegates login to the official system
+  browser; no email/password/Google credential UI is embedded in Reader.
+- Added guarded Android Release signing configuration, Windows Authenticode
+  signing helper, and a read-only canonical artifact audit.
+
+### Release safety
+
+- Android Release no longer silently falls back to the Android Debug key.
+- Windows build selection now records source commit and dirty-worktree state in
+  `engine-selection.json`.
+- Historical M5.x documents are explicitly retained as evidence while
+  `RELEASE_BASELINE_2026_09_18.md` is the current status/artifact authority.
+- Real account service, OS credential storage and valid license acceptance are
+  MANUAL REQUIRED. Production Android/Windows signing remains blocked until the
+  original private credentials are supplied outside Git.
+
 ## M5.9 — Profile-aware local storage foundation (2026-08-16)
 
 - Fixed the standard Windows data root at `%LOCALAPPDATA%\\XAOCEN\\Reader\\profiles\\<profileId>`;

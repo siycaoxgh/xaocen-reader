@@ -13,9 +13,9 @@ beside the active root was quarantined during this cleanup.
 
 | Platform | Canonical local output | Notes |
 |---|---|---|
-| Android Release | `build\app\outputs\flutter-apk\app-release.apk` | Universal APK (arm64, armeabi-v7a, x86_64); generated output, not a source file |
-| Windows Standard Release | `artifacts\windows\current\Release\xaocen_reader.exe` | Staged by `tool\build_windows_engine.ps1 -Engine Standard -Configuration Release` |
-| Windows Patched Release | Same canonical Windows path | Staged only through the same selector after revision/artifact guards pass |
+| Android Release | `build\app\outputs\flutter-apk\app-release.apk` | Universal APK; formal only with the non-debug production certificate |
+| Windows Standard verification | `artifacts\windows\current\Release\xaocen_reader.exe` | Opaque fallback smoke only; not the true-transparency formal hand-off |
+| Windows Patched Release | Same canonical Windows path | Formal Windows selection after revision/artifact, clean-source and signing gates pass |
 
 `build\` is an intermediate Flutter directory. The Windows `artifacts\windows\current\Release\`
 directory is the only current Windows hand-off directory; old standard/patched
@@ -26,11 +26,11 @@ folders are not release sources.
 Run from the active root:
 
 ```powershell
-& 'C:\Users\TOM\develop\flutter\bin\flutter.bat' pub get
-& 'C:\Users\TOM\develop\flutter\bin\flutter.bat' build apk --release
-.\tool\build_windows_engine.ps1 -Engine Standard -Configuration Release
-# Patched is opt-in and guarded:
-# .\tool\build_windows_engine.ps1 -Engine Patched -Configuration Release
+& 'C:\Users\TOM\flutter\bin\flutter.bat' pub get
+& 'C:\Users\TOM\flutter\bin\flutter.bat' build apk --release
+.\tool\build_windows_engine.ps1 -Engine Patched -Configuration Release
+# Standard is retained only for fallback regression:
+# .\tool\build_windows_engine.ps1 -Engine Standard -Configuration Release
 ```
 
 The selector discovers the same Flutter SDK without modifying the global SDK,

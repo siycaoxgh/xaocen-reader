@@ -1,0 +1,7 @@
+# Copy this file to android/key.properties and replace every placeholder.
+# android/key.properties and keystore files are intentionally ignored by Git.
+# storeFile may be absolute, or relative to the android/ directory.
+storeFile=C:/secure/xaocen-reader-upload.jks
+storePassword=REPLACE_LOCALLY
+keyAlias=REPLACE_LOCALLY
+keyPassword=REPLACE_LOCALLY

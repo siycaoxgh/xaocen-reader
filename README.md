@@ -7,15 +7,21 @@
 
 `C:\Users\TOM\Desktop\xaocen-reader-v4\xaocen_reader`
 
-## 最新构建
+## 构建与发布
 
-- Windows Release（唯一正式产物）：`artifacts\windows\current\Release\xaocen_reader.exe`
+- Windows 唯一交付目录：`artifacts\windows\current\Release\`；其中
+  `engine-selection.json` 必须明确为 `XAOCEN_PATCHED_ENGINE`，真透明正式版不得用
+  Standard 产物冒充。
+- Android Release universal APK：`build\app\outputs\flutter-apk\app-release.apk`。
 - `build\windows\x64\runner\Release` 仅为 Flutter 中间构建目录，不作为对外启动地址。
-- Android Release universal APK：`build\app\outputs\flutter-apk\app-release.apk`
 - Android applicationId：`com.xaocen.xaocen_reader`
 - 当前版本：`4.5.8`（Android build number `5`）
-- 本次 Android Release 大小：约 `61.5 MiB`（Debug APK 不作为发布产物）
 - Android 图标源与生成说明：[tool/branding/README.md](tool/branding/README.md)
+
+文件位于上述地址只表示“已生成”，不自动等于正式发布包。正式交付还必须
+通过 [发布基线与签名说明](docs/RELEASE_BASELINE_2026_09_18.md)：Android
+不得使用 Debug 证书，Windows 必须通过 Patched Engine、干净源码和
+Authenticode 检查。可运行 `tool\audit_release_artifacts.ps1` 查看事实状态。
 
 Windows 标准模式的用户数据与程序安装目录分离，固定使用：
 `%LOCALAPPDATA%\\XAOCEN\\Reader\\profiles\\default\\`。显式便携模式使用
@@ -35,7 +41,8 @@ Android Release APK 同时包含 arm64-v8a、armeabi-v7a 和 x86_64，适用于�
 
 ## 文档入口
 
-- [M5.7 产品状态、构建产物与基线汇总](M5_7_PRODUCT_CONSOLIDATED_STATUS.md)
+- [当前发布基线、签名状态与文档优先级](docs/RELEASE_BASELINE_2026_09_18.md)
+- [M5.7 历史产品状态与验收记录](M5_7_PRODUCT_CONSOLIDATED_STATUS.md)
 - [Production Baseline Freeze](docs/PRODUCT_BASELINE_FREEZE.md)
 - [历史变更记录](docs/CHANGELOG.md)
 - [当前架构](docs/ARCHITECTURE_CURRENT.md)

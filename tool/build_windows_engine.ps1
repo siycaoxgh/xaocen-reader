@@ -51,7 +51,7 @@ if ($null -eq $Flutter) {
     }
 }
 if ($null -eq $Flutter -or -not (Test-Path -LiteralPath $Flutter -PathType Leaf)) {
-    throw 'Flutter SDK not found. Add flutter to PATH or place it under %USERPROFILE%\develop\flutter.'
+    throw 'Flutter SDK not found. Add flutter to PATH or place it under %USERPROFILE%\flutter or %USERPROFILE%\develop\flutter.'
 }
 
 $ManifestPath = Join-Path $Root 'windows_engine_patches\patched_engine_artifact.json'
@@ -61,6 +61,15 @@ if ([string]::IsNullOrWhiteSpace($FlutterJson)) {
 }
 $FlutterInfo = $FlutterJson | ConvertFrom-Json
 $FlutterEngineRevision = [string]$FlutterInfo.engineRevision
+$SourceCommit = (& git -C $Root rev-parse HEAD 2>$null | Out-String).Trim()
+if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($SourceCommit)) {
+    throw 'Unable to resolve the XAOCEN source commit for the build manifest.'
+}
+$SourceStatus = (& git -C $Root status --porcelain --untracked-files=normal 2>$null | Out-String).Trim()
+if ($LASTEXITCODE -ne 0) {
+    throw 'Unable to read XAOCEN source status for the build manifest.'
+}
+$SourceDirty = -not [string]::IsNullOrWhiteSpace($SourceStatus)
 
 function Invoke-Flutter {
     param([Parameter(Mandatory = $true)][string[]]$Arguments)
@@ -191,6 +200,8 @@ $selection = [ordered]@{
     configuration = $Configuration
     engineRevision = $FlutterEngineRevision
     flutterFrameworkVersion = [string]$FlutterInfo.frameworkVersion
+    sourceCommit = $SourceCommit
+    sourceDirty = $SourceDirty
     artifactSource = $source
     stagedDll = $stagedDll
     stagedDllSha256 = $stagedHash
