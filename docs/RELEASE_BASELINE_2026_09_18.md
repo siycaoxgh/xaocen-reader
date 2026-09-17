@@ -70,7 +70,7 @@ Standard 构建仅用于 fallback 回归：
 ```
 
 构建脚本在 canonical 目录生成 `engine-selection.json`，记录 Engine revision、
-DLL hash、源码 commit 和源码是否 dirty。不得手工覆盖 Flutter SDK 或正式
+Engine DLL/EXE/Dart AOT hash、源码 commit 和源码是否 dirty。不得手工覆盖 Flutter SDK 或正式
 目录中的 `flutter_windows.dll`。
 
 ## 4. 签名安全

@@ -30,6 +30,10 @@ $warnings = [Collections.Generic.List[string]]::new()
 $pubspec = Get-Content -LiteralPath (Join-Path $Root 'pubspec.yaml') -Raw
 $versionMatch = [regex]::Match($pubspec, '(?m)^version:\s*([^\s]+)\s*$')
 $version = if ($versionMatch.Success) { $versionMatch.Groups[1].Value } else { 'UNKNOWN' }
+$currentCommit = (& git -C $Root rev-parse HEAD 2>$null | Out-String).Trim()
+$commitResolved = $LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($currentCommit)
+$currentStatus = (& git -C $Root status --porcelain --untracked-files=normal 2>$null | Out-String).Trim()
+$statusResolved = $LASTEXITCODE -eq 0
 
 Write-Host "APP_VERSION=$version"
 
@@ -58,17 +62,40 @@ if (-not (Test-Path -LiteralPath $engineManifestPath -PathType Leaf)) {
     Write-Host "WINDOWS_ENGINE_REVISION=$($engineManifest.engineRevision)"
     Write-Host "WINDOWS_SOURCE_COMMIT=$($engineManifest.sourceCommit)"
     Write-Host "WINDOWS_SOURCE_DIRTY=$($engineManifest.sourceDirty)"
+    if (-not $commitResolved -or -not $statusResolved) {
+        $issues.Add('Current Git source state could not be resolved.')
+    }
     if ([string]$engineManifest.selection -ne 'XAOCEN_PATCHED_ENGINE') {
         $issues.Add('Canonical Windows artifact is not the validated Patched Engine build.')
     }
     if ([string]::IsNullOrWhiteSpace([string]$engineManifest.sourceCommit)) {
         $issues.Add('Windows build manifest does not identify a source commit; rebuild it.')
+    } elseif ($engineManifest.sourceCommit -ne $currentCommit) {
+        $issues.Add('Windows artifact source commit is not the current repository HEAD; rebuild it.')
     }
     if ($null -eq $engineManifest.sourceDirty) {
         $issues.Add('Windows build manifest predates source cleanliness tracking; rebuild it.')
     } elseif ([bool]$engineManifest.sourceDirty) {
         $message = 'Windows artifact was built from an uncommitted source tree.'
         if ($AllowUnsignedVerification) { $warnings.Add($message) } else { $issues.Add($message) }
+    }
+    if (-not [string]::IsNullOrWhiteSpace($currentStatus)) {
+        $message = 'Current XAOCEN source tree has uncommitted changes.'
+        if ($AllowUnsignedVerification) { $warnings.Add($message) } else { $issues.Add($message) }
+    }
+
+    $stagedAppAot = Join-Path $WindowsReleaseDirectory 'data\app.so'
+    if (-not (Test-Path -LiteralPath $stagedAppAot -PathType Leaf)) {
+        $issues.Add("Windows AOT application is missing: $stagedAppAot")
+    } elseif ([string]::IsNullOrWhiteSpace([string]$engineManifest.stagedApplicationAotSha256)) {
+        $issues.Add('Windows build manifest predates application AOT hash tracking; rebuild it.')
+    } elseif ((Get-FileHash -LiteralPath $stagedAppAot -Algorithm SHA256).Hash -ne [string]$engineManifest.stagedApplicationAotSha256) {
+        $issues.Add('Windows AOT application hash does not match engine-selection.json.')
+    }
+    if ((Test-Path -LiteralPath $windowsExe -PathType Leaf) -and
+        -not [string]::IsNullOrWhiteSpace([string]$engineManifest.stagedExecutableSha256) -and
+        (Get-FileHash -LiteralPath $windowsExe -Algorithm SHA256).Hash -ne [string]$engineManifest.stagedExecutableSha256) {
+        $issues.Add('Windows executable hash does not match engine-selection.json.')
     }
 }
 

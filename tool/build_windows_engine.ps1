@@ -174,8 +174,16 @@ New-Item -ItemType Directory -Path $stageRoot -Force | Out-Null
 Copy-Item -Path (Join-Path $flutterOutput '*') -Destination $stageRoot -Recurse -Force
 
 $stagedDll = Join-Path $stageRoot 'flutter_windows.dll'
+$stagedExe = Join-Path $stageRoot 'xaocen_reader.exe'
+$stagedAppAot = Join-Path $stageRoot 'data\app.so'
 if (-not (Test-Path -LiteralPath $stagedDll -PathType Leaf)) {
     throw "Staged Flutter Windows DLL is missing: $stagedDll"
+}
+if (-not (Test-Path -LiteralPath $stagedExe -PathType Leaf)) {
+    throw "Staged XAOCEN executable is missing: $stagedExe"
+}
+if (-not (Test-Path -LiteralPath $stagedAppAot -PathType Leaf)) {
+    throw "Staged XAOCEN AOT application is missing: $stagedAppAot"
 }
 
 $standardHash = Get-Sha256 $stagedDll
@@ -194,7 +202,7 @@ if ($Engine -eq 'Patched') {
 }
 
 $selection = [ordered]@{
-    schemaVersion = 1
+    schemaVersion = 2
     selection = $selectionStatus
     engineMode = $Engine
     configuration = $Configuration
@@ -205,6 +213,8 @@ $selection = [ordered]@{
     artifactSource = $source
     stagedDll = $stagedDll
     stagedDllSha256 = $stagedHash
+    stagedExecutableSha256 = Get-Sha256 $stagedExe
+    stagedApplicationAotSha256 = Get-Sha256 $stagedAppAot
     standardDllSha256BeforeStaging = $standardHash
     generatedAtUtc = (Get-Date).ToUniversalTime().ToString('o')
 }
@@ -214,11 +224,7 @@ Write-Host "Staged bundle: $stageRoot"
 Write-Host "Staged DLL SHA-256: $stagedHash"
 
 if ($Smoke) {
-    $exe = Join-Path $stageRoot 'xaocen_reader.exe'
-    if (-not (Test-Path -LiteralPath $exe -PathType Leaf)) {
-        throw "Staged executable is missing: $exe"
-    }
-    $process = Start-Process -FilePath $exe -WorkingDirectory $stageRoot -PassThru
+    $process = Start-Process -FilePath $stagedExe -WorkingDirectory $stageRoot -PassThru
     try {
         Start-Sleep -Seconds 8
         if ($process.HasExited) {
