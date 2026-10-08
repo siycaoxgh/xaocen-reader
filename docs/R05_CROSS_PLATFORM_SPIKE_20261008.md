@@ -24,6 +24,8 @@
 
 Hvigor 首次尝试使用默认 npm 源，未能解析 Harmony 插件；之后在样例目录使用被 Git 忽略的本机 `.npmrc`，为 `@ohos` 包指定 Harmony 官方 npm 源后构建成功。Hvigor 在用户缓存目录生成 pnpm wrapper 并安装两个依赖包，工具输出一项 high severity audit 警告；该机器缓存没有删除或纳入仓库。
 
+用户 2026-10-08 确认手头有 Harmony 设备和 iPhone；它们尚未连接到本机，因此设备验收仍未发生。iPad 是否可用于验收尚未确认。
+
 ### 样例实现和构建证据
 
 独立原生样例位于 [`platform_spikes/harmonyos_next_r05`](../platform_spikes/harmonyos_next_r05/README.md)。ArkUI 页面从 rawfile 加载合成 TXT，显示仓库内图片资源，提供前后页交互；`PersistentStorage` 保存样例页索引。该页索引是试验状态，**不是 Reader 生产 Locator**。源码只覆盖最小链路，没有账号、真实书库或云功能。
@@ -51,11 +53,23 @@ $env:NPM_CONFIG_USERCONFIG = (Join-Path (Get-Location) '.npmrc')
 
 因此，不能将本次结果描述为 Harmony 端功能验收通过。下一步需配置 API 26 兼容的模拟器镜像或提供真机，生成受控签名后验证安装、TXT/图片显示、前后页交互与退出重开恢复；之后仍需单独做真机兼容验收。
 
+### 模拟器和调试签名的下一步
+
+用户确认手头有 Harmony 设备。当前没有模拟器实例：`C:\Users\TOM\AppData\Local\Huawei\Emulator\deployed` 只有版本信息文件，没有已部署设备；SDK 目录也没有模拟器系统镜像。HarmonyOS 支持 DevEco 模拟器，可从 **Tools > Device Manager > Local Emulator > New Emulator** 选择设备模板、下载镜像并启动；系统镜像与设备实例分别存储，下载镜像需要网络。当前工具目标 API 是 26，模拟器/真机需要满足应用声明的最低 API。华为官方[模拟器创建指南](https://developer.huawei.com/consumer/cn/doc/HarmonyOS-Guides/ide-emulator-create)说明了创建与启动流程。
+
+实体 Harmony 设备也可替代模拟器做 R05 功能验证：在设备开启开发者模式和 USB 调试，连接电脑后确认授权；开发者模式入口和调试签名要求见[华为调试安装说明](https://developer.huawei.com/consumer/cn/doc/harmonyos-guides-v5/bm-tool-V5)。本机执行 `hdc list targets` 有设备序列号后，才能继续安装与交互验收。
+
+Android APK 的 keystore 不能直接当作 Harmony HAP 的完整签名配置。HAP 手动签名需要 `.p12` 密钥、`.cer` 数字证书和 `.p7b` Harmony profile，且证书/profile 绑定 Harmony 应用身份和包名；建议生成独立的 Harmony **debug** 密钥，不复用 Android production 密钥。若只用一台设备且 DevEco 自动签名可用，可在本机的 Project Structure/Signing Configs 中启用自动签名，不必把密钥文件交给我；多设备或离线调试则由有权限的 Huawei Developer/AppGallery Connect 账号申请 debug 证书和 profile。官方[调试证书指南](https://developer.huawei.com/consumer/en/doc/app/agc-help-add-debugcert-0000001914263178)说明了自动签名和手动调试证书条件，[命令行签名说明](https://developer.huawei.com/consumer/en/doc/harmonyos-guides-V14/ide-command-line-building-app-V14)列明 HAP 所需签名文件。AppGallery Connect 中注册的应用包名还必须与工程 `bundleName` 一致，见[应用身份配置](https://developer.huawei.com/consumer/cn/doc/harmonyos-guides-v5/iap-config-app-identity-info-V5)。
+
+包名已按用户确认值重建。因为它与正式 Reader 预期相同，安装前应确认目标设备上没有同包名的其他应用，以免覆盖现有安装或因签名不匹配而失败。
+
 ## R05-B：iOS / iPadOS
 
 ### 现有 Flutter 工程静态盘点
 
 以下内容只读自原 Reader 主工作区的当前文件；该工作区 dirty，且 iOS 配置不在本次干净 worktree 的 HEAD 中，因此这些观察不等同于本任务分支内可复现的工程基线。
+
+本次 R05 worktree 的 HEAD 没有 `ios/` 目录；原主工作区的 `ios/` 是未跟踪目录，`pubspec.yaml`/`pubspec.lock` 有未提交修改。为了不把未经逐项审阅的当前变更混入独立分支，本次没有复制它们或生成声称能构建 Reader 的 `Podfile`/`codemagic.yaml`。建立干净、无凭据的 Reader 源码快照后，再生成/修订这些文件并做云构建。
 
 | 项目 | 当前观察 |
 | --- | --- |
@@ -72,9 +86,9 @@ $env:NPM_CONFIG_USERCONFIG = (Join-Path (Get-Location) '.npmrc')
 
 ### Apple / Codemagic 所需条件
 
-- Codemagic 需连接包含可构建 iOS 工程的固定 Reader 源码基线，并使用 macOS/Xcode 构建机。仓库需提供有效 CocoaPods 项目配置；云配置提交后再进行一次不签名或模拟器目标的构建以检查编译。
-- 要签名设备包或送 TestFlight，需要 Apple Developer Program 团队、已登记规范 Bundle ID `com.xaocen.xaocen_reader`、Team ID，以及通过 Codemagic 安全配置维护的 App Store Connect API key/签名资产。密钥不要放在仓库、文档或聊天。
-- 还需一台 iPhone 和一台 iPad（或明确可用的受控设备池）验证文件导入/重新打开、恢复、TTS 与布局；云构建产物本身不等于设备验收。
+- 先在**经审阅的干净 Reader 源码基线**中补齐 `ios/Podfile` 和 Xcode Runner 工程，统一 Runner/RunnerTests 的 Bundle ID，再用 CocoaPods 生成并复核 `ios/Podfile.lock`。根目录 `codemagic.yaml` 定义 Flutter、Xcode、依赖安装、构建和可选发布步骤；Codemagic 要连接这个确切的 Git 仓库/分支，并使用 macOS/Xcode 构建机。`pubspec.yaml`、`pubspec.lock` 与本地插件源码也必须与被构建的 Reader 源码一致。
+- 先跑不签名 iOS 编译以验证 Flutter/Xcode/CocoaPods，再配置签名生成 `.ipa`。签名设备包或送 TestFlight，需要 Apple Developer Program 团队、已登记规范 Bundle ID `com.xaocen.xaocen_reader`、Team ID，以及通过 Codemagic 安全配置维护的 App Store Connect API key/签名资产。密钥不要放在仓库、文档或聊天。[Codemagic YAML 签名说明](https://docs.codemagic.io/yaml-code-signing/signing-ios/)列出了该流程和权限要求。
+- 用户已确认手头有 iPhone，可用于实体 iOS 验收；iPad 或 iPad 模拟器仍需补充以覆盖 iPadOS 布局。两类设备分别验证文件导入/重新打开、恢复、TTS 与布局；云构建产物本身不等于设备验收。
 - Bundle ID 已由用户确定；在审阅后的 iOS 源码基线中需统一 Xcode Runner、RunnerTests 和 App Store Connect 应用记录。R06 平台/账号策略仍待冻结，不应先把新的 `ios` 值套进现有 Android/Windows 登录逻辑。
 
 ## 共享数据与平台适配
