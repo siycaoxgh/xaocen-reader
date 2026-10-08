@@ -40,7 +40,7 @@ $env:JAVA_HOME = 'C:\Program Files\Eclipse Adoptium\jdk-17.0.19.10-hotspot'
 | DevEco Studio | `D:\HUAWEIDev\DevEco Studio`，`DS-261.23567.138.36.2600851`（26.0.0.851） |
 | Harmony SDK | `sdk/default/openharmony`，平台 API 26；构建版本 `26.0.0.105` |
 | Hvigor / OHPM | Hvigor 6.26.8；OHPM 6.0.0.630 |
-| HDC | 3.2.0f；用户已开始创建模拟器；2026-10-08 22:44 再查 `hdc list targets` 仍无输出，暂未发现在线模拟器或设备 |
+| HDC | 3.2.0f；用户已开始创建模拟器；2026-10-08 22:54 再查 `hdc list targets` 仍无输出，暂未发现在线模拟器或设备 |
 | SDK 环境变量 | `DEVECO_SDK_HOME` 原先未设置；只为当前构建进程临时指向已安装 SDK，没有修改系统或用户全局变量 |
 | 模拟器 | DevEco 的 Emulator 程序存在；用户正在 Device Manager 创建模拟器；尚未完成启动或检测到在线目标 |
 
