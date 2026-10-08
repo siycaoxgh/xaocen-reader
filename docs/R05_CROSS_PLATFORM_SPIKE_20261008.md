@@ -40,9 +40,9 @@ $env:JAVA_HOME = 'C:\Program Files\Eclipse Adoptium\jdk-17.0.19.10-hotspot'
 | DevEco Studio | `D:\HUAWEIDev\DevEco Studio`，`DS-261.23567.138.36.2600851`（26.0.0.851） |
 | Harmony SDK | `sdk/default/openharmony`，平台 API 26；构建版本 `26.0.0.105` |
 | Hvigor / OHPM | Hvigor 6.26.8；OHPM 6.0.0.630 |
-| HDC | 3.2.0f；用户已开始创建模拟器；2026-10-08 22:54 再查 `hdc list targets` 仍无输出，暂未发现在线模拟器或设备 |
+| HDC | 3.2.0f；用户随后报告模拟器已启用；2026-10-08 23:15 复查 `hdc list targets` 仍无输出，当前 HDC 未发现在线模拟器或设备 |
 | SDK 环境变量 | `DEVECO_SDK_HOME` 原先未设置；只为当前构建进程临时指向已安装 SDK，没有修改系统或用户全局变量 |
-| 模拟器 | DevEco 的 Emulator 程序存在；用户正在 Device Manager 创建模拟器；尚未完成启动或检测到在线目标 |
+| 模拟器 | 较早盘点时本机尚无已部署模拟器；用户现报告已启用。当前执行环境仅能枚举隔离 shell 进程，无法检查宿主 DevEco/Emulator 进程；HDC 也尚未枚举到目标，因此启动状态待确认 |
 
 Hvigor 首次尝试使用默认 npm 源，未能解析 Harmony 插件；之后在样例目录使用被 Git 忽略的本机 `.npmrc`，为 `@ohos` 包指定 Harmony 官方 npm 源后构建成功。Hvigor 在用户缓存目录生成 pnpm wrapper 并安装两个依赖包，工具输出一项 high severity audit 警告；该机器缓存没有删除或纳入仓库。
 
@@ -74,15 +74,19 @@ $env:NPM_CONFIG_USERCONFIG = (Join-Path (Get-Location) '.npmrc')
 | 安装/启动/交互 | 未执行：没有 HDC 目标和可用模拟器系统镜像 |
 | TXT / 图片 / 退出恢复 | ArkTS 编译和资源打包通过；应用内显示、按钮交互、退出后恢复均未实机验证 |
 
-因此，不能将本次结果描述为 Harmony 端功能验收通过。下一步需配置 API 26 兼容的模拟器镜像或提供真机，生成受控签名后验证安装、TXT/图片显示、前后页交互与退出重开恢复；之后仍需单独做真机兼容验收。
+因此，不能将本次结果描述为 Harmony 端功能验收通过。下一步先让已创建的 API 26 兼容模拟器出现在 HDC/DevEco 目标列表中，再通过 IDE“运行”执行未签名调试包，验证安装、TXT/图片显示、前后页交互与退出重开恢复；如果改用实体设备，再生成受控调试签名并单独做真机兼容验收。模拟器成功不等于真机验收。
 
 ### 模拟器和调试签名的下一步
 
-用户确认手头有 Harmony 设备。当前没有模拟器实例：`C:\Users\TOM\AppData\Local\Huawei\Emulator\deployed` 只有版本信息文件，没有已部署设备；SDK 目录也没有模拟器系统镜像。HarmonyOS 支持 DevEco 模拟器，可从 **Tools > Device Manager > Local Emulator > New Emulator** 选择设备模板、下载镜像并启动；系统镜像与设备实例分别存储，下载镜像需要网络。当前工具目标 API 是 26，模拟器/真机需要满足应用声明的最低 API。华为官方[模拟器创建指南](https://developer.huawei.com/consumer/cn/doc/HarmonyOS-Guides/ide-emulator-create)说明了创建与启动流程。
+用户确认手头有 Harmony 设备。较早盘点时 `C:\Users\TOM\AppData\Local\Huawei\Emulator\deployed` 只有版本信息文件，SDK 目录也没有模拟器系统镜像；用户随后报告模拟器已启用。2026-10-08 23:15 从当前隔离执行环境复查，`hdc list targets` 仍无输出；Windows 进程枚举仅暴露当前命令 shell，不能据此判断宿主 DevEco/模拟器是否存活。请在 DevEco 的设备选择框确认模拟器状态为已启动，或在用户自己的 PowerShell 运行下文 HDC 命令并检查结果。HarmonyOS 支持 DevEco 模拟器，中文界面通常从“工具 > 设备管理器 > 本地模拟器 > 新建模拟器”选择设备模板、下载镜像并启动；具体版本菜单名称可能略有差异。系统镜像与设备实例分别存储，下载镜像需要网络。当前工具目标 API 是 26，模拟器/真机需要满足应用声明的最低 API。华为官方[模拟器创建指南](https://developer.huawei.com/consumer/cn/doc/HarmonyOS-Guides/ide-emulator-create)说明了创建与启动流程。
 
-实体 Harmony 设备也可替代模拟器做 R05 功能验证：在设备开启开发者模式和 USB 调试，连接电脑后确认授权；开发者模式入口和调试签名要求见[华为调试安装说明](https://developer.huawei.com/consumer/cn/doc/harmonyos-guides-v5/bm-tool-V5)。本机执行 `hdc list targets` 有设备序列号后，才能继续安装与交互验收。
+```powershell
+& 'D:\HUAWEIDev\DevEco Studio\sdk\default\openharmony\toolchains\hdc.exe' list targets -v
+```
 
-Android APK 的 keystore 不能直接当作 Harmony HAP 的完整签名配置。HAP 手动签名需要 `.p12` 密钥、`.cer` 数字证书和 `.p7b` Harmony profile，且证书/profile 绑定 Harmony 应用身份和包名；建议生成独立的 Harmony **debug** 密钥，不复用 Android production 密钥。若只用一台设备且 DevEco 自动签名可用，可在本机的 Project Structure/Signing Configs 中启用自动签名，不必把密钥文件交给我；多设备或离线调试则由有权限的 Huawei Developer/AppGallery Connect 账号申请 debug 证书和 profile。官方[调试证书指南](https://developer.huawei.com/consumer/en/doc/app/agc-help-add-debugcert-0000001914263178)说明了自动签名和手动调试证书条件，[命令行签名说明](https://developer.huawei.com/consumer/en/doc/harmonyos-guides-V14/ide-command-line-building-app-V14)列明 HAP 所需签名文件。AppGallery Connect 中注册的应用包名还必须与工程 `bundleName` 一致，见[应用身份配置](https://developer.huawei.com/consumer/cn/doc/harmonyos-guides-v5/iap-config-app-identity-info-V5)。
+模拟器和实体设备要区分处理：华为入门指南说明，在模拟器/预览器调试无需签名配置；实体设备运行则需要 HAP 调试签名。模拟器可在 DevEco 选择已启动目标并点“运行”，IDE 会编译、推包和启动。实体 Harmony 设备也可替代模拟器做 R05 功能验证：在设备开启开发者模式和 USB 调试，连接电脑后确认授权；开发者模式入口和调试签名要求见[华为调试安装说明](https://developer.huawei.com/consumer/cn/doc/harmonyos-guides-v5/bm-tool-V5)。本机执行 `hdc list targets` 有设备序列号后，才能继续安装与交互验收。若模拟器启动后仍未出现目标，应先查看 DevEco 设备选择框/设备管理器的运行状态，再用同一套本机 HDC 检查确认。
+
+Android APK 的 keystore 不能直接当作 Harmony HAP 的完整签名配置。实体设备调试时，手动签名需要 `.p12` 密钥、`.cer` 数字证书和 `.p7b` Harmony profile，且证书/profile 绑定 Harmony 应用身份和包名；建议生成独立的 Harmony **debug** 密钥，不复用 Android production 密钥。单设备可先尝试 DevEco 自动签名；手动路径是在菜单“构建 > 生成密钥和证书请求（Generate Key and CSR）”创建 `.p12` 与 `.csr`，在 AppGallery Connect 创建普通“应用”（不是元服务），包名填 `com.xaocen.reader`，上传 CSR 申请调试证书并下载 `.cer`；设备连接后用 `hdc shell bm get -u` 获取 UDID，在 AGC 注册调试设备，再创建绑定该应用、调试证书和设备的 Debug Profile 并下载 `.p7b`；最后在“文件 > 项目结构 > 签名配置（Signing Configs）”填入 `.p12`、`.cer`、`.p7b`、别名和密码。私钥和密码仅在本机安全保存，不提交仓库也不发到聊天。官方[HarmonyOS 开发入门](https://developer.huawei.com/consumer/cn/develop-novice-guide/)说明模拟器与真机签名要求，[调试 Profile 指南](https://developer.huawei.com/consumer/cn/doc/doccenter-getting-started/agc-help-debug-profile-0000002248181278)列明调试证书/设备/Profile 关系；[bm get -u 官方说明](https://developer.huawei.com/consumer/cn/doc/harmonyos-guides-v5/bm-tool-V5)列明设备 UDID 获取命令。AppGallery Connect 中注册的应用包名还必须与工程 `bundleName` 一致，见[应用身份配置](https://developer.huawei.com/consumer/cn/doc/harmonyos-guides-v5/iap-config-app-identity-info-V5)。
 
 包名已按用户最终确认的统一值重建。首次安装前仍要确认设备上没有同包名应用；由于 Android 应用身份已改变，旧包不会作为同应用直接覆盖升级。
 
