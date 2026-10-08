@@ -7,7 +7,7 @@
 
 - 实现仓库：`D:/xaocen/reader-r05-platform-spike`，分支 `r05-platform-spike`，基于 Reader `b3f96c5acbec0f01101f36c348e110bec2a55f31` 建立独立 worktree。
 - 原 Reader 主工作区有大量未提交/未跟踪内容。为避免误纳或覆盖，本任务只基于 HEAD 建立样例；iOS 配置盘点是只读查看原主工作区中的当前文件，不复制、不修改其内容。
-- 本次未改 Android/Windows 生产逻辑、账号政策或共享平台枚举。Harmony bundle name 是样例值，不是已登记的正式 Bundle ID。
+- 本次未改 Android/Windows 生产逻辑、账号政策或共享平台枚举。用户已确认项目包名统一为 `com.xaocen.xaocen_reader`；Harmony 样例已采用该值，但尚未验证其 AppGallery Connect 注册状态。
 
 ## R05-A：HarmonyOS NEXT
 
@@ -38,9 +38,12 @@ $env:NPM_CONFIG_USERCONFIG = (Join-Path (Get-Location) '.npmrc')
 
 | 证据 | 结果 |
 | --- | --- |
-| 构建 | `BUILD SUCCESSFUL`；33 tasks，23 executed、10 up-to-date |
-| 产物 | `platform_spikes/harmonyos_next_r05/entry/build/default/outputs/default/entry-default-unsigned.hap`；806,987 bytes |
-| SHA-256 | `1CE1BB4FF46C9FD2238A279CED3A6192A7CA36F15F84349C6541AB64FB64346C` |
+| 初始构建 | `BUILD SUCCESSFUL`；33 tasks，23 executed、10 up-to-date；当时仍使用试验期包名 |
+| 初始产物 | `platform_spikes/harmonyos_next_r05/entry/build/default/outputs/default/entry-default-unsigned.hap`；806,987 bytes |
+| 初始 SHA-256 | `1CE1BB4FF46C9FD2238A279CED3A6192A7CA36F15F84349C6541AB64FB64346C` |
+| 规范包名复建（2026-10-08） | 用户确认统一包名后设置 `com.xaocen.xaocen_reader` 并重建成功；33 tasks，27 executed、6 up-to-date |
+| 当前产物 | 同一路径 `entry-default-unsigned.hap`；806,957 bytes |
+| 当前 SHA-256 | `242FB35A5B7CA91492CEF7F0BC8820BF2FAE60DB66F22F085D4159118B54C598` |
 | 签名 | 未配置 signingConfig，产物为 unsigned HAP；未验证签名或安装资格 |
 | 构建警告 | `EntryAbility.ets` 可能抛异常的诊断仍存在；本次没有运行时日志用于判断其实际影响 |
 | 安装/启动/交互 | 未执行：没有 HDC 目标和可用模拟器系统镜像 |
@@ -60,7 +63,7 @@ $env:NPM_CONFIG_USERCONFIG = (Join-Path (Get-Location) '.npmrc')
 | 插件声明 | `pubspec.yaml` 声明 `file_picker ^11.0.3`、`path_provider ^2.1.6`、`flutter_secure_storage 9.2.4`、`cryptography 2.7.0`；`flutter_tts ^4.2.5` 使用本地 `third_party/flutter_tts` 覆盖 |
 | iOS 插件证据 | 当前 `GeneratedPluginRegistrant.m` 包含 file_picker、flutter_secure_storage、flutter_tts；本地 TTS 插件有 Swift iOS 实现。它们只证明源码入口存在，不证明 CocoaPods 解析、编译或运行成功 |
 | Xcode 项目 | iOS deployment target 13.0，`CODE_SIGN_STYLE = Automatic`，未发现 `DEVELOPMENT_TEAM` |
-| Bundle ID | 当前工程为 `com.xaocen.xaocenReader`；Master Plan 记载的计划值是 `com.xaocen.xaocen_reader`。二者不一致，未擅自改动，需由产品/Apple 开发者账号持有人确认并登记 |
+| Bundle ID | 当前主工作区 iOS 工程仍为 `com.xaocen.xaocenReader`；用户已确认规范值 `com.xaocen.xaocen_reader`。该 dirty 工作区未改动，需在审阅后的 iOS 源码基线中统一 Runner 与 RunnerTests 配置 |
 | 构建依赖 | 当前检查未找到 `ios/Podfile` 或仓库根 `codemagic.yaml` |
 | 本机可执行性 | Windows 主机没有 `xcodebuild` 或 `pod`；Flutter CLI 信息采集未能完成并中断，未执行 iOS 编译 |
 | 云构建 / 签名 / TestFlight | 本次没有 Codemagic 工程访问和 Apple 账号/签名材料，未构建、签名、上传或发布 |
@@ -70,9 +73,9 @@ $env:NPM_CONFIG_USERCONFIG = (Join-Path (Get-Location) '.npmrc')
 ### Apple / Codemagic 所需条件
 
 - Codemagic 需连接包含可构建 iOS 工程的固定 Reader 源码基线，并使用 macOS/Xcode 构建机。仓库需提供有效 CocoaPods 项目配置；云配置提交后再进行一次不签名或模拟器目标的构建以检查编译。
-- 要签名设备包或送 TestFlight，需要 Apple Developer Program 团队、已确认且可注册的 Bundle ID、Team ID，以及通过 Codemagic 安全配置维护的 App Store Connect API key/签名资产。密钥不要放在仓库、文档或聊天。
+- 要签名设备包或送 TestFlight，需要 Apple Developer Program 团队、已登记规范 Bundle ID `com.xaocen.xaocen_reader`、Team ID，以及通过 Codemagic 安全配置维护的 App Store Connect API key/签名资产。密钥不要放在仓库、文档或聊天。
 - 还需一台 iPhone 和一台 iPad（或明确可用的受控设备池）验证文件导入/重新打开、恢复、TTS 与布局；云构建产物本身不等于设备验收。
-- 不应在尚未裁决 Bundle ID 和 R06 平台/账号策略前，把新的 `ios` 值直接套进现有 Android/Windows 分支或共享身份逻辑。
+- Bundle ID 已由用户确定；在审阅后的 iOS 源码基线中需统一 Xcode Runner、RunnerTests 和 App Store Connect 应用记录。R06 平台/账号策略仍待冻结，不应先把新的 `ios` 值套进现有 Android/Windows 登录逻辑。
 
 ## 共享数据与平台适配
 
@@ -96,7 +99,7 @@ $env:NPM_CONFIG_USERCONFIG = (Join-Path (Get-Location) '.npmrc')
 | HarmonyOS NEXT | DevEco/SDK/Hvigor 盘点；独立 ArkTS/ArkUI 工程；API 26 编译和 HAP 产物哈希 | 可启动模拟器/实体目标、受控签名安装、TXT/图片/交互/退出恢复运行证据；真实设备验收分开记录 |
 | iOS/iPadOS | 现有 Flutter/Xcode 配置静态盘点；识别 Bundle ID、Team、Podfile、Codemagic 缺口 | 固定干净 Flutter/iOS 基线，补齐/核实 Pods 与 Codemagic macOS build，至少一次云构建产物；确认 Apple 签名条件；TestFlight 和真机行为按授权/账号另验 |
 
-R05 **尚未达到验收标准**。R35 需先做 Harmony 渲染/文件沙箱/本地库/定位/安全存储适配，再进入格式和真机性能工作；R36 需确认正式 Bundle ID、Xcode/CocoaPods/Codemagic 可复现流水线、iOS 文件与 Keychain 语义、TTS/音频焦点，以及 iPhone/iPad 布局和恢复。两个完整客户端仍依赖 R06–R10；本次未启动这些工作。
+R05 **尚未达到验收标准**。R35 需先做 Harmony 渲染/文件沙箱/本地库/定位/安全存储适配，再进入格式和真机性能工作；R36 需在审阅后的源代码基线中统一规范 Bundle ID、补齐并验证 Xcode/CocoaPods/Codemagic 流水线、iOS 文件与 Keychain 语义、TTS/音频焦点，以及 iPhone/iPad 布局和恢复。两个完整客户端仍依赖 R06–R10；本次未启动这些工作。
 
 以下是基于目前工程盘点的**相对工作量**，不是排期承诺；不含完整 Reader 功能实现、上架和未确认产品政策：
 
