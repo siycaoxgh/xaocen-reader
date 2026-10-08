@@ -7,7 +7,7 @@
 
 - 实现仓库：`D:/xaocen/reader-r05-platform-spike`，分支 `r05-platform-spike`，基于 Reader `b3f96c5acbec0f01101f36c348e110bec2a55f31` 建立独立 worktree。
 - 原 Reader 主工作区有大量未提交/未跟踪内容。为避免误纳或覆盖，本任务只基于 HEAD 建立样例；iOS 配置盘点是只读查看原主工作区中的当前文件，不复制、不修改其内容。
-- 本次未改 Android/Windows 生产逻辑、账号政策或共享平台枚举。用户已确认项目包名统一为 `com.xaocen.xaocen_reader`；Harmony 样例已采用该值，但尚未验证其 AppGallery Connect 注册状态。
+- 本次未改 Android/Windows 生产逻辑、账号政策或共享平台枚举。用户确认 Android/Harmony 项目包名使用 `com.xaocen.xaocen_reader`；Harmony 样例已采用该值，但尚未验证其 AppGallery Connect 注册状态。iOS 需要单独的 Apple 兼容 Bundle ID，详见下文。
 
 ## R05-A：HarmonyOS NEXT
 
@@ -77,7 +77,7 @@ Android APK 的 keystore 不能直接当作 Harmony HAP 的完整签名配置。
 | 插件声明 | `pubspec.yaml` 声明 `file_picker ^11.0.3`、`path_provider ^2.1.6`、`flutter_secure_storage 9.2.4`、`cryptography 2.7.0`；`flutter_tts ^4.2.5` 使用本地 `third_party/flutter_tts` 覆盖 |
 | iOS 插件证据 | 当前 `GeneratedPluginRegistrant.m` 包含 file_picker、flutter_secure_storage、flutter_tts；本地 TTS 插件有 Swift iOS 实现。它们只证明源码入口存在，不证明 CocoaPods 解析、编译或运行成功 |
 | Xcode 项目 | iOS deployment target 13.0，`CODE_SIGN_STYLE = Automatic`，未发现 `DEVELOPMENT_TEAM` |
-| Bundle ID | 当前主工作区 iOS 工程仍为 `com.xaocen.xaocenReader`；用户已确认规范值 `com.xaocen.xaocen_reader`。该 dirty 工作区未改动，需在审阅后的 iOS 源码基线中统一 Runner 与 RunnerTests 配置 |
+| Bundle ID | 当前主工作区 iOS 工程仍为 `com.xaocen.xaocenReader`；该 dirty 工作区未改动。Apple 官方限制 Bundle ID 只含字母、数字、连字符和点，不允许下划线，因此 iOS 不能使用 `com.xaocen.xaocen_reader`；iOS 专用 ID 等待负责人确认 |
 | 构建依赖 | 当前检查未找到 `ios/Podfile` 或仓库根 `codemagic.yaml` |
 | 本机可执行性 | Windows 主机没有 `xcodebuild` 或 `pod`；Flutter CLI 信息采集未能完成并中断，未执行 iOS 编译 |
 | 云构建 / 签名 / TestFlight | 本次没有 Codemagic 工程访问和 Apple 账号/签名材料，未构建、签名、上传或发布 |
@@ -87,9 +87,9 @@ Android APK 的 keystore 不能直接当作 Harmony HAP 的完整签名配置。
 ### Apple / Codemagic 所需条件
 
 - 先在**经审阅的干净 Reader 源码基线**中补齐 `ios/Podfile` 和 Xcode Runner 工程，统一 Runner/RunnerTests 的 Bundle ID，再用 CocoaPods 生成并复核 `ios/Podfile.lock`。根目录 `codemagic.yaml` 定义 Flutter、Xcode、依赖安装、构建和可选发布步骤；Codemagic 要连接这个确切的 Git 仓库/分支，并使用 macOS/Xcode 构建机。`pubspec.yaml`、`pubspec.lock` 与本地插件源码也必须与被构建的 Reader 源码一致。
-- 先跑不签名 iOS 编译以验证 Flutter/Xcode/CocoaPods，再配置签名生成 `.ipa`。签名设备包或送 TestFlight，需要 Apple Developer Program 团队、已登记规范 Bundle ID `com.xaocen.xaocen_reader`、Team ID，以及通过 Codemagic 安全配置维护的 App Store Connect API key/签名资产。密钥不要放在仓库、文档或聊天。[Codemagic YAML 签名说明](https://docs.codemagic.io/yaml-code-signing/signing-ios/)列出了该流程和权限要求。
+- 先跑不签名 iOS 编译以验证 Flutter/Xcode/CocoaPods，再配置签名生成 `.ipa`。签名设备包或送 TestFlight，需要 Apple Developer Program 团队、经用户确认且符合 Apple 字符限制的 iOS 专用 Bundle ID、Team ID，以及通过 Codemagic 安全配置维护的 App Store Connect API key/签名资产。密钥不要放在仓库、文档或聊天。[Codemagic YAML 签名说明](https://docs.codemagic.io/yaml-code-signing/signing-ios/)列出了该流程和权限要求。
 - 用户已确认手头有 iPhone，可用于实体 iOS 验收；iPad 或 iPad 模拟器仍需补充以覆盖 iPadOS 布局。两类设备分别验证文件导入/重新打开、恢复、TTS 与布局；云构建产物本身不等于设备验收。
-- Bundle ID 已由用户确定；在审阅后的 iOS 源码基线中需统一 Xcode Runner、RunnerTests 和 App Store Connect 应用记录。R06 平台/账号策略仍待冻结，不应先把新的 `ios` 值套进现有 Android/Windows 登录逻辑。
+- Android/Harmony 包名已由用户确定；iOS Bundle ID 不能含下划线，等用户选定 Apple 兼容值后，再在审阅后的源码基线中统一 Xcode Runner、RunnerTests 与 App Store Connect 应用记录。Apple 说明 Bundle ID 只允许字母、数字、连字符和点，并且上传 App Store Connect 后不能更改；参见 [Bundle ID 规则](https://developer.apple.com/help/glossary/bundle-id/)和 [CFBundleIdentifier](https://developer.apple.com/documentation/BundleResources/Information-Property-List/CFBundleIdentifier)。R06 平台/账号策略仍待冻结，不应先把新的 `ios` 值套进现有 Android/Windows 登录逻辑。
 
 ## 共享数据与平台适配
 
@@ -128,5 +128,5 @@ R05 **尚未达到验收标准**。R35 需先做 Harmony 渲染/文件沙箱/本
 ## 官方平台资料
 
 - HarmonyOS [ArkTS 概览和模拟器差异](https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/arkts-overview)、[Picker API](https://developer.huawei.com/consumer/en/doc/harmonyos-references/js-apis-file-picker)、[文件持久授权说明](https://developer.huawei.com/consumer/cn/doc/harmonyos-guides-v5/file-persistpermission-V5)、[HUKS 密钥派生](https://developer.huawei.com/consumer/en/doc/harmonyos-guides-V13/huks-key-derivation-arkts-V13)、[Core Speech Kit 能力介绍](https://developer.huawei.com/consumer/cn/app/planning)。
-- Apple [Keychain Services](https://developer.apple.com/documentation/security/keychain-services?changes=_1)、[UIDocumentPicker](https://developer.apple.com/documentation/uikit/uidocumentpickerviewcontroller?changes=_4__7)、[AVSpeechSynthesizer](https://developer.apple.com/documentation/avfaudio/avspeechsynthesizer?changes=_8&language=objc)。
+- Apple [Bundle ID 字符规则](https://developer.apple.com/help/glossary/bundle-id/)、[Keychain Services](https://developer.apple.com/documentation/security/keychain-services?changes=_1)、[UIDocumentPicker](https://developer.apple.com/documentation/uikit/uidocumentpickerviewcontroller?changes=_4__7)、[AVSpeechSynthesizer](https://developer.apple.com/documentation/avfaudio/avspeechsynthesizer?changes=_8&language=objc)。
 - Codemagic [iOS code signing](https://docs.codemagic.io/flutter-code-signing/ios-code-signing/)、[iOS simulator build](https://docs.codemagic.io/yaml-code-signing/ios-simulator-builds/)、[first signed build](https://docs.codemagic.io/yaml-quick-start/first-signed-build/)。
