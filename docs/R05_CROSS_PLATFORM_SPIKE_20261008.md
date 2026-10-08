@@ -1,7 +1,7 @@
 # R05 跨平台最小试验实测报告
 
 更新：2026-10-08（Asia/Shanghai）
-结论：**部分完成，不满足 R05 验收**。HarmonyOS ArkTS/ArkUI 样例已以统一应用标识构建未签名 HAP，但尚无模拟器/设备运行证据。iOS 已在干净 R05 worktree 建立 Flutter Runner、Podfile 和 Codemagic 无签名构建配置；离线依赖解析通过，但 Windows 无 Xcode/CocoaPods，且尚未运行 Codemagic 云构建。
+结论：**部分完成，不满足 R05 全部验收**。HarmonyOS ArkTS/ArkUI 样例已在 HarmonyOS NEXT 模拟器安装并启动；用户截图确认 TXT 与图片内容可见，翻页和重启恢复仍待验证，真机验收未执行。iOS 已在干净 R05 worktree 建立 Flutter Runner、Podfile 和 Codemagic 无签名构建配置；离线依赖解析通过，但 Windows 无 Xcode/CocoaPods，且尚未运行 Codemagic 云构建。
 
 ## 隔离基线和范围
 
@@ -40,13 +40,13 @@ $env:JAVA_HOME = 'C:\Program Files\Eclipse Adoptium\jdk-17.0.19.10-hotspot'
 | DevEco Studio | `D:\HUAWEIDev\DevEco Studio`，`DS-261.23567.138.36.2600851`（26.0.0.851） |
 | Harmony SDK | `sdk/default/openharmony`，平台 API 26；构建版本 `26.0.0.105` |
 | Hvigor / OHPM | Hvigor 6.26.8；OHPM 6.0.0.630 |
-| HDC | 3.2.0f；代理执行环境的 HDC 未发现目标；用户随后提供本机 PowerShell 输出 `127.0.0.1:5557 TCP Connected localhost hdc`，确认用户侧模拟器目标在线。代理与用户的 HDC 会话相互隔离；尚未安装或运行 HAP |
+| HDC | 3.2.0f；代理执行环境的 HDC 未发现目标；用户本机 PowerShell 输出 `127.0.0.1:5557 TCP Connected localhost hdc`。用户随后提供 DevEco 运行截图，确认 HAP 安装并启动成功，日志显示 `com.xaocen.reader successfully launched` |
 | SDK 环境变量 | `DEVECO_SDK_HOME` 原先未设置；只为当前构建进程临时指向已安装 SDK，没有修改系统或用户全局变量 |
-| 模拟器 | 较早盘点时本机尚无已部署模拟器；用户现报告已启用，并提供其本机 HDC 的在线目标输出。当前执行环境仅能枚举隔离 shell 进程，无法检查宿主 DevEco/Emulator 进程；以用户侧 HDC 输出作为模拟器在线证据 |
+| 模拟器 | 用户的 DevEco 运行配置显示 Mate 90 Pro 7.0.0 模拟器；HDC 目标 `127.0.0.1:5557` 在线。用户截图显示应用界面已启动；代理执行环境与用户侧 HDC 不共享连接 |
 
 Hvigor 首次尝试使用默认 npm 源，未能解析 Harmony 插件；之后在样例目录使用被 Git 忽略的本机 `.npmrc`，为 `@ohos` 包指定 Harmony 官方 npm 源后构建成功。Hvigor 在用户缓存目录生成 pnpm wrapper 并安装两个依赖包，工具输出一项 high severity audit 警告；该机器缓存没有删除或纳入仓库。
 
-用户 2026-10-08 确认手头有 Harmony 设备和 iPhone；它们尚未连接到本机，因此设备验收仍未发生。iPad 是否可用于验收尚未确认。
+用户 2026-10-08 确认手头有 Harmony 真机和 iPhone；本次已验证 Harmony 模拟器，Harmony 真机及 iPhone 尚未进行设备验收。iPad 是否可用于验收尚未确认。
 
 ### 样例实现和构建证据
 
@@ -69,16 +69,18 @@ $env:NPM_CONFIG_USERCONFIG = (Join-Path (Get-Location) '.npmrc')
 | 当前统一标识构建（2026-10-08） | `BUILD SUCCESSFUL`；33 tasks，27 executed、6 up-to-date；`pack.info` 确认 `bundleName=com.xaocen.reader` |
 | 当前产物 | 同一路径 `entry-default-unsigned.hap`；806,915 bytes |
 | 当前 SHA-256 | `C65F7445FE265794FDD61B8FB181EE2365BDE0533B0CFE3003F4686AD071AE5C` |
-| 签名 | 未配置 signingConfig，产物为 unsigned HAP；未验证签名或安装资格 |
+| 签名 | 本报告记录的独立命令行构建产物为 unsigned HAP；DevEco 部署截图未显示实际部署包的签名配置，因此不推断该次部署的签名路径；真机调试签名仍待验证 |
 | 构建警告 | `EntryAbility.ets` 可能抛异常的诊断仍存在；本次没有运行时日志用于判断其实际影响 |
-| 安装/启动/交互 | 未执行：没有 HDC 目标和可用模拟器系统镜像 |
-| TXT / 图片 / 退出恢复 | ArkTS 编译和资源打包通过；应用内显示、按钮交互、退出后恢复均未实机验证 |
+| 安装/启动 | 用户于 2026-10-08 提供 DevEco 模拟器截图：安装完成提示，用时约 24 秒；控制台 `aa start -a EntryAbility -b com.xaocen.reader` 返回 `com.xaocen.reader successfully launched` |
+| TXT / 图片显示 | 模拟器屏幕可见合成 TXT 正文与图片资源，截图验证通过 |
+| 翻页交互 | 截图显示初始页 `1/3`，“上一页”禁用、“下一页”可用；尚无点击翻页后状态变化的证据 |
+| 退出后恢复 | 页面标示阅读位置保存在本地状态中；尚未停止/重启应用并确认位置恢复 |
 
-因此，不能将本次结果描述为 Harmony 端功能验收通过。下一步先让已创建的 API 26 兼容模拟器出现在 HDC/DevEco 目标列表中，再通过 IDE“运行”执行未签名调试包，验证安装、TXT/图片显示、前后页交互与退出重开恢复；如果改用实体设备，再生成受控调试签名并单独做真机兼容验收。模拟器成功不等于真机验收。
+因此，Harmony 模拟器的构建、安装、启动和 TXT/图片显示已通过；仍不能称为 Harmony 端完整功能验收。下一步在模拟器点击“下一页”确认页码变为 `2/3`，停止并重新运行应用，确认该位置恢复；之后用实体 Harmony 设备做独立兼容验收。模拟器成功不等于真机验收。
 
 ### 模拟器和调试签名的下一步
 
-用户确认手头有 Harmony 设备。较早盘点时 `C:\Users\TOM\AppData\Local\Huawei\Emulator\deployed` 只有版本信息文件，SDK 目录也没有模拟器系统镜像；用户随后报告模拟器已启用，并从自己的 PowerShell 提供 `127.0.0.1:5557 TCP Connected localhost hdc`，证明模拟器已由用户侧 HDC 连接。代理的 HDC 会话与用户会话隔离，代理不能直接复用该本地 TCP 目标；代理运行 `hdc list targets -v` 无输出，不能推翻用户侧在线证据。HarmonyOS 支持 DevEco 模拟器，中文界面通常从“工具 > 设备管理器 > 本地模拟器 > 新建模拟器”选择设备模板、下载镜像并启动；具体版本菜单名称可能略有差异。系统镜像与设备实例分别存储，下载镜像需要网络。当前工具目标 API 是 26，模拟器/真机需要满足应用声明的最低 API。华为官方[模拟器创建指南](https://developer.huawei.com/consumer/cn/doc/HarmonyOS-Guides/ide-emulator-create)说明了创建与启动流程。
+用户确认手头有 Harmony 设备。较早盘点时 `C:\Users\TOM\AppData\Local\Huawei\Emulator\deployed` 只有版本信息文件，SDK 目录也没有模拟器系统镜像；用户随后完成模拟器创建与启动，HDC 输出 `127.0.0.1:5557 TCP Connected localhost hdc`，并通过 DevEco 成功安装启动样例。代理的 HDC 会话与用户会话隔离，不能直接复用该本地 TCP 目标；模拟器运行证据来自用户提供的 DevEco 截图。当前工具目标 API 是 26，模拟器/真机需要满足应用声明的最低 API。华为官方[模拟器创建指南](https://developer.huawei.com/consumer/cn/doc/HarmonyOS-Guides/ide-emulator-create)说明了创建与启动流程。
 
 ```powershell
 & 'D:\HUAWEIDev\DevEco Studio\sdk\default\openharmony\toolchains\hdc.exe' list targets -v
