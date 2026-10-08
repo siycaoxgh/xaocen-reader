@@ -1,0 +1,8 @@
+{
+  "modelVersion": "6.0.0",
+  "name": "@xaocen/reader-r05-harmony-spike",
+  "version": "0.1.0",
+  "description": "XAOCEN Reader R05 HarmonyOS NEXT local reading spike",
+  "dependencies": {},
+  "devDependencies": {}
+}

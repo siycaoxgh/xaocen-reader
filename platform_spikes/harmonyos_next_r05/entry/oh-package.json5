@@ -1,0 +1,8 @@
+{
+  "modelVersion": "6.0.0",
+  "name": "entry",
+  "version": "1.0.0",
+  "description": "R05 HarmonyOS NEXT sample entry module",
+  "dependencies": {},
+  "devDependencies": {}
+}

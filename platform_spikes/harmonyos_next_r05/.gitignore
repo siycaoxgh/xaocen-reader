@@ -1,0 +1,16 @@
+.hvigor/
+.idea/
+.previewer/
+.task-user/
+.npmrc
+build/
+oh_modules/
+local.properties
+*.hap
+*.app
+*.p12
+*.pfx
+*.pem
+*.keystore
+*.jks
+signingConfigs/

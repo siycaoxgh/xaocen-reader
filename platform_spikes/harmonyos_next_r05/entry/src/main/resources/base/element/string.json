@@ -1,0 +1,16 @@
+{
+  "string": [
+    {
+      "name": "app_name",
+      "value": "R05 Harmony 样例"
+    },
+    {
+      "name": "module_desc",
+      "value": "XAOCEN Reader R05 本地阅读最小试验"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "显示合成 TXT 与图片并保存阅读位置"
+    }
+  ]
+}
