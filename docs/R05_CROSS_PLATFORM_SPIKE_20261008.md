@@ -1,7 +1,7 @@
 # R05 跨平台最小试验实测报告
 
-更新：2026-10-08（Asia/Shanghai）
-结论：**部分完成，不满足 R05 全部验收**。HarmonyOS ArkTS/ArkUI 样例已在 HarmonyOS NEXT 模拟器安装并启动；用户截图确认 TXT 与图片内容可见，翻页和重启恢复仍待验证，真机验收未执行。iOS 已在干净 R05 worktree 建立 Flutter Runner、Podfile 和 Codemagic 无签名构建配置；离线依赖解析通过，但 Windows 无 Xcode/CocoaPods，且尚未运行 Codemagic 云构建。
+更新：2026-10-09（Asia/Shanghai）
+结论：**部分完成，不满足 R05 全部验收**。HarmonyOS ArkTS/ArkUI 样例已在 HarmonyOS NEXT 模拟器安装并启动；用户截图确认 TXT 与图片显示，用户随后确认终止进程并重启后仍停留在第 2 页。模拟器最小链路验证通过，HarmonyOS 真机验收未执行。iOS 已在干净 R05 worktree 建立 Flutter Runner、Podfile 和 Codemagic 无签名构建配置；离线依赖解析通过，但 Windows 无 Xcode/CocoaPods，且尚未运行 Codemagic 云构建。
 
 ## 隔离基线和范围
 
@@ -74,9 +74,9 @@ $env:NPM_CONFIG_USERCONFIG = (Join-Path (Get-Location) '.npmrc')
 | 安装/启动 | 用户于 2026-10-08 提供 DevEco 模拟器截图：安装完成提示，用时约 24 秒；控制台 `aa start -a EntryAbility -b com.xaocen.reader` 返回 `com.xaocen.reader successfully launched` |
 | TXT / 图片显示 | 模拟器屏幕可见合成 TXT 正文与图片资源，截图验证通过 |
 | 翻页交互 | 截图显示初始页 `1/3`，“上一页”禁用、“下一页”可用；尚无点击翻页后状态变化的证据 |
-| 退出后恢复 | 页面标示阅读位置保存在本地状态中；尚未停止/重启应用并确认位置恢复 |
+| 退出后恢复 | 用户于 2026-10-09 确认翻到第 2 页后终止应用，再运行仍停留在第 2 页；用户报告验证通过，尚无单独重启截图 |
 
-因此，Harmony 模拟器的构建、安装、启动和 TXT/图片显示已通过；仍不能称为 Harmony 端完整功能验收。下一步在模拟器点击“下一页”确认页码变为 `2/3`，停止并重新运行应用，确认该位置恢复；之后用实体 Harmony 设备做独立兼容验收。模拟器成功不等于真机验收。
+因此，Harmony 模拟器上的构建、安装、启动、TXT/图片显示、翻页与进程终止后恢复均有通过证据，完成了 R05 原生最小链路验证；仍不能将其视为真机兼容验收或完整 Harmony 客户端。下一步用实体 Harmony 设备进行签名安装和独立兼容验收。模拟器成功不等于真机验收。
 
 ### 模拟器和调试签名的下一步
 
@@ -139,7 +139,7 @@ Android APK 的 keystore 不能直接当作 Harmony HAP 的完整签名配置。
 
 | 端 | 已达到 | R05 仍需完成 |
 | --- | --- | --- |
-| HarmonyOS NEXT | DevEco/SDK/Hvigor 盘点；独立 ArkTS/ArkUI 工程；API 26 编译和 HAP 产物哈希 | 可启动模拟器/实体目标、受控签名安装、TXT/图片/交互/退出恢复运行证据；真实设备验收分开记录 |
+| HarmonyOS NEXT | DevEco/SDK/Hvigor 盘点；独立 ArkTS/ArkUI 工程；API 26 编译；模拟器安装/启动、TXT/图片显示、翻页及终止后第 2 页恢复（用户确认） | Harmony 真机调试签名安装与行为验收；真实设备验收分开记录 |
 | iOS/iPadOS | 干净 R05 worktree 已生成 Runner、Podfile、统一 Bundle ID 和无签名 Codemagic workflow；`flutter pub get --offline` PASS | macOS/Xcode/CocoaPods 云构建、Podfile.lock、Apple Team/签名、TestFlight 和真机行为仍待验 |
 
 R05 **尚未达到验收标准**。R35 需先做 Harmony 渲染/文件沙箱/本地库/定位/安全存储适配，再进入格式和真机性能工作；R36 需在审阅后的源码基线中沿用 `com.xaocen.reader`、完成 Xcode/CocoaPods/Codemagic 云构建、iOS 文件与 Keychain 语义、TTS/音频焦点，以及 iPhone/iPad 布局和恢复。两个完整客户端仍依赖 R06–R10；本次未启动这些工作。
