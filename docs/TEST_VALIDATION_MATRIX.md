@@ -1,5 +1,11 @@
 # TEST_VALIDATION_MATRIX.md — XAOCEN Reader v4 验证矩阵
 
+> **R05 identity addendum (2026-10-08):** the isolated R05 branch sets the
+> Android `applicationId`, HarmonyOS `bundleName`, and iOS `Runner` Bundle ID
+> to `com.xaocen.reader`, per user decision. Android Debug APK and unsigned
+> Harmony HAP builds pass with that ID. Neither artifact was installed or
+> released; the historical M5.8 row below records the previous production ID.
+
 > **Current gate (2026-09-18):** Flutter analyze PASS; Account contract tests
 > 3/3 PASS; full Flutter suite 773 PASS with 3 explicitly skipped live-network
 > tests; secret scan PASS. Drift is schema 21. Windows Patched Release and

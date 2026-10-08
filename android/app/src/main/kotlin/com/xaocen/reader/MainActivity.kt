@@ -1,4 +1,4 @@
-package com.xaocen.xaocen_reader
+package com.xaocen.reader
 
 import android.view.KeyEvent
 import android.content.pm.ActivityInfo

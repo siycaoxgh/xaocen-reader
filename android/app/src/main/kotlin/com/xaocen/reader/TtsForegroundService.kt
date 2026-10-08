@@ -1,4 +1,4 @@
-package com.xaocen.xaocen_reader
+package com.xaocen.reader
 
 import android.app.Notification
 import android.app.NotificationChannel
@@ -13,11 +13,11 @@ import android.content.pm.ServiceInfo
 /** Keeps the process eligible for background system TTS and exposes media controls. */
 class TtsForegroundService : Service() {
     companion object {
-        const val ACTION_START = "com.xaocen.xaocen_reader.action.TTS_START"
-        const val ACTION_STOP = "com.xaocen.xaocen_reader.action.TTS_STOP"
-        const val ACTION_NOTIFICATION_STOP = "com.xaocen.xaocen_reader.action.TTS_NOTIFICATION_STOP"
-        const val ACTION_UPDATE = "com.xaocen.xaocen_reader.action.TTS_UPDATE"
-        const val ACTION_MEDIA_COMMAND = "com.xaocen.xaocen_reader.action.TTS_MEDIA_COMMAND"
+        const val ACTION_START = "com.xaocen.reader.action.TTS_START"
+        const val ACTION_STOP = "com.xaocen.reader.action.TTS_STOP"
+        const val ACTION_NOTIFICATION_STOP = "com.xaocen.reader.action.TTS_NOTIFICATION_STOP"
+        const val ACTION_UPDATE = "com.xaocen.reader.action.TTS_UPDATE"
+        const val ACTION_MEDIA_COMMAND = "com.xaocen.reader.action.TTS_MEDIA_COMMAND"
         const val EXTRA_MEDIA_COMMAND = "mediaCommand"
         const val EXTRA_PLAYBACK_STATE = "playbackState"
         private const val CHANNEL_ID = "xaocen_tts"

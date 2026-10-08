@@ -10,6 +10,20 @@ Legend for validation columns:
 - **Win** = Windows manual / integration verification
 - **Droid** = Android real-device verification (Redmi K60, Android 15)
 
+## Unreleased — R05 cross-platform identity and build setup (2026-10-08)
+
+- Set the R05 branch Android `namespace`/`applicationId`, HarmonyOS `bundleName`,
+  and iOS Runner Bundle ID to the user-approved `com.xaocen.reader`. The Android
+  package change creates a new app identity; it does not carry forward the old
+  release's in-place upgrade path or sandbox data.
+- Added an iOS Runner scaffold, iOS 13 CocoaPods Podfile, and a Codemagic
+  macOS workflow for an unsigned iOS build. Flutter dependencies resolve
+  offline on the development machine; Xcode/CocoaPods cloud build and device
+  install remain unverified.
+- Validation: Android Debug APK build PASS (package confirmed by `aapt`);
+  Harmony API 26 HAP build PASS (bundleName confirmed by `pack.info`), unsigned;
+  no emulator/device installation or runtime acceptance yet.
+
 ---
 
 ## Unreleased — Account integration and release safety (2026-09-18)

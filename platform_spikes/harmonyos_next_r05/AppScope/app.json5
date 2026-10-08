@@ -1,6 +1,6 @@
 {
   "app": {
-    "bundleName": "com.xaocen.xaocen_reader",
+    "bundleName": "com.xaocen.reader",
     "vendor": "XAOCEN",
     "versionCode": 10000,
     "versionName": "0.1.0",

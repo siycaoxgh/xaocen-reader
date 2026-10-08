@@ -522,8 +522,10 @@ Two distinct hashes, distinct duties:
   CMAKE_INSTALL_PREFIX to Program Files otherwise). Mouse wheel / scrollbar
   / window resize supported by the virtualized list.
 - **Android**: Release build via `flutter build apk --release`
-  (`build\app\outputs\flutter-apk\app-release.apk`). applicationId
-  `com.xaocen.xaocen_reader`. `android/settings.gradle.kts` prefers google()
+  (`build\app\outputs\flutter-apk\app-release.apk`). The existing 4.5.8
+  release baseline uses applicationId `com.xaocen.xaocen_reader`; the R05
+  isolated branch now targets `com.xaocen.reader` as a new app identity per
+  user decision on 2026-10-08. `android/settings.gradle.kts` prefers google()
   and excludes androidx.test from download.flutter.io (dynamic-version
   metadata 404). sqlite3 native assets download via ghproxy mirror
   (`hooks.user_defines.sqlite3.url_pattern`).

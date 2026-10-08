@@ -14,7 +14,8 @@
   Standard 产物冒充。
 - Android Release universal APK：`build\app\outputs\flutter-apk\app-release.apk`。
 - `build\windows\x64\runner\Release` 仅为 Flutter 中间构建目录，不作为对外启动地址。
-- Android applicationId：`com.xaocen.xaocen_reader`
+- 当前已交付 Android applicationId：`com.xaocen.xaocen_reader`（4.5.8 release baseline）
+- R05 分支 Android / HarmonyOS / iOS 目标 app ID：`com.xaocen.reader`（尚未发布；Android 是新应用身份）
 - 当前版本：`4.5.8`（Android build number `5`）
 - Android 图标源与生成说明：[tool/branding/README.md](tool/branding/README.md)
 

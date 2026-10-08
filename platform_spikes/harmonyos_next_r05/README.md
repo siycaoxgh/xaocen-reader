@@ -25,7 +25,7 @@ $env:NPM_CONFIG_USERCONFIG = (Join-Path (Get-Location) '.npmrc')
 ## 边界
 
 - TXT 与图片均为合成、仓库内资源；不访问公共文件夹或用户授权文件。
-- Bundle name 使用项目确认的 `com.xaocen.xaocen_reader`。安装样例前确认测试设备上没有同 ID 的其他 Reader 包，避免覆盖或签名冲突；包名一致不代表已经在 AppGallery Connect 注册。
+- Bundle name 使用用户于 2026-10-08 确认的跨端 ID `com.xaocen.reader`。它与此前 Android 身份不同；安装样例前确认测试设备上没有同 ID 的其他 Reader 包，避免覆盖或签名冲突；包名一致不代表已经在 AppGallery Connect 注册。
 - 不含签名私钥或开发者配置。模拟器安装、签名和真机兼容须分别记录；HAP 构建不代表真机验收。
 - Harmony 原生工程不复用 Flutter 插件或 Dart 状态；共享数据合同仍需 R06/R07 明确。
 

@@ -1,5 +1,14 @@
 # XAOCEN Production Baseline Freeze
 
+> 2026-10-08 R05 addendum: the user approved a cross-platform application ID
+> of `com.xaocen.reader`. The R05 isolated branch updates Android,
+> HarmonyOS NEXT, and iOS/iPadOS project identities accordingly. This is a
+> new Android application identity; it does not provide in-place update or
+> automatic app-sandbox data migration from the historical
+> `com.xaocen.xaocen_reader` release. R05 Debug/HAP builds are validation
+> artifacts only and have not been released. The 2026-08-15 M5.8 identity row
+> below remains a historical production snapshot.
+
 > 2026-09-18 current addendum: the active product is `4.5.8+5`, Drift schema
 > `21`. TXT/EPUB/ReaderContent/Profile/Responsive Shell, RSS/Atom, WebArticle
 > minimal runtime, WebBook product loop/on-demand chapter cache, TTS/AutoRead,

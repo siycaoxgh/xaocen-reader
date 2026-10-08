@@ -12,7 +12,7 @@ $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 $SdkRoot = if ($env:ANDROID_SDK_ROOT) { $env:ANDROID_SDK_ROOT } elseif ($env:ANDROID_HOME) { $env:ANDROID_HOME } else { 'C:\Users\TOM\AppData\Local\Android\Sdk' }
 $Adb = Join-Path $SdkRoot 'platform-tools\adb.exe'
 $Emulator = Join-Path $SdkRoot 'emulator\emulator.exe'
-$Package = 'com.xaocen.xaocen_reader'
+$Package = 'com.xaocen.reader'
 $Apk = Join-Path $RepoRoot 'build\app\outputs\flutter-apk\app-release.apk'
 function Assert-Tool([string]$Path) { if (-not (Test-Path -LiteralPath $Path)) { throw "Missing Android tool: $Path" } }
 function Get-EmulatorSerial {

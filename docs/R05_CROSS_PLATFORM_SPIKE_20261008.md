@@ -1,13 +1,35 @@
 # R05 跨平台最小试验实测报告
 
 更新：2026-10-08（Asia/Shanghai）
-结论：**部分完成，不满足 R05 验收**。HarmonyOS 已构建 ArkTS 最小样例并生成未签名 HAP；尚未有模拟器/设备运行证据。iOS 仅完成现有工程静态盘点，没有可执行的 macOS/Xcode 或 Codemagic 构建。
+结论：**部分完成，不满足 R05 验收**。HarmonyOS ArkTS/ArkUI 样例已以统一应用标识构建未签名 HAP，但尚无模拟器/设备运行证据。iOS 已在干净 R05 worktree 建立 Flutter Runner、Podfile 和 Codemagic 无签名构建配置；离线依赖解析通过，但 Windows 无 Xcode/CocoaPods，且尚未运行 Codemagic 云构建。
 
 ## 隔离基线和范围
 
 - 实现仓库：`D:/xaocen/reader-r05-platform-spike`，分支 `r05-platform-spike`，基于 Reader `b3f96c5acbec0f01101f36c348e110bec2a55f31` 建立独立 worktree。
-- 原 Reader 主工作区有大量未提交/未跟踪内容。为避免误纳或覆盖，本任务只基于 HEAD 建立样例；iOS 配置盘点是只读查看原主工作区中的当前文件，不复制、不修改其内容。
-- 本次未改 Android/Windows 生产逻辑、账号政策或共享平台枚举。用户确认 Android/Harmony 项目包名使用 `com.xaocen.xaocen_reader`；Harmony 样例已采用该值，但尚未验证其 AppGallery Connect 注册状态。iOS 需要单独的 Apple 兼容 Bundle ID，详见下文。
+- 原 Reader 主工作区有大量未提交/未跟踪内容；本次没有修改或复制其内容。代码变更仅在 Reader worktree `D:/xaocen/reader-r05-platform-spike`，分支 `r05-platform-spike`，基于提交 `b3f96c5acbec0f01101f36c348e110bec2a55f31`。
+- 用户于 2026-10-08 确认 Android、HarmonyOS、iOS 三端统一应用标识为 `com.xaocen.reader`。Android/Harmony 原来的 `com.xaocen.xaocen_reader` 与新标识属于不同应用身份，旧安装、应用沙箱数据不保证能随新标识升级迁移；该身份变更已由用户接受。AppGallery Connect 与 Apple Developer/App Store Connect 中的标识注册和可用性仍未验证。未改 Android/Windows 阅读业务逻辑、账号政策或共享平台枚举。
+
+## 统一应用标识与 Android 构建验证
+
+Android `namespace`、`applicationId`、Kotlin package、TTS action names 和 Android Emulator helper 已更新为 `com.xaocen.reader`；iOS Runner 与 Harmony bundleName 使用同一 app ID。Dart package 名 `xaocen_reader` 是语言包名，保留不变。
+
+在 R05 worktree 根目录执行：
+
+```powershell
+$env:PUB_CACHE = 'D:\xaocen\.tooling\reader-public-cache\pub'
+$env:GRADLE_USER_HOME = 'D:\xaocen\.tooling\reader-public-cache\gradle'
+$env:ANDROID_USER_HOME = 'D:\xaocen\.tooling\reader-public-cache\android-user'
+$env:ANDROID_SDK_ROOT = 'C:\Users\TOM\AppData\Local\Android\Sdk'
+$env:JAVA_HOME = 'C:\Program Files\Eclipse Adoptium\jdk-17.0.19.10-hotspot'
+& 'C:\Users\TOM\flutter\bin\flutter.bat' build apk --debug --no-pub
+```
+
+| 证据 | 结果 |
+| --- | --- |
+| 环境 | Flutter 3.44.7 / Dart 3.12.2；JDK 17.0.19；Android SDK API 36 |
+| Android Debug 构建 | PASS，`assembleDebug` 完成；耗时约 234 秒。Flutter 提示当前 AGP 8.7.3 后续需升级到至少 8.11.1 |
+| APK | `build/app/outputs/flutter-apk/app-debug.apk`；`aapt dump badging` 确认 `package='com.xaocen.reader'`；SHA-256 `13F408B2462ED8CD3A46B86487DE4AF17B2DAEC7C019F0C6EA8D7CD7CF03D45D` |
+| 安装/运行 | 未执行；新包未安装到 Android 设备，不构成 Android 运行验收 |
 
 ## R05-A：HarmonyOS NEXT
 
@@ -18,9 +40,9 @@
 | DevEco Studio | `D:\HUAWEIDev\DevEco Studio`，`DS-261.23567.138.36.2600851`（26.0.0.851） |
 | Harmony SDK | `sdk/default/openharmony`，平台 API 26；构建版本 `26.0.0.105` |
 | Hvigor / OHPM | Hvigor 6.26.8；OHPM 6.0.0.630 |
-| HDC | 3.2.0f；`hdc list targets` 无输出，没有已连接模拟器或设备 |
+| HDC | 3.2.0f；用户已开始创建模拟器；2026-10-08 22:44 再查 `hdc list targets` 仍无输出，暂未发现在线模拟器或设备 |
 | SDK 环境变量 | `DEVECO_SDK_HOME` 原先未设置；只为当前构建进程临时指向已安装 SDK，没有修改系统或用户全局变量 |
-| 模拟器 | DevEco 的 Emulator 程序存在；SDK 内未发现可用系统镜像，HDC 也没有在线目标；没有完成模拟器启动 |
+| 模拟器 | DevEco 的 Emulator 程序存在；用户正在 Device Manager 创建模拟器；尚未完成启动或检测到在线目标 |
 
 Hvigor 首次尝试使用默认 npm 源，未能解析 Harmony 插件；之后在样例目录使用被 Git 忽略的本机 `.npmrc`，为 `@ohos` 包指定 Harmony 官方 npm 源后构建成功。Hvigor 在用户缓存目录生成 pnpm wrapper 并安装两个依赖包，工具输出一项 high severity audit 警告；该机器缓存没有删除或纳入仓库。
 
@@ -43,9 +65,10 @@ $env:NPM_CONFIG_USERCONFIG = (Join-Path (Get-Location) '.npmrc')
 | 初始构建 | `BUILD SUCCESSFUL`；33 tasks，23 executed、10 up-to-date；当时仍使用试验期包名 |
 | 初始产物 | `platform_spikes/harmonyos_next_r05/entry/build/default/outputs/default/entry-default-unsigned.hap`；806,987 bytes |
 | 初始 SHA-256 | `1CE1BB4FF46C9FD2238A279CED3A6192A7CA36F15F84349C6541AB64FB64346C` |
-| 规范包名复建（2026-10-08） | 用户确认统一包名后设置 `com.xaocen.xaocen_reader` 并重建成功；33 tasks，27 executed、6 up-to-date |
-| 当前产物 | 同一路径 `entry-default-unsigned.hap`；806,957 bytes |
-| 当前 SHA-256 | `242FB35A5B7CA91492CEF7F0BC8820BF2FAE60DB66F22F085D4159118B54C598` |
+| 上一标识构建（2026-10-08） | 当时按先前标识 `com.xaocen.xaocen_reader` 构建；该产物已被本次新标识构建替代 |
+| 当前统一标识构建（2026-10-08） | `BUILD SUCCESSFUL`；33 tasks，27 executed、6 up-to-date；`pack.info` 确认 `bundleName=com.xaocen.reader` |
+| 当前产物 | 同一路径 `entry-default-unsigned.hap`；806,915 bytes |
+| 当前 SHA-256 | `C65F7445FE265794FDD61B8FB181EE2365BDE0533B0CFE3003F4686AD071AE5C` |
 | 签名 | 未配置 signingConfig，产物为 unsigned HAP；未验证签名或安装资格 |
 | 构建警告 | `EntryAbility.ets` 可能抛异常的诊断仍存在；本次没有运行时日志用于判断其实际影响 |
 | 安装/启动/交互 | 未执行：没有 HDC 目标和可用模拟器系统镜像 |
@@ -61,15 +84,15 @@ $env:NPM_CONFIG_USERCONFIG = (Join-Path (Get-Location) '.npmrc')
 
 Android APK 的 keystore 不能直接当作 Harmony HAP 的完整签名配置。HAP 手动签名需要 `.p12` 密钥、`.cer` 数字证书和 `.p7b` Harmony profile，且证书/profile 绑定 Harmony 应用身份和包名；建议生成独立的 Harmony **debug** 密钥，不复用 Android production 密钥。若只用一台设备且 DevEco 自动签名可用，可在本机的 Project Structure/Signing Configs 中启用自动签名，不必把密钥文件交给我；多设备或离线调试则由有权限的 Huawei Developer/AppGallery Connect 账号申请 debug 证书和 profile。官方[调试证书指南](https://developer.huawei.com/consumer/en/doc/app/agc-help-add-debugcert-0000001914263178)说明了自动签名和手动调试证书条件，[命令行签名说明](https://developer.huawei.com/consumer/en/doc/harmonyos-guides-V14/ide-command-line-building-app-V14)列明 HAP 所需签名文件。AppGallery Connect 中注册的应用包名还必须与工程 `bundleName` 一致，见[应用身份配置](https://developer.huawei.com/consumer/cn/doc/harmonyos-guides-v5/iap-config-app-identity-info-V5)。
 
-包名已按用户确认值重建。因为它与正式 Reader 预期相同，安装前应确认目标设备上没有同包名的其他应用，以免覆盖现有安装或因签名不匹配而失败。
+包名已按用户最终确认的统一值重建。首次安装前仍要确认设备上没有同包名应用；由于 Android 应用身份已改变，旧包不会作为同应用直接覆盖升级。
 
 ## R05-B：iOS / iPadOS
 
-### 现有 Flutter 工程静态盘点
+### R05 分支 iOS 工程与云构建配置
 
-以下内容只读自原 Reader 主工作区的当前文件；该工作区 dirty，且 iOS 配置不在本次干净 worktree 的 HEAD 中，因此这些观察不等同于本任务分支内可复现的工程基线。
+原 Reader 主工作区的 iOS 目录和大量 Reader 源码更改仍保持原位、未复制、未修改。为避免把未审阅的 dirty 源码混入 R05，本 worktree 基于已提交 Flutter 源码单独生成 iOS 平台骨架；这不是对主工作区全部新功能的验证。
 
-本次 R05 worktree 的 HEAD 没有 `ios/` 目录；原主工作区的 `ios/` 是未跟踪目录，`pubspec.yaml`/`pubspec.lock` 有未提交修改。为了不把未经逐项审阅的当前变更混入独立分支，本次没有复制它们或生成声称能构建 Reader 的 `Podfile`/`codemagic.yaml`。建立干净、无凭据的 Reader 源码快照后，再生成/修订这些文件并做云构建。
+执行 `flutter create --platforms=ios --org com.xaocen --project-name reader --no-pub .` 生成 Runner、Xcode workspace 和 iOS 资源；`ios/Runner.xcodeproj` 的应用 Bundle ID 已设为 `com.xaocen.reader`，RunnerTests 使用 Xcode 标准后缀 `com.xaocen.reader.RunnerTests`。添加 Flutter CocoaPods 标准 Podfile，最低 iOS target 为 13.0；根目录 `codemagic.yaml` 配置 Flutter 3.44.7、macOS/Xcode、依赖解析、`pod install` 和 `flutter build ios --release --no-codesign`。该 workflow 只编译，不签名、不上传、不发布。
 
 | 项目 | 当前观察 |
 | --- | --- |
@@ -77,19 +100,19 @@ Android APK 的 keystore 不能直接当作 Harmony HAP 的完整签名配置。
 | 插件声明 | `pubspec.yaml` 声明 `file_picker ^11.0.3`、`path_provider ^2.1.6`、`flutter_secure_storage 9.2.4`、`cryptography 2.7.0`；`flutter_tts ^4.2.5` 使用本地 `third_party/flutter_tts` 覆盖 |
 | iOS 插件证据 | 当前 `GeneratedPluginRegistrant.m` 包含 file_picker、flutter_secure_storage、flutter_tts；本地 TTS 插件有 Swift iOS 实现。它们只证明源码入口存在，不证明 CocoaPods 解析、编译或运行成功 |
 | Xcode 项目 | iOS deployment target 13.0，`CODE_SIGN_STYLE = Automatic`，未发现 `DEVELOPMENT_TEAM` |
-| Bundle ID | 当前主工作区 iOS 工程仍为 `com.xaocen.xaocenReader`；该 dirty 工作区未改动。Apple 官方限制 Bundle ID 只含字母、数字、连字符和点，不允许下划线，因此 iOS 不能使用 `com.xaocen.xaocen_reader`；iOS 专用 ID 等待负责人确认 |
-| 构建依赖 | 当前检查未找到 `ios/Podfile` 或仓库根 `codemagic.yaml` |
-| 本机可执行性 | Windows 主机没有 `xcodebuild` 或 `pod`；Flutter CLI 信息采集未能完成并中断，未执行 iOS 编译 |
-| 云构建 / 签名 / TestFlight | 本次没有 Codemagic 工程访问和 Apple 账号/签名材料，未构建、签名、上传或发布 |
+| Bundle ID | R05 worktree Runner 为 `com.xaocen.reader`；主工作区原工程的 `com.xaocen.xaocenReader` 保持未修改。Apple 账号中的 ID 注册/可用性尚未检查 |
+| 构建依赖 | R05 worktree 已有 `ios/Podfile` 和根 `codemagic.yaml`；`flutter pub get --offline` 成功，生成插件登记。`Podfile.lock` 尚未由 macOS/CocoaPods 解析，需首轮云构建后复核并固定 |
+| 本机可执行性 | Windows 主机没有 `xcodebuild` 或 `pod`；本机不支持执行 Xcode/iOS 编译，未生成 iOS `.app` / `.ipa` |
+| 云构建 / 签名 / TestFlight | YAML 已配置无签名 macOS 构建，但没有 Codemagic 云账号/仓库授权，尚未运行；无 Apple Team、开发/分发证书、Provisioning Profile 或 TestFlight 证据 |
 
-**iOS 当前结论：仅静态配置检查；没有 iOS `.app` / `.ipa` 构建证据，也没有模拟器、iPhone 或 iPad 运行验收。** 由于现有 iOS 文件位于原 dirty 工作区而不在本次 HEAD，本报告不以不完整拷贝拼装工程，也不将已有文件声称为本任务分支中的可复现 build baseline。
+**iOS 当前结论：工程与云构建配置已在干净 R05 worktree 生成，依赖解析通过；尚无 macOS/Xcode 构建、签名、TestFlight 或设备运行证据。** R05 分支仍落后于主工作区的 dirty Reader 功能代码，首次 Codemagic 构建应使用本分支已提交源码完成基线验证；合并主工作区的新代码前需固定并审阅无凭据源码快照。
 
 ### Apple / Codemagic 所需条件
 
-- 先在**经审阅的干净 Reader 源码基线**中补齐 `ios/Podfile` 和 Xcode Runner 工程，统一 Runner/RunnerTests 的 Bundle ID，再用 CocoaPods 生成并复核 `ios/Podfile.lock`。根目录 `codemagic.yaml` 定义 Flutter、Xcode、依赖安装、构建和可选发布步骤；Codemagic 要连接这个确切的 Git 仓库/分支，并使用 macOS/Xcode 构建机。`pubspec.yaml`、`pubspec.lock` 与本地插件源码也必须与被构建的 Reader 源码一致。
-- 先跑不签名 iOS 编译以验证 Flutter/Xcode/CocoaPods，再配置签名生成 `.ipa`。签名设备包或送 TestFlight，需要 Apple Developer Program 团队、经用户确认且符合 Apple 字符限制的 iOS 专用 Bundle ID、Team ID，以及通过 Codemagic 安全配置维护的 App Store Connect API key/签名资产。密钥不要放在仓库、文档或聊天。[Codemagic YAML 签名说明](https://docs.codemagic.io/yaml-code-signing/signing-ios/)列出了该流程和权限要求。
+- 先把 R05 分支提交推送到 Codemagic 能访问的 Git 仓库/分支，再运行当前无签名 workflow；成功后取回 macOS 生成的 `Podfile.lock` 并审阅提交。无签名编译不需要 Apple 证书，但需要 Codemagic 账号、项目仓库接入和可用 macOS 构建额度。
+- 若要安装到 iPhone/iPad 或送 TestFlight，需要 Apple Developer Program 团队、App Store Connect 中可用的 `com.xaocen.reader`、Team ID，以及在 Codemagic 安全配置中的 App Store Connect API key、开发/分发证书和匹配的 Provisioning Profile。密钥不要放在仓库、文档或聊天。[Codemagic iOS 签名说明](https://docs.codemagic.io/yaml-code-signing/signing-ios/)与[无签名到签名的首发流程](https://docs.codemagic.io/yaml-quick-start/first-signed-build/)列出了条件。
 - 用户已确认手头有 iPhone，可用于实体 iOS 验收；iPad 或 iPad 模拟器仍需补充以覆盖 iPadOS 布局。两类设备分别验证文件导入/重新打开、恢复、TTS 与布局；云构建产物本身不等于设备验收。
-- Android/Harmony 包名已由用户确定；iOS Bundle ID 不能含下划线，等用户选定 Apple 兼容值后，再在审阅后的源码基线中统一 Xcode Runner、RunnerTests 与 App Store Connect 应用记录。Apple 说明 Bundle ID 只允许字母、数字、连字符和点，并且上传 App Store Connect 后不能更改；参见 [Bundle ID 规则](https://developer.apple.com/help/glossary/bundle-id/)和 [CFBundleIdentifier](https://developer.apple.com/documentation/BundleResources/Information-Property-List/CFBundleIdentifier)。R06 平台/账号策略仍待冻结，不应先把新的 `ios` 值套进现有 Android/Windows 登录逻辑。
+- 用户已确认三端统一为 `com.xaocen.reader`，R05 分支的 Android/Harmony/iOS 工程均使用该应用标识；Apple/AppGallery 注册状态待账号持有人核验。Apple Bundle ID 只允许字母、数字、连字符和点，并且上传 App Store Connect 后不能更改；参见 [Bundle ID 规则](https://developer.apple.com/help/glossary/bundle-id/)和 [CFBundleIdentifier](https://developer.apple.com/documentation/BundleResources/Information-Property-List/CFBundleIdentifier)。R06 平台/账号策略仍待冻结，不应先把新平台值套进现有登录逻辑。
 
 ## 共享数据与平台适配
 
@@ -111,9 +134,9 @@ Android APK 的 keystore 不能直接当作 Harmony HAP 的完整签名配置。
 | 端 | 已达到 | R05 仍需完成 |
 | --- | --- | --- |
 | HarmonyOS NEXT | DevEco/SDK/Hvigor 盘点；独立 ArkTS/ArkUI 工程；API 26 编译和 HAP 产物哈希 | 可启动模拟器/实体目标、受控签名安装、TXT/图片/交互/退出恢复运行证据；真实设备验收分开记录 |
-| iOS/iPadOS | 现有 Flutter/Xcode 配置静态盘点；识别 Bundle ID、Team、Podfile、Codemagic 缺口 | 固定干净 Flutter/iOS 基线，补齐/核实 Pods 与 Codemagic macOS build，至少一次云构建产物；确认 Apple 签名条件；TestFlight 和真机行为按授权/账号另验 |
+| iOS/iPadOS | 干净 R05 worktree 已生成 Runner、Podfile、统一 Bundle ID 和无签名 Codemagic workflow；`flutter pub get --offline` PASS | macOS/Xcode/CocoaPods 云构建、Podfile.lock、Apple Team/签名、TestFlight 和真机行为仍待验 |
 
-R05 **尚未达到验收标准**。R35 需先做 Harmony 渲染/文件沙箱/本地库/定位/安全存储适配，再进入格式和真机性能工作；R36 需在审阅后的源代码基线中统一规范 Bundle ID、补齐并验证 Xcode/CocoaPods/Codemagic 流水线、iOS 文件与 Keychain 语义、TTS/音频焦点，以及 iPhone/iPad 布局和恢复。两个完整客户端仍依赖 R06–R10；本次未启动这些工作。
+R05 **尚未达到验收标准**。R35 需先做 Harmony 渲染/文件沙箱/本地库/定位/安全存储适配，再进入格式和真机性能工作；R36 需在审阅后的源码基线中沿用 `com.xaocen.reader`、完成 Xcode/CocoaPods/Codemagic 云构建、iOS 文件与 Keychain 语义、TTS/音频焦点，以及 iPhone/iPad 布局和恢复。两个完整客户端仍依赖 R06–R10；本次未启动这些工作。
 
 以下是基于目前工程盘点的**相对工作量**，不是排期承诺；不含完整 Reader 功能实现、上架和未确认产品政策：
 
@@ -121,7 +144,7 @@ R05 **尚未达到验收标准**。R35 需先做 Harmony 渲染/文件沙箱/本
 | --- | --- | --- |
 | Harmony TXT/EPUB/图片渲染、书库与导入 | 很高 | ArkTS/ArkUI 与 Flutter/Dart UI、文件及解析插件不能直接复用；当前只有单页合成样本 |
 | Harmony 账号安全存储、Picker 授权、定位恢复和 TTS | 高 | 需接系统密钥、文档授权和 Core Speech Kit，并按 R06 冻结平台/设备策略 |
-| iOS 可复现构建、Pods 与 Codemagic | 中 | Flutter 和插件代码有复用基础，但当前缺 Podfile、云配置和可审阅源码基线；需先验证实际解析与编译 |
+| iOS 可复现构建、Pods 与 Codemagic | 中 | Runner/Podfile/无签名 workflow 已建立，Flutter 依赖解析通过；仍需 Codemagic macOS 解析 CocoaPods、产出并复核 Podfile.lock、实际编译 |
 | iOS 文件访问、持久恢复、安全存储和 TTS | 中到高 | 插件入口存在但运行未验证；文档 URL 生命周期、Keychain 策略、语音生命周期仍需适配与真机覆盖 |
 | 两端完整设备回归、性能与发行门禁 | 高 | 需要 Harmony 模拟器/真机、iPhone/iPad、签名身份、测试数据及平台政策，不由本次编译替代 |
 
@@ -129,4 +152,4 @@ R05 **尚未达到验收标准**。R35 需先做 Harmony 渲染/文件沙箱/本
 
 - HarmonyOS [ArkTS 概览和模拟器差异](https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/arkts-overview)、[Picker API](https://developer.huawei.com/consumer/en/doc/harmonyos-references/js-apis-file-picker)、[文件持久授权说明](https://developer.huawei.com/consumer/cn/doc/harmonyos-guides-v5/file-persistpermission-V5)、[HUKS 密钥派生](https://developer.huawei.com/consumer/en/doc/harmonyos-guides-V13/huks-key-derivation-arkts-V13)、[Core Speech Kit 能力介绍](https://developer.huawei.com/consumer/cn/app/planning)。
 - Apple [Bundle ID 字符规则](https://developer.apple.com/help/glossary/bundle-id/)、[Keychain Services](https://developer.apple.com/documentation/security/keychain-services?changes=_1)、[UIDocumentPicker](https://developer.apple.com/documentation/uikit/uidocumentpickerviewcontroller?changes=_4__7)、[AVSpeechSynthesizer](https://developer.apple.com/documentation/avfaudio/avspeechsynthesizer?changes=_8&language=objc)。
-- Codemagic [iOS code signing](https://docs.codemagic.io/flutter-code-signing/ios-code-signing/)、[iOS simulator build](https://docs.codemagic.io/yaml-code-signing/ios-simulator-builds/)、[first signed build](https://docs.codemagic.io/yaml-quick-start/first-signed-build/)。
+- Codemagic [iOS code signing](https://docs.codemagic.io/yaml-code-signing/signing-ios/)、[iOS simulator build](https://docs.codemagic.io/yaml-code-signing/ios-simulator-builds/)、[first signed build](https://docs.codemagic.io/yaml-quick-start/first-signed-build/)。
