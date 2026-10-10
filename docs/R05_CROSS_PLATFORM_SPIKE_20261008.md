@@ -1,6 +1,6 @@
 # R05 跨平台最小试验实测报告
 
-更新：2026-10-09（Asia/Shanghai）
+更新：2026-10-10（Asia/Shanghai）
 结论：**部分完成，不满足 R05 全部验收**。HarmonyOS ArkTS/ArkUI 样例已在 HarmonyOS NEXT 模拟器安装并启动；用户截图确认 TXT 与图片显示，用户随后确认终止进程并重启后仍停留在第 2 页。模拟器最小链路验证通过，HarmonyOS 真机验收未执行。iOS 已在干净 R05 worktree 建立 Flutter Runner、Podfile 和 Codemagic 无签名构建配置；离线依赖解析通过，但 Windows 无 Xcode/CocoaPods，且尚未运行 Codemagic 云构建。
 
 ## 隔离基线和范围
@@ -98,7 +98,7 @@ Android APK 的 keystore 不能直接当作 Harmony HAP 的完整签名配置。
 
 原 Reader 主工作区的 iOS 目录和大量 Reader 源码更改仍保持原位、未复制、未修改。为避免把未审阅的 dirty 源码混入 R05，本 worktree 基于已提交 Flutter 源码单独生成 iOS 平台骨架；这不是对主工作区全部新功能的验证。
 
-执行 `flutter create --platforms=ios --org com.xaocen --project-name reader --no-pub .` 生成 Runner、Xcode workspace 和 iOS 资源；`ios/Runner.xcodeproj` 的应用 Bundle ID 已设为 `com.xaocen.reader`，RunnerTests 使用 Xcode 标准后缀 `com.xaocen.reader.RunnerTests`。添加 Flutter CocoaPods 标准 Podfile，最低 iOS target 为 13.0；根目录 `codemagic.yaml` 配置 Flutter 3.44.7、macOS/Xcode、依赖解析、`pod install` 和 `flutter build ios --release --no-codesign`。该 workflow 只编译，不签名、不上传、不发布。
+执行 `flutter create --platforms=ios --org com.xaocen --project-name reader --no-pub .` 生成 Runner、Xcode workspace 和 iOS 资源；`ios/Runner.xcodeproj` 的应用 Bundle ID 已设为 `com.xaocen.reader`，RunnerTests 使用 Xcode 标准后缀 `com.xaocen.reader.RunnerTests`。添加 Flutter CocoaPods 标准 Podfile，最低 iOS target 为 13.0；根目录 `codemagic.yaml` 的 `ios_unsigned_validation` workflow 配置 Flutter 3.44.7、macOS/Xcode、依赖解析、`pod install` 和 `flutter build ios --release --no-codesign`，并归档 `.app`、构建日志和 `ios/Podfile.lock`。该 workflow 只编译，不签名、不上传、不发布。
 
 | 项目 | 当前观察 |
 | --- | --- |
@@ -115,7 +115,7 @@ Android APK 的 keystore 不能直接当作 Harmony HAP 的完整签名配置。
 
 ### Apple / Codemagic 所需条件
 
-- 先把 R05 分支提交推送到 Codemagic 能访问的 Git 仓库/分支，再运行当前无签名 workflow；成功后取回 macOS 生成的 `Podfile.lock` 并审阅提交。无签名编译不需要 Apple 证书，但需要 Codemagic 账号、项目仓库接入和可用 macOS 构建额度。
+- 具体首轮无签名云构建步骤（2026-10-10）：在 R05 worktree 执行 `git push -u origin r05-platform-spike`，将已提交分支推到远端；在 Codemagic 登录后进入 **Applications > Add application**，接入保存 Reader 仓库的 Git 提供方，选择 Reader 仓库并添加 Flutter app。若是 GitHub 私有仓库，需由有权限的人授权 Codemagic GitHub App 访问该仓库。打开新应用后选择 `r05-platform-spike` 分支，点击 **Check for configuration file**，确认识别仓库根的 `codemagic.yaml`；从 **Start new build** 选择分支和 workflow `ios_unsigned_validation` 并启动。此 workflow 顺序运行 `flutter pub get`、`cd ios && pod install`、`flutter build ios --release --no-codesign`；完成后下载 `.app`、构建日志和 `ios/Podfile.lock`。审阅锁文件后再提交回 R05 分支。无签名编译不需要 Apple 证书，但需要 Codemagic 账号、仓库访问授权和可用 macOS 构建额度。[Codemagic 添加应用指南](https://docs.codemagic.io/getting-started/adding-apps/)、[YAML 构建指南](https://docs.codemagic.io/yaml-basic-configuration/yaml-getting-started/)说明了仓库授权、根目录配置、分支扫描和手动启动流程。
 - 若要安装到 iPhone/iPad 或送 TestFlight，需要 Apple Developer Program 团队、App Store Connect 中可用的 `com.xaocen.reader`、Team ID，以及在 Codemagic 安全配置中的 App Store Connect API key、开发/分发证书和匹配的 Provisioning Profile。密钥不要放在仓库、文档或聊天。[Codemagic iOS 签名说明](https://docs.codemagic.io/yaml-code-signing/signing-ios/)与[无签名到签名的首发流程](https://docs.codemagic.io/yaml-quick-start/first-signed-build/)列出了条件。
 - 用户已确认手头有 iPhone，可用于实体 iOS 验收；iPad 或 iPad 模拟器仍需补充以覆盖 iPadOS 布局。两类设备分别验证文件导入/重新打开、恢复、TTS 与布局；云构建产物本身不等于设备验收。
 - 用户已确认三端统一为 `com.xaocen.reader`，R05 分支的 Android/Harmony/iOS 工程均使用该应用标识；Apple/AppGallery 注册状态待账号持有人核验。Apple Bundle ID 只允许字母、数字、连字符和点，并且上传 App Store Connect 后不能更改；参见 [Bundle ID 规则](https://developer.apple.com/help/glossary/bundle-id/)和 [CFBundleIdentifier](https://developer.apple.com/documentation/BundleResources/Information-Property-List/CFBundleIdentifier)。R06 平台/账号策略仍待冻结，不应先把新平台值套进现有登录逻辑。
